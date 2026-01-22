@@ -3,6 +3,13 @@
   <div class="mb-4 text-xl flex gap-4">
     <div>Turn: <span class="font-mono text-yellow-400">{{ gameEngine.turn() }}</span></div>
     <div>Wood: <span class="font-mono text-green-400">{{ gameEngine.resources().wood }}</span></div>
+    <button (click)="gameEngine.toggleBuildMode()" class="px-3 py-1 rounded text-sm"
+            [class.bg-gray-700]="!gameEngine.buildMode()" [class.bg-blue-700]="gameEngine.buildMode()">
+      Build Wall (10)
+    </button>
+    <button (click)="gameEngine.convertWoodToReserve()" class="px-3 py-1 rounded text-sm bg-green-700 hover:bg-green-600">
+      Convert 20 Wood → +1 Reserve
+    </button>
     @if (gameEngine.gameStatus() !== 'playing') {
        <div class="font-bold text-red-500 animate-pulse">{{ gameEngine.gameStatus() | titlecase }}</div>
     }
@@ -46,12 +53,14 @@
           [class.border-blue-400]="x === 0 && y === 0"
           [class.border-red-400]="x === 9 && y === 9"
           [class.ring-2]="(x === 0 && y === 0) || (x === 9 && y === 9)"
-          [class.ring-blue-300]="x === 0 && y === 0"
+          [class.ring-blue-300]="(x === 0 && y === 0) && gameEngine.baseDeployActive()"
           [class.ring-red-300]="x === 9 && y === 9"
           [class.bg-green-800]="gameEngine.isForest(x, y) && !gameEngine.isValidMove(x, y)"
           [class.bg-amber-900]="gameEngine.isDeployTarget(x, y)"
           [class.border-amber-500]="gameEngine.isDeployTarget(x, y)"
           
+          [class.bg-gray-950]="!gameEngine.isVisibleToPlayer(x, y)"
+          [class.border-gray-800]="!gameEngine.isVisibleToPlayer(x, y)"
           [class.bg-green-900]="gameEngine.isValidMove(x, y) && !gameEngine.getUnitAt(x, y)"
           [class.border-green-500]="gameEngine.isValidMove(x, y) && !gameEngine.getUnitAt(x, y)"
           
@@ -65,7 +74,7 @@
         >
            <!-- Grid coordinate helper -->
            <span class="absolute top-0 right-0 text-[8px] text-gray-500 p-0.5 pointer-events-none">{{x}},{{y}}</span>
-           @if (gameEngine.isForest(x, y)) {
+           @if (gameEngine.isForest(x, y) && gameEngine.isVisibleToPlayer(x, y)) {
              <span class="absolute bottom-0 left-0 text-[10px] text-green-400 p-0.5 font-bold pointer-events-none">W</span>
            }
            @if (x === 0 && y === 0) {
@@ -86,7 +95,15 @@
            }
            
            <!-- Unit Rendering -->
+           @if (gameEngine.getWallAt(x, y); as wall) {
+             <div class="w-10 h-10 flex items-center justify-center font-bold transition-all duration-300 pointer-events-none bg-gray-600 border border-gray-400 rounded">
+               <div class="absolute top-0 inset-x-1 h-1 bg-gray-800 rounded">
+                <div class="h-1 bg-gray-300 rounded" [style.width.%]="wall.hp * 2"></div>
+               </div>
+             </div>
+           }
            @if (gameEngine.getUnitAt(x, y); as unit) {
+             @if (unit.owner === 'player' || gameEngine.isVisibleToPlayer(x, y)) {
              <div 
                class="w-10 h-10 flex items-center justify-center font-bold transition-all duration-300 shadow-lg pointer-events-none"
                [class.bg-blue-500]="unit.owner === 'player'"
@@ -117,7 +134,8 @@
               >
                 <span [class.-rotate-45]="unit.tier === 4">{{ unit.level }}</span>
               </div>
-            }
+             }
+           }
         </div>
       }
     }

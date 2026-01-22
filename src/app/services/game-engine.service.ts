@@ -1,6 +1,13 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { Unit, Position, Owner } from '../models/unit.model';
 
+interface Wall {
+  id: string;
+  position: Position;
+  hp: number;
+  owner: Owner;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -19,6 +26,11 @@ export class GameEngineService {
   private baseHealthSignal = signal<{ player: number; ai: number }>({ player: 100, ai: 100 });
   private reservePointsSignal = signal<{ player: number; ai: number }>({ player: 0, ai: 0 });
   private deployTargetsSignal = signal<Position[]>([]);
+  private baseDeployActiveSignal = signal<boolean>(false);
+  private wallsSignal = signal<Wall[]>([]);
+  private playerVisibilitySignal = signal<Set<string>>(new Set<string>());
+  private aiVisibilitySignal = signal<Set<string>>(new Set<string>());
+  private buildModeSignal = signal<boolean>(false);
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -32,6 +44,11 @@ export class GameEngineService {
   readonly baseHealth = this.baseHealthSignal.asReadonly();
   readonly reservePoints = this.reservePointsSignal.asReadonly();
   readonly deployTargets = this.deployTargetsSignal.asReadonly();
+  readonly baseDeployActive = this.baseDeployActiveSignal.asReadonly();
+  readonly walls = this.wallsSignal.asReadonly();
+  readonly playerVisibility = this.playerVisibilitySignal.asReadonly();
+  readonly aiVisibility = this.aiVisibilitySignal.asReadonly();
+  readonly buildMode = this.buildModeSignal.asReadonly();
   
   readonly selectedUnit = computed(() => 
     this.unitsSignal().find(u => u.id === this.selectedUnitIdSignal()) || null
@@ -63,6 +80,10 @@ export class GameEngineService {
     this.reservePointsSignal.set({ player: 5, ai: 5 });
     this.deployTargetsSignal.set([]);
     this.forestsSignal.set(this.generateForests());
+    this.wallsSignal.set([]);
+    this.baseDeployActiveSignal.set(false);
+    this.buildModeSignal.set(false);
+    this.recomputeVisibility();
   }
 
   // --- Selection & Movement ---
@@ -115,6 +136,33 @@ export class GameEngineService {
         });
         updatedUnits.splice(unitIndex, 1);
         return updatedUnits;
+      }
+      
+      const targetWall = this.getWallAt(target.x, target.y);
+      if (targetWall) {
+        if (targetWall.owner === movingUnit.owner) {
+          return updatedUnits;
+        } else {
+          const attackerPoints = this.calculateTotalPoints(movingUnit);
+          const defenderHP = targetWall.hp;
+          if (attackerPoints > defenderHP) {
+            const newPoints = Math.max(1, attackerPoints - defenderHP);
+            const tl = this.calculateTierAndLevel(newPoints);
+            movingUnit.points = newPoints;
+            movingUnit.tier = tl.tier;
+            movingUnit.level = tl.level;
+            this.wallsSignal.update(ws => ws.filter(w => w.id !== targetWall.id));
+          } else if (attackerPoints < defenderHP) {
+            const newHP = Math.max(0, defenderHP - attackerPoints);
+            this.wallsSignal.update(ws => ws.map(w => w.id === targetWall.id ? { ...w, hp: newHP } : w));
+            updatedUnits.splice(unitIndex, 1);
+            return updatedUnits;
+          } else {
+            this.wallsSignal.update(ws => ws.filter(w => w.id !== targetWall.id));
+            updatedUnits.splice(unitIndex, 1);
+            return updatedUnits;
+          }
+        }
       }
       
       const targetUnitIndex = updatedUnits.findIndex(u => 
@@ -274,6 +322,43 @@ export class GameEngineService {
     }
     return 0;
   }
+  
+  private inBounds(x: number, y: number): boolean {
+    return x >= 0 && x < this.gridSize && y >= 0 && y < this.gridSize;
+  }
+  
+  private recomputeVisibility() {
+    const playerSet = new Set<string>();
+    const aiSet = new Set<string>();
+    const mark = (set: Set<string>, x: number, y: number) => {
+      if (this.inBounds(x, y)) set.add(`${x},${y}`);
+    };
+    const markRadius = (set: Set<string>, center: Position, radius: number) => {
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+          const x = center.x + dx;
+          const y = center.y + dy;
+          if (Math.max(Math.abs(dx), Math.abs(dy)) <= radius) mark(set, x, y);
+        }
+      }
+    };
+    markRadius(playerSet, this.getBasePosition('player'), 3);
+    markRadius(aiSet, this.getBasePosition('ai'), 3);
+    for (const u of this.unitsSignal()) {
+      const targetSet = u.owner === 'player' ? playerSet : aiSet;
+      markRadius(targetSet, u.position, 2);
+    }
+    this.playerVisibilitySignal.set(playerSet);
+    this.aiVisibilitySignal.set(aiSet);
+  }
+  
+  isVisibleToPlayer(x: number, y: number): boolean {
+    return this.playerVisibilitySignal().has(`${x},${y}`);
+  }
+  
+  isVisibleToAi(x: number, y: number): boolean {
+    return this.aiVisibilitySignal().has(`${x},${y}`);
+  }
 
   private calculatePower(unit: Unit): number {
       return this.calculateTotalPoints(unit);
@@ -319,13 +404,17 @@ export class GameEngineService {
             const newPos = { x: unit.position.x + (dir.x * i), y: unit.position.y + (dir.y * i) };
             
             if (newPos.x >= 0 && newPos.x < this.gridSize && newPos.y >= 0 && newPos.y < this.gridSize) {
+                const targetWall = this.getWallAt(newPos.x, newPos.y);
+                if (targetWall) {
+                  if (targetWall.owner !== unit.owner) moves.push(newPos);
+                  break;
+                }
                 const targetUnit = this.getUnitAt(newPos.x, newPos.y);
                 
                 if (!targetUnit) {
                     moves.push(newPos);
                 } else {
                     if (targetUnit.owner === unit.owner) {
-                        // Merge check
                         if (targetUnit.tier === unit.tier) {
                             moves.push(newPos);
                         }
@@ -335,7 +424,7 @@ export class GameEngineService {
                     break;
                 }
             } else {
-                break; // Out of bounds
+                break;
             }
         }
     }
@@ -367,6 +456,8 @@ export class GameEngineService {
       }
     }
     this.deployTargetsSignal.set([]);
+    this.baseDeployActiveSignal.set(false);
+    this.recomputeVisibility();
   }
 
   // --- AI Logic ---
@@ -384,8 +475,9 @@ export class GameEngineService {
           const x = base.x + dx;
           const y = base.y + dy;
           if (x < 0 || x >= this.gridSize || y < 0 || y >= this.gridSize) continue;
-          const occupied = this.getUnitAt(x, y);
-          if (!occupied) targets.push({ x, y });
+          const occupiedUnit = this.getUnitAt(x, y);
+          const occupiedWall = this.getWallAt(x, y);
+          if (!occupiedUnit && !occupiedWall) targets.push({ x, y });
         }
       }
       if (targets.length > 0) {
@@ -398,6 +490,7 @@ export class GameEngineService {
             return [...units, newUnit];
           });
           this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai - cost }));
+          this.recomputeVisibility();
         }
       }
     }
@@ -432,13 +525,15 @@ export class GameEngineService {
                       if (tier > unit.tier) score += 30;
                     }
                 } else {
-                    const enemyPower = this.calculatePower(targetUnit);
-                    if (myPower > enemyPower) {
-                        score += 100 + (enemyPower * 2);
-                    } else if (myPower < enemyPower) {
-                        score -= 500;
-                    } else {
-                        score -= 50;
+                    if (this.isVisibleToAi(move.x, move.y)) {
+                      const enemyPower = this.calculatePower(targetUnit);
+                      if (myPower > enemyPower) {
+                          score += 100 + (enemyPower * 2);
+                      } else if (myPower < enemyPower) {
+                          score -= 500;
+                      } else {
+                          score -= 50;
+                      }
                     }
                 }
             }
@@ -475,6 +570,9 @@ export class GameEngineService {
   getUnitAt(x: number, y: number): Unit | undefined {
     return this.unitsSignal().find(u => u.position.x === x && u.position.y === y);
   }
+  getWallAt(x: number, y: number): Wall | undefined {
+    return this.wallsSignal().find(w => w.position.x === x && w.position.y === y);
+  }
   
   isValidMove(x: number, y: number): boolean {
       return this.validMoves().some(p => p.x === x && p.y === y);
@@ -503,11 +601,38 @@ export class GameEngineService {
     return owner === 'player' ? { x: 0, y: 0 } : { x: 9, y: 9 };
   }
 
+  cancelDeploy() {
+    this.deployTargetsSignal.set([]);
+    this.baseDeployActiveSignal.set(false);
+  }
+ 
+  toggleBuildMode() {
+    this.buildModeSignal.update(v => !v);
+  }
+ 
+  buildWallAt(position: Position) {
+    const wood = this.resourcesSignal().wood;
+    if (wood < 10) return;
+    if (!this.isVisibleToPlayer(position.x, position.y)) return;
+    if (this.getUnitAt(position.x, position.y)) return;
+    if (this.getWallAt(position.x, position.y)) return;
+    this.wallsSignal.update(ws => [...ws, { id: crypto.randomUUID(), position: { ...position }, hp: 50, owner: 'player' }]);
+    this.resourcesSignal.update(r => ({ wood: r.wood - 10 }));
+    this.buildModeSignal.set(false);
+  }
+ 
+  convertWoodToReserve() {
+    const wood = this.resourcesSignal().wood;
+    if (wood < 20) return;
+    this.resourcesSignal.update(r => ({ wood: r.wood - 20 }));
+    this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai }));
+  }
   startDeployFromBase() {
     const reserves = this.reservePointsSignal().player;
     const base = this.getBasePosition('player');
     if (reserves <= 0) {
       this.deployTargetsSignal.set([]);
+      this.baseDeployActiveSignal.set(false);
       return;
     }
     const targets: Position[] = [];
@@ -517,11 +642,13 @@ export class GameEngineService {
         const x = base.x + dx;
         const y = base.y + dy;
         if (x < 0 || x >= this.gridSize || y < 0 || y >= this.gridSize) continue;
-        const occupied = this.getUnitAt(x, y);
-        if (!occupied) targets.push({ x, y });
+        const occupiedUnit = this.getUnitAt(x, y);
+        const occupiedWall = this.getWallAt(x, y);
+        if (!occupiedUnit && !occupiedWall) targets.push({ x, y });
       }
     }
     this.deployTargetsSignal.set(targets);
+    this.baseDeployActiveSignal.set(true);
   }
 
   isDeployTarget(x: number, y: number): boolean {
@@ -541,5 +668,7 @@ export class GameEngineService {
     });
     this.reservePointsSignal.update(r => ({ player: r.player - cost, ai: r.ai }));
     this.deployTargetsSignal.set([]);
+    this.baseDeployActiveSignal.set(false);
+    this.recomputeVisibility();
   }
 }

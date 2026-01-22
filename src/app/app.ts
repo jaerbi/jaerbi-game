@@ -16,6 +16,11 @@ export class App {
   onTileClick(x: number, y: number) {
     if (this.gameEngine.gameStatus() !== 'playing') return;
 
+    if (this.gameEngine.buildMode()) {
+      this.gameEngine.buildWallAt({ x, y });
+      return;
+    }
+
     if (this.gameEngine.isDeployTarget(x, y)) {
       this.gameEngine.deployTo({ x, y });
       return;
@@ -25,6 +30,8 @@ export class App {
       this.gameEngine.startDeployFromBase();
       return;
     }
+
+    this.gameEngine.cancelDeploy();
 
     const unit = this.gameEngine.getUnitAt(x, y);
 
