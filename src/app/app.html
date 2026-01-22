@@ -53,21 +53,33 @@
            <!-- Unit Rendering -->
            @if (gameEngine.getUnitAt(x, y); as unit) {
              <div 
-               class="w-10 h-10 rounded-full flex items-center justify-center font-bold border-2 transition-all duration-300 shadow-lg pointer-events-none"
+               class="w-10 h-10 flex items-center justify-center font-bold transition-all duration-300 shadow-lg pointer-events-none"
                [class.bg-blue-500]="unit.owner === 'player'"
                [class.bg-red-500]="unit.owner === 'ai'"
-               [class.border-blue-300]="unit.owner === 'player'"
-               [class.border-red-300]="unit.owner === 'ai'"
+               [class.text-white]="true"
+               
+               [class.rounded-full]="unit.tier === 1"
+               [class.border-2]="unit.tier !== 2"
+               [class.border-blue-300]="unit.owner === 'player' && unit.tier !== 2"
+               [class.border-red-300]="unit.owner === 'ai' && unit.tier !== 2"
+               
+               [class.rounded-none]="unit.tier === 3"
+               
+               [class.rotate-45]="unit.tier === 4"
+               [class.scale-75]="unit.tier === 4"
+               
+               [style.clip-path]="unit.tier === 2 ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : ''"
+               [style.padding-top]="unit.tier === 2 ? '0.25rem' : ''"
+
                [class.ring-4]="gameEngine.selectedUnitId() === unit.id"
                [class.ring-yellow-400]="gameEngine.selectedUnitId() === unit.id"
                [class.ring-offset-2]="gameEngine.selectedUnitId() === unit.id"
                [class.ring-offset-gray-800]="gameEngine.selectedUnitId() === unit.id"
-               [class.scale-110]="gameEngine.selectedUnitId() === unit.id"
+               [class.scale-110]="gameEngine.selectedUnitId() === unit.id && unit.tier !== 4"
+               [class.scale-90]="gameEngine.selectedUnitId() === unit.id && unit.tier === 4"
                [class.scale-125]="gameEngine.lastMergedUnitId() === unit.id" 
-               [class.ring-2]="unit.type === 'advanced' && gameEngine.selectedUnitId() !== unit.id"
-               [class.ring-orange-400]="unit.type === 'advanced' && gameEngine.selectedUnitId() !== unit.id"
              >
-               {{ unit.level }}
+               <span [class.-rotate-45]="unit.tier === 4">{{ unit.level }}</span>
              </div>
            }
         </div>

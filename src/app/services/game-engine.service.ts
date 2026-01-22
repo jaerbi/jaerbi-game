@@ -97,43 +97,105 @@ export class GameEngineService {
       if (targetUnitIndex !== -1) {
         const targetUnit = updatedUnits[targetUnitIndex];
         if (targetUnit.owner === movingUnit.owner) {
-          // Merge Logic
-          movingUnit.level += targetUnit.level;
+          // Merge Logic (New)
+          const totalPoints = this.calculateTotalPoints(movingUnit) + this.calculateTotalPoints(targetUnit);
+          const { tier, level } = this.calculateTierAndLevel(totalPoints);
+          
+          movingUnit.tier = tier;
+          movingUnit.level = level;
+          
           merged = true;
-          
-          if (movingUnit.level >= 5) {
-            movingUnit.level = 1;
-            movingUnit.type = 'advanced';
-          }
-          
           updatedUnits.splice(targetUnitIndex, 1);
         } else {
-            // Capture Enemy
-             updatedUnits.splice(targetUnitIndex, 1);
+            // Combat Logic (Power-based)
+            const attackerPower = this.calculatePower(movingUnit);
+            const defenderPower = this.calculatePower(targetUnit);
+
+            if (attackerPower > defenderPower) {
+                // Attacker Wins
+                updatedUnits.splice(targetUnitIndex, 1);
+                // movingUnit moves to target (below)
+            } else if (attackerPower < defenderPower) {
+                // Defender Wins
+                updatedUnits.splice(unitIndex, 1); // Remove Attacker
+                return updatedUnits; // Return immediately, attacker is dead
+            } else {
+                // Draw - Both Removed
+                // Remove attacker (unitIndex) AND defender (targetUnitIndex)
+                // Note: Splice affects indices. 
+                // If unitIndex > targetUnitIndex, splice target first, then unitIndex - 1.
+                // Or just filter by ID.
+                return updatedUnits.filter(u => u.id !== movingUnit.id && u.id !== targetUnit.id);
+            }
         }
       }
 
       movingUnit.position = target;
       
-      // Update the moving unit in the array
-      // Find index again or map? Map is safer if splice shifted indices? 
-      // Actually we spliced targetUnitIndex.
-      // If targetUnitIndex < unitIndex, unitIndex shifted down by 1.
-      // Let's just map by ID to be safe.
       return updatedUnits.map(u => u.id === movingUnit.id ? movingUnit : u);
     });
 
     if (merged) {
       this.lastMergedUnitIdSignal.set(unit.id);
-      // Reset animation trigger after short delay
       setTimeout(() => this.lastMergedUnitIdSignal.set(null), 300);
     }
 
-    this.checkWinCondition(unit.owner, target);
+    // Check win only if the mover survived
+    const moverSurvivor = this.unitsSignal().find(u => u.id === unit.id);
+    if (moverSurvivor) {
+        this.checkWinCondition(moverSurvivor.owner, moverSurvivor.position);
+    }
     
     if (this.gameStatus() === 'playing') {
       this.endTurn();
     }
+  }
+
+  // --- Helper Methods ---
+  
+  // Total Points = (Tier - 1) * 4 + Level
+  // T1L1=1, T1L4=4, T2L1=5
+  private calculateTotalPoints(unit: Unit): number {
+    return (unit.tier - 1) * 4 + unit.level;
+  }
+
+  private calculateTierAndLevel(points: number): { tier: number, level: number } {
+    // Max Tier 4, Level 5 -> Points = (3)*4 + 5 = 17
+    // Actually, T4 can go up to Level 5. T1-T3 evolve at Level 5 (Points > 4, > 8, > 12).
+    
+    // Reverse:
+    // Tier = floor((Points - 1) / 4) + 1
+    // Level = ((Points - 1) % 4) + 1
+    
+    let tier = Math.floor((points - 1) / 4) + 1;
+    let level = ((points - 1) % 4) + 1;
+
+    // Cap at Tier 4
+    if (tier > 4) {
+        tier = 4;
+        // If points exceed T4 max, we should just cap at T4 L5?
+        // Logic: T4 L5 is max.
+        // T4 starts at point 13 ( (3*4)+1 ).
+        // T4 L5 is point 17.
+        if (points >= 17) {
+            level = 5;
+        } else {
+            // Recalculate level for T4 if points are like 13,14,15,16
+            // Wait, the formula handles 13->L1, 16->L4.
+            // If points is 17 (from 13+4?), formula gives T5 L1.
+            // We want T4 L5.
+            if (tier === 5 && level === 1) {
+                tier = 4;
+                level = 5;
+            }
+        }
+    }
+    
+    return { tier, level };
+  }
+
+  private calculatePower(unit: Unit): number {
+      return (unit.tier * 10) + unit.level;
   }
 
   private checkWinCondition(moverOwner: Owner, pos: Position) {
@@ -146,32 +208,55 @@ export class GameEngineService {
 
   private calculateValidMoves(unit: Unit): Position[] {
     const moves: Position[] = [];
-    const directions = [
-      { x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 } // Basic
-    ];
+    
+    // Tier 1: 1 tile X/Y
+    // Tier 2: 1 tile 8-dir
+    // Tier 3: 2 tiles 8-dir
+    // Tier 4: 3 tiles 8-dir
+    
+    const range = unit.tier >= 3 ? (unit.tier === 4 ? 3 : 2) : 1;
+    const diagonals = unit.tier >= 2;
 
-    if (unit.type === 'advanced') {
-      directions.push(
-        { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: 1, y: 1 } // Diagonals
-      );
+    const directions = [
+      { x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }
+    ];
+    if (diagonals) {
+        directions.push({ x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: 1, y: 1 });
     }
 
+    // BFS or just iterate directions * range?
+    // "Moves up to X tiles". Assuming jumping over isn't allowed? Or is it just range?
+    // Usually "Move 2 tiles" means walking distance.
+    // Let's implement pathfinding style reachability or just simple "Line of Sight" movement?
+    // "Moves up to X tiles" in grid usually implies walking.
+    // However, for simplicity and standard tactics, let's assume it can stop at any tile within range in those directions, 
+    // BLOCKED by obstacles.
+    
     for (const dir of directions) {
-      const newPos = { x: unit.position.x + dir.x, y: unit.position.y + dir.y };
-      
-      if (newPos.x >= 0 && newPos.x < this.gridSize && newPos.y >= 0 && newPos.y < this.gridSize) {
-        const targetUnit = this.getUnitAt(newPos.x, newPos.y);
-        
-        if (!targetUnit) {
-          moves.push(newPos);
-        } else if (targetUnit.owner === unit.owner) {
-          // Can merge
-          moves.push(newPos);
-        } else {
-           // Can capture enemy
-           moves.push(newPos);
+        for (let i = 1; i <= range; i++) {
+            const newPos = { x: unit.position.x + (dir.x * i), y: unit.position.y + (dir.y * i) };
+            
+            if (newPos.x >= 0 && newPos.x < this.gridSize && newPos.y >= 0 && newPos.y < this.gridSize) {
+                const targetUnit = this.getUnitAt(newPos.x, newPos.y);
+                
+                if (!targetUnit) {
+                    moves.push(newPos);
+                } else {
+                    // Unit present
+                    if (targetUnit.owner === unit.owner) {
+                        // Friendly -> Merge (Valid Move)
+                        moves.push(newPos);
+                    } else {
+                        // Enemy -> Attack (Valid Move)
+                        moves.push(newPos);
+                    }
+                    // Cannot move PAST a unit (Block)
+                    break;
+                }
+            } else {
+                break; // Out of bounds
+            }
         }
-      }
     }
     return moves;
   }
@@ -182,31 +267,13 @@ export class GameEngineService {
     this.selectedUnitIdSignal.set(null); 
     this.turnSignal.update(t => t + 1);
     
-    // Spawn logic every 2 turns
     if (this.turnSignal() % 2 === 0) { 
         this.spawnUnit('player');
         this.spawnUnit('ai');
     }
 
-    // AI Turn Trigger
-    // We can use a setTimeout to simulate "thinking" and avoid synchronous UI blocking
     if (this.gameStatus() === 'playing') {
-        // If it was player's turn, now it might be AI's "move" phase? 
-        // But the requirement says "Turn-based". 
-        // "Units move 1 tile per turn". 
-        // Usually in strategy games: Player Move -> AI Move -> Turn End? 
-        // OR Player moves 1 unit, then turn ends. Then AI moves 1 unit.
-        // The prompt says: "Units spawn... every 2 turns". 
-        // And "End Turn: After a move is completed, increment turnSignal".
-        // So: Turn 1 (Player moves) -> Turn 2 (AI moves) -> Turn 3 (Player moves + Spawn) -> Turn 4 (AI moves) -> Turn 5 (Player moves + Spawn).
-        
-        // So if turn is EVEN, it's AI's turn?
-        // Turn 1: Player. 
-        // Turn 2: AI.
-        // Turn 3: Player.
-        
         if (this.turnSignal() % 2 === 0) {
-            // It's AI's turn (Turn 2, 4, 6...)
             setTimeout(() => this.aiTurn(), 500);
         }
     }
@@ -219,7 +286,6 @@ export class GameEngineService {
 
     const aiUnits = this.unitsSignal().filter(u => u.owner === 'ai');
     if (aiUnits.length === 0) {
-        // AI has no units, skip turn (or resign?)
         this.endTurn(); 
         return;
     }
@@ -229,23 +295,33 @@ export class GameEngineService {
 
     for (const unit of aiUnits) {
         const moves = this.calculateValidMoves(unit);
+        const myPower = this.calculatePower(unit);
+
         for (const move of moves) {
             let score = 0;
             
-            // Distance to player base (lower is better)
+            // Distance to player base
             const dist = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
             score -= dist * 10; 
 
-            // Check for merge/capture
             const targetUnit = this.getUnitAt(move.x, move.y);
             if (targetUnit) {
                 if (targetUnit.owner === 'ai') {
-                    // Merge priority
+                    // Merge
                     score += 50; 
-                    if (unit.level + targetUnit.level >= 5) score += 20; // Evolution bonus
+                    const mergedPoints = this.calculateTotalPoints(unit) + this.calculateTotalPoints(targetUnit);
+                    const { tier } = this.calculateTierAndLevel(mergedPoints);
+                    if (tier > unit.tier) score += 30; // Tier Up bonus
                 } else {
-                    // Capture priority
-                    score += 100;
+                    // Combat Analysis
+                    const enemyPower = this.calculatePower(targetUnit);
+                    if (myPower > enemyPower) {
+                        score += 100 + (enemyPower * 2); // Kill weak
+                    } else if (myPower < enemyPower) {
+                        score -= 500; // Avoid suicide
+                    } else {
+                        score -= 50; // Avoid draw unless desperate?
+                    }
                 }
             }
 
@@ -258,7 +334,6 @@ export class GameEngineService {
     if (bestMove) {
         this.executeMove(bestMove.unit, bestMove.target);
     } else {
-        // No valid moves? Skip turn
         this.endTurn();
     }
   }
@@ -278,17 +353,16 @@ export class GameEngineService {
       if (existingUnitIndex !== -1) {
         const updatedUnits = [...units];
         const existingUnit = { ...updatedUnits[existingUnitIndex] };
-        existingUnit.level += 1;
         
-        if (existingUnit.level >= 5) {
-            existingUnit.level = 1;
-            existingUnit.type = 'advanced';
-        }
+        // Spawn Merge: Add T1L1 (1 point)
+        const totalPoints = this.calculateTotalPoints(existingUnit) + 1; // +1 point for new spawn
+        const { tier, level } = this.calculateTierAndLevel(totalPoints);
+        existingUnit.tier = tier;
+        existingUnit.level = level;
         
         updatedUnits[existingUnitIndex] = existingUnit;
         
-        // Trigger merge animation for spawn merge
-        if (owner === 'player') { // Only animate player for now or generic?
+        if (owner === 'player') {
              this.lastMergedUnitIdSignal.set(existingUnit.id);
              setTimeout(() => this.lastMergedUnitIdSignal.set(null), 300);
         }
@@ -299,8 +373,8 @@ export class GameEngineService {
           id: crypto.randomUUID(),
           position: { ...basePosition },
           level: 1,
-          owner: owner,
-          type: 'basic'
+          tier: 1,
+          owner: owner
         };
         return [...units, newUnit];
       }

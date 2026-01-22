@@ -4,12 +4,11 @@ export interface Position {
 }
 
 export type Owner = 'player' | 'ai';
-export type UnitType = 'basic' | 'advanced';
 
 export interface Unit {
   id: string;
   position: Position;
   level: number;
+  tier: number; // 1 to 4
   owner: Owner;
-  type: UnitType;
 }
