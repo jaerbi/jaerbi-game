@@ -2,6 +2,7 @@
   <h1 class="text-3xl font-bold mb-4">Turn-Based Strategy</h1>
   <div class="mb-4 text-xl flex gap-4">
     <div>Turn: <span class="font-mono text-yellow-400">{{ gameEngine.turn() }}</span></div>
+    <div>Wood: <span class="font-mono text-green-400">{{ gameEngine.resources().wood }}</span></div>
     @if (gameEngine.gameStatus() !== 'playing') {
        <div class="font-bold text-red-500 animate-pulse">{{ gameEngine.gameStatus() | titlecase }}</div>
     }
@@ -25,8 +26,12 @@
   <div class="grid grid-cols-10 gap-1 bg-gray-800 p-2 rounded-lg border border-gray-700 select-none relative">
     
     <!-- Base Indicators -->
-    <div class="absolute top-2 left-2 w-12 h-12 border-2 border-blue-500/30 rounded pointer-events-none"></div>
-    <div class="absolute bottom-2 right-2 w-12 h-12 border-2 border-red-500/30 rounded pointer-events-none"></div>
+    <div class="absolute top-2 left-2 w-12 h-12 border-2 border-blue-500/30 rounded pointer-events-none flex items-center justify-center">
+      <span class="text-xs text-blue-300 font-bold">{{ gameEngine.baseHealth().player }}</span>
+    </div>
+    <div class="absolute bottom-2 right-2 w-12 h-12 border-2 border-red-500/30 rounded pointer-events-none flex items-center justify-center">
+      <span class="text-xs text-red-400 font-bold">{{ gameEngine.baseHealth().ai }}</span>
+    </div>
 
     @for (y of gameEngine.gridRows; track y) {
       @for (x of gameEngine.gridCols; track x) {
@@ -35,6 +40,7 @@
           class="w-12 h-12 rounded flex items-center justify-center relative border transition-colors duration-200 cursor-pointer"
           [class.bg-gray-700]="!gameEngine.isValidMove(x, y)"
           [class.border-gray-600]="!gameEngine.isValidMove(x, y)"
+          [class.bg-green-800]="gameEngine.isForest(x, y) && !gameEngine.isValidMove(x, y)"
           
           [class.bg-green-900]="gameEngine.isValidMove(x, y) && !gameEngine.getUnitAt(x, y)"
           [class.border-green-500]="gameEngine.isValidMove(x, y) && !gameEngine.getUnitAt(x, y)"
@@ -49,6 +55,9 @@
         >
            <!-- Grid coordinate helper -->
            <span class="absolute top-0 right-0 text-[8px] text-gray-500 p-0.5 pointer-events-none">{{x}},{{y}}</span>
+           @if (gameEngine.isForest(x, y)) {
+             <span class="absolute bottom-0 left-0 text-[10px] text-green-400 p-0.5 font-bold pointer-events-none">W</span>
+           }
            
            <!-- Unit Rendering -->
            @if (gameEngine.getUnitAt(x, y); as unit) {
@@ -91,6 +100,6 @@
     <p>Click on your (Blue) units to select.</p>
     <p>Green tiles indicate valid moves.</p>
     <p>Cyan pulsing tiles indicate valid <span class="text-cyan-400 font-bold">MERGE</span> targets.</p>
-    <p>Capture the Enemy Base (Red) at (9,9) to win!</p>
+    <p>Reduce the enemy Base HP to 0 to win.</p>
   </div>
 </div>

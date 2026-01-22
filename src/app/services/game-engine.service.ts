@@ -13,6 +13,9 @@ export class GameEngineService {
   private selectedUnitIdSignal = signal<string | null>(null);
   private gameStatusSignal = signal<'playing' | 'player wins' | 'ai wins'>('playing');
   private lastMergedUnitIdSignal = signal<string | null>(null);
+  private resourcesSignal = signal<{ wood: number }>({ wood: 0 });
+  private forestsSignal = signal<Position[]>([]);
+  private baseHealthSignal = signal<{ player: number; ai: number }>({ player: 100, ai: 100 });
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -20,6 +23,9 @@ export class GameEngineService {
   readonly selectedUnitId = this.selectedUnitIdSignal.asReadonly();
   readonly gameStatus = this.gameStatusSignal.asReadonly();
   readonly lastMergedUnitId = this.lastMergedUnitIdSignal.asReadonly();
+  readonly resources = this.resourcesSignal.asReadonly();
+  readonly forests = this.forestsSignal.asReadonly();
+  readonly baseHealth = this.baseHealthSignal.asReadonly();
   
   readonly selectedUnit = computed(() => 
     this.unitsSignal().find(u => u.id === this.selectedUnitIdSignal()) || null
@@ -45,6 +51,9 @@ export class GameEngineService {
     this.selectedUnitIdSignal.set(null);
     this.gameStatusSignal.set('playing');
     this.lastMergedUnitIdSignal.set(null);
+    this.resourcesSignal.set({ wood: 0 });
+    this.baseHealthSignal.set({ player: 100, ai: 100 });
+    this.forestsSignal.set(this.generateForests());
     this.spawnUnit('player');
     this.spawnUnit('ai');
   }
@@ -88,6 +97,18 @@ export class GameEngineService {
 
       const movingUnit = { ...updatedUnits[unitIndex] };
       
+      const opponentBase = movingUnit.owner === 'player' ? { x: 9, y: 9 } : { x: 0, y: 0 };
+      if (target.x === opponentBase.x && target.y === opponentBase.y) {
+        this.baseHealthSignal.update(hp => {
+          const key = movingUnit.owner === 'player' ? 'ai' : 'player';
+          const next = { ...hp };
+          next[key] = Math.max(0, next[key] - this.calculatePower(movingUnit));
+          return next;
+        });
+        updatedUnits.splice(unitIndex, 1);
+        return updatedUnits;
+      }
+      
       const targetUnitIndex = updatedUnits.findIndex(u => 
         u.position.x === target.x && 
         u.position.y === target.y && 
@@ -97,34 +118,26 @@ export class GameEngineService {
       if (targetUnitIndex !== -1) {
         const targetUnit = updatedUnits[targetUnitIndex];
         if (targetUnit.owner === movingUnit.owner) {
-          // Merge Logic (New)
-          const totalPoints = this.calculateTotalPoints(movingUnit) + this.calculateTotalPoints(targetUnit);
-          const { tier, level } = this.calculateTierAndLevel(totalPoints);
-          
-          movingUnit.tier = tier;
-          movingUnit.level = level;
-          
-          merged = true;
-          updatedUnits.splice(targetUnitIndex, 1);
+          if (targetUnit.tier === movingUnit.tier) {
+            const totalPoints = this.calculateTotalPoints(movingUnit) + this.calculateTotalPoints(targetUnit);
+            const { tier, level } = this.calculateTierAndLevel(totalPoints);
+            movingUnit.tier = tier;
+            movingUnit.level = level;
+            merged = true;
+            updatedUnits.splice(targetUnitIndex, 1);
+          } else {
+            return updatedUnits;
+          }
         } else {
-            // Combat Logic (Power-based)
             const attackerPower = this.calculatePower(movingUnit);
             const defenderPower = this.calculatePower(targetUnit);
 
             if (attackerPower > defenderPower) {
-                // Attacker Wins
                 updatedUnits.splice(targetUnitIndex, 1);
-                // movingUnit moves to target (below)
             } else if (attackerPower < defenderPower) {
-                // Defender Wins
-                updatedUnits.splice(unitIndex, 1); // Remove Attacker
-                return updatedUnits; // Return immediately, attacker is dead
+                updatedUnits.splice(unitIndex, 1);
+                return updatedUnits;
             } else {
-                // Draw - Both Removed
-                // Remove attacker (unitIndex) AND defender (targetUnitIndex)
-                // Note: Splice affects indices. 
-                // If unitIndex > targetUnitIndex, splice target first, then unitIndex - 1.
-                // Or just filter by ID.
                 return updatedUnits.filter(u => u.id !== movingUnit.id && u.id !== targetUnit.id);
             }
         }
@@ -140,11 +153,7 @@ export class GameEngineService {
       setTimeout(() => this.lastMergedUnitIdSignal.set(null), 300);
     }
 
-    // Check win only if the mover survived
-    const moverSurvivor = this.unitsSignal().find(u => u.id === unit.id);
-    if (moverSurvivor) {
-        this.checkWinCondition(moverSurvivor.owner, moverSurvivor.position);
-    }
+    this.checkBaseDefeat();
     
     if (this.gameStatus() === 'playing') {
       this.endTurn();
@@ -198,10 +207,11 @@ export class GameEngineService {
       return (unit.tier * 10) + unit.level;
   }
 
-  private checkWinCondition(moverOwner: Owner, pos: Position) {
-    if (moverOwner === 'player' && pos.x === 9 && pos.y === 9) {
+  private checkBaseDefeat() {
+    const hp = this.baseHealthSignal();
+    if (hp.ai <= 0) {
       this.gameStatusSignal.set('player wins');
-    } else if (moverOwner === 'ai' && pos.x === 0 && pos.y === 0) {
+    } else if (hp.player <= 0) {
       this.gameStatusSignal.set('ai wins');
     }
   }
@@ -242,15 +252,13 @@ export class GameEngineService {
                 if (!targetUnit) {
                     moves.push(newPos);
                 } else {
-                    // Unit present
                     if (targetUnit.owner === unit.owner) {
-                        // Friendly -> Merge (Valid Move)
-                        moves.push(newPos);
+                        if (targetUnit.tier === unit.tier) {
+                            moves.push(newPos);
+                        }
                     } else {
-                        // Enemy -> Attack (Valid Move)
                         moves.push(newPos);
                     }
-                    // Cannot move PAST a unit (Block)
                     break;
                 }
             } else {
@@ -276,6 +284,15 @@ export class GameEngineService {
         if (this.turnSignal() % 2 === 0) {
             setTimeout(() => this.aiTurn(), 500);
         }
+    }
+
+    if (this.gameStatus() === 'playing') {
+      if (this.turnSignal() % 2 === 1) {
+        const ownedOnForest = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
+        if (ownedOnForest > 0) {
+          this.resourcesSignal.update(r => ({ wood: r.wood + ownedOnForest * 2 }));
+        }
+      }
     }
   }
 
@@ -323,6 +340,10 @@ export class GameEngineService {
                         score -= 50; // Avoid draw unless desperate?
                     }
                 }
+            }
+
+            if (this.isForest(move.x, move.y)) {
+                score += 30;
             }
 
             if (!bestMove || score > bestMove.score) {
@@ -387,5 +408,24 @@ export class GameEngineService {
   
   isValidMove(x: number, y: number): boolean {
       return this.validMoves().some(p => p.x === x && p.y === y);
+  }
+
+  isForest(x: number, y: number): boolean {
+    return this.forestsSignal().some(p => p.x === x && p.y === y);
+  }
+
+  private generateForests(): Position[] {
+    const count = Math.floor(Math.random() * 4) + 5;
+    const positions: Position[] = [];
+    const forbidden = new Set(['0,0', '9,9']);
+    while (positions.length < count) {
+      const x = Math.floor(Math.random() * this.gridSize);
+      const y = Math.floor(Math.random() * this.gridSize);
+      const key = `${x},${y}`;
+      if (forbidden.has(key)) continue;
+      if (positions.some(p => p.x === x && p.y === y)) continue;
+      positions.push({ x, y });
+    }
+    return positions;
   }
 }
