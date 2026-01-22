@@ -1,10 +1,33 @@
 <div class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
   <h1 class="text-3xl font-bold mb-4">Turn-Based Strategy</h1>
-  <div class="mb-4 text-xl">
-    Turn: <span class="font-mono text-yellow-400">{{ gameEngine.turn() }}</span>
+  <div class="mb-4 text-xl flex gap-4">
+    <div>Turn: <span class="font-mono text-yellow-400">{{ gameEngine.turn() }}</span></div>
+    @if (gameEngine.gameStatus() !== 'playing') {
+       <div class="font-bold text-red-500 animate-pulse">{{ gameEngine.gameStatus() | titlecase }}</div>
+    }
   </div>
 
-  <div class="grid grid-cols-10 gap-1 bg-gray-800 p-2 rounded-lg border border-gray-700 select-none">
+  @if (gameEngine.gameStatus() !== 'playing') {
+      <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-gray-800 p-8 rounded-lg shadow-xl border border-gray-600 text-center">
+              <h2 class="text-4xl font-bold mb-4" 
+                  [class.text-blue-400]="gameEngine.gameStatus() === 'player wins'"
+                  [class.text-red-500]="gameEngine.gameStatus() === 'ai wins'">
+                  {{ gameEngine.gameStatus() | titlecase }}!
+              </h2>
+              <button (click)="gameEngine.resetGame()" class="px-6 py-3 bg-green-600 hover:bg-green-500 rounded text-white font-bold text-lg cursor-pointer">
+                  Play Again
+              </button>
+          </div>
+      </div>
+  }
+
+  <div class="grid grid-cols-10 gap-1 bg-gray-800 p-2 rounded-lg border border-gray-700 select-none relative">
+    
+    <!-- Base Indicators -->
+    <div class="absolute top-2 left-2 w-12 h-12 border-2 border-blue-500/30 rounded pointer-events-none"></div>
+    <div class="absolute bottom-2 right-2 w-12 h-12 border-2 border-red-500/30 rounded pointer-events-none"></div>
+
     @for (y of gameEngine.gridRows; track y) {
       @for (x of gameEngine.gridCols; track x) {
         <div 
@@ -12,10 +35,17 @@
           class="w-12 h-12 rounded flex items-center justify-center relative border transition-colors duration-200 cursor-pointer"
           [class.bg-gray-700]="!gameEngine.isValidMove(x, y)"
           [class.border-gray-600]="!gameEngine.isValidMove(x, y)"
-          [class.bg-green-900]="gameEngine.isValidMove(x, y)"
-          [class.border-green-500]="gameEngine.isValidMove(x, y)"
+          
+          [class.bg-green-900]="gameEngine.isValidMove(x, y) && !gameEngine.getUnitAt(x, y)"
+          [class.border-green-500]="gameEngine.isValidMove(x, y) && !gameEngine.getUnitAt(x, y)"
+          
+          [class.bg-cyan-900]="gameEngine.isValidMove(x, y) && gameEngine.getUnitAt(x, y)"
+          [class.border-cyan-500]="gameEngine.isValidMove(x, y) && gameEngine.getUnitAt(x, y)"
+          [class.animate-pulse]="gameEngine.isValidMove(x, y) && gameEngine.getUnitAt(x, y)"
+          
           [class.hover:bg-gray-600]="!gameEngine.isValidMove(x, y)"
-          [class.hover:bg-green-800]="gameEngine.isValidMove(x, y)"
+          [class.hover:bg-green-800]="gameEngine.isValidMove(x, y) && !gameEngine.getUnitAt(x, y)"
+          [class.hover:bg-cyan-800]="gameEngine.isValidMove(x, y) && gameEngine.getUnitAt(x, y)"
         >
            <!-- Grid coordinate helper -->
            <span class="absolute top-0 right-0 text-[8px] text-gray-500 p-0.5 pointer-events-none">{{x}},{{y}}</span>
@@ -33,6 +63,7 @@
                [class.ring-offset-2]="gameEngine.selectedUnitId() === unit.id"
                [class.ring-offset-gray-800]="gameEngine.selectedUnitId() === unit.id"
                [class.scale-110]="gameEngine.selectedUnitId() === unit.id"
+               [class.scale-125]="gameEngine.lastMergedUnitId() === unit.id" 
                [class.ring-2]="unit.type === 'advanced' && gameEngine.selectedUnitId() !== unit.id"
                [class.ring-orange-400]="unit.type === 'advanced' && gameEngine.selectedUnitId() !== unit.id"
              >
@@ -47,6 +78,7 @@
   <div class="mt-4 text-gray-400 text-sm">
     <p>Click on your (Blue) units to select.</p>
     <p>Green tiles indicate valid moves.</p>
-    <p>Merge units by moving onto them.</p>
+    <p>Cyan pulsing tiles indicate valid <span class="text-cyan-400 font-bold">MERGE</span> targets.</p>
+    <p>Capture the Enemy Base (Red) at (9,9) to win!</p>
   </div>
 </div>
