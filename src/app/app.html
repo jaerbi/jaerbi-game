@@ -27,10 +27,10 @@
     
     <!-- Base Indicators -->
     <div class="absolute top-2 left-2 w-12 h-12 border-2 border-blue-500/30 rounded pointer-events-none flex items-center justify-center">
-      <span class="text-xs text-blue-300 font-bold">{{ gameEngine.baseHealth().player }}</span>
+      <span class="text-white font-bold bg-blue-600 px-1 rounded shadow text-xs">{{ gameEngine.baseHealth().player }}</span>
     </div>
     <div class="absolute bottom-2 right-2 w-12 h-12 border-2 border-red-500/30 rounded pointer-events-none flex items-center justify-center">
-      <span class="text-xs text-red-400 font-bold">{{ gameEngine.baseHealth().ai }}</span>
+      <span class="text-white font-bold bg-red-600 px-1 rounded shadow text-xs">{{ gameEngine.baseHealth().ai }}</span>
     </div>
 
     @for (y of gameEngine.gridRows; track y) {
@@ -95,12 +95,13 @@
                [class.ring-offset-2]="gameEngine.selectedUnitId() === unit.id"
                [class.ring-offset-gray-800]="gameEngine.selectedUnitId() === unit.id"
                [class.scale-110]="gameEngine.selectedUnitId() === unit.id && unit.tier !== 4"
-               [class.scale-90]="gameEngine.selectedUnitId() === unit.id && unit.tier === 4"
-               [class.scale-125]="gameEngine.lastMergedUnitId() === unit.id" 
-             >
-               <span [class.-rotate-45]="unit.tier === 4">{{ unit.level }}</span>
-             </div>
-           }
+                [class.scale-90]="gameEngine.selectedUnitId() === unit.id && unit.tier === 4"
+                [class.scale-125]="gameEngine.lastMergedUnitId() === unit.id" 
+                [class.animate-bounce]="gameEngine.lastRemainderUnitId() === unit.id"
+              >
+                <span [class.-rotate-45]="unit.tier === 4">{{ unit.level }}</span>
+              </div>
+            }
         </div>
       }
     }
@@ -110,6 +111,6 @@
     <p>Click on your (Blue) units to select.</p>
     <p>Green tiles indicate valid moves.</p>
     <p>Cyan pulsing tiles indicate valid <span class="text-cyan-400 font-bold">MERGE</span> targets.</p>
-    <p>Reduce the enemy Base HP to 0 to win.</p>
+    <p>Capture the Enemy Base (Red) at (9,9) to win!</p>
   </div>
 </div>

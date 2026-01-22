@@ -13,6 +13,7 @@ export class GameEngineService {
   private selectedUnitIdSignal = signal<string | null>(null);
   private gameStatusSignal = signal<'playing' | 'player wins' | 'ai wins'>('playing');
   private lastMergedUnitIdSignal = signal<string | null>(null);
+  private lastRemainderUnitIdSignal = signal<string | null>(null);
   private resourcesSignal = signal<{ wood: number }>({ wood: 0 });
   private forestsSignal = signal<Position[]>([]);
   private baseHealthSignal = signal<{ player: number; ai: number }>({ player: 100, ai: 100 });
@@ -23,6 +24,7 @@ export class GameEngineService {
   readonly selectedUnitId = this.selectedUnitIdSignal.asReadonly();
   readonly gameStatus = this.gameStatusSignal.asReadonly();
   readonly lastMergedUnitId = this.lastMergedUnitIdSignal.asReadonly();
+  readonly lastRemainderUnitId = this.lastRemainderUnitIdSignal.asReadonly();
   readonly resources = this.resourcesSignal.asReadonly();
   readonly forests = this.forestsSignal.asReadonly();
   readonly baseHealth = this.baseHealthSignal.asReadonly();
@@ -51,6 +53,7 @@ export class GameEngineService {
     this.selectedUnitIdSignal.set(null);
     this.gameStatusSignal.set('playing');
     this.lastMergedUnitIdSignal.set(null);
+    this.lastRemainderUnitIdSignal.set(null);
     this.resourcesSignal.set({ wood: 0 });
     this.baseHealthSignal.set({ player: 100, ai: 100 });
     this.forestsSignal.set(this.generateForests());
@@ -89,6 +92,7 @@ export class GameEngineService {
 
   private executeMove(unit: Unit, target: Position) {
     let merged = false;
+    let remainderId: string | null = null;
 
     this.unitsSignal.update(units => {
       const updatedUnits = [...units];
@@ -118,46 +122,101 @@ export class GameEngineService {
       if (targetUnitIndex !== -1) {
         const targetUnit = updatedUnits[targetUnitIndex];
         if (targetUnit.owner === movingUnit.owner) {
+          // Merge Logic (New Rule: Level Summing & Remainder)
           if (targetUnit.tier === movingUnit.tier) {
-            const totalPoints = this.calculateTotalPoints(movingUnit) + this.calculateTotalPoints(targetUnit);
-            const { tier, level } = this.calculateTierAndLevel(totalPoints);
-            movingUnit.tier = tier;
-            movingUnit.level = level;
+            const sumLevels = movingUnit.level + targetUnit.level;
+            
+            if (sumLevels <= 5) {
+                // Simple Merge
+                targetUnit.level = sumLevels;
+                updatedUnits.splice(unitIndex, 1); // Remove moving unit
+            } else {
+                // Evolution + Remainder
+                const remainder = sumLevels - 5;
+                
+                // Target evolves
+                targetUnit.tier += 1;
+                targetUnit.level = 1;
+                if (targetUnit.tier > 4) { // Cap at T4L5
+                    targetUnit.tier = 4;
+                    targetUnit.level = 5;
+                }
+                
+                // Moving unit becomes remainder (stays at old position)
+                movingUnit.level = remainder;
+                updatedUnits[unitIndex] = movingUnit; // Update in place
+                remainderId = movingUnit.id;
+            }
             merged = true;
-            updatedUnits.splice(targetUnitIndex, 1);
           } else {
-            return updatedUnits;
+            return updatedUnits; // Should be blocked by isValidMove, but safety check
           }
         } else {
+            // Combat Logic (50% Attrition Rule)
             const attackerPoints = this.calculateTotalPoints(movingUnit);
             const defenderPoints = this.calculateTotalPoints(targetUnit);
+
             if (attackerPoints > defenderPoints) {
-              const remaining = attackerPoints - defenderPoints;
-              const { tier, level } = this.calculateTierAndLevel(remaining);
+              const newPoints = attackerPoints - Math.floor(defenderPoints / 2);
+              const { tier, level } = this.calculateTierAndLevel(newPoints);
+              
               movingUnit.tier = tier;
               movingUnit.level = level;
-              updatedUnits.splice(targetUnitIndex, 1);
+              
+              updatedUnits.splice(targetUnitIndex, 1); // Remove defender
+              // movingUnit moves to target (below)
             } else if (attackerPoints < defenderPoints) {
-              const remaining = defenderPoints - attackerPoints;
-              const { tier, level } = this.calculateTierAndLevel(remaining);
+              const newPoints = defenderPoints - Math.floor(attackerPoints / 2);
+              const { tier, level } = this.calculateTierAndLevel(newPoints);
+              
               const defender = { ...targetUnit, tier, level };
               updatedUnits[targetUnitIndex] = defender;
-              updatedUnits.splice(unitIndex, 1);
+              updatedUnits.splice(unitIndex, 1); // Remove attacker
               return updatedUnits;
             } else {
+              // Draw - Both Removed
               return updatedUnits.filter(u => u.id !== movingUnit.id && u.id !== targetUnit.id);
             }
         }
       }
 
-      movingUnit.position = target;
+      // If moving unit wasn't removed (simple merge or defeat) or turned into remainder
+      if (updatedUnits.find(u => u.id === movingUnit.id)) {
+          // If it became a remainder, it shouldn't move. 
+          // Check if remainderId is set.
+          if (remainderId === movingUnit.id) {
+             // Do not update position, it stays behind.
+          } else {
+             movingUnit.position = target;
+             // Update the unit in the array
+             const idx = updatedUnits.findIndex(u => u.id === movingUnit.id);
+             if (idx !== -1) updatedUnits[idx] = movingUnit;
+          }
+      }
       
-      return updatedUnits.map(u => u.id === movingUnit.id ? movingUnit : u);
+      return updatedUnits;
     });
 
     if (merged) {
-      this.lastMergedUnitIdSignal.set(unit.id);
-      setTimeout(() => this.lastMergedUnitIdSignal.set(null), 300);
+      // For simple merge, the moving unit is gone, so we highlight target?
+      // Actually lastMergedUnitId usually highlights the result.
+      // In simple merge, targetUnit is the result.
+      // In remainder merge, targetUnit is the result (evolved), movingUnit is remainder.
+      
+      // We need to know which unit is the "result" of the merge to highlight it.
+      // In both cases, targetUnit is the one growing/evolving.
+      // But we don't have targetUnit ref here easily after update.
+      // Let's find unit at target position.
+      const resultUnit = this.getUnitAt(target.x, target.y);
+      if (resultUnit) {
+          this.lastMergedUnitIdSignal.set(resultUnit.id);
+          setTimeout(() => this.lastMergedUnitIdSignal.set(null), 300);
+      }
+      
+      if (remainderId) {
+          this.lastRemainderUnitIdSignal.set(remainderId);
+          setTimeout(() => this.lastRemainderUnitIdSignal.set(null), 300);
+      }
     }
 
     this.checkBaseDefeat();
@@ -235,6 +294,7 @@ export class GameEngineService {
                     moves.push(newPos);
                 } else {
                     if (targetUnit.owner === unit.owner) {
+                        // Merge check
                         if (targetUnit.tier === unit.tier) {
                             moves.push(newPos);
                         }
@@ -264,7 +324,7 @@ export class GameEngineService {
 
     if (this.gameStatus() === 'playing') {
         if (this.turnSignal() % 2 === 0) {
-            setTimeout(() => this.aiTurn(), 1000);
+            setTimeout(() => this.aiTurn(), 500);
         }
     }
 
