@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 import { Unit, Position, Owner } from '../models/unit.model';
 
 @Injectable({
@@ -10,16 +10,335 @@ export class GameEngineService {
   // State using Signals
   private unitsSignal = signal<Unit[]>([]);
   private turnSignal = signal<number>(1);
+  private selectedUnitIdSignal = signal<string | null>(null);
+  private gameStatusSignal = signal<'playing' | 'player wins' | 'ai wins'>('playing');
+  private lastMergedUnitIdSignal = signal<string | null>(null);
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
   readonly turn = this.turnSignal.asReadonly();
+  readonly selectedUnitId = this.selectedUnitIdSignal.asReadonly();
+  readonly gameStatus = this.gameStatusSignal.asReadonly();
+  readonly lastMergedUnitId = this.lastMergedUnitIdSignal.asReadonly();
   
+  readonly selectedUnit = computed(() => 
+    this.unitsSignal().find(u => u.id === this.selectedUnitIdSignal()) || null
+  );
+
+  readonly validMoves = computed(() => {
+    const unit = this.selectedUnit();
+    if (!unit) return [];
+    return this.calculateValidMoves(unit);
+  });
+
   // Grid dimensions
   readonly gridRows = Array.from({ length: this.gridSize }, (_, i) => i);
   readonly gridCols = Array.from({ length: this.gridSize }, (_, i) => i);
 
-  constructor() {}
+  constructor() {
+    this.resetGame();
+  }
+
+  resetGame() {
+    this.unitsSignal.set([]);
+    this.turnSignal.set(1);
+    this.selectedUnitIdSignal.set(null);
+    this.gameStatusSignal.set('playing');
+    this.lastMergedUnitIdSignal.set(null);
+    this.spawnUnit('player');
+    this.spawnUnit('ai');
+  }
+
+  // --- Selection & Movement ---
+
+  selectUnit(unitId: string | null) {
+    if (this.gameStatus() !== 'playing') return;
+
+    if (!unitId) {
+      this.selectedUnitIdSignal.set(null);
+      return;
+    }
+    
+    const unit = this.unitsSignal().find(u => u.id === unitId);
+    // Only allow selecting own units
+    if (unit && unit.owner === 'player') { 
+      this.selectedUnitIdSignal.set(unitId);
+    }
+  }
+
+  moveSelectedUnit(target: Position) {
+    if (this.gameStatus() !== 'playing') return;
+
+    const unit = this.selectedUnit();
+    if (!unit) return;
+
+    const isValid = this.validMoves().some(p => p.x === target.x && p.y === target.y);
+    if (!isValid) return;
+
+    this.executeMove(unit, target);
+  }
+
+  private executeMove(unit: Unit, target: Position) {
+    let merged = false;
+
+    this.unitsSignal.update(units => {
+      const updatedUnits = [...units];
+      const unitIndex = updatedUnits.findIndex(u => u.id === unit.id);
+      if (unitIndex === -1) return units;
+
+      const movingUnit = { ...updatedUnits[unitIndex] };
+      
+      const targetUnitIndex = updatedUnits.findIndex(u => 
+        u.position.x === target.x && 
+        u.position.y === target.y && 
+        u.id !== movingUnit.id
+      );
+
+      if (targetUnitIndex !== -1) {
+        const targetUnit = updatedUnits[targetUnitIndex];
+        if (targetUnit.owner === movingUnit.owner) {
+          // Merge Logic (New)
+          const totalPoints = this.calculateTotalPoints(movingUnit) + this.calculateTotalPoints(targetUnit);
+          const { tier, level } = this.calculateTierAndLevel(totalPoints);
+          
+          movingUnit.tier = tier;
+          movingUnit.level = level;
+          
+          merged = true;
+          updatedUnits.splice(targetUnitIndex, 1);
+        } else {
+            // Combat Logic (Power-based)
+            const attackerPower = this.calculatePower(movingUnit);
+            const defenderPower = this.calculatePower(targetUnit);
+
+            if (attackerPower > defenderPower) {
+                // Attacker Wins
+                updatedUnits.splice(targetUnitIndex, 1);
+                // movingUnit moves to target (below)
+            } else if (attackerPower < defenderPower) {
+                // Defender Wins
+                updatedUnits.splice(unitIndex, 1); // Remove Attacker
+                return updatedUnits; // Return immediately, attacker is dead
+            } else {
+                // Draw - Both Removed
+                // Remove attacker (unitIndex) AND defender (targetUnitIndex)
+                // Note: Splice affects indices. 
+                // If unitIndex > targetUnitIndex, splice target first, then unitIndex - 1.
+                // Or just filter by ID.
+                return updatedUnits.filter(u => u.id !== movingUnit.id && u.id !== targetUnit.id);
+            }
+        }
+      }
+
+      movingUnit.position = target;
+      
+      return updatedUnits.map(u => u.id === movingUnit.id ? movingUnit : u);
+    });
+
+    if (merged) {
+      this.lastMergedUnitIdSignal.set(unit.id);
+      setTimeout(() => this.lastMergedUnitIdSignal.set(null), 300);
+    }
+
+    // Check win only if the mover survived
+    const moverSurvivor = this.unitsSignal().find(u => u.id === unit.id);
+    if (moverSurvivor) {
+        this.checkWinCondition(moverSurvivor.owner, moverSurvivor.position);
+    }
+    
+    if (this.gameStatus() === 'playing') {
+      this.endTurn();
+    }
+  }
+
+  // --- Helper Methods ---
+  
+  // Total Points = (Tier - 1) * 4 + Level
+  // T1L1=1, T1L4=4, T2L1=5
+  private calculateTotalPoints(unit: Unit): number {
+    return (unit.tier - 1) * 4 + unit.level;
+  }
+
+  private calculateTierAndLevel(points: number): { tier: number, level: number } {
+    // Max Tier 4, Level 5 -> Points = (3)*4 + 5 = 17
+    // Actually, T4 can go up to Level 5. T1-T3 evolve at Level 5 (Points > 4, > 8, > 12).
+    
+    // Reverse:
+    // Tier = floor((Points - 1) / 4) + 1
+    // Level = ((Points - 1) % 4) + 1
+    
+    let tier = Math.floor((points - 1) / 4) + 1;
+    let level = ((points - 1) % 4) + 1;
+
+    // Cap at Tier 4
+    if (tier > 4) {
+        tier = 4;
+        // If points exceed T4 max, we should just cap at T4 L5?
+        // Logic: T4 L5 is max.
+        // T4 starts at point 13 ( (3*4)+1 ).
+        // T4 L5 is point 17.
+        if (points >= 17) {
+            level = 5;
+        } else {
+            // Recalculate level for T4 if points are like 13,14,15,16
+            // Wait, the formula handles 13->L1, 16->L4.
+            // If points is 17 (from 13+4?), formula gives T5 L1.
+            // We want T4 L5.
+            if (tier === 5 && level === 1) {
+                tier = 4;
+                level = 5;
+            }
+        }
+    }
+    
+    return { tier, level };
+  }
+
+  private calculatePower(unit: Unit): number {
+      return (unit.tier * 10) + unit.level;
+  }
+
+  private checkWinCondition(moverOwner: Owner, pos: Position) {
+    if (moverOwner === 'player' && pos.x === 9 && pos.y === 9) {
+      this.gameStatusSignal.set('player wins');
+    } else if (moverOwner === 'ai' && pos.x === 0 && pos.y === 0) {
+      this.gameStatusSignal.set('ai wins');
+    }
+  }
+
+  private calculateValidMoves(unit: Unit): Position[] {
+    const moves: Position[] = [];
+    
+    // Tier 1: 1 tile X/Y
+    // Tier 2: 1 tile 8-dir
+    // Tier 3: 2 tiles 8-dir
+    // Tier 4: 3 tiles 8-dir
+    
+    const range = unit.tier >= 3 ? (unit.tier === 4 ? 3 : 2) : 1;
+    const diagonals = unit.tier >= 2;
+
+    const directions = [
+      { x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }
+    ];
+    if (diagonals) {
+        directions.push({ x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: 1, y: 1 });
+    }
+
+    // BFS or just iterate directions * range?
+    // "Moves up to X tiles". Assuming jumping over isn't allowed? Or is it just range?
+    // Usually "Move 2 tiles" means walking distance.
+    // Let's implement pathfinding style reachability or just simple "Line of Sight" movement?
+    // "Moves up to X tiles" in grid usually implies walking.
+    // However, for simplicity and standard tactics, let's assume it can stop at any tile within range in those directions, 
+    // BLOCKED by obstacles.
+    
+    for (const dir of directions) {
+        for (let i = 1; i <= range; i++) {
+            const newPos = { x: unit.position.x + (dir.x * i), y: unit.position.y + (dir.y * i) };
+            
+            if (newPos.x >= 0 && newPos.x < this.gridSize && newPos.y >= 0 && newPos.y < this.gridSize) {
+                const targetUnit = this.getUnitAt(newPos.x, newPos.y);
+                
+                if (!targetUnit) {
+                    moves.push(newPos);
+                } else {
+                    // Unit present
+                    if (targetUnit.owner === unit.owner) {
+                        // Friendly -> Merge (Valid Move)
+                        moves.push(newPos);
+                    } else {
+                        // Enemy -> Attack (Valid Move)
+                        moves.push(newPos);
+                    }
+                    // Cannot move PAST a unit (Block)
+                    break;
+                }
+            } else {
+                break; // Out of bounds
+            }
+        }
+    }
+    return moves;
+  }
+
+  // --- Turn Management ---
+
+  private endTurn() {
+    this.selectedUnitIdSignal.set(null); 
+    this.turnSignal.update(t => t + 1);
+    
+    if (this.turnSignal() % 2 === 0) { 
+        this.spawnUnit('player');
+        this.spawnUnit('ai');
+    }
+
+    if (this.gameStatus() === 'playing') {
+        if (this.turnSignal() % 2 === 0) {
+            setTimeout(() => this.aiTurn(), 500);
+        }
+    }
+  }
+
+  // --- AI Logic ---
+
+  private aiTurn() {
+    if (this.gameStatus() !== 'playing') return;
+
+    const aiUnits = this.unitsSignal().filter(u => u.owner === 'ai');
+    if (aiUnits.length === 0) {
+        this.endTurn(); 
+        return;
+    }
+
+    let bestMove: { unit: Unit, target: Position, score: number } | null = null;
+    const playerBase = { x: 0, y: 0 };
+
+    for (const unit of aiUnits) {
+        const moves = this.calculateValidMoves(unit);
+        const myPower = this.calculatePower(unit);
+
+        for (const move of moves) {
+            let score = 0;
+            
+            // Distance to player base
+            const dist = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
+            score -= dist * 10; 
+
+            const targetUnit = this.getUnitAt(move.x, move.y);
+            if (targetUnit) {
+                if (targetUnit.owner === 'ai') {
+                    // Merge
+                    score += 50; 
+                    const mergedPoints = this.calculateTotalPoints(unit) + this.calculateTotalPoints(targetUnit);
+                    const { tier } = this.calculateTierAndLevel(mergedPoints);
+                    if (tier > unit.tier) score += 30; // Tier Up bonus
+                } else {
+                    // Combat Analysis
+                    const enemyPower = this.calculatePower(targetUnit);
+                    if (myPower > enemyPower) {
+                        score += 100 + (enemyPower * 2); // Kill weak
+                    } else if (myPower < enemyPower) {
+                        score -= 500; // Avoid suicide
+                    } else {
+                        score -= 50; // Avoid draw unless desperate?
+                    }
+                }
+            }
+
+            if (!bestMove || score > bestMove.score) {
+                bestMove = { unit, target: move, score };
+            }
+        }
+    }
+
+    if (bestMove) {
+        this.executeMove(bestMove.unit, bestMove.target);
+    } else {
+        this.endTurn();
+    }
+  }
+
+  // --- Spawning ---
 
   spawnUnit(owner: Owner) {
     const basePosition: Position = owner === 'player' ? { x: 0, y: 0 } : { x: 9, y: 9 };
@@ -32,26 +351,30 @@ export class GameEngineService {
       );
 
       if (existingUnitIndex !== -1) {
-        // Merge logic
         const updatedUnits = [...units];
         const existingUnit = { ...updatedUnits[existingUnitIndex] };
-        existingUnit.level += 1;
         
-        // Evolution check
-        if (existingUnit.level >= 5) {
-            existingUnit.level = 1;
-            existingUnit.type = 'advanced';
-        }
+        // Spawn Merge: Add T1L1 (1 point)
+        const totalPoints = this.calculateTotalPoints(existingUnit) + 1; // +1 point for new spawn
+        const { tier, level } = this.calculateTierAndLevel(totalPoints);
+        existingUnit.tier = tier;
+        existingUnit.level = level;
         
         updatedUnits[existingUnitIndex] = existingUnit;
+        
+        if (owner === 'player') {
+             this.lastMergedUnitIdSignal.set(existingUnit.id);
+             setTimeout(() => this.lastMergedUnitIdSignal.set(null), 300);
+        }
+
         return updatedUnits;
       } else {
         const newUnit: Unit = {
           id: crypto.randomUUID(),
           position: { ...basePosition },
           level: 1,
-          owner: owner,
-          type: 'basic'
+          tier: 1,
+          owner: owner
         };
         return [...units, newUnit];
       }
@@ -60,5 +383,9 @@ export class GameEngineService {
 
   getUnitAt(x: number, y: number): Unit | undefined {
     return this.unitsSignal().find(u => u.position.x === x && u.position.y === y);
+  }
+  
+  isValidMove(x: number, y: number): boolean {
+      return this.validMoves().some(p => p.x === x && p.y === y);
   }
 }
