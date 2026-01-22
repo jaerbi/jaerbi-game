@@ -17,6 +17,8 @@ export class GameEngineService {
   private resourcesSignal = signal<{ wood: number }>({ wood: 0 });
   private forestsSignal = signal<Position[]>([]);
   private baseHealthSignal = signal<{ player: number; ai: number }>({ player: 100, ai: 100 });
+  private reservePointsSignal = signal<{ player: number; ai: number }>({ player: 0, ai: 0 });
+  private deployTargetsSignal = signal<Position[]>([]);
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -28,6 +30,8 @@ export class GameEngineService {
   readonly resources = this.resourcesSignal.asReadonly();
   readonly forests = this.forestsSignal.asReadonly();
   readonly baseHealth = this.baseHealthSignal.asReadonly();
+  readonly reservePoints = this.reservePointsSignal.asReadonly();
+  readonly deployTargets = this.deployTargetsSignal.asReadonly();
   
   readonly selectedUnit = computed(() => 
     this.unitsSignal().find(u => u.id === this.selectedUnitIdSignal()) || null
@@ -56,6 +60,8 @@ export class GameEngineService {
     this.lastRemainderUnitIdSignal.set(null);
     this.resourcesSignal.set({ wood: 0 });
     this.baseHealthSignal.set({ player: 100, ai: 100 });
+    this.reservePointsSignal.set({ player: 0, ai: 0 });
+    this.deployTargetsSignal.set([]);
     this.forestsSignal.set(this.generateForests());
     this.spawnUnit('player');
     this.spawnUnit('ai');
@@ -122,20 +128,20 @@ export class GameEngineService {
       if (targetUnitIndex !== -1) {
         const targetUnit = updatedUnits[targetUnitIndex];
         if (targetUnit.owner === movingUnit.owner) {
-          // Merge Logic (Point-based Sum & Remainder)
+          // Merge Logic (Point-based Sum & Remainder) with 4-level tiers
           if (targetUnit.tier === movingUnit.tier) {
             const tier = targetUnit.tier;
             const sumPoints = this.calculateTotalPoints(movingUnit) + this.calculateTotalPoints(targetUnit);
-            const tierMax = tier * 5; // 5, 10, 15, 20
+            const tierMax = tier * 4; // 4, 8, 12, 16
             if (sumPoints <= tierMax) {
               const { level } = this.calculateTierAndLevel(sumPoints);
               targetUnit.level = level;
               updatedUnits.splice(unitIndex, 1);
             } else {
-              const nextTierLevel1Cost = tierMax + 1; // e.g. 6, 11, 16
+              const nextTierLevel1Cost = tierMax + 1; // e.g. 5->6, 8->9, 12->13
               // Promote target to next tier level 1
               targetUnit.tier = Math.min(4, tier + 1);
-              targetUnit.level = targetUnit.tier === 4 ? 1 : 1;
+              targetUnit.level = 1;
               // Remainder stays on starting tile
               let remainderPoints = sumPoints - nextTierLevel1Cost;
               if (remainderPoints > 0) {
@@ -153,13 +159,12 @@ export class GameEngineService {
             return updatedUnits; // blocked by isValidMove; safety
           }
         } else {
-            // Combat Logic (20% Attrition Rule with ceil)
+            // Combat Logic (Direct A - D)
             const attackerPoints = this.calculateTotalPoints(movingUnit);
             const defenderPoints = this.calculateTotalPoints(targetUnit);
 
             if (attackerPoints > defenderPoints) {
-              const damage = Math.ceil(defenderPoints * 0.2);
-              const newPoints = Math.max(1, attackerPoints - damage);
+              const newPoints = Math.max(1, attackerPoints - defenderPoints);
               const { tier, level } = this.calculateTierAndLevel(newPoints);
               
               movingUnit.tier = tier;
@@ -168,8 +173,7 @@ export class GameEngineService {
               updatedUnits.splice(targetUnitIndex, 1); // Remove defender
               // movingUnit moves to target (below)
             } else if (attackerPoints < defenderPoints) {
-              const damage = Math.ceil(attackerPoints * 0.2);
-              const newPoints = Math.max(1, defenderPoints - damage);
+              const newPoints = Math.max(1, defenderPoints - attackerPoints);
               const { tier, level } = this.calculateTierAndLevel(newPoints);
               
               const defender = { ...targetUnit, tier, level };
@@ -231,19 +235,14 @@ export class GameEngineService {
 
   // --- Helper Methods ---
   
-  // Total Points = (Tier - 1) * 4 + Level
-  // T1L1=1, T1L4=4, T2L1=5
   private calculateTotalPoints(unit: Unit): number {
-    return (unit.tier - 1) * 5 + unit.level;
+    return (unit.tier - 1) * 4 + unit.level;
   }
 
   private calculateTierAndLevel(points: number): { tier: number, level: number } {
-    let tier = Math.floor((points - 1) / 5) + 1;
-    let level = ((points - 1) % 5) + 1;
-    if (tier > 4) {
-      tier = 4;
-      level = 5;
-    }
+    let tier = Math.floor((points - 1) / 4) + 1;
+    let level = ((points - 1) % 4) + 1;
+    if (tier > 4) { tier = 4; level = 4; }
     return { tier, level };
   }
 
@@ -321,13 +320,12 @@ export class GameEngineService {
     this.turnSignal.update(t => t + 1);
     
     if (this.turnSignal() % 2 === 0) { 
-        this.spawnUnit('player');
-        this.spawnUnit('ai');
+        this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai + 1 }));
     }
 
     if (this.gameStatus() === 'playing') {
         if (this.turnSignal() % 2 === 0) {
-            setTimeout(() => this.aiTurn(), 500);
+            setTimeout(() => this.aiTurn(), 1000);
         }
     }
 
@@ -339,6 +337,7 @@ export class GameEngineService {
         }
       }
     }
+    this.deployTargetsSignal.set([]);
   }
 
   // --- AI Logic ---
@@ -408,30 +407,10 @@ export class GameEngineService {
 
   spawnUnit(owner: Owner) {
     const basePosition: Position = owner === 'player' ? { x: 0, y: 0 } : { x: 9, y: 9 };
-    const candidates: Position[] = [];
-    candidates.push(basePosition);
-    for (let d = 1; d <= 2; d++) {
-      for (let dx = -d; dx <= d; dx++) {
-        for (let dy = -d; dy <= d; dy++) {
-          const x = basePosition.x + dx;
-          const y = basePosition.y + dy;
-          if (x < 0 || x >= this.gridSize || y < 0 || y >= this.gridSize) continue;
-          if (x === basePosition.x && y === basePosition.y) continue;
-          candidates.push({ x, y });
-        }
-      }
-    }
     this.unitsSignal.update(units => {
-      const occupied = new Set(units.map(u => `${u.position.x},${u.position.y}`));
-      const spot = candidates.find(p => !occupied.has(`${p.x},${p.y}`));
-      if (!spot) return units;
-      const newUnit: Unit = {
-        id: crypto.randomUUID(),
-        position: { ...spot },
-        level: 1,
-        tier: 1,
-        owner
-      };
+      const occupied = units.some(u => u.position.x === basePosition.x && u.position.y === basePosition.y);
+      if (occupied) return units;
+      const newUnit: Unit = { id: crypto.randomUUID(), position: { ...basePosition }, level: 1, tier: 1, owner };
       return [...units, newUnit];
     });
   }
@@ -461,5 +440,45 @@ export class GameEngineService {
       positions.push({ x, y });
     }
     return positions;
+  }
+
+  getBasePosition(owner: Owner): Position {
+    return owner === 'player' ? { x: 0, y: 0 } : { x: 9, y: 9 };
+  }
+
+  startDeployFromBase() {
+    const reserves = this.reservePointsSignal().player;
+    const base = this.getBasePosition('player');
+    if (reserves <= 0) {
+      this.deployTargetsSignal.set([]);
+      return;
+    }
+    const targets: Position[] = [];
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue;
+        const x = base.x + dx;
+        const y = base.y + dy;
+        if (x < 0 || x >= this.gridSize || y < 0 || y >= this.gridSize) continue;
+        const occupied = this.getUnitAt(x, y);
+        if (!occupied) targets.push({ x, y });
+      }
+    }
+    this.deployTargetsSignal.set(targets);
+  }
+
+  isDeployTarget(x: number, y: number): boolean {
+    return this.deployTargetsSignal().some(p => p.x === x && p.y === y);
+  }
+
+  deployTo(target: Position) {
+    if (!this.isDeployTarget(target.x, target.y)) return;
+    if (this.reservePointsSignal().player <= 0) return;
+    this.unitsSignal.update(units => {
+      const newUnit: Unit = { id: crypto.randomUUID(), position: { ...target }, level: 1, tier: 1, owner: 'player' };
+      return [...units, newUnit];
+    });
+    this.reservePointsSignal.update(r => ({ player: r.player - 1, ai: r.ai }));
+    this.deployTargetsSignal.set([]);
   }
 }

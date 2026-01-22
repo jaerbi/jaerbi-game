@@ -16,6 +16,16 @@ export class App {
   onTileClick(x: number, y: number) {
     if (this.gameEngine.gameStatus() !== 'playing') return;
 
+    if (this.gameEngine.isDeployTarget(x, y)) {
+      this.gameEngine.deployTo({ x, y });
+      return;
+    }
+
+    if (x === 0 && y === 0) {
+      this.gameEngine.startDeployFromBase();
+      return;
+    }
+
     const unit = this.gameEngine.getUnitAt(x, y);
 
     // If a unit is selected and we click on a valid move tile, move it
