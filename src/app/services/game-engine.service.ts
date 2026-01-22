@@ -129,16 +129,23 @@ export class GameEngineService {
             return updatedUnits;
           }
         } else {
-            const attackerPower = this.calculatePower(movingUnit);
-            const defenderPower = this.calculatePower(targetUnit);
-
-            if (attackerPower > defenderPower) {
-                updatedUnits.splice(targetUnitIndex, 1);
-            } else if (attackerPower < defenderPower) {
-                updatedUnits.splice(unitIndex, 1);
-                return updatedUnits;
+            const attackerPoints = this.calculateTotalPoints(movingUnit);
+            const defenderPoints = this.calculateTotalPoints(targetUnit);
+            if (attackerPoints > defenderPoints) {
+              const remaining = attackerPoints - defenderPoints;
+              const { tier, level } = this.calculateTierAndLevel(remaining);
+              movingUnit.tier = tier;
+              movingUnit.level = level;
+              updatedUnits.splice(targetUnitIndex, 1);
+            } else if (attackerPoints < defenderPoints) {
+              const remaining = defenderPoints - attackerPoints;
+              const { tier, level } = this.calculateTierAndLevel(remaining);
+              const defender = { ...targetUnit, tier, level };
+              updatedUnits[targetUnitIndex] = defender;
+              updatedUnits.splice(unitIndex, 1);
+              return updatedUnits;
             } else {
-                return updatedUnits.filter(u => u.id !== movingUnit.id && u.id !== targetUnit.id);
+              return updatedUnits.filter(u => u.id !== movingUnit.id && u.id !== targetUnit.id);
             }
         }
       }
@@ -165,46 +172,21 @@ export class GameEngineService {
   // Total Points = (Tier - 1) * 4 + Level
   // T1L1=1, T1L4=4, T2L1=5
   private calculateTotalPoints(unit: Unit): number {
-    return (unit.tier - 1) * 4 + unit.level;
+    return (unit.tier - 1) * 5 + unit.level;
   }
 
   private calculateTierAndLevel(points: number): { tier: number, level: number } {
-    // Max Tier 4, Level 5 -> Points = (3)*4 + 5 = 17
-    // Actually, T4 can go up to Level 5. T1-T3 evolve at Level 5 (Points > 4, > 8, > 12).
-    
-    // Reverse:
-    // Tier = floor((Points - 1) / 4) + 1
-    // Level = ((Points - 1) % 4) + 1
-    
-    let tier = Math.floor((points - 1) / 4) + 1;
-    let level = ((points - 1) % 4) + 1;
-
-    // Cap at Tier 4
+    let tier = Math.floor((points - 1) / 5) + 1;
+    let level = ((points - 1) % 5) + 1;
     if (tier > 4) {
-        tier = 4;
-        // If points exceed T4 max, we should just cap at T4 L5?
-        // Logic: T4 L5 is max.
-        // T4 starts at point 13 ( (3*4)+1 ).
-        // T4 L5 is point 17.
-        if (points >= 17) {
-            level = 5;
-        } else {
-            // Recalculate level for T4 if points are like 13,14,15,16
-            // Wait, the formula handles 13->L1, 16->L4.
-            // If points is 17 (from 13+4?), formula gives T5 L1.
-            // We want T4 L5.
-            if (tier === 5 && level === 1) {
-                tier = 4;
-                level = 5;
-            }
-        }
+      tier = 4;
+      level = 5;
     }
-    
     return { tier, level };
   }
 
   private calculatePower(unit: Unit): number {
-      return (unit.tier * 10) + unit.level;
+      return this.calculateTotalPoints(unit);
   }
 
   private checkBaseDefeat() {
@@ -282,7 +264,7 @@ export class GameEngineService {
 
     if (this.gameStatus() === 'playing') {
         if (this.turnSignal() % 2 === 0) {
-            setTimeout(() => this.aiTurn(), 500);
+            setTimeout(() => this.aiTurn(), 1000);
         }
     }
 
@@ -324,20 +306,20 @@ export class GameEngineService {
             const targetUnit = this.getUnitAt(move.x, move.y);
             if (targetUnit) {
                 if (targetUnit.owner === 'ai') {
-                    // Merge
-                    score += 50; 
-                    const mergedPoints = this.calculateTotalPoints(unit) + this.calculateTotalPoints(targetUnit);
-                    const { tier } = this.calculateTierAndLevel(mergedPoints);
-                    if (tier > unit.tier) score += 30; // Tier Up bonus
+                    if (targetUnit.tier === unit.tier) {
+                      score += 50; 
+                      const mergedPoints = this.calculateTotalPoints(unit) + this.calculateTotalPoints(targetUnit);
+                      const { tier } = this.calculateTierAndLevel(mergedPoints);
+                      if (tier > unit.tier) score += 30;
+                    }
                 } else {
-                    // Combat Analysis
                     const enemyPower = this.calculatePower(targetUnit);
                     if (myPower > enemyPower) {
-                        score += 100 + (enemyPower * 2); // Kill weak
+                        score += 100 + (enemyPower * 2);
                     } else if (myPower < enemyPower) {
-                        score -= 500; // Avoid suicide
+                        score -= 500;
                     } else {
-                        score -= 50; // Avoid draw unless desperate?
+                        score -= 50;
                     }
                 }
             }
