@@ -122,42 +122,44 @@ export class GameEngineService {
       if (targetUnitIndex !== -1) {
         const targetUnit = updatedUnits[targetUnitIndex];
         if (targetUnit.owner === movingUnit.owner) {
-          // Merge Logic (New Rule: Level Summing & Remainder)
+          // Merge Logic (Point-based Sum & Remainder)
           if (targetUnit.tier === movingUnit.tier) {
-            const sumLevels = movingUnit.level + targetUnit.level;
-            
-            if (sumLevels <= 5) {
-                // Simple Merge
-                targetUnit.level = sumLevels;
-                updatedUnits.splice(unitIndex, 1); // Remove moving unit
+            const tier = targetUnit.tier;
+            const sumPoints = this.calculateTotalPoints(movingUnit) + this.calculateTotalPoints(targetUnit);
+            const tierMax = tier * 5; // 5, 10, 15, 20
+            if (sumPoints <= tierMax) {
+              const { level } = this.calculateTierAndLevel(sumPoints);
+              targetUnit.level = level;
+              updatedUnits.splice(unitIndex, 1);
             } else {
-                // Evolution + Remainder
-                const remainder = sumLevels - 5;
-                
-                // Target evolves
-                targetUnit.tier += 1;
-                targetUnit.level = 1;
-                if (targetUnit.tier > 4) { // Cap at T4L5
-                    targetUnit.tier = 4;
-                    targetUnit.level = 5;
-                }
-                
-                // Moving unit becomes remainder (stays at old position)
-                movingUnit.level = remainder;
-                updatedUnits[unitIndex] = movingUnit; // Update in place
+              const nextTierLevel1Cost = tierMax + 1; // e.g. 6, 11, 16
+              // Promote target to next tier level 1
+              targetUnit.tier = Math.min(4, tier + 1);
+              targetUnit.level = targetUnit.tier === 4 ? 1 : 1;
+              // Remainder stays on starting tile
+              let remainderPoints = sumPoints - nextTierLevel1Cost;
+              if (remainderPoints > 0) {
+                const remainderTL = this.calculateTierAndLevel(remainderPoints);
+                movingUnit.tier = remainderTL.tier;
+                movingUnit.level = remainderTL.level;
+                updatedUnits[unitIndex] = movingUnit;
                 remainderId = movingUnit.id;
+              } else {
+                updatedUnits.splice(unitIndex, 1);
+              }
             }
             merged = true;
           } else {
-            return updatedUnits; // Should be blocked by isValidMove, but safety check
+            return updatedUnits; // blocked by isValidMove; safety
           }
         } else {
-            // Combat Logic (50% Attrition Rule)
+            // Combat Logic (20% Attrition Rule with ceil)
             const attackerPoints = this.calculateTotalPoints(movingUnit);
             const defenderPoints = this.calculateTotalPoints(targetUnit);
 
             if (attackerPoints > defenderPoints) {
-              const newPoints = attackerPoints - Math.floor(defenderPoints / 2);
+              const damage = Math.ceil(defenderPoints * 0.2);
+              const newPoints = Math.max(1, attackerPoints - damage);
               const { tier, level } = this.calculateTierAndLevel(newPoints);
               
               movingUnit.tier = tier;
@@ -166,7 +168,8 @@ export class GameEngineService {
               updatedUnits.splice(targetUnitIndex, 1); // Remove defender
               // movingUnit moves to target (below)
             } else if (attackerPoints < defenderPoints) {
-              const newPoints = defenderPoints - Math.floor(attackerPoints / 2);
+              const damage = Math.ceil(attackerPoints * 0.2);
+              const newPoints = Math.max(1, defenderPoints - damage);
               const { tier, level } = this.calculateTierAndLevel(newPoints);
               
               const defender = { ...targetUnit, tier, level };
@@ -405,42 +408,31 @@ export class GameEngineService {
 
   spawnUnit(owner: Owner) {
     const basePosition: Position = owner === 'player' ? { x: 0, y: 0 } : { x: 9, y: 9 };
-    
-    this.unitsSignal.update(units => {
-      const existingUnitIndex = units.findIndex(u => 
-        u.position.x === basePosition.x && 
-        u.position.y === basePosition.y && 
-        u.owner === owner
-      );
-
-      if (existingUnitIndex !== -1) {
-        const updatedUnits = [...units];
-        const existingUnit = { ...updatedUnits[existingUnitIndex] };
-        
-        // Spawn Merge: Add T1L1 (1 point)
-        const totalPoints = this.calculateTotalPoints(existingUnit) + 1; // +1 point for new spawn
-        const { tier, level } = this.calculateTierAndLevel(totalPoints);
-        existingUnit.tier = tier;
-        existingUnit.level = level;
-        
-        updatedUnits[existingUnitIndex] = existingUnit;
-        
-        if (owner === 'player') {
-             this.lastMergedUnitIdSignal.set(existingUnit.id);
-             setTimeout(() => this.lastMergedUnitIdSignal.set(null), 300);
+    const candidates: Position[] = [];
+    candidates.push(basePosition);
+    for (let d = 1; d <= 2; d++) {
+      for (let dx = -d; dx <= d; dx++) {
+        for (let dy = -d; dy <= d; dy++) {
+          const x = basePosition.x + dx;
+          const y = basePosition.y + dy;
+          if (x < 0 || x >= this.gridSize || y < 0 || y >= this.gridSize) continue;
+          if (x === basePosition.x && y === basePosition.y) continue;
+          candidates.push({ x, y });
         }
-
-        return updatedUnits;
-      } else {
-        const newUnit: Unit = {
-          id: crypto.randomUUID(),
-          position: { ...basePosition },
-          level: 1,
-          tier: 1,
-          owner: owner
-        };
-        return [...units, newUnit];
       }
+    }
+    this.unitsSignal.update(units => {
+      const occupied = new Set(units.map(u => `${u.position.x},${u.position.y}`));
+      const spot = candidates.find(p => !occupied.has(`${p.x},${p.y}`));
+      if (!spot) return units;
+      const newUnit: Unit = {
+        id: crypto.randomUUID(),
+        position: { ...spot },
+        level: 1,
+        tier: 1,
+        owner
+      };
+      return [...units, newUnit];
     });
   }
 
