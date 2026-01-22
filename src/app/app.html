@@ -1,9 +1,10 @@
 <div class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
   <h1 class="text-3xl font-bold mb-4">Turn-Based Strategy</h1>
-  <div class="mb-4 text-xl flex gap-4">
+  <div class="mb-4 text-xl flex gap-4 items-center">
     <div>Turn: <span class="font-mono text-yellow-400">{{ gameEngine.turn() }}</span></div>
+    <div>Wood: <span class="font-mono text-green-400">{{ gameEngine.resources().wood }}</span></div>
     @if (gameEngine.gameStatus() !== 'playing') {
-       <div class="font-bold text-red-500 animate-pulse">{{ gameEngine.gameStatus() | titlecase }}</div>
+      <div class="font-bold text-red-500 animate-pulse">{{ gameEngine.gameStatus() | titlecase }}</div>
     }
   </div>
 
@@ -25,8 +26,12 @@
   <div class="grid grid-cols-10 gap-1 bg-gray-800 p-2 rounded-lg border border-gray-700 select-none relative">
     
     <!-- Base Indicators -->
-    <div class="absolute top-2 left-2 w-12 h-12 border-2 border-blue-500/30 rounded pointer-events-none"></div>
-    <div class="absolute bottom-2 right-2 w-12 h-12 border-2 border-red-500/30 rounded pointer-events-none"></div>
+    <div class="absolute top-2 left-2 w-12 h-12 border-2 border-blue-500/30 rounded pointer-events-none flex items-center justify-center">
+      <span class="text-white font-bold bg-blue-600 px-1 rounded shadow text-xs">{{ gameEngine.baseHealth().player }}</span>
+    </div>
+    <div class="absolute bottom-2 right-2 w-12 h-12 border-2 border-red-500/30 rounded pointer-events-none flex items-center justify-center">
+      <span class="text-white font-bold bg-red-600 px-1 rounded shadow text-xs">{{ gameEngine.baseHealth().ai }}</span>
+    </div>
 
     @for (y of gameEngine.gridRows; track y) {
       @for (x of gameEngine.gridCols; track x) {
@@ -35,7 +40,20 @@
           class="w-12 h-12 rounded flex items-center justify-center relative border transition-colors duration-200 cursor-pointer"
           [class.bg-gray-700]="!gameEngine.isValidMove(x, y)"
           [class.border-gray-600]="!gameEngine.isValidMove(x, y)"
+          [class.bg-blue-900]="x === 0 && y === 0"
+          [class.bg-red-900]="x === 9 && y === 9"
+          [class.border-4]="(x === 0 && y === 0) || (x === 9 && y === 9)"
+          [class.border-blue-400]="x === 0 && y === 0"
+          [class.border-red-400]="x === 9 && y === 9"
+          [class.ring-2]="(x === 0 && y === 0) || (x === 9 && y === 9)"
+          [class.ring-blue-300]="(x === 0 && y === 0) && gameEngine.baseDeployActive()"
+          [class.ring-red-300]="x === 9 && y === 9"
+          [class.bg-green-800]="gameEngine.isForest(x, y) && !gameEngine.isValidMove(x, y)"
+          [class.bg-amber-900]="gameEngine.isDeployTarget(x, y)"
+          [class.border-amber-500]="gameEngine.isDeployTarget(x, y)"
           
+          [class.bg-gray-950]="!gameEngine.isVisibleToPlayer(x, y)"
+          [class.border-gray-800]="!gameEngine.isVisibleToPlayer(x, y)"
           [class.bg-green-900]="gameEngine.isValidMove(x, y) && !gameEngine.getUnitAt(x, y)"
           [class.border-green-500]="gameEngine.isValidMove(x, y) && !gameEngine.getUnitAt(x, y)"
           
@@ -49,9 +67,68 @@
         >
            <!-- Grid coordinate helper -->
            <span class="absolute top-0 right-0 text-[8px] text-gray-500 p-0.5 pointer-events-none">{{x}},{{y}}</span>
-           
-           <!-- Unit Rendering -->
+           @if (gameEngine.isForest(x, y) && gameEngine.isVisibleToPlayer(x, y)) {
+             <span class="absolute bottom-0 left-0 text-[10px] text-green-400 p-0.5 font-bold pointer-events-none">W</span>
+           }
+           @if (x === 0 && y === 0) {
+             <span class="absolute inset-x-0 top-0 m-0.5 text-[10px] font-extrabold text-blue-900 bg-blue-300/80 rounded px-1 pointer-events-none">
+               {{ gameEngine.baseHealth().player }}
+             </span>
+             <span class="absolute left-0 bottom-0 m-0.5 text-[10px] font-extrabold text-white bg-blue-600/90 rounded px-1 pointer-events-none">
+               {{ gameEngine.reservePoints().player }}
+             </span>
+           }
+           @if (x === 9 && y === 9) {
+             <span class="absolute inset-x-0 top-0 m-0.5 text-[10px] font-extrabold text-red-900 bg-red-300/80 rounded px-1 pointer-events-none">
+               {{ gameEngine.baseHealth().ai }}
+             </span>
+             <span class="absolute right-0 bottom-0 m-0.5 text-[10px] font-extrabold text-white bg-red-600/90 rounded px-1 pointer-events-none">
+               {{ gameEngine.reservePoints().ai }}
+             </span>
+           }
+
+           @if (x < 9) {
+             @if (gameEngine.getWallBetween(x, y, x + 1, y); as vWall) {
+               <div
+                 class="absolute top-0 right-0 h-full w-1 bg-lime-400"
+                 [class.opacity-100]="vWall.hitsRemaining === 3"
+                 [class.opacity-70]="vWall.hitsRemaining === 2"
+                 [class.opacity-40]="vWall.hitsRemaining === 1">
+               </div>
+             } @else {
+               <div
+                 class="absolute top-0 right-0 h-full w-1"
+                 [class.bg-lime-700]="gameEngine.buildMode()"
+                 [class.bg-transparent]="!gameEngine.buildMode()"
+                 [class.cursor-pointer]="gameEngine.buildMode()"
+                 [class.pointer-events-none]="!gameEngine.buildMode()"
+                 (click)="onEdgeClick($event, x, y, x + 1, y)">
+               </div>
+             }
+           }
+
+           @if (y < 9) {
+             @if (gameEngine.getWallBetween(x, y, x, y + 1); as hWall) {
+               <div
+                 class="absolute left-0 bottom-0 w-full h-1 bg-lime-400"
+                 [class.opacity-100]="hWall.hitsRemaining === 3"
+                 [class.opacity-70]="hWall.hitsRemaining === 2"
+                 [class.opacity-40]="hWall.hitsRemaining === 1">
+               </div>
+             } @else {
+               <div
+                 class="absolute left-0 bottom-0 w-full h-1"
+                 [class.bg-lime-700]="gameEngine.buildMode()"
+                 [class.bg-transparent]="!gameEngine.buildMode()"
+                 [class.cursor-pointer]="gameEngine.buildMode()"
+                 [class.pointer-events-none]="!gameEngine.buildMode()"
+                 (click)="onEdgeClick($event, x, y, x, y + 1)">
+               </div>
+             }
+           }
+
            @if (gameEngine.getUnitAt(x, y); as unit) {
+             @if (unit.owner === 'player' || gameEngine.isVisibleToPlayer(x, y)) {
              <div 
                class="w-10 h-10 flex items-center justify-center font-bold transition-all duration-300 shadow-lg pointer-events-none"
                [class.bg-blue-500]="unit.owner === 'player'"
@@ -76,21 +153,51 @@
                [class.ring-offset-2]="gameEngine.selectedUnitId() === unit.id"
                [class.ring-offset-gray-800]="gameEngine.selectedUnitId() === unit.id"
                [class.scale-110]="gameEngine.selectedUnitId() === unit.id && unit.tier !== 4"
-               [class.scale-90]="gameEngine.selectedUnitId() === unit.id && unit.tier === 4"
-               [class.scale-125]="gameEngine.lastMergedUnitId() === unit.id" 
-             >
-               <span [class.-rotate-45]="unit.tier === 4">{{ unit.level }}</span>
-             </div>
+                [class.scale-90]="gameEngine.selectedUnitId() === unit.id && unit.tier === 4"
+                [class.scale-125]="gameEngine.lastMergedUnitId() === unit.id" 
+                [class.animate-bounce]="gameEngine.lastRemainderUnitId() === unit.id"
+              >
+                <span [class.-rotate-45]="unit.tier === 4">{{ unit.level }}</span>
+              </div>
+             }
            }
         </div>
       }
     }
   </div>
-  
+
+  <div class="mt-4 flex flex-col items-center gap-3">
+    <div class="flex gap-4 items-center">
+      <button
+        (click)="gameEngine.toggleBuildMode()"
+        class="px-3 py-1 rounded text-sm"
+        [class.bg-gray-700]="!gameEngine.buildMode()"
+        [class.bg-blue-700]="gameEngine.buildMode()">
+        Build Wall (10)
+      </button>
+      <button
+        (click)="gameEngine.convertWoodToReserve()"
+        class="px-3 py-1 rounded text-sm bg-green-700 hover:bg-green-600">
+        Convert 20 Wood → +1 Reserve
+      </button>
+    </div>
+    <label class="flex items-center gap-2 text-sm text-gray-300">
+      <input
+        type="checkbox"
+        class="h-4 w-4 rounded border-gray-500 bg-gray-800"
+        [checked]="gameEngine.fogDebugDisabled()"
+        (change)="gameEngine.toggleFogDebug()" />
+      <span>Disable Fog of War (Debug)</span>
+    </label>
+  </div>
+
   <div class="mt-4 text-gray-400 text-sm">
     <p>Click on your (Blue) units to select.</p>
     <p>Green tiles indicate valid moves.</p>
     <p>Cyan pulsing tiles indicate valid <span class="text-cyan-400 font-bold">MERGE</span> targets.</p>
     <p>Capture the Enemy Base (Red) at (9,9) to win!</p>
   </div>
+</div>
+<div class="fixed bottom-4 right-4 text-[12px] text-gray-500">
+  version: 0.0.0 | Created by jaerbi and just
 </div>

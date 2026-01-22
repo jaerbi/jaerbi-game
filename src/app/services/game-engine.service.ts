@@ -1,6 +1,14 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { Unit, Position, Owner } from '../models/unit.model';
 
+interface Wall {
+  id: string;
+  tile1: Position;
+  tile2: Position;
+  hitsRemaining: number;
+  owner: Owner;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -13,6 +21,18 @@ export class GameEngineService {
   private selectedUnitIdSignal = signal<string | null>(null);
   private gameStatusSignal = signal<'playing' | 'player wins' | 'ai wins'>('playing');
   private lastMergedUnitIdSignal = signal<string | null>(null);
+  private lastRemainderUnitIdSignal = signal<string | null>(null);
+  private resourcesSignal = signal<{ wood: number }>({ wood: 0 });
+  private forestsSignal = signal<Position[]>([]);
+  private baseHealthSignal = signal<{ player: number; ai: number }>({ player: 100, ai: 100 });
+  private reservePointsSignal = signal<{ player: number; ai: number }>({ player: 0, ai: 0 });
+  private deployTargetsSignal = signal<Position[]>([]);
+  private baseDeployActiveSignal = signal<boolean>(false);
+  private wallsSignal = signal<Wall[]>([]);
+  private playerVisibilitySignal = signal<Set<string>>(new Set<string>());
+  private aiVisibilitySignal = signal<Set<string>>(new Set<string>());
+  private buildModeSignal = signal<boolean>(false);
+  private fogDebugDisabledSignal = signal<boolean>(false);
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -20,6 +40,18 @@ export class GameEngineService {
   readonly selectedUnitId = this.selectedUnitIdSignal.asReadonly();
   readonly gameStatus = this.gameStatusSignal.asReadonly();
   readonly lastMergedUnitId = this.lastMergedUnitIdSignal.asReadonly();
+  readonly lastRemainderUnitId = this.lastRemainderUnitIdSignal.asReadonly();
+  readonly resources = this.resourcesSignal.asReadonly();
+  readonly forests = this.forestsSignal.asReadonly();
+  readonly baseHealth = this.baseHealthSignal.asReadonly();
+  readonly reservePoints = this.reservePointsSignal.asReadonly();
+  readonly deployTargets = this.deployTargetsSignal.asReadonly();
+  readonly baseDeployActive = this.baseDeployActiveSignal.asReadonly();
+  readonly walls = this.wallsSignal.asReadonly();
+  readonly playerVisibility = this.playerVisibilitySignal.asReadonly();
+  readonly aiVisibility = this.aiVisibilitySignal.asReadonly();
+  readonly buildMode = this.buildModeSignal.asReadonly();
+  readonly fogDebugDisabled = this.fogDebugDisabledSignal.asReadonly();
   
   readonly selectedUnit = computed(() => 
     this.unitsSignal().find(u => u.id === this.selectedUnitIdSignal()) || null
@@ -45,8 +77,17 @@ export class GameEngineService {
     this.selectedUnitIdSignal.set(null);
     this.gameStatusSignal.set('playing');
     this.lastMergedUnitIdSignal.set(null);
-    this.spawnUnit('player');
-    this.spawnUnit('ai');
+    this.lastRemainderUnitIdSignal.set(null);
+    this.resourcesSignal.set({ wood: 0 });
+    this.baseHealthSignal.set({ player: 100, ai: 100 });
+    this.reservePointsSignal.set({ player: 5, ai: 5 });
+    this.deployTargetsSignal.set([]);
+    this.forestsSignal.set(this.generateForests());
+    this.wallsSignal.set([]);
+    this.baseDeployActiveSignal.set(false);
+    this.buildModeSignal.set(false);
+    this.fogDebugDisabledSignal.set(false);
+    this.recomputeVisibility();
   }
 
   // --- Selection & Movement ---
@@ -80,6 +121,7 @@ export class GameEngineService {
 
   private executeMove(unit: Unit, target: Position) {
     let merged = false;
+    let remainderId: string | null = null;
 
     this.unitsSignal.update(units => {
       const updatedUnits = [...units];
@@ -87,6 +129,53 @@ export class GameEngineService {
       if (unitIndex === -1) return units;
 
       const movingUnit = { ...updatedUnits[unitIndex] };
+
+      const start = { x: movingUnit.position.x, y: movingUnit.position.y };
+      const dxTotal = target.x - start.x;
+      const dyTotal = target.y - start.y;
+      const stepX = Math.sign(dxTotal);
+      const stepY = Math.sign(dyTotal);
+      const steps = Math.max(Math.abs(dxTotal), Math.abs(dyTotal));
+
+      for (let i = 1; i <= steps; i++) {
+        const from = { x: start.x + stepX * (i - 1), y: start.y + stepY * (i - 1) };
+        const to = { x: start.x + stepX * i, y: start.y + stepY * i };
+        const wall = this.getWallBetween(from.x, from.y, to.x, to.y);
+        if (wall) {
+          if (wall.owner === movingUnit.owner) {
+            return updatedUnits;
+          } else {
+            let hitStrength = 1;
+            if (movingUnit.tier >= 3) {
+              hitStrength = 3;
+            } else if (movingUnit.tier === 2) {
+              hitStrength = 2;
+            }
+            this.wallsSignal.update(ws =>
+              ws
+                .map(w =>
+                  w.id === wall.id
+                    ? { ...w, hitsRemaining: w.hitsRemaining - hitStrength }
+                    : w
+                )
+                .filter(w => w.hitsRemaining > 0)
+            );
+            return updatedUnits;
+          }
+        }
+      }
+
+      const opponentBase = movingUnit.owner === 'player' ? { x: 9, y: 9 } : { x: 0, y: 0 };
+      if (target.x === opponentBase.x && target.y === opponentBase.y) {
+        this.baseHealthSignal.update(hp => {
+          const key = movingUnit.owner === 'player' ? 'ai' : 'player';
+          const next = { ...hp };
+          next[key] = Math.max(0, next[key] - this.calculatePower(movingUnit));
+          return next;
+        });
+        updatedUnits.splice(unitIndex, 1);
+        return updatedUnits;
+      }
       
       const targetUnitIndex = updatedUnits.findIndex(u => 
         u.position.x === target.x && 
@@ -97,54 +186,116 @@ export class GameEngineService {
       if (targetUnitIndex !== -1) {
         const targetUnit = updatedUnits[targetUnitIndex];
         if (targetUnit.owner === movingUnit.owner) {
-          // Merge Logic (New)
-          const totalPoints = this.calculateTotalPoints(movingUnit) + this.calculateTotalPoints(targetUnit);
-          const { tier, level } = this.calculateTierAndLevel(totalPoints);
-          
-          movingUnit.tier = tier;
-          movingUnit.level = level;
-          
-          merged = true;
-          updatedUnits.splice(targetUnitIndex, 1);
-        } else {
-            // Combat Logic (Power-based)
-            const attackerPower = this.calculatePower(movingUnit);
-            const defenderPower = this.calculatePower(targetUnit);
-
-            if (attackerPower > defenderPower) {
-                // Attacker Wins
-                updatedUnits.splice(targetUnitIndex, 1);
-                // movingUnit moves to target (below)
-            } else if (attackerPower < defenderPower) {
-                // Defender Wins
-                updatedUnits.splice(unitIndex, 1); // Remove Attacker
-                return updatedUnits; // Return immediately, attacker is dead
+          // Merge Logic (Point-based Sum & Remainder) with 4-level tiers
+          if (targetUnit.tier === movingUnit.tier) {
+            const tier = targetUnit.tier;
+            const sumPoints = this.calculateTotalPoints(movingUnit) + this.calculateTotalPoints(targetUnit);
+            const thresholds: Record<number, number[]> = {
+              1: [1, 2, 3, 4],
+              2: [5, 10, 15, 20],
+              3: [25, 50, 75, 100],
+              4: [125, 250, 375, 500]
+            };
+            const tierMax = thresholds[tier][3];
+            if (sumPoints <= tierMax) {
+              targetUnit.points = sumPoints;
+              const tl = this.calculateTierAndLevel(targetUnit.points);
+              targetUnit.tier = tl.tier;
+              targetUnit.level = tl.level;
+              updatedUnits.splice(unitIndex, 1);
             } else {
-                // Draw - Both Removed
-                // Remove attacker (unitIndex) AND defender (targetUnitIndex)
-                // Note: Splice affects indices. 
-                // If unitIndex > targetUnitIndex, splice target first, then unitIndex - 1.
-                // Or just filter by ID.
-                return updatedUnits.filter(u => u.id !== movingUnit.id && u.id !== targetUnit.id);
+              const nextTier = Math.min(4, tier + 1);
+              const nextTierLevel1Cost = thresholds[nextTier][0];
+              targetUnit.points = nextTierLevel1Cost;
+              const tlTarget = this.calculateTierAndLevel(targetUnit.points);
+              targetUnit.tier = tlTarget.tier;
+              targetUnit.level = tlTarget.level;
+              const remainderPoints = sumPoints - nextTierLevel1Cost;
+              if (remainderPoints > 0) {
+                movingUnit.points = remainderPoints;
+                const tlMove = this.calculateTierAndLevel(movingUnit.points);
+                movingUnit.tier = tlMove.tier;
+                movingUnit.level = tlMove.level;
+                updatedUnits[unitIndex] = movingUnit;
+                remainderId = movingUnit.id;
+              } else {
+                updatedUnits.splice(unitIndex, 1);
+              }
+            }
+            merged = true;
+          } else {
+            return updatedUnits; // blocked by isValidMove; safety
+          }
+        } else {
+            // Combat Logic (Direct A - D)
+            const attackerPoints = this.calculateTotalPoints(movingUnit);
+            const defenderPoints = this.calculateTotalPoints(targetUnit);
+
+            if (attackerPoints > defenderPoints) {
+              const newPoints = Math.max(1, attackerPoints - defenderPoints);
+              const { tier, level } = this.calculateTierAndLevel(newPoints);
+              
+              movingUnit.points = newPoints;
+              movingUnit.tier = tier;
+              movingUnit.level = level;
+              
+              updatedUnits.splice(targetUnitIndex, 1); // Remove defender
+              // movingUnit moves to target (below)
+            } else if (attackerPoints < defenderPoints) {
+              const newPoints = Math.max(1, defenderPoints - attackerPoints);
+              const { tier, level } = this.calculateTierAndLevel(newPoints);
+              
+              const defender = { ...targetUnit, points: newPoints, tier, level };
+              updatedUnits[targetUnitIndex] = defender;
+              updatedUnits.splice(unitIndex, 1); // Remove attacker
+              return updatedUnits;
+            } else {
+              // Draw - Both Removed
+              return updatedUnits.filter(u => u.id !== movingUnit.id && u.id !== targetUnit.id);
             }
         }
       }
 
-      movingUnit.position = target;
+      // If moving unit wasn't removed (simple merge or defeat) or turned into remainder
+      if (updatedUnits.find(u => u.id === movingUnit.id)) {
+          // If it became a remainder, it shouldn't move. 
+          // Check if remainderId is set.
+          if (remainderId === movingUnit.id) {
+             // Do not update position, it stays behind.
+          } else {
+             movingUnit.position = target;
+             // Update the unit in the array
+             const idx = updatedUnits.findIndex(u => u.id === movingUnit.id);
+             if (idx !== -1) updatedUnits[idx] = movingUnit;
+          }
+      }
       
-      return updatedUnits.map(u => u.id === movingUnit.id ? movingUnit : u);
+      return updatedUnits;
     });
 
     if (merged) {
-      this.lastMergedUnitIdSignal.set(unit.id);
-      setTimeout(() => this.lastMergedUnitIdSignal.set(null), 300);
+      // For simple merge, the moving unit is gone, so we highlight target?
+      // Actually lastMergedUnitId usually highlights the result.
+      // In simple merge, targetUnit is the result.
+      // In remainder merge, targetUnit is the result (evolved), movingUnit is remainder.
+      
+      // We need to know which unit is the "result" of the merge to highlight it.
+      // In both cases, targetUnit is the one growing/evolving.
+      // But we don't have targetUnit ref here easily after update.
+      // Let's find unit at target position.
+      const resultUnit = this.getUnitAt(target.x, target.y);
+      if (resultUnit) {
+          this.lastMergedUnitIdSignal.set(resultUnit.id);
+          setTimeout(() => this.lastMergedUnitIdSignal.set(null), 300);
+      }
+      
+      if (remainderId) {
+          this.lastRemainderUnitIdSignal.set(remainderId);
+          setTimeout(() => this.lastRemainderUnitIdSignal.set(null), 300);
+      }
     }
 
-    // Check win only if the mover survived
-    const moverSurvivor = this.unitsSignal().find(u => u.id === unit.id);
-    if (moverSurvivor) {
-        this.checkWinCondition(moverSurvivor.owner, moverSurvivor.position);
-    }
+    this.checkBaseDefeat();
     
     if (this.gameStatus() === 'playing') {
       this.endTurn();
@@ -153,55 +304,85 @@ export class GameEngineService {
 
   // --- Helper Methods ---
   
-  // Total Points = (Tier - 1) * 4 + Level
-  // T1L1=1, T1L4=4, T2L1=5
   private calculateTotalPoints(unit: Unit): number {
-    return (unit.tier - 1) * 4 + unit.level;
+    return unit.points;
   }
-
+ 
   private calculateTierAndLevel(points: number): { tier: number, level: number } {
-    // Max Tier 4, Level 5 -> Points = (3)*4 + 5 = 17
-    // Actually, T4 can go up to Level 5. T1-T3 evolve at Level 5 (Points > 4, > 8, > 12).
-    
-    // Reverse:
-    // Tier = floor((Points - 1) / 4) + 1
-    // Level = ((Points - 1) % 4) + 1
-    
-    let tier = Math.floor((points - 1) / 4) + 1;
-    let level = ((points - 1) % 4) + 1;
-
-    // Cap at Tier 4
-    if (tier > 4) {
-        tier = 4;
-        // If points exceed T4 max, we should just cap at T4 L5?
-        // Logic: T4 L5 is max.
-        // T4 starts at point 13 ( (3*4)+1 ).
-        // T4 L5 is point 17.
-        if (points >= 17) {
-            level = 5;
-        } else {
-            // Recalculate level for T4 if points are like 13,14,15,16
-            // Wait, the formula handles 13->L1, 16->L4.
-            // If points is 17 (from 13+4?), formula gives T5 L1.
-            // We want T4 L5.
-            if (tier === 5 && level === 1) {
-                tier = 4;
-                level = 5;
-            }
+    const thresholds: Record<number, number[]> = {
+      1: [1, 2, 3, 4],
+      2: [5, 10, 15, 20],
+      3: [25, 50, 75, 100],
+      4: [125, 250, 375, 500]
+    };
+    if (points <= 0) return { tier: 1, level: 1 };
+    for (let t = 4; t >= 1; t--) {
+      const arr = thresholds[t];
+      for (let l = arr.length; l >= 1; l--) {
+        if (points >= arr[l - 1]) {
+          return { tier: t, level: l };
         }
+      }
     }
-    
-    return { tier, level };
+    return { tier: 1, level: 1 };
+  }
+ 
+  private getHighestAffordableCost(reserves: number): number {
+    const costs = [500, 375, 250, 125, 100, 75, 50, 25, 20, 15, 10, 5, 4, 3, 2, 1];
+    for (const c of costs) {
+      if (reserves >= c) return c;
+    }
+    return 0;
+  }
+  
+  private inBounds(x: number, y: number): boolean {
+    return x >= 0 && x < this.gridSize && y >= 0 && y < this.gridSize;
+  }
+  
+  private recomputeVisibility() {
+    const playerSet = new Set<string>();
+    const aiSet = new Set<string>();
+    const mark = (set: Set<string>, x: number, y: number) => {
+      if (this.inBounds(x, y)) set.add(`${x},${y}`);
+    };
+    const markRadius = (set: Set<string>, center: Position, radius: number) => {
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+          const x = center.x + dx;
+          const y = center.y + dy;
+          if (Math.max(Math.abs(dx), Math.abs(dy)) <= radius) mark(set, x, y);
+        }
+      }
+    };
+    markRadius(playerSet, this.getBasePosition('player'), 3);
+    markRadius(aiSet, this.getBasePosition('ai'), 3);
+    for (const u of this.unitsSignal()) {
+      const targetSet = u.owner === 'player' ? playerSet : aiSet;
+      markRadius(targetSet, u.position, 2);
+    }
+    this.playerVisibilitySignal.set(playerSet);
+    this.aiVisibilitySignal.set(aiSet);
+  }
+  
+  isVisibleToPlayer(x: number, y: number): boolean {
+    if (this.fogDebugDisabledSignal()) return true;
+    return this.playerVisibilitySignal().has(`${x},${y}`);
+  }
+  
+  isVisibleToAi(x: number, y: number): boolean {
+    if (this.fogDebugDisabledSignal()) return true;
+    return this.aiVisibilitySignal().has(`${x},${y}`);
   }
 
   private calculatePower(unit: Unit): number {
-      return (unit.tier * 10) + unit.level;
+      return this.calculateTotalPoints(unit);
   }
 
-  private checkWinCondition(moverOwner: Owner, pos: Position) {
-    if (moverOwner === 'player' && pos.x === 9 && pos.y === 9) {
+  private checkBaseDefeat() {
+    const hp = this.baseHealthSignal();
+    if (hp.ai <= 0) {
       this.gameStatusSignal.set('player wins');
-    } else if (moverOwner === 'ai' && pos.x === 0 && pos.y === 0) {
+    } else if (hp.player <= 0) {
       this.gameStatusSignal.set('ai wins');
     }
   }
@@ -233,30 +414,43 @@ export class GameEngineService {
     // BLOCKED by obstacles.
     
     for (const dir of directions) {
-        for (let i = 1; i <= range; i++) {
-            const newPos = { x: unit.position.x + (dir.x * i), y: unit.position.y + (dir.y * i) };
-            
-            if (newPos.x >= 0 && newPos.x < this.gridSize && newPos.y >= 0 && newPos.y < this.gridSize) {
-                const targetUnit = this.getUnitAt(newPos.x, newPos.y);
-                
-                if (!targetUnit) {
-                    moves.push(newPos);
-                } else {
-                    // Unit present
-                    if (targetUnit.owner === unit.owner) {
-                        // Friendly -> Merge (Valid Move)
-                        moves.push(newPos);
-                    } else {
-                        // Enemy -> Attack (Valid Move)
-                        moves.push(newPos);
-                    }
-                    // Cannot move PAST a unit (Block)
-                    break;
-                }
-            } else {
-                break; // Out of bounds
+      for (let i = 1; i <= range; i++) {
+        const newPos = {
+          x: unit.position.x + dir.x * i,
+          y: unit.position.y + dir.y * i
+        };
+
+        if (newPos.x >= 0 && newPos.x < this.gridSize && newPos.y >= 0 && newPos.y < this.gridSize) {
+          const from = {
+            x: unit.position.x + dir.x * (i - 1),
+            y: unit.position.y + dir.y * (i - 1)
+          };
+          const wall = this.getWallBetween(from.x, from.y, newPos.x, newPos.y);
+          if (wall) {
+            if (wall.owner !== unit.owner) {
+              moves.push(newPos);
             }
+            break;
+          }
+
+          const targetUnit = this.getUnitAt(newPos.x, newPos.y);
+
+          if (!targetUnit) {
+            moves.push(newPos);
+          } else {
+            if (targetUnit.owner === unit.owner) {
+              if (targetUnit.tier === unit.tier) {
+                moves.push(newPos);
+              }
+            } else {
+              moves.push(newPos);
+            }
+            break;
+          }
+        } else {
+          break;
         }
+      }
     }
     return moves;
   }
@@ -268,8 +462,7 @@ export class GameEngineService {
     this.turnSignal.update(t => t + 1);
     
     if (this.turnSignal() % 2 === 0) { 
-        this.spawnUnit('player');
-        this.spawnUnit('ai');
+        this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai + 1 }));
     }
 
     if (this.gameStatus() === 'playing') {
@@ -277,6 +470,18 @@ export class GameEngineService {
             setTimeout(() => this.aiTurn(), 500);
         }
     }
+
+    if (this.gameStatus() === 'playing') {
+      if (this.turnSignal() % 2 === 1) {
+        const ownedOnForest = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
+        if (ownedOnForest > 0) {
+          this.resourcesSignal.update(r => ({ wood: r.wood + ownedOnForest * 2 }));
+        }
+      }
+    }
+    this.deployTargetsSignal.set([]);
+    this.baseDeployActiveSignal.set(false);
+    this.recomputeVisibility();
   }
 
   // --- AI Logic ---
@@ -284,10 +489,46 @@ export class GameEngineService {
   private aiTurn() {
     if (this.gameStatus() !== 'playing') return;
 
+    const aiReserves = this.reservePointsSignal().ai;
+    if (aiReserves >= 1) {
+      const base = this.getBasePosition('ai');
+      const targets: Position[] = [];
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (dx === 0 && dy === 0) continue;
+          const x = base.x + dx;
+          const y = base.y + dy;
+          if (x < 0 || x >= this.gridSize || y < 0 || y >= this.gridSize) continue;
+          const occupiedUnit = this.getUnitAt(x, y);
+          if (!occupiedUnit) targets.push({ x, y });
+        }
+      }
+      if (targets.length > 0) {
+        const cost = this.getHighestAffordableCost(aiReserves);
+        if (cost > 0) {
+          const pos = targets[Math.floor(Math.random() * targets.length)];
+          const tl = this.calculateTierAndLevel(cost);
+          this.unitsSignal.update(units => {
+            const newUnit: Unit = {
+              id: crypto.randomUUID(),
+              position: { ...pos },
+              level: tl.level,
+              tier: tl.tier,
+              points: cost,
+              owner: 'ai'
+            };
+            return [...units, newUnit];
+          });
+          this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai - cost }));
+          this.recomputeVisibility();
+        }
+      }
+    }
+ 
     const aiUnits = this.unitsSignal().filter(u => u.owner === 'ai');
     if (aiUnits.length === 0) {
-        this.endTurn(); 
-        return;
+      this.endTurn();
+      return;
     }
 
     let bestMove: { unit: Unit, target: Position, score: number } | null = null;
@@ -307,22 +548,28 @@ export class GameEngineService {
             const targetUnit = this.getUnitAt(move.x, move.y);
             if (targetUnit) {
                 if (targetUnit.owner === 'ai') {
-                    // Merge
-                    score += 50; 
-                    const mergedPoints = this.calculateTotalPoints(unit) + this.calculateTotalPoints(targetUnit);
-                    const { tier } = this.calculateTierAndLevel(mergedPoints);
-                    if (tier > unit.tier) score += 30; // Tier Up bonus
+                    if (targetUnit.tier === unit.tier) {
+                      score += 50; 
+                      const mergedPoints = this.calculateTotalPoints(unit) + this.calculateTotalPoints(targetUnit);
+                      const { tier } = this.calculateTierAndLevel(mergedPoints);
+                      if (tier > unit.tier) score += 30;
+                    }
                 } else {
-                    // Combat Analysis
-                    const enemyPower = this.calculatePower(targetUnit);
-                    if (myPower > enemyPower) {
-                        score += 100 + (enemyPower * 2); // Kill weak
-                    } else if (myPower < enemyPower) {
-                        score -= 500; // Avoid suicide
-                    } else {
-                        score -= 50; // Avoid draw unless desperate?
+                    if (this.isVisibleToAi(move.x, move.y)) {
+                      const enemyPower = this.calculatePower(targetUnit);
+                      if (myPower > enemyPower) {
+                          score += 100 + (enemyPower * 2);
+                      } else if (myPower < enemyPower) {
+                          score -= 500;
+                      } else {
+                          score -= 50;
+                      }
                     }
                 }
+            }
+
+            if (this.isForest(move.x, move.y)) {
+                score += 30;
             }
 
             if (!bestMove || score > bestMove.score) {
@@ -342,50 +589,151 @@ export class GameEngineService {
 
   spawnUnit(owner: Owner) {
     const basePosition: Position = owner === 'player' ? { x: 0, y: 0 } : { x: 9, y: 9 };
-    
     this.unitsSignal.update(units => {
-      const existingUnitIndex = units.findIndex(u => 
-        u.position.x === basePosition.x && 
-        u.position.y === basePosition.y && 
-        u.owner === owner
-      );
-
-      if (existingUnitIndex !== -1) {
-        const updatedUnits = [...units];
-        const existingUnit = { ...updatedUnits[existingUnitIndex] };
-        
-        // Spawn Merge: Add T1L1 (1 point)
-        const totalPoints = this.calculateTotalPoints(existingUnit) + 1; // +1 point for new spawn
-        const { tier, level } = this.calculateTierAndLevel(totalPoints);
-        existingUnit.tier = tier;
-        existingUnit.level = level;
-        
-        updatedUnits[existingUnitIndex] = existingUnit;
-        
-        if (owner === 'player') {
-             this.lastMergedUnitIdSignal.set(existingUnit.id);
-             setTimeout(() => this.lastMergedUnitIdSignal.set(null), 300);
-        }
-
-        return updatedUnits;
-      } else {
-        const newUnit: Unit = {
-          id: crypto.randomUUID(),
-          position: { ...basePosition },
-          level: 1,
-          tier: 1,
-          owner: owner
-        };
-        return [...units, newUnit];
-      }
+      const occupied = units.some(u => u.position.x === basePosition.x && u.position.y === basePosition.y);
+      if (occupied) return units;
+      const newUnit: Unit = { id: crypto.randomUUID(), position: { ...basePosition }, level: 1, tier: 1, points: 1, owner };
+      return [...units, newUnit];
     });
   }
 
   getUnitAt(x: number, y: number): Unit | undefined {
     return this.unitsSignal().find(u => u.position.x === x && u.position.y === y);
   }
-  
+  getWallBetween(x1: number, y1: number, x2: number, y2: number): Wall | undefined {
+    const p1: Position = { x: x1, y: y1 };
+    const p2: Position = { x: x2, y: y2 };
+    if (!this.areAdjacent(p1, p2)) return undefined;
+    const [a, b] = this.sortEdgeEndpoints(p1, p2);
+    return this.wallsSignal().find(
+      w =>
+        w.tile1.x === a.x &&
+        w.tile1.y === a.y &&
+        w.tile2.x === b.x &&
+        w.tile2.y === b.y
+    );
+  }
+ 
   isValidMove(x: number, y: number): boolean {
       return this.validMoves().some(p => p.x === x && p.y === y);
+  }
+
+  isForest(x: number, y: number): boolean {
+    return this.forestsSignal().some(p => p.x === x && p.y === y);
+  }
+
+  private generateForests(): Position[] {
+    const count = Math.floor(Math.random() * 4) + 5;
+    const positions: Position[] = [];
+    const forbidden = new Set(['0,0', '9,9']);
+    while (positions.length < count) {
+      const x = Math.floor(Math.random() * this.gridSize);
+      const y = Math.floor(Math.random() * this.gridSize);
+      const key = `${x},${y}`;
+      if (forbidden.has(key)) continue;
+      if (positions.some(p => p.x === x && p.y === y)) continue;
+      positions.push({ x, y });
+    }
+    return positions;
+  }
+
+  getBasePosition(owner: Owner): Position {
+    return owner === 'player' ? { x: 0, y: 0 } : { x: 9, y: 9 };
+  }
+
+  cancelDeploy() {
+    this.deployTargetsSignal.set([]);
+    this.baseDeployActiveSignal.set(false);
+  }
+ 
+  toggleBuildMode() {
+    this.buildModeSignal.update(v => !v);
+  }
+ 
+  toggleFogDebug() {
+    this.fogDebugDisabledSignal.update(v => !v);
+  }
+
+  buildWallBetween(tile1: Position, tile2: Position) {
+    const wood = this.resourcesSignal().wood;
+    if (wood < 10) return;
+    if (!this.areAdjacent(tile1, tile2)) return;
+    if (!this.isVisibleToPlayer(tile1.x, tile1.y) && !this.isVisibleToPlayer(tile2.x, tile2.y)) return;
+    if (this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y)) return;
+
+    const [a, b] = this.sortEdgeEndpoints(tile1, tile2);
+    this.wallsSignal.update(ws => [
+      ...ws,
+      {
+        id: crypto.randomUUID(),
+        tile1: { x: a.x, y: a.y },
+        tile2: { x: b.x, y: b.y },
+        hitsRemaining: 3,
+        owner: 'player'
+      }
+    ]);
+    this.resourcesSignal.update(r => ({ wood: r.wood - 10 }));
+    this.buildModeSignal.set(false);
+  }
+ 
+  convertWoodToReserve() {
+    const wood = this.resourcesSignal().wood;
+    if (wood < 20) return;
+    this.resourcesSignal.update(r => ({ wood: r.wood - 20 }));
+    this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai }));
+  }
+  startDeployFromBase() {
+    const reserves = this.reservePointsSignal().player;
+    const base = this.getBasePosition('player');
+    if (reserves <= 0) {
+      this.deployTargetsSignal.set([]);
+      this.baseDeployActiveSignal.set(false);
+      return;
+    }
+    const targets: Position[] = [];
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue;
+        const x = base.x + dx;
+        const y = base.y + dy;
+        if (x < 0 || x >= this.gridSize || y < 0 || y >= this.gridSize) continue;
+        const occupiedUnit = this.getUnitAt(x, y);
+        if (!occupiedUnit) targets.push({ x, y });
+      }
+    }
+    this.deployTargetsSignal.set(targets);
+    this.baseDeployActiveSignal.set(true);
+  }
+
+  isDeployTarget(x: number, y: number): boolean {
+    return this.deployTargetsSignal().some(p => p.x === x && p.y === y);
+  }
+
+  deployTo(target: Position) {
+    if (!this.isDeployTarget(target.x, target.y)) return;
+    const reserves = this.reservePointsSignal().player;
+    if (reserves <= 0) return;
+    const cost = this.getHighestAffordableCost(reserves);
+    if (cost <= 0) return;
+    const tl = this.calculateTierAndLevel(cost);
+    this.unitsSignal.update(units => {
+      const newUnit: Unit = { id: crypto.randomUUID(), position: { ...target }, level: tl.level, tier: tl.tier, points: cost, owner: 'player' };
+      return [...units, newUnit];
+    });
+    this.reservePointsSignal.update(r => ({ player: r.player - cost, ai: r.ai }));
+    this.deployTargetsSignal.set([]);
+    this.baseDeployActiveSignal.set(false);
+    this.recomputeVisibility();
+  }
+
+  private areAdjacent(a: Position, b: Position): boolean {
+    return Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1;
+  }
+
+  private sortEdgeEndpoints(a: Position, b: Position): [Position, Position] {
+    if (a.x < b.x || (a.x === b.x && a.y <= b.y)) {
+      return [a, b];
+    }
+    return [b, a];
   }
 }

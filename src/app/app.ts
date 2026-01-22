@@ -16,6 +16,18 @@ export class App {
   onTileClick(x: number, y: number) {
     if (this.gameEngine.gameStatus() !== 'playing') return;
 
+    if (this.gameEngine.isDeployTarget(x, y)) {
+      this.gameEngine.deployTo({ x, y });
+      return;
+    }
+
+    if (x === 0 && y === 0) {
+      this.gameEngine.startDeployFromBase();
+      return;
+    }
+
+    this.gameEngine.cancelDeploy();
+
     const unit = this.gameEngine.getUnitAt(x, y);
 
     // If a unit is selected and we click on a valid move tile, move it
@@ -33,5 +45,12 @@ export class App {
     
     // Clicking elsewhere deselects
     this.gameEngine.selectUnit(null);
+  }
+
+  onEdgeClick(event: MouseEvent, x1: number, y1: number, x2: number, y2: number) {
+    event.stopPropagation();
+    if (this.gameEngine.gameStatus() !== 'playing') return;
+    if (!this.gameEngine.buildMode()) return;
+    this.gameEngine.buildWallBetween({ x: x1, y: y1 }, { x: x2, y: y2 });
   }
 }
