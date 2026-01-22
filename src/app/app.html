@@ -1,17 +1,10 @@
 <div class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
   <h1 class="text-3xl font-bold mb-4">Turn-Based Strategy</h1>
-  <div class="mb-4 text-xl flex gap-4">
+  <div class="mb-4 text-xl flex gap-4 items-center">
     <div>Turn: <span class="font-mono text-yellow-400">{{ gameEngine.turn() }}</span></div>
     <div>Wood: <span class="font-mono text-green-400">{{ gameEngine.resources().wood }}</span></div>
-    <button (click)="gameEngine.toggleBuildMode()" class="px-3 py-1 rounded text-sm"
-            [class.bg-gray-700]="!gameEngine.buildMode()" [class.bg-blue-700]="gameEngine.buildMode()">
-      Build Wall (10)
-    </button>
-    <button (click)="gameEngine.convertWoodToReserve()" class="px-3 py-1 rounded text-sm bg-green-700 hover:bg-green-600">
-      Convert 20 Wood → +1 Reserve
-    </button>
     @if (gameEngine.gameStatus() !== 'playing') {
-       <div class="font-bold text-red-500 animate-pulse">{{ gameEngine.gameStatus() | titlecase }}</div>
+      <div class="font-bold text-red-500 animate-pulse">{{ gameEngine.gameStatus() | titlecase }}</div>
     }
   </div>
 
@@ -93,15 +86,47 @@
                {{ gameEngine.reservePoints().ai }}
              </span>
            }
-           
-           <!-- Unit Rendering -->
-           @if (gameEngine.getWallAt(x, y); as wall) {
-             <div class="w-10 h-10 flex items-center justify-center font-bold transition-all duration-300 pointer-events-none bg-gray-600 border border-gray-400 rounded">
-               <div class="absolute top-0 inset-x-1 h-1 bg-gray-800 rounded">
-                <div class="h-1 bg-gray-300 rounded" [style.width.%]="wall.hp * 2"></div>
+
+           @if (x < 9) {
+             @if (gameEngine.getWallBetween(x, y, x + 1, y); as vWall) {
+               <div
+                 class="absolute top-0 right-0 h-full w-1 bg-lime-400"
+                 [class.opacity-100]="vWall.hitsRemaining === 3"
+                 [class.opacity-70]="vWall.hitsRemaining === 2"
+                 [class.opacity-40]="vWall.hitsRemaining === 1">
                </div>
-             </div>
+             } @else {
+               <div
+                 class="absolute top-0 right-0 h-full w-1"
+                 [class.bg-lime-700]="gameEngine.buildMode()"
+                 [class.bg-transparent]="!gameEngine.buildMode()"
+                 [class.cursor-pointer]="gameEngine.buildMode()"
+                 [class.pointer-events-none]="!gameEngine.buildMode()"
+                 (click)="onEdgeClick($event, x, y, x + 1, y)">
+               </div>
+             }
            }
+
+           @if (y < 9) {
+             @if (gameEngine.getWallBetween(x, y, x, y + 1); as hWall) {
+               <div
+                 class="absolute left-0 bottom-0 w-full h-1 bg-lime-400"
+                 [class.opacity-100]="hWall.hitsRemaining === 3"
+                 [class.opacity-70]="hWall.hitsRemaining === 2"
+                 [class.opacity-40]="hWall.hitsRemaining === 1">
+               </div>
+             } @else {
+               <div
+                 class="absolute left-0 bottom-0 w-full h-1"
+                 [class.bg-lime-700]="gameEngine.buildMode()"
+                 [class.bg-transparent]="!gameEngine.buildMode()"
+                 [class.cursor-pointer]="gameEngine.buildMode()"
+                 [class.pointer-events-none]="!gameEngine.buildMode()"
+                 (click)="onEdgeClick($event, x, y, x, y + 1)">
+               </div>
+             }
+           }
+
            @if (gameEngine.getUnitAt(x, y); as unit) {
              @if (unit.owner === 'player' || gameEngine.isVisibleToPlayer(x, y)) {
              <div 
@@ -140,7 +165,32 @@
       }
     }
   </div>
-  
+
+  <div class="mt-4 flex flex-col items-center gap-3">
+    <div class="flex gap-4 items-center">
+      <button
+        (click)="gameEngine.toggleBuildMode()"
+        class="px-3 py-1 rounded text-sm"
+        [class.bg-gray-700]="!gameEngine.buildMode()"
+        [class.bg-blue-700]="gameEngine.buildMode()">
+        Build Wall (10)
+      </button>
+      <button
+        (click)="gameEngine.convertWoodToReserve()"
+        class="px-3 py-1 rounded text-sm bg-green-700 hover:bg-green-600">
+        Convert 20 Wood → +1 Reserve
+      </button>
+    </div>
+    <label class="flex items-center gap-2 text-sm text-gray-300">
+      <input
+        type="checkbox"
+        class="h-4 w-4 rounded border-gray-500 bg-gray-800"
+        [checked]="gameEngine.fogDebugDisabled()"
+        (change)="gameEngine.toggleFogDebug()" />
+      <span>Disable Fog of War (Debug)</span>
+    </label>
+  </div>
+
   <div class="mt-4 text-gray-400 text-sm">
     <p>Click on your (Blue) units to select.</p>
     <p>Green tiles indicate valid moves.</p>
