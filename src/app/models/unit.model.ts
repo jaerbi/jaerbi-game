@@ -10,5 +10,6 @@ export interface Unit {
   position: Position;
   level: number;
   tier: number; // 1 to 4
+  points: number;
   owner: Owner;
 }
