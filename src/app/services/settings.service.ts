@@ -1,10 +1,12 @@
 import { Injectable, signal } from '@angular/core';
 
 export type Difficulty = 'normal' | 'hard' | 'nightmare';
+export type MapSize = 10 | 20 | 30;
 
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
   private difficultySignal = signal<Difficulty>('normal');
+  private mapSizeSignal = signal<MapSize>(10);
 
   difficulty(): Difficulty {
     return this.difficultySignal();
@@ -24,5 +26,15 @@ export class SettingsService {
   }
   isNightmare(): boolean {
     return this.difficultySignal() === 'nightmare';
+  }
+  // Map Size
+  mapSize(): number {
+    return this.mapSizeSignal();
+  }
+  setMapSize(size: MapSize) {
+    this.mapSizeSignal.set(size);
+  }
+  mapSizeLabel(): string {
+    return `${this.mapSizeSignal()}x${this.mapSizeSignal()}`;
   }
 }

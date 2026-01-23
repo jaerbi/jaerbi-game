@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GameEngineService } from './services/game-engine.service';
 import { SettingsService } from './services/settings.service';
@@ -12,7 +12,28 @@ import { Unit } from './models/unit.model';
   styleUrl: './app.css'
 })
 export class App {
+  @ViewChild('boardContainer') boardContainer?: ElementRef<HTMLDivElement>;
   constructor(public gameEngine: GameEngineService, public settings: SettingsService) {}
+  
+  ngAfterViewInit() {
+    setTimeout(() => {
+      const el: any = this.boardContainer?.nativeElement;
+      if (typeof window !== 'undefined' && el && typeof el.scrollTo === 'function') {
+        el.scrollTo({ left: 0, top: 0 });
+      }
+    }, 0);
+  }
+  
+  onMapSizeChange(size: number) {
+    this.settings.setMapSize(size as any);
+    this.gameEngine.resetGame();
+    setTimeout(() => {
+      const el: any = this.boardContainer?.nativeElement;
+      if (typeof window !== 'undefined' && el && typeof el.scrollTo === 'function') {
+        el.scrollTo({ left: 0, top: 0 });
+      }
+    }, 0);
+  }
 
   onTileClick(x: number, y: number) {
     if (this.gameEngine.gameStatus() !== 'playing') return;
