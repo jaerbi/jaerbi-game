@@ -8,7 +8,7 @@ interface Wall {
   id: string;
   tile1: Position;
   tile2: Position;
-  hitsRemaining: number;
+  health: number;
   owner: Owner;
 }
 
@@ -42,6 +42,7 @@ export class GameEngineService {
   private aiWoodSignal = signal<number>(0);
   private logsOpenSignal = signal<boolean>(false);
   private logsSignal = signal<string[]>([]);
+  private activeSideSignal = signal<Owner>('ai');
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -85,6 +86,7 @@ export class GameEngineService {
   resetGame() {
     this.unitsSignal.set([]);
     this.turnSignal.set(1);
+    this.activeSideSignal.set('ai');
     this.selectedUnitIdSignal.set(null);
     this.gameStatusSignal.set('playing');
     this.lastMergedUnitIdSignal.set(null);
@@ -102,6 +104,7 @@ export class GameEngineService {
     this.spawnStarterArmy('player');
     this.spawnStarterArmy('ai');
     this.recomputeVisibility();
+    setTimeout(() => this.aiTurn(), 0);
   }
 
   // --- Selection & Movement ---
@@ -159,23 +162,17 @@ export class GameEngineService {
           if (wall.owner === movingUnit.owner) {
             return updatedUnits;
           } else {
-            let hitStrength = 1;
-            if (movingUnit.tier === 4) {
-              hitStrength = 4;
-            } else if (movingUnit.tier === 3) {
-              hitStrength = 2;
-            } else {
-              hitStrength = 1; // tiers 1 and 2
-            }
+            const dmgPercent = movingUnit.tier === 1 ? 34 : movingUnit.tier === 2 ? 51 : 100;
             this.wallsSignal.update(ws =>
               ws
                 .map(w =>
                   w.id === wall.id
-                    ? { ...w, hitsRemaining: w.hitsRemaining - hitStrength }
+                    ? { ...w, health: Math.max(0, (w as any).health - dmgPercent) }
                     : w
                 )
-                .filter(w => w.hitsRemaining > 0)
+                .filter((w: any) => (w.health ?? w.hitsRemaining ?? 0) > 0)
             );
+            this.appendLog(`[Turn ${this.turnSignal()}] ${movingUnit.owner === 'player' ? 'Player' : 'AI'} auto-hit wall between (${from.x},${from.y})-(${to.x},${to.y}) for ${dmgPercent}% damage.`);
             return updatedUnits;
           }
         }
@@ -288,8 +285,34 @@ export class GameEngineService {
               updatedUnits.splice(unitIndex, 1); // Remove attacker
               return updatedUnits;
             } else {
-              // Draw - Both Removed
-              return updatedUnits.filter(u => u.id !== movingUnit.id && u.id !== targetUnit.id);
+              const coin = Math.random() < 0.5;
+              if (coin) {
+                this.queueCombatText('DRAW', target);
+                this.appendLog(`[Turn ${this.turnSignal()}] Result: DRAW - Both units destroyed.`);
+                return updatedUnits.filter(u => u.id !== movingUnit.id && u.id !== targetUnit.id);
+              } else {
+                const survivorIsAttacker = Math.random() < 0.5;
+                this.queueCombatText('LUCKY!', target);
+                if (survivorIsAttacker) {
+                  const baseMin = this.getPointsForTierLevel(movingUnit.tier, 1);
+                  movingUnit.points = baseMin;
+                  const tl = this.calculateTierAndLevel(baseMin);
+                  movingUnit.tier = tl.tier;
+                  movingUnit.level = tl.level;
+                  updatedUnits.splice(targetUnitIndex, 1);
+                  this.appendLog(`[Turn ${this.turnSignal()}] Result: LUCKY - Attacker survived!`);
+                } else {
+                  const baseMin = this.getPointsForTierLevel(targetUnit.tier, 1);
+                  const defender = { ...targetUnit, points: baseMin };
+                  const tl = this.calculateTierAndLevel(baseMin);
+                  defender.tier = tl.tier;
+                  defender.level = tl.level;
+                  updatedUnits[targetUnitIndex] = defender;
+                  updatedUnits.splice(unitIndex, 1);
+                  this.appendLog(`[Turn ${this.turnSignal()}] Result: LUCKY - Defender survived!`);
+                  return updatedUnits;
+                }
+              }
             }
         }
       }
@@ -535,9 +558,8 @@ export class GameEngineService {
 
   private endTurn() {
     this.selectedUnitIdSignal.set(null); 
-    this.turnSignal.update(t => t + 1);
-    this.wallBuiltThisTurnSignal.set(false);
-    const ownerJustActed: Owner = this.turnSignal() % 2 === 0 ? 'player' : 'ai';
+    const ownerJustActed: Owner = this.activeSideSignal();
+    // Update stationary counters based on who just acted
     const movedIds = new Set(this.movedThisTurnSignal());
     this.unitsSignal.update(units =>
       units.map(u => {
@@ -549,16 +571,7 @@ export class GameEngineService {
       })
     );
     this.movedThisTurnSignal.set(new Set<string>());
-    
-    if (this.turnSignal() % 2 === 0) { 
-        this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai + 1 }));
-    }
-
-    if (this.gameStatus() === 'playing') {
-        if (this.turnSignal() % 2 === 0) {
-            setTimeout(() => this.aiTurn(), 150);
-        }
-    }
+    this.wallBuiltThisTurnSignal.set(false);
 
     if (this.gameStatus() === 'playing') {
       const countOnForest = this.unitsSignal().filter(u => u.owner === ownerJustActed && this.isForest(u.position.x, u.position.y)).length;
@@ -573,6 +586,15 @@ export class GameEngineService {
     this.deployTargetsSignal.set([]);
     this.baseDeployActiveSignal.set(false);
     this.recomputeVisibility();
+    // Switch phase; when player finishes, increment turn and add reserves
+    if (ownerJustActed === 'player') {
+      this.turnSignal.update(t => t + 1);
+      this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai + 1 }));
+      this.activeSideSignal.set('ai');
+      if (this.gameStatus() === 'playing') setTimeout(() => this.aiTurn(), 150);
+    } else {
+      this.activeSideSignal.set('player');
+    }
   }
 
   // --- AI Logic ---
@@ -854,7 +876,7 @@ export class GameEngineService {
         id: crypto.randomUUID(),
         tile1: { x: a.x, y: a.y },
         tile2: { x: b.x, y: b.y },
-        hitsRemaining: 4,
+        health: 100,
         owner: 'player'
       }
     ]);
@@ -936,24 +958,17 @@ export class GameEngineService {
     const unit = this.getBestAdjacentPlayerUnit(tile1, tile2);
     if (!unit) return;
 
-    let hitStrength = 1;
-    if (unit.tier === 4) {
-      hitStrength = 4;
-    } else if (unit.tier === 3) {
-      hitStrength = 2;
-    } else {
-      hitStrength = 1; // tiers 1 and 2
-    }
+    const dmgPercent = unit.tier === 1 ? 34 : unit.tier === 2 ? 51 : 100;
     this.wallsSignal.update(ws =>
       ws
         .map(w =>
           w.id === wall.id
-            ? { ...w, hitsRemaining: w.hitsRemaining - hitStrength }
+            ? { ...w, health: Math.max(0, w.health - dmgPercent) }
             : w
         )
-        .filter(w => w.hitsRemaining > 0)
+        .filter(w => w.health > 0)
     );
-    this.appendLog(`[Turn ${this.turnSignal()}] Player attacked AI wall between (${tile1.x},${tile1.y})-(${tile2.x},${tile2.y}) for ${hitStrength} damage.`);
+    this.appendLog(`[Turn ${this.turnSignal()}] Player hit AI wall (${tile1.x},${tile1.y})-(${tile2.x},${tile2.y}) for ${dmgPercent}% damage.`);
     this.endTurn();
   }
 
@@ -1000,7 +1015,7 @@ export class GameEngineService {
  
   private canActThisTurn(): boolean {
     if (this.gameStatusSignal() !== 'playing') return false;
-    return this.turnSignal() % 2 === 1;
+    return this.activeSideSignal() === 'player';
   }
  
   private isAnyPlayerUnitAdjacentToEdge(tile1: Position, tile2: Position): boolean {
@@ -1068,7 +1083,7 @@ export class GameEngineService {
         id: crypto.randomUUID(),
         tile1: { x: a.x, y: a.y },
         tile2: { x: b.x, y: b.y },
-        hitsRemaining: 4,
+        health: 100,
         owner: 'ai'
       }
     ]);
