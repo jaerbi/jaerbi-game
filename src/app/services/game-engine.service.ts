@@ -1,5 +1,7 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { Unit, Position, Owner } from '../models/unit.model';
+import { CombatService } from './combat.service';
+import { BuildService } from './build.service';
 
 interface Wall {
   id: string;
@@ -35,6 +37,10 @@ export class GameEngineService {
   private fogDebugDisabledSignal = signal<boolean>(false);
   private wallBuiltThisTurnSignal = signal<boolean>(false);
   private rulesOpenSignal = signal<boolean>(false);
+  private movedThisTurnSignal = signal<Set<string>>(new Set<string>());
+  private aiWoodSignal = signal<number>(0);
+  private logsOpenSignal = signal<boolean>(false);
+  private logsSignal = signal<string[]>([]);
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -71,7 +77,7 @@ export class GameEngineService {
   readonly gridRows = Array.from({ length: this.gridSize }, (_, i) => i);
   readonly gridCols = Array.from({ length: this.gridSize }, (_, i) => i);
 
-  constructor() {
+  constructor(private combat: CombatService, private build: BuildService) {
     this.resetGame();
   }
 
@@ -243,9 +249,10 @@ export class GameEngineService {
             return updatedUnits; // blocked by isValidMove; safety
           }
         } else {
-            // Combat Logic (Direct A - D)
-            const attackerPoints = this.calculateTotalPoints(movingUnit);
-            const defenderPoints = this.calculateTotalPoints(targetUnit);
+            const attackerBase = this.calculateTotalPoints(movingUnit);
+            const luck = this.getAttackLuckModifier(movingUnit);
+            const attackerPoints = Math.max(0, attackerBase + luck);
+            const defenderPoints = this.calculateTotalPoints(targetUnit) + this.getDefenseBonus(targetUnit);
 
             if (attackerPoints > defenderPoints) {
               const newPoints = attackerPoints - defenderPoints;
@@ -280,9 +287,13 @@ export class GameEngineService {
              // Do not update position, it stays behind.
           } else {
              movingUnit.position = target;
+             movingUnit.turnsStationary = 0;
              // Update the unit in the array
              const idx = updatedUnits.findIndex(u => u.id === movingUnit.id);
              if (idx !== -1) updatedUnits[idx] = movingUnit;
+             const next = new Set(this.movedThisTurnSignal());
+             next.add(movingUnit.id);
+             this.movedThisTurnSignal.set(next);
           }
       }
       
@@ -321,37 +332,15 @@ export class GameEngineService {
   // --- Helper Methods ---
   
   private calculateTotalPoints(unit: Unit): number {
-    return unit.points;
+    return this.combat.calculateTotalPoints(unit);
   }
  
   private calculateTierAndLevel(points: number): { tier: number, level: number } {
-    const thresholds: Record<number, number[]> = {
-      1: [1, 2, 3, 4],
-      2: [5, 10, 15, 20],
-      3: [25, 50, 75, 100],
-      4: [125, 250, 375, 500]
-    };
-    if (points <= 0) return { tier: 1, level: 1 };
-    for (let t = 4; t >= 1; t--) {
-      const arr = thresholds[t];
-      for (let l = arr.length; l >= 1; l--) {
-        if (points >= arr[l - 1]) {
-          return { tier: t, level: l };
-        }
-      }
-    }
-    return { tier: 1, level: 1 };
+    return this.combat.calculateTierAndLevel(points);
   }
  
   private getPointsForTierLevel(tier: number, level: number): number {
-    const thresholds: Record<number, number[]> = {
-      1: [1, 2, 3, 4],
-      2: [5, 10, 15, 20],
-      3: [25, 50, 75, 100],
-      4: [125, 250, 375, 500]
-    };
-    const arr = thresholds[tier];
-    return arr ? arr[level - 1] : 1;
+    return this.combat.getPointsForTierLevel(tier, level);
   }
  
   private getHighestAffordableCost(reserves: number): number {
@@ -367,8 +356,10 @@ export class GameEngineService {
   }
   
   private recomputeVisibility() {
-    const playerSet = new Set<string>();
-    const aiSet = new Set<string>();
+    const playerBase = this.getBasePosition('player');
+    const aiBase = this.getBasePosition('ai');
+    const res = { player: new Set<string>(), ai: new Set<string>() };
+    const units = this.unitsSignal();
     const mark = (set: Set<string>, x: number, y: number) => {
       if (this.inBounds(x, y)) set.add(`${x},${y}`);
     };
@@ -381,14 +372,14 @@ export class GameEngineService {
         }
       }
     };
-    markRadius(playerSet, this.getBasePosition('player'), 3);
-    markRadius(aiSet, this.getBasePosition('ai'), 3);
-    for (const u of this.unitsSignal()) {
-      const targetSet = u.owner === 'player' ? playerSet : aiSet;
-      markRadius(targetSet, u.position, 2);
+    markRadius(res.player, playerBase, 3);
+    markRadius(res.ai, aiBase, 3);
+    for (const u of units) {
+      const set = u.owner === 'player' ? res.player : res.ai;
+      markRadius(set, u.position, 2);
     }
-    this.playerVisibilitySignal.set(playerSet);
-    this.aiVisibilitySignal.set(aiSet);
+    this.playerVisibilitySignal.set(res.player);
+    this.aiVisibilitySignal.set(res.ai);
   }
   
   isVisibleToPlayer(x: number, y: number): boolean {
@@ -412,6 +403,49 @@ export class GameEngineService {
     } else if (hp.player <= 0) {
       this.gameStatusSignal.set('ai wins');
     }
+  }
+
+  private getDefenseBonus(unit: Unit): number {
+    let bonus = 0;
+    if ((unit.turnsStationary ?? 0) >= 3) {
+      bonus += 1;
+    }
+    const hasSupport = this.unitsSignal().some(
+      u =>
+        u.owner === unit.owner &&
+        u.id !== unit.id &&
+        u.tier === unit.tier &&
+        Math.max(Math.abs(u.position.x - unit.position.x), Math.abs(u.position.y - unit.position.y)) === 1
+    );
+    if (hasSupport) bonus += 1;
+    return bonus;
+  }
+
+  private combatTextsSignal = signal<{ id: string; text: string; position: Position }[]>([]);
+  readonly combatTexts = this.combatTextsSignal.asReadonly();
+  defenseBonus(unit: Unit): number {
+    return this.getDefenseBonus(unit);
+  }
+  hasDefenseBonus(unit: Unit): boolean {
+    return this.getDefenseBonus(unit) > 0;
+  }
+  getCombatTextAt(x: number, y: number): string[] {
+    return this.combatTextsSignal().filter(e => e.position.x === x && e.position.y === y).map(e => e.text);
+  }
+
+  private getAttackLuckModifier(unit: Unit): number {
+    const res = this.combat.getAttackLuckModifier(unit);
+    if (res.tag) this.queueCombatText(res.tag.startsWith('CRIT') ? 'CRIT!' : 'MISS!', unit.position);
+    return res.delta;
+  }
+
+  private queueCombatText(text: string, position: Position) {
+    const id = crypto.randomUUID();
+    const entry = { id, text, position: { ...position } };
+    this.combatTextsSignal.update(arr => [...arr, entry]);
+    setTimeout(() => {
+      this.combatTextsSignal.update(arr => arr.filter(e => e.id !== id));
+    }, 800);
   }
 
   private calculateValidMoves(unit: Unit): Position[] {
@@ -495,6 +529,18 @@ export class GameEngineService {
     this.selectedUnitIdSignal.set(null); 
     this.turnSignal.update(t => t + 1);
     this.wallBuiltThisTurnSignal.set(false);
+    const ownerJustActed: Owner = this.turnSignal() % 2 === 0 ? 'player' : 'ai';
+    const movedIds = new Set(this.movedThisTurnSignal());
+    this.unitsSignal.update(units =>
+      units.map(u => {
+        if (u.owner !== ownerJustActed) return u;
+        if (movedIds.has(u.id)) {
+          return { ...u, turnsStationary: 0 };
+        }
+        return { ...u, turnsStationary: (u.turnsStationary ?? 0) + 1 };
+      })
+    );
+    this.movedThisTurnSignal.set(new Set<string>());
     
     if (this.turnSignal() % 2 === 0) { 
         this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai + 1 }));
@@ -507,10 +553,12 @@ export class GameEngineService {
     }
 
     if (this.gameStatus() === 'playing') {
-      if (this.turnSignal() % 2 === 1) {
-        const ownedOnForest = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
-        if (ownedOnForest > 0) {
-          this.resourcesSignal.update(r => ({ wood: r.wood + ownedOnForest * 2 }));
+      const countOnForest = this.unitsSignal().filter(u => u.owner === ownerJustActed && this.isForest(u.position.x, u.position.y)).length;
+      if (countOnForest > 0) {
+        if (ownerJustActed === 'player') {
+          this.resourcesSignal.update(r => ({ wood: r.wood + countOnForest * 2 }));
+        } else {
+          this.aiWoodSignal.update(w => w + countOnForest * 2);
         }
       }
     }
@@ -575,7 +623,8 @@ export class GameEngineService {
               level: tl.level,
               tier: tl.tier,
               points: cost,
-              owner: 'ai'
+              owner: 'ai',
+              turnsStationary: 0
             };
             return [...units, newUnit];
           });
@@ -652,7 +701,7 @@ export class GameEngineService {
     this.unitsSignal.update(units => {
       const occupied = units.some(u => u.position.x === basePosition.x && u.position.y === basePosition.y);
       if (occupied) return units;
-      const newUnit: Unit = { id: crypto.randomUUID(), position: { ...basePosition }, level: 1, tier: 1, points: 1, owner };
+      const newUnit: Unit = { id: crypto.randomUUID(), position: { ...basePosition }, level: 1, tier: 1, points: 1, owner, turnsStationary: 0 };
       return [...units, newUnit];
     });
   }
@@ -691,7 +740,8 @@ export class GameEngineService {
         level: cfg.level,
         tier: cfg.tier,
         points,
-        owner
+        owner,
+        turnsStationary: 0
       });
     }
     if (newUnits.length > 0) {
@@ -768,6 +818,19 @@ export class GameEngineService {
   closeRules() {
     this.rulesOpenSignal.set(false);
   }
+ 
+  toggleLog() {
+    this.logsOpenSignal.update(v => !v);
+  }
+  logOpen() {
+    return this.logsOpenSignal();
+  }
+  logs() {
+    return this.logsSignal();
+  }
+  private appendLog(entry: string) {
+    this.logsSignal.update(arr => [...arr, entry]);
+  }
 
   buildWallBetween(tile1: Position, tile2: Position) {
     const wood = this.resourcesSignal().wood;
@@ -790,6 +853,7 @@ export class GameEngineService {
     this.resourcesSignal.update(r => ({ wood: r.wood - 10 }));
     this.buildModeSignal.set(false);
     this.wallBuiltThisTurnSignal.set(true);
+    this.appendLog(`[Turn ${this.turnSignal()}] Player built wall between (${a.x},${a.y})-(${b.x},${b.y}). Cost: 10 Wood.`);
   }
  
   convertWoodToReserve() {
@@ -797,6 +861,7 @@ export class GameEngineService {
     if (wood < 20) return;
     this.resourcesSignal.update(r => ({ wood: r.wood - 20 }));
     this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai }));
+    this.appendLog(`[Turn ${this.turnSignal()}] Player converted 20 Wood → +1 Reserve.`);
   }
   startDeployFromBase() {
     const reserves = this.reservePointsSignal().player;
@@ -833,24 +898,22 @@ export class GameEngineService {
     if (cost <= 0) return;
     const tl = this.calculateTierAndLevel(cost);
     this.unitsSignal.update(units => {
-      const newUnit: Unit = { id: crypto.randomUUID(), position: { ...target }, level: tl.level, tier: tl.tier, points: cost, owner: 'player' };
+      const newUnit: Unit = { id: crypto.randomUUID(), position: { ...target }, level: tl.level, tier: tl.tier, points: cost, owner: 'player', turnsStationary: 0 };
       return [...units, newUnit];
     });
     this.reservePointsSignal.update(r => ({ player: r.player - cost, ai: r.ai }));
     this.deployTargetsSignal.set([]);
     this.baseDeployActiveSignal.set(false);
     this.recomputeVisibility();
+    this.appendLog(`[Turn ${this.turnSignal()}] Player deployed T${tl.tier}(L${tl.level}) at (${target.x},${target.y}) costing ${cost} reserve.`);
   }
 
   private areAdjacent(a: Position, b: Position): boolean {
-    return Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1;
+    return this.build.areAdjacent(a, b);
   }
 
   private sortEdgeEndpoints(a: Position, b: Position): [Position, Position] {
-    if (a.x < b.x || (a.x === b.x && a.y <= b.y)) {
-      return [a, b];
-    }
-    return [b, a];
+    return this.build.sortEdgeEndpoints(a, b);
   }
 
   attackOrDestroyWallBetween(tile1: Position, tile2: Position) {
@@ -882,6 +945,7 @@ export class GameEngineService {
         )
         .filter(w => w.hitsRemaining > 0)
     );
+    this.appendLog(`[Turn ${this.turnSignal()}] Player attacked AI wall between (${tile1.x},${tile1.y})-(${tile2.x},${tile2.y}) for ${hitStrength} damage.`);
     this.endTurn();
   }
 
@@ -891,6 +955,7 @@ export class GameEngineService {
     if (wall.owner !== 'player') return;
     if (!this.isAnyPlayerUnitAdjacentToEdge(tile1, tile2)) return;
     this.wallsSignal.update(ws => ws.filter(w => w.id !== wall.id));
+    this.appendLog(`[Turn ${this.turnSignal()}] Player removed own wall between (${tile1.x},${tile1.y})-(${tile2.x},${tile2.y}).`);
   }
 
   canDestroyOwnWall(tile1: Position, tile2: Position): boolean {
@@ -976,9 +1041,18 @@ export class GameEngineService {
   }
 
   private aiBuildWallBetween(tile1: Position, tile2: Position) {
+    if (this.wallBuiltThisTurnSignal()) return;
+    if (this.aiWoodSignal() < 10) return;
     if (!this.areAdjacent(tile1, tile2)) return;
     if (this.isInNoBuildZone(tile1) || this.isInNoBuildZone(tile2)) return;
     if (this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y)) return;
+    const adjacentAI = this.unitsSignal().some(
+      u =>
+        u.owner === 'ai' &&
+        ((u.position.x === tile1.x && u.position.y === tile1.y) ||
+          (u.position.x === tile2.x && u.position.y === tile2.y))
+    );
+    if (!adjacentAI) return;
     const [a, b] = this.sortEdgeEndpoints(tile1, tile2);
     this.wallsSignal.update(ws => [
       ...ws,
@@ -990,14 +1064,10 @@ export class GameEngineService {
         owner: 'ai'
       }
     ]);
+    this.aiWoodSignal.update(w => w - 10);
+    this.wallBuiltThisTurnSignal.set(true);
   }
   private isInNoBuildZone(tile: Position): boolean {
-    const bases = [this.getBasePosition('player'), this.getBasePosition('ai')];
-    for (const base of bases) {
-      const dx = Math.abs(tile.x - base.x);
-      const dy = Math.abs(tile.y - base.y);
-      if (Math.max(dx, dy) <= 2) return true;
-    }
-    return false;
+    return this.build.isInNoBuildZone(tile, this.getBasePosition('player'), this.getBasePosition('ai'));
   }
 }

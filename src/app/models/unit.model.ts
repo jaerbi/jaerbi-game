@@ -12,4 +12,5 @@ export interface Unit {
   tier: number; // 1 to 4
   points: number;
   owner: Owner;
+  turnsStationary: number;
 }
