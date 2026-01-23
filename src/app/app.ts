@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GameEngineService } from './services/game-engine.service';
+import { SettingsService } from './services/settings.service';
 import { Unit } from './models/unit.model';
 
 @Component({
@@ -11,7 +12,7 @@ import { Unit } from './models/unit.model';
   styleUrl: './app.css'
 })
 export class App {
-  constructor(public gameEngine: GameEngineService) {}
+  constructor(public gameEngine: GameEngineService, public settings: SettingsService) {}
 
   onTileClick(x: number, y: number) {
     if (this.gameEngine.gameStatus() !== 'playing') return;

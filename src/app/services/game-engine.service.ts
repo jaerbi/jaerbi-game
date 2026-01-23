@@ -3,6 +3,7 @@ import { Unit, Position, Owner } from '../models/unit.model';
 import { CombatService } from './combat.service';
 import { BuildService } from './build.service';
 import { LogService } from './log.service';
+import { SettingsService } from './settings.service';
 
 interface Wall {
   id: string;
@@ -41,6 +42,7 @@ export class GameEngineService {
   private movedThisTurnSignal = signal<Set<string>>(new Set<string>());
   private aiWoodSignal = signal<number>(0);
   private logsOpenSignal = signal<boolean>(false);
+  private settingsOpenSignal = signal<boolean>(false);
   private logsSignal = signal<string[]>([]);
   private activeSideSignal = signal<Owner>('ai');
   private lastArrivedUnitIdSignal = signal<string | null>(null);
@@ -86,7 +88,7 @@ export class GameEngineService {
   readonly gridRows = Array.from({ length: this.gridSize }, (_, i) => i);
   readonly gridCols = Array.from({ length: this.gridSize }, (_, i) => i);
 
-  constructor(private combat: CombatService, private build: BuildService, private log: LogService) {
+  constructor(private combat: CombatService, private build: BuildService, private log: LogService, private settings: SettingsService) {
     this.resetGame();
   }
 
@@ -618,8 +620,10 @@ export class GameEngineService {
     // Switch phase; when player finishes, increment turn and add reserves
     if (ownerJustActed === 'player') {
       this.turnSignal.update(t => t + 1);
-      this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai + 1 }));
+      const aiBonus = this.settings.getAiReserveBonus();
+      this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai + aiBonus }));
       this.activeSideSignal.set('ai');
+      this.appendLog(`[Turn Start] AI received +${aiBonus} reserves (${this.settings.difficultyLabel()}).`, 'text-red-400');
       if (this.gameStatus() === 'playing') setTimeout(() => this.aiTurn(), 150);
     } else {
       this.activeSideSignal.set('player');
@@ -723,6 +727,7 @@ export class GameEngineService {
       const onBase = u.position.x === aiBase.x && u.position.y === aiBase.y;
       return near || onBase;
     }).length;
+    const aggressionMultiplier = this.settings.isNightmare() ? 1.25 : 1.0;
     for (const unit of aiUnits) {
         const moves = this.calculateValidMoves(unit);
         const myPower = this.calculatePower(unit);
@@ -756,11 +761,11 @@ export class GameEngineService {
                     if (this.isVisibleToAi(move.x, move.y)) {
                       const enemyPower = this.calculatePower(targetUnit);
                       if (myPower > enemyPower) {
-                          score += 100 + (enemyPower * 2);
+                          score += aggressionMultiplier * (100 + (enemyPower * 2));
                       } else if (myPower < enemyPower) {
-                          score -= 500;
+                          score -= this.settings.isNightmare() ? 350 : 500;
                       } else {
-                          score -= 50;
+                          score -= this.settings.isNightmare() ? 20 : 50;
                       }
                     }
                 }
@@ -965,6 +970,12 @@ export class GameEngineService {
   }
   logOpen() {
     return this.logsOpenSignal();
+  }
+  toggleSettings() {
+    this.settingsOpenSignal.update(v => !v);
+  }
+  settingsOpen() {
+    return this.settingsOpenSignal();
   }
   logs() {
     return this.log.logs();

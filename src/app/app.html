@@ -10,6 +10,13 @@
     </button>
     <button
       class="flex items-center gap-1 px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-sm cursor-pointer"
+      (click)="gameEngine.toggleSettings()"
+    >
+      <span class="w-5 h-5 flex items-center justify-center rounded-full bg-gray-500 text-white text-sm">⚙️</span>
+      <span>Settings</span>
+    </button>
+    <button
+      class="flex items-center gap-1 px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-sm cursor-pointer"
       (click)="gameEngine.toggleLog()"
     >
       <span class="w-5 h-5 flex items-center justify-center rounded-full bg-teal-500 text-white text-sm">ℹ</span>
@@ -24,6 +31,10 @@
     <div>
       Wood:
       <span class="font-mono text-green-400">{{ gameEngine.resources().wood }}</span>
+    </div>
+    <div>
+      Difficulty:
+      <span class="font-mono text-blue-300">{{ settings.difficultyLabel() }}</span>
     </div>
     @if (gameEngine.gameStatus() !== 'playing') {
       <div class="font-bold text-red-500 animate-pulse">{{ gameEngine.gameStatus() | titlecase }}</div>
@@ -423,6 +434,28 @@
         @for (entry of gameEngine.logs(); track entry.text) {
           <div [class]="entry.color">{{ entry.text }}</div>
         }
+      </div>
+    </div>
+  }
+  @if (gameEngine.settingsOpen()) {
+    <div class="fixed inset-y-0 left-0 w-64 bg-gray-900/90 border-r border-gray-700 p-4 z-40">
+      <h3 class="text-lg font-bold mb-2">Settings</h3>
+      <div class="mb-3">
+        <label class="text-sm mb-1 block">Difficulty</label>
+        <div class="flex gap-2">
+          <button class="px-3 py-1 rounded text-sm cursor-pointer"
+                  [class.bg-blue-600]="settings.difficulty() === 'normal'"
+                  [class.bg-gray-700]="settings.difficulty() !== 'normal'"
+                  (click)="settings.setDifficulty('normal')">Normal</button>
+          <button class="px-3 py-1 rounded text-sm cursor-pointer"
+                  [class.bg-blue-600]="settings.difficulty() === 'hard'"
+                  [class.bg-gray-700]="settings.difficulty() !== 'hard'"
+                  (click)="settings.setDifficulty('hard')">Hard</button>
+          <button class="px-3 py-1 rounded text-sm cursor-pointer"
+                  [class.bg-blue-600]="settings.difficulty() === 'nightmare'"
+                  [class.bg-gray-700]="settings.difficulty() !== 'nightmare'"
+                  (click)="settings.setDifficulty('nightmare')">Nightmare</button>
+        </div>
       </div>
     </div>
   }
