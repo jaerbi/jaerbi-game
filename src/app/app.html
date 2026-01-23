@@ -58,6 +58,17 @@
       aspect-ratio: 1 / 1;
       position: relative;
     }
+    .combat-text-anim {
+      animation: combatFloat 0.5s ease-out;
+    }
+    @keyframes combatFloat {
+      from {
+        transform: translateY(0);
+      }
+      to {
+        transform: translateY(-12px);
+      }
+    }
   </style>
   <div class="grid grid-cols-10 bg-gray-800 p-2 rounded-lg border border-gray-700 select-none relative" [style.gap.px]="10">
     <!-- Base Indicators -->
@@ -147,6 +158,7 @@
                    [style.width.px]="10"
                    [style.height.%]="vWall.health"
                    [style.z-index]="40"
+                   [style.transition]="'height 0.25s ease-out'"
                    [class.bg-lime-400]="vWall.owner === 'player'"
                    [class.bg-red-400]="vWall.owner === 'ai'">
                 @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x + 1, y: y })) {
@@ -174,6 +186,7 @@
                 [style.width.px]="10"
                 [style.height.%]="100"
                 [style.z-index]="40"
+                [style.transition]="'height 0.25s ease-out'"
                 [class.bg-lime-700]="gameEngine.buildMode() && gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x + 1, y: y })"
                 [class.bg-transparent]="!gameEngine.buildMode() || !gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x + 1, y: y })"
               >
@@ -199,6 +212,7 @@
                    [style.height.px]="10"
                    [style.width.%]="hWall.health"
                    [style.z-index]="40"
+                   [style.transition]="'width 0.25s ease-out'"
                    [class.bg-lime-400]="hWall.owner === 'player'"
                    [class.bg-red-400]="hWall.owner === 'ai'">
                 @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
@@ -226,6 +240,7 @@
                 [style.height.px]="10"
                 [style.width.%]="100"
                 [style.z-index]="40"
+                [style.transition]="'width 0.25s ease-out'"
                 [class.bg-lime-700]="gameEngine.buildMode() && gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x, y: y + 1 })"
                 [class.bg-transparent]="!gameEngine.buildMode() || !gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x, y: y + 1 })"
               >
@@ -279,8 +294,9 @@
               }
             }
           }
+
           @for (entry of gameEngine.getCombatTextEntriesAt(x, y); track entry.id) {
-            <div class="absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-500" [style.z-index]="100" [style.opacity]="entry.opacity">
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-500 combat-text-anim" [style.z-index]="100" [style.opacity]="entry.opacity">
               <span class="text-xs font-extrabold text-yellow-300">{{ entry.text }}</span>
             </div>
           }
