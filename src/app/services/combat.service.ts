@@ -62,4 +62,9 @@ export class CombatService {
     if (roll > 0.8) return { delta: -delta, tag: `MISS! -${delta}`, isCrit: false };
     return { delta: 0, isCrit: false };
   }
+  getWallHitPercent(tier: number): number {
+    if (tier === 1) return 34;
+    if (tier === 2) return 51;
+    return 100;
+  }
 }

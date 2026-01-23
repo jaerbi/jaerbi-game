@@ -162,7 +162,7 @@ export class GameEngineService {
           if (wall.owner === movingUnit.owner) {
             return updatedUnits;
           } else {
-            const dmgPercent = movingUnit.tier === 1 ? 34 : movingUnit.tier === 2 ? 51 : 100;
+            const dmgPercent = this.combat.getWallHitPercent(movingUnit.tier);
             this.wallsSignal.update(ws =>
               ws
                 .map(w =>
@@ -642,7 +642,8 @@ export class GameEngineService {
           if (!occupiedUnit) targets.push({ x, y });
         }
       }
-      if (targets.length > 0) {
+      const aiUnitsCountPre = this.unitsSignal().filter(u => u.owner === 'ai').length;
+      if (targets.length > 0 && aiUnitsCountPre < 8) {
         const cost = this.getHighestAffordableCost(aiReserves);
         if (cost > 0) {
           const pos = targets[Math.floor(Math.random() * targets.length)];
@@ -687,6 +688,7 @@ export class GameEngineService {
     let bestMove: { unit: Unit, target: Position, score: number } | null = null;
     const playerBase = { x: 0, y: 0 };
 
+    const aiBase = this.getBasePosition('ai');
     for (const unit of aiUnits) {
         const moves = this.calculateValidMoves(unit);
         const myPower = this.calculatePower(unit);
@@ -697,12 +699,21 @@ export class GameEngineService {
             // Distance to player base
             const dist = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
             score -= dist * 10; 
+            // Movement desire: if unit stayed near/at base for >2 turns, prefer moving toward center
+            const center = { x: Math.floor(this.gridSize / 2), y: Math.floor(this.gridSize / 2) };
+            const stationaryLong = (unit.turnsStationary ?? 0) >= 2;
+            const nearBase = Math.max(Math.abs(unit.position.x - aiBase.x), Math.abs(unit.position.y - aiBase.y)) <= 1;
+            const currDistToCenter = Math.abs(unit.position.x - center.x) + Math.abs(unit.position.y - center.y);
+            const moveDistToCenter = Math.abs(move.x - center.x) + Math.abs(move.y - center.y);
+            if (stationaryLong && nearBase && moveDistToCenter < currDistToCenter) {
+                score += 150;
+            }
 
             const targetUnit = this.getUnitAt(move.x, move.y);
             if (targetUnit) {
                 if (targetUnit.owner === 'ai') {
                     if (targetUnit.tier === unit.tier) {
-                      score += 50; 
+                      score += (unit.tier <= 2 ? 250 : 80); 
                       const mergedPoints = this.calculateTotalPoints(unit) + this.calculateTotalPoints(targetUnit);
                       const { tier } = this.calculateTierAndLevel(mergedPoints);
                       if (tier > unit.tier) score += 30;
@@ -722,7 +733,14 @@ export class GameEngineService {
             }
 
             if (this.isForest(move.x, move.y)) {
-                score += 30;
+                score += 80;
+            }
+            // Prefer moving toward player's half (left/top)
+            if (move.x <= Math.floor(this.gridSize / 2)) score += 30;
+            if (move.y <= Math.floor(this.gridSize / 2)) score += 20;
+            // Never sit on base: strongly reward leaving base tile
+            if (unit.position.x === aiBase.x && unit.position.y === aiBase.y) {
+                score += 500;
             }
             // Anti-deadlock: strongly prefer moving units away from base adjacency to clear spawn
             if (typeof isAdjToBase === 'function') {
@@ -979,7 +997,7 @@ export class GameEngineService {
     const unit = this.getBestAdjacentPlayerUnit(tile1, tile2);
     if (!unit) return;
 
-    const dmgPercent = unit.tier === 1 ? 34 : unit.tier === 2 ? 51 : 100;
+    const dmgPercent = this.combat.getWallHitPercent(unit.tier);
     this.wallsSignal.update(ws =>
       ws
         .map(w =>
