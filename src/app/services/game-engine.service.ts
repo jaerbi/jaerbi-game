@@ -244,9 +244,20 @@ export class GameEngineService {
         const targetUnit = updatedUnits[targetUnitIndex];
         const lastFrom = { x: target.x - stepX, y: target.y - stepY };
         if (this.inBounds(lastFrom.x, lastFrom.y)) {
-          const wallBetweenCombat = this.getWallBetween(lastFrom.x, lastFrom.y, target.x, target.y);
-          if (wallBetweenCombat) {
-            return updatedUnits;
+          // Block diagonal attacks through corners: check corner walls
+          if (stepX !== 0 && stepY !== 0) {
+            const w1 = this.getWallBetween(lastFrom.x, lastFrom.y, lastFrom.x + stepX, lastFrom.y);
+            const w2 = this.getWallBetween(lastFrom.x, lastFrom.y, lastFrom.x, lastFrom.y + stepY);
+            const w3 = this.getWallBetween(target.x - stepX, target.y, target.x, target.y);
+            const w4 = this.getWallBetween(target.x, target.y - stepY, target.x, target.y);
+            if (w1 || w2 || w3 || w4) {
+              return updatedUnits;
+            }
+          } else {
+            const wallBetweenCombat = this.getWallBetween(lastFrom.x, lastFrom.y, target.x, target.y);
+            if (wallBetweenCombat) {
+              return updatedUnits;
+            }
           }
         }
         if (targetUnit.owner === movingUnit.owner) {
@@ -356,7 +367,7 @@ export class GameEngineService {
                   updatedUnits.splice(targetUnitIndex, 1);
                   this.pulseUnitIdSignal.set(movingUnit.id);
                   setTimeout(() => this.pulseUnitIdSignal.set(null), 400);
-                  this.log.addCombat(movingUnit.owner, `[Turn ${this.turnSignal()}] Result: LUCKY - Attacker survived!`, false);
+                  this.log.addCombat(movingUnit.owner, `[Turn ${this.turnSignal()}] Result: LUCKY (x1.25) - Attacker survived!`, false);
                 } else {
                   const baseMin = this.getPointsForTierLevel(targetUnit.tier, 1);
                   const defender = { ...targetUnit, points: baseMin };
@@ -367,7 +378,7 @@ export class GameEngineService {
                   updatedUnits.splice(unitIndex, 1);
                   this.pulseUnitIdSignal.set(defender.id);
                   setTimeout(() => this.pulseUnitIdSignal.set(null), 400);
-                  this.log.addCombat(movingUnit.owner, `[Turn ${this.turnSignal()}] Result: LUCKY - Defender survived!`, false);
+                  this.log.addCombat(movingUnit.owner, `[Turn ${this.turnSignal()}] Result: LUCKY (x1.25) - Defender survived!`, false);
                   return updatedUnits;
                 }
               }
@@ -697,6 +708,30 @@ export class GameEngineService {
         if (this.wallBuiltThisTurnSignal()) break;
       }
     }
+    // Choke Point Logic: build walls in narrow passages (only 2 free neighbors)
+    if (!this.wallBuiltThisTurnSignal() && this.aiWoodSignal() >= 10) {
+      const neighbors = (p: Position) => [
+        { x: p.x + 1, y: p.y }, { x: p.x - 1, y: p.y }, { x: p.x, y: p.y + 1 }, { x: p.x, y: p.y - 1 }
+      ].filter(q => this.inBounds(q.x, q.y));
+      const freeNeighbors = (p: Position) => neighbors(p).filter(q => !this.getWallBetween(p.x, p.y, q.x, q.y));
+      const tiles = this.unitsSignal().filter(u => u.owner === 'ai').map(u => u.position);
+      for (const t of tiles) {
+        const free = freeNeighbors(t);
+        if (free.length === 2) {
+          // Prefer walling toward the player base direction
+          const towardPlayer = free.sort((a, b) => {
+            const da = Math.abs(a.x - 0) + Math.abs(a.y - 0);
+            const db = Math.abs(b.x - 0) + Math.abs(b.y - 0);
+            return da - db;
+          })[0];
+          if (this.canBuildWallBetween(t, towardPlayer)) {
+            this.aiBuildWallBetween(t, towardPlayer);
+            this.wallBuiltThisTurnSignal.set(true);
+            break;
+          }
+        }
+      }
+    }
     // Nightmare refinement: attempt extra blocking when enough wood remains
     if (this.settings.isNightmare() && !this.wallBuiltThisTurnSignal() && this.aiWoodSignal() >= 20) {
       const aiBase = this.getBasePosition('ai');
@@ -766,7 +801,10 @@ export class GameEngineService {
       }
       const aiUnitsCountPre = this.unitsSignal().filter(u => u.owner === 'ai').length;
       if (targets.length > 0 && aiUnitsCountPre < 8) {
-        const cost = this.getHighestAffordableCost(aiReserves);
+        let cost = this.getHighestAffordableCost(aiReserves);
+        if (this.settings.isNightmare() && this.aiWoodSignal() > 30 && aiReserves > 10) {
+          cost = Math.max(cost, 5);
+        }
         if (cost > 0) {
           const pos = targets[Math.floor(Math.random() * targets.length)];
           const tl = this.calculateTierAndLevel(cost);
