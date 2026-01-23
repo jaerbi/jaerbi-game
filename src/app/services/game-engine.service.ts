@@ -33,6 +33,7 @@ export class GameEngineService {
   private aiVisibilitySignal = signal<Set<string>>(new Set<string>());
   private buildModeSignal = signal<boolean>(false);
   private fogDebugDisabledSignal = signal<boolean>(false);
+  private wallBuiltThisTurnSignal = signal<boolean>(false);
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -52,6 +53,7 @@ export class GameEngineService {
   readonly aiVisibility = this.aiVisibilitySignal.asReadonly();
   readonly buildMode = this.buildModeSignal.asReadonly();
   readonly fogDebugDisabled = this.fogDebugDisabledSignal.asReadonly();
+  readonly wallBuiltThisTurn = this.wallBuiltThisTurnSignal.asReadonly();
   
   readonly selectedUnit = computed(() => 
     this.unitsSignal().find(u => u.id === this.selectedUnitIdSignal()) || null
@@ -87,6 +89,7 @@ export class GameEngineService {
     this.baseDeployActiveSignal.set(false);
     this.buildModeSignal.set(false);
     this.fogDebugDisabledSignal.set(false);
+    this.wallBuiltThisTurnSignal.set(false);
     this.recomputeVisibility();
   }
 
@@ -146,10 +149,12 @@ export class GameEngineService {
             return updatedUnits;
           } else {
             let hitStrength = 1;
-            if (movingUnit.tier >= 3) {
-              hitStrength = 3;
-            } else if (movingUnit.tier === 2) {
+            if (movingUnit.tier === 4) {
+              hitStrength = 4;
+            } else if (movingUnit.tier === 3) {
               hitStrength = 2;
+            } else {
+              hitStrength = 1; // tiers 1 and 2
             }
             this.wallsSignal.update(ws =>
               ws
@@ -232,7 +237,7 @@ export class GameEngineService {
             const defenderPoints = this.calculateTotalPoints(targetUnit);
 
             if (attackerPoints > defenderPoints) {
-              const newPoints = Math.max(1, attackerPoints - defenderPoints);
+              const newPoints = attackerPoints - defenderPoints;
               const { tier, level } = this.calculateTierAndLevel(newPoints);
               
               movingUnit.points = newPoints;
@@ -242,7 +247,7 @@ export class GameEngineService {
               updatedUnits.splice(targetUnitIndex, 1); // Remove defender
               // movingUnit moves to target (below)
             } else if (attackerPoints < defenderPoints) {
-              const newPoints = Math.max(1, defenderPoints - attackerPoints);
+              const newPoints = defenderPoints - attackerPoints;
               const { tier, level } = this.calculateTierAndLevel(newPoints);
               
               const defender = { ...targetUnit, points: newPoints, tier, level };
@@ -425,12 +430,19 @@ export class GameEngineService {
             x: unit.position.x + dir.x * (i - 1),
             y: unit.position.y + dir.y * (i - 1)
           };
-          const wall = this.getWallBetween(from.x, from.y, newPos.x, newPos.y);
-          if (wall) {
-            if (wall.owner !== unit.owner) {
-              moves.push(newPos);
+          if (dir.x !== 0 && dir.y !== 0) {
+            const stepH = { x: from.x + dir.x, y: from.y };
+            const stepV = { x: from.x, y: from.y + dir.y };
+            const wallH = this.getWallBetween(from.x, from.y, stepH.x, stepH.y);
+            const wallV = this.getWallBetween(from.x, from.y, stepV.x, stepV.y);
+            if (wallH || wallV) {
+              break;
             }
-            break;
+          } else {
+            const wall = this.getWallBetween(from.x, from.y, newPos.x, newPos.y);
+            if (wall) {
+              break;
+            }
           }
 
           const targetUnit = this.getUnitAt(newPos.x, newPos.y);
@@ -460,6 +472,7 @@ export class GameEngineService {
   private endTurn() {
     this.selectedUnitIdSignal.set(null); 
     this.turnSignal.update(t => t + 1);
+    this.wallBuiltThisTurnSignal.set(false);
     
     if (this.turnSignal() % 2 === 0) { 
         this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai + 1 }));
@@ -488,6 +501,31 @@ export class GameEngineService {
 
   private aiTurn() {
     if (this.gameStatus() !== 'playing') return;
+
+    if (!this.wallBuiltThisTurnSignal()) {
+      const aiBase = this.getBasePosition('ai');
+      const candidates = this.unitsSignal()
+        .filter(u => u.owner === 'player')
+        .filter(u => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3)
+        .sort((a, b) => this.calculateTotalPoints(b) - this.calculateTotalPoints(a));
+      for (const enemy of candidates) {
+        const dx = Math.sign(aiBase.x - enemy.position.x);
+        const dy = Math.sign(aiBase.y - enemy.position.y);
+        const edges: Position[] = [];
+        if (dx !== 0) edges.push({ x: enemy.position.x + dx, y: enemy.position.y });
+        if (dy !== 0) edges.push({ x: enemy.position.x, y: enemy.position.y + dy });
+        for (const e of edges) {
+          const a = enemy.position;
+          const b = e;
+          if (this.canBuildWallBetween(a, b)) {
+            this.aiBuildWallBetween(a, b);
+            this.wallBuiltThisTurnSignal.set(true);
+            break;
+          }
+        }
+        if (this.wallBuiltThisTurnSignal()) break;
+      }
+    }
 
     const aiReserves = this.reservePointsSignal().ai;
     if (aiReserves >= 1) {
@@ -647,7 +685,12 @@ export class GameEngineService {
   }
  
   toggleBuildMode() {
-    this.buildModeSignal.update(v => !v);
+    if (this.buildModeSignal()) {
+      this.buildModeSignal.set(false);
+      return;
+    }
+    if (!this.canBuildThisTurn()) return;
+    this.buildModeSignal.set(true);
   }
  
   toggleFogDebug() {
@@ -657,9 +700,8 @@ export class GameEngineService {
   buildWallBetween(tile1: Position, tile2: Position) {
     const wood = this.resourcesSignal().wood;
     if (wood < 10) return;
-    if (!this.areAdjacent(tile1, tile2)) return;
-    if (!this.isVisibleToPlayer(tile1.x, tile1.y) && !this.isVisibleToPlayer(tile2.x, tile2.y)) return;
-    if (this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y)) return;
+    if (!this.canBuildWallBetween(tile1, tile2)) return;
+    if (this.wallBuiltThisTurnSignal()) return;
 
     const [a, b] = this.sortEdgeEndpoints(tile1, tile2);
     this.wallsSignal.update(ws => [
@@ -668,12 +710,13 @@ export class GameEngineService {
         id: crypto.randomUUID(),
         tile1: { x: a.x, y: a.y },
         tile2: { x: b.x, y: b.y },
-        hitsRemaining: 3,
+        hitsRemaining: 4,
         owner: 'player'
       }
     ]);
     this.resourcesSignal.update(r => ({ wood: r.wood - 10 }));
     this.buildModeSignal.set(false);
+    this.wallBuiltThisTurnSignal.set(true);
   }
  
   convertWoodToReserve() {
@@ -735,5 +778,117 @@ export class GameEngineService {
       return [a, b];
     }
     return [b, a];
+  }
+
+  attackOrDestroyWallBetween(tile1: Position, tile2: Position) {
+    const wall = this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y);
+    if (!wall) return;
+
+    if (wall.owner === 'player') {
+      return;
+    }
+
+    // Attack: must have a selected unit adjacent to this edge
+    const unit = this.selectedUnit();
+    if (!unit) return;
+    if (unit.owner !== 'player') return;
+
+    const adjacent = (unit.position.x === tile1.x && unit.position.y === tile1.y) ||
+                     (unit.position.x === tile2.x && unit.position.y === tile2.y);
+    if (!adjacent) return;
+
+    let hitStrength = 1;
+    if (unit.tier === 4) {
+      hitStrength = 4;
+    } else if (unit.tier === 3) {
+      hitStrength = 2;
+    } else {
+      hitStrength = 1; // tiers 1 and 2
+    }
+    this.wallsSignal.update(ws =>
+      ws
+        .map(w =>
+          w.id === wall.id
+            ? { ...w, hitsRemaining: w.hitsRemaining - hitStrength }
+            : w
+        )
+        .filter(w => w.hitsRemaining > 0)
+    );
+    this.endTurn();
+  }
+
+  destroyOwnWallBetween(tile1: Position, tile2: Position) {
+    const wall = this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y);
+    if (!wall) return;
+    if (wall.owner !== 'player') return;
+    const unit = this.selectedUnit();
+    if (!unit) return;
+    const adjacent = (unit.position.x === tile1.x && unit.position.y === tile1.y) ||
+                     (unit.position.x === tile2.x && unit.position.y === tile2.y);
+    if (!adjacent) return;
+    this.wallsSignal.update(ws => ws.filter(w => w.id !== wall.id));
+  }
+
+  canDestroyOwnWall(tile1: Position, tile2: Position): boolean {
+    const wall = this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y);
+    if (!wall) return false;
+    if (wall.owner !== 'player') return false;
+    const unit = this.selectedUnit();
+    if (!unit) return false;
+    return (unit.position.x === tile1.x && unit.position.y === tile1.y) ||
+           (unit.position.x === tile2.x && unit.position.y === tile2.y);
+  }
+
+  canAttackEnemyWall(tile1: Position, tile2: Position): boolean {
+    const wall = this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y);
+    if (!wall) return false;
+    if (wall.owner !== 'ai') return false;
+    const unit = this.selectedUnit();
+    if (!unit || unit.owner !== 'player') return false;
+    return (unit.position.x === tile1.x && unit.position.y === tile1.y) ||
+           (unit.position.x === tile2.x && unit.position.y === tile2.y);
+  }
+
+  canBuildThisTurn(): boolean {
+    if (this.wallBuiltThisTurnSignal()) return false;
+    return this.resourcesSignal().wood >= 10;
+  }
+
+  isInSafeZone(x: number, y: number): boolean {
+    return this.isInNoBuildZone({ x, y });
+  }
+
+  canBuildWallBetween(tile1: Position, tile2: Position): boolean {
+    if (!this.areAdjacent(tile1, tile2)) return false;
+    if (!this.isVisibleToPlayer(tile1.x, tile1.y) && !this.isVisibleToPlayer(tile2.x, tile2.y)) return false;
+    if (this.isInNoBuildZone(tile1) || this.isInNoBuildZone(tile2)) return false;
+    if (!!this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y)) return false;
+    return true;
+  }
+
+  private aiBuildWallBetween(tile1: Position, tile2: Position) {
+    if (!this.areAdjacent(tile1, tile2)) return;
+    if (this.isInNoBuildZone(tile1) || this.isInNoBuildZone(tile2)) return;
+    if (this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y)) return;
+    const [a, b] = this.sortEdgeEndpoints(tile1, tile2);
+    this.wallsSignal.update(ws => [
+      ...ws,
+      {
+        id: crypto.randomUUID(),
+        tile1: { x: a.x, y: a.y },
+        tile2: { x: b.x, y: b.y },
+        hitsRemaining: 4,
+        owner: 'ai'
+      }
+    ]);
+  }
+  private isInNoBuildZone(tile: Position): boolean {
+    const bases = [this.getBasePosition('player'), this.getBasePosition('ai')];
+    for (const base of bases) {
+      const dx = Math.abs(tile.x - base.x);
+      const dy = Math.abs(tile.y - base.y);
+      if (Math.max(dx, dy) <= 2) return true;
+    }
+    return false;
   }
 }

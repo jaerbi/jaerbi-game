@@ -50,7 +50,19 @@ export class App {
   onEdgeClick(event: MouseEvent, x1: number, y1: number, x2: number, y2: number) {
     event.stopPropagation();
     if (this.gameEngine.gameStatus() !== 'playing') return;
-    if (!this.gameEngine.buildMode()) return;
-    this.gameEngine.buildWallBetween({ x: x1, y: y1 }, { x: x2, y: y2 });
+    const wall = this.gameEngine.getWallBetween(x1, y1, x2, y2);
+    if (wall) {
+      this.gameEngine.attackOrDestroyWallBetween({ x: x1, y: y1 }, { x: x2, y: y2 });
+      return;
+    }
+    if (this.gameEngine.buildMode()) {
+      this.gameEngine.buildWallBetween({ x: x1, y: y1 }, { x: x2, y: y2 });
+    }
+  }
+
+  onDestroyIconClick(event: MouseEvent, x1: number, y1: number, x2: number, y2: number) {
+    event.stopPropagation();
+    if (this.gameEngine.gameStatus() !== 'playing') return;
+    this.gameEngine.destroyOwnWallBetween({ x: x1, y: y1 }, { x: x2, y: y2 });
   }
 }
