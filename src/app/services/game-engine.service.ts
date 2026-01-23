@@ -288,7 +288,7 @@ export class GameEngineService {
               const coin = Math.random() < 0.5;
               if (coin) {
                 this.queueCombatText('DRAW', target);
-                this.appendLog(`[Turn ${this.turnSignal()}] Result: DRAW - Both units destroyed.`);
+                this.log.addCombat(movingUnit.owner, `[Turn ${this.turnSignal()}] Result: DRAW - Both units destroyed.`, false);
                 return updatedUnits.filter(u => u.id !== movingUnit.id && u.id !== targetUnit.id);
               } else {
                 const survivorIsAttacker = Math.random() < 0.5;
@@ -300,7 +300,7 @@ export class GameEngineService {
                   movingUnit.tier = tl.tier;
                   movingUnit.level = tl.level;
                   updatedUnits.splice(targetUnitIndex, 1);
-                  this.appendLog(`[Turn ${this.turnSignal()}] Result: LUCKY - Attacker survived!`);
+                  this.log.addCombat(movingUnit.owner, `[Turn ${this.turnSignal()}] Result: LUCKY - Attacker survived!`, false);
                 } else {
                   const baseMin = this.getPointsForTierLevel(targetUnit.tier, 1);
                   const defender = { ...targetUnit, points: baseMin };
@@ -309,7 +309,7 @@ export class GameEngineService {
                   defender.level = tl.level;
                   updatedUnits[targetUnitIndex] = defender;
                   updatedUnits.splice(unitIndex, 1);
-                  this.appendLog(`[Turn ${this.turnSignal()}] Result: LUCKY - Defender survived!`);
+                  this.log.addCombat(movingUnit.owner, `[Turn ${this.turnSignal()}] Result: LUCKY - Defender survived!`, false);
                   return updatedUnits;
                 }
               }
@@ -628,6 +628,7 @@ export class GameEngineService {
     }
 
     const aiReserves = this.reservePointsSignal().ai;
+    let isAdjToBase: (p: Position) => boolean = () => false;
     if (aiReserves >= 1) {
       const base = this.getBasePosition('ai');
       const targets: Position[] = [];
@@ -662,6 +663,19 @@ export class GameEngineService {
           this.recomputeVisibility();
         }
       }
+      // Base clearance priority if reserves are high and all spawn tiles are blocked
+      const needClearBase = aiReserves > 20 && targets.length === 0;
+      const baseAdjKey = new Set<string>();
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (dx === 0 && dy === 0) continue;
+          const x = base.x + dx;
+          const y = base.y + dy;
+          if (x < 0 || x >= this.gridSize || y < 0 || y >= this.gridSize) continue;
+          baseAdjKey.add(`${x},${y}`);
+        }
+      }
+      isAdjToBase = (p: Position) => baseAdjKey.has(`${p.x},${p.y}`);
     }
  
     const aiUnits = this.unitsSignal().filter(u => u.owner === 'ai');
@@ -709,6 +723,13 @@ export class GameEngineService {
 
             if (this.isForest(move.x, move.y)) {
                 score += 30;
+            }
+            // Anti-deadlock: strongly prefer moving units away from base adjacency to clear spawn
+            if (typeof isAdjToBase === 'function') {
+              if (isAdjToBase(unit.position) && !isAdjToBase(move)) {
+                // Base clearance gets very high priority when reserves are high and spawn is blocked
+                score += (aiReserves > 20 ? 1000 : 200);
+              }
             }
 
             if (!bestMove || score > bestMove.score) {

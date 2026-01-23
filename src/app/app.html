@@ -133,97 +133,97 @@
 
           @if (x < 9) {
             @if (gameEngine.getWallBetween(x, y, x + 1, y); as vWall) {
-              <div class="absolute right-0 top-1/2 -translate-y-1/2 cursor-pointer"
+              <div class="absolute right-0 top-1/2 -translate-y-1/2 relative"
                    [style.right]="'-2.5px'"
                    [style.width.px]="5"
                    [style.height.%]="vWall.health"
                    [class.bg-lime-400]="vWall.owner === 'player'"
-                   [class.bg-red-400]="vWall.owner === 'ai'"></div>
-              @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x + 1, y: y })) {
-                <button
-                  class="absolute top-1/2 right-0 -translate-y-1/2 w-4 h-4 text-[10px] rounded-full shadow flex items-center justify-center"
-                  [style.z-index]="100"
-                  [style.right]="'-2.5px'"
-                  [class.bg-green-500]="vWall.owner === 'player'"
-                  [class.text-white]="vWall.owner === 'player'"
-                  [class.bg-yellow-500]="vWall.owner === 'ai'"
-                  [class.text-red-900]="vWall.owner === 'ai'"
-                  (click)="
-                    vWall.owner === 'player'
-                      ? onDestroyIconClick($event, x, y, x + 1, y)
-                      : onAttackIconClick($event, x, y, x + 1, y)
-                  "
-                >
-                  {{ vWall.owner === 'player' ? '✖' : '⚔' }}
-                </button>
-              }
+                   [class.bg-red-400]="vWall.owner === 'ai'">
+                @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x + 1, y: y })) {
+                  <button
+                    class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 text-[10px] rounded-full shadow flex items-center justify-center"
+                    [style.z-index]="100"
+                    [class.bg-green-500]="vWall.owner === 'player'"
+                    [class.text-white]="vWall.owner === 'player'"
+                    [class.bg-yellow-500]="vWall.owner === 'ai'"
+                    [class.text-red-900]="vWall.owner === 'ai'"
+                    (click)="
+                      vWall.owner === 'player'
+                        ? onDestroyIconClick($event, x, y, x + 1, y)
+                        : onAttackIconClick($event, x, y, x + 1, y)
+                    "
+                  >
+                    {{ vWall.owner === 'player' ? '✖' : '⚔' }}
+                  </button>
+                }
+              </div>
             } @else {
               <div
-                class="absolute right-0 top-1/2 -translate-y-1/2"
+                class="absolute right-0 top-1/2 -translate-y-1/2 relative"
                 [style.right]="'-2.5px'"
                 [style.width.px]="5"
                 [style.height.%]="100"
                 [class.bg-lime-700]="gameEngine.buildMode() && gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x + 1, y: y })"
                 [class.bg-transparent]="!gameEngine.buildMode() || !gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x + 1, y: y })"
-              ></div>
-              @if (gameEngine.canShowBuildIcon({ x: x, y: y }, { x: x + 1, y: y })) {
-                <button
-                  class="absolute top-1/2 right-0 -translate-y-1/2 w-4 h-4 bg-green-500 text-white text-[10px] rounded-full shadow"
-                  [style.z-index]="100"
-                  [style.right]="'-2.5px'"
-                  (click)="onBuildIconClick($event, x, y, x + 1, y)"
-                >
-                  ✔
-                </button>
-              }
+              >
+                @if (gameEngine.canShowBuildIcon({ x: x, y: y }, { x: x + 1, y: y })) {
+                  <button
+                    class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-green-500 text-white text-[10px] rounded-full shadow"
+                    [style.z-index]="100"
+                    (click)="onBuildIconClick($event, x, y, x + 1, y)"
+                  >
+                    ✔
+                  </button>
+                }
+              </div>
             }
           }
 
           @if (y < 9) {
             @if (gameEngine.getWallBetween(x, y, x, y + 1); as hWall) {
-              <div class="absolute left-1/2 bottom-0 -translate-x-1/2 cursor-pointer"
+              <div class="absolute left-1/2 bottom-0 -translate-x-1/2 relative"
                    [style.bottom]="'-2.5px'"
                    [style.height.px]="5"
                    [style.width.%]="hWall.health"
                    [class.bg-lime-400]="hWall.owner === 'player'"
-                   [class.bg-red-400]="hWall.owner === 'ai'"></div>
-              @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
-                <button
-                  class="absolute left-1/2 bottom-0 -translate-x-1/2 w-4 h-4 text-[10px] rounded-full shadow flex items-center justify-center"
-                  [style.z-index]="100"
-                  [style.bottom]="'-2.5px'"
-                  [class.bg-green-500]="hWall.owner === 'player'"
-                  [class.text-white]="hWall.owner === 'player'"
-                  [class.bg-yellow-500]="hWall.owner === 'ai'"
-                  [class.text-red-900]="hWall.owner === 'ai'"
-                  (click)="
-                    hWall.owner === 'player'
-                      ? onDestroyIconClick($event, x, y, x, y + 1)
-                      : onAttackIconClick($event, x, y, x, y + 1)
-                  "
-                >
-                  {{ hWall.owner === 'player' ? '✖' : '⚔' }}
-                </button>
-              }
+                   [class.bg-red-400]="hWall.owner === 'ai'">
+                @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
+                  <button
+                    class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 text-[10px] rounded-full shadow flex items-center justify-center"
+                    [style.z-index]="100"
+                    [class.bg-green-500]="hWall.owner === 'player'"
+                    [class.text-white]="hWall.owner === 'player'"
+                    [class.bg-yellow-500]="hWall.owner === 'ai'"
+                    [class.text-red-900]="hWall.owner === 'ai'"
+                    (click)="
+                      hWall.owner === 'player'
+                        ? onDestroyIconClick($event, x, y, x, y + 1)
+                        : onAttackIconClick($event, x, y, x, y + 1)
+                    "
+                  >
+                    {{ hWall.owner === 'player' ? '✖' : '⚔' }}
+                  </button>
+                }
+              </div>
             } @else {
               <div
-                class="absolute left-1/2 bottom-0 -translate-x-1/2"
+                class="absolute left-1/2 bottom-0 -translate-x-1/2 relative"
                 [style.bottom]="'-2.5px'"
                 [style.height.px]="5"
                 [style.width.%]="100"
                 [class.bg-lime-700]="gameEngine.buildMode() && gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x, y: y + 1 })"
                 [class.bg-transparent]="!gameEngine.buildMode() || !gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x, y: y + 1 })"
-              ></div>
-              @if (gameEngine.canShowBuildIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
-                <button
-                  class="absolute left-1/2 bottom-0 -translate-x-1/2 w-4 h-4 bg-green-500 text-white text-[10px] rounded-full shadow"
-                  [style.z-index]="100"
-                  [style.bottom]="'-2.5px'"
-                  (click)="onBuildIconClick($event, x, y, x, y + 1)"
-                >
-                  ✔
-                </button>
-              }
+              >
+                @if (gameEngine.canShowBuildIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
+                  <button
+                    class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-green-500 text-white text-[10px] rounded-full shadow"
+                    [style.z-index]="100"
+                    (click)="onBuildIconClick($event, x, y, x, y + 1)"
+                  >
+                    ✔
+                  </button>
+                }
+              </div>
             }
           }
 
