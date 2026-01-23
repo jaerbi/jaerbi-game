@@ -821,6 +821,14 @@ export class GameEngineService {
     const forests = this.forestsSignal();
     const freeForestsVisible = forests.filter(f => this.isVisibleToAi(f.x, f.y) && !this.getUnitAt(f.x, f.y));
     const reconNeeded = freeForestsVisible.length === 0;
+    const aiForestCount = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
+    const playerForestCount = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
+    const siegeDesperation = playerForestCount > aiForestCount;
+    const safeAiForests = this.unitsSignal()
+      .filter(u => u.owner === 'ai' && u.tier >= 3 && this.isForest(u.position.x, u.position.y))
+      .filter(u => this.unitsSignal().filter(p => p.owner === 'player')
+        .every(p => (Math.abs(p.position.x - u.position.x) + Math.abs(p.position.y - u.position.y)) > 3))
+      .map(u => ({ x: u.position.x, y: u.position.y }));
     const corners: Position[] = [{ x: 0, y: 0 }, { x: this.gridSize - 1, y: 0 }, { x: 0, y: this.gridSize - 1 }, { x: this.gridSize - 1, y: this.gridSize - 1 }];
     const candidatesCollected: { unit: Unit, target: Position, score: number, weakAttack: boolean }[] = [];
     for (const unit of aiUnits) {
@@ -871,6 +879,18 @@ export class GameEngineService {
                         const mergedPoints = this.calculateTotalPoints(unit) + this.calculateTotalPoints(targetUnit);
                         const { tier } = this.calculateTierAndLevel(mergedPoints);
                         if (tier > unit.tier) score += 30;
+                        // Strategic merging only if it helps win nearby fights or prep assault
+                        const nearbyPlayers = this.unitsSignal().filter(p => p.owner === 'player');
+                        let canWinSoon = false;
+                        for (const p of nearbyPlayers) {
+                          const d = Math.abs(move.x - p.position.x) + Math.abs(move.y - p.position.y);
+                          if (d <= 2) {
+                            const enemyPow = this.calculatePower(p);
+                            if (mergedPoints > enemyPow) { canWinSoon = true; break; }
+                          }
+                        }
+                        if (canWinSoon) score += 400;
+                        else score -= 150;
                       } else {
                         score -= 100;
                       }
@@ -881,6 +901,7 @@ export class GameEngineService {
                       if (myPower > enemyPower) {
                           let bonus = aggressionMultiplier * (100 + (enemyPower * 2));
                           if (this.isForest(move.x, move.y)) bonus = Math.floor(bonus * 3);
+                          if (unit.tier >= 2) bonus += 150; // Warrior role: stronger units emphasize combat
                           score += bonus;
                       } else if (myPower < enemyPower) {
                           score -= this.settings.isNightmare() ? 800 : 1200;
@@ -904,8 +925,18 @@ export class GameEngineService {
                 const baseGreed = this.aiWoodSignal() < 40 ? 800 : 400;
                 const greed = baseThreat ? baseGreed : baseGreed * 8;
                 score += greed;
+                // Farmer Role: Tier 1 gets top priority to occupy free forests
+                if (unit.tier === 1 && !this.getUnitAt(move.x, move.y)) {
+                  score += 3000;
+                }
             } else if (nearestForestDistMove < nearestForestDistCurrent) {
                 score += 180 * (nearestForestDistCurrent - nearestForestDistMove);
+            }
+            // Efficient Rotation: encourage T1 to approach safe AI forests
+            if (unit.tier === 1 && safeAiForests.length > 0) {
+              const currToSafe = Math.min(...safeAiForests.map(f => Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y)));
+              const moveToSafe = Math.min(...safeAiForests.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y)));
+              if (moveToSafe < currToSafe) score += 300 * (currToSafe - moveToSafe);
             }
             // Prefer moving toward player's half (left/top)
             if (move.x <= Math.floor(this.gridSize / 2)) score += 30;
@@ -926,8 +957,10 @@ export class GameEngineService {
             if (aiNearCount > 3) {
               const isCurrNear = nearBase || (unit.position.x === aiBase.x && unit.position.y === aiBase.y);
               const isMoveNear = Math.max(Math.abs(move.x - aiBase.x), Math.abs(move.y - aiBase.y)) <= 1 || (move.x === aiBase.x && move.y === aiBase.y);
-              if (isCurrNear && isMoveNear) score -= 1000;
-              if (isCurrNear && !isMoveNear) score += 500;
+              const penalty = siegeDesperation ? 1500 : 1000;
+              const reward = siegeDesperation ? 750 : 500;
+              if (isCurrNear && isMoveNear) score -= penalty;
+              if (isCurrNear && !isMoveNear) score += reward;
             }
             // Resource Denial: prioritize attacking player units occupying forests
             const playerOnForest = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y));
@@ -944,6 +977,12 @@ export class GameEngineService {
               const targetAtMove = this.getUnitAt(move.x, move.y);
               if (targetAtMove && targetAtMove.owner === 'player' && this.isForest(move.x, move.y)) {
                 score += 2400;
+              }
+              // Priority Targets: stronger units move toward player's occupied forests
+              if (unit.tier >= 2) {
+                const currToPlayerForest = nearestForestHolderDistCurrent;
+                const moveToPlayerForest = nearestForestHolderDistMove;
+                if (moveToPlayerForest < currToPlayerForest) score += 300 * (currToPlayerForest - moveToPlayerForest);
               }
             }
 
@@ -998,6 +1037,25 @@ export class GameEngineService {
                 score += 200 + weakness * 10;
               }
             }
+            // Pathfinding optimization: clear lane for stronger teammate
+            const axisX = Math.abs(unit.position.x - playerBase.x) >= Math.abs(unit.position.y - playerBase.y);
+            const strongerAhead = this.unitsSignal().some(u => {
+              if (u.owner !== 'ai') return false;
+              const stronger = this.calculateTotalPoints(u) > this.calculateTotalPoints(unit);
+              if (!stronger) return false;
+              if (axisX) {
+                return u.position.y === unit.position.y && Math.abs(u.position.x - playerBase.x) < Math.abs(unit.position.x - playerBase.x);
+              } else {
+                return u.position.x === unit.position.x && Math.abs(u.position.y - playerBase.y) < Math.abs(unit.position.y - playerBase.y);
+              }
+            });
+            if (strongerAhead) {
+              const sideStep = axisX ? (move.y !== unit.position.y) : (move.x !== unit.position.x);
+              const notCloserToBase = axisX
+                ? Math.abs(move.x - playerBase.x) >= Math.abs(unit.position.x - playerBase.x)
+                : Math.abs(move.y - playerBase.y) >= Math.abs(unit.position.y - playerBase.y);
+              if (sideStep && notCloserToBase) score += 250;
+            }
 
             const targetUnitAtMove = this.getUnitAt(move.x, move.y);
             const weakAttack = !!(targetUnitAtMove && targetUnitAtMove.owner === 'player' && myPower < this.calculatePower(targetUnitAtMove));
@@ -1011,6 +1069,15 @@ export class GameEngineService {
       if (!bestMove || c.score > bestMove.score) bestMove = { unit: c.unit, target: c.target, score: c.score };
     }
     if (bestMove) {
+      const moving = bestMove.unit;
+      const wasStrongOnForest = moving.owner === 'ai' && moving.tier >= 3 && this.isForest(moving.position.x, moving.position.y);
+      const noImmediateThreat = this.unitsSignal().filter(u => u.owner === 'player')
+        .every(p => (Math.abs(p.position.x - moving.position.x) + Math.abs(p.position.y - moving.position.y)) > 3);
+      const leavingForest = !this.isForest(bestMove.target.x, bestMove.target.y);
+      if (wasStrongOnForest && noImmediateThreat && leavingForest) {
+        const hasT1 = this.unitsSignal().some(u => u.owner === 'ai' && u.tier === 1);
+        if (hasT1) this.appendLog(`[Strategy] AI rotated units to free up Elite forces.`, 'text-yellow-300');
+      }
       this.executeMove(bestMove.unit, bestMove.target);
     } else {
       this.endTurn();
