@@ -256,9 +256,9 @@
               </div>
             }
           }
-          @for (text of gameEngine.getCombatTextAt(x, y); track text) {
-            <div class="absolute inset-0 flex items-center justify-center pointer-events-none" [style.z-index]="100">
-              <span class="text-xs font-extrabold text-yellow-300 animate-pulse">{{ text }}</span>
+          @for (entry of gameEngine.getCombatTextEntriesAt(x, y); track entry.id) {
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-500" [style.z-index]="100" [style.opacity]="entry.opacity">
+              <span class="text-xs font-extrabold text-yellow-300">{{ entry.text }}</span>
             </div>
           }
         </div>
@@ -328,7 +328,7 @@
           </div>
           <div>
             <h3 class="font-semibold mb-1">Combat Luck</h3>
-            <p>Attacks can Crit (10%) or Miss (10%). Bonus/Malus: T1:+1, T2:+2, T3:+4, T4:+8.</p>
+            <p>Attacks can Crit (20%) or Miss (20%). Bonus/Malus: T1:+1, T2:+2, T3:+4, T4:+8.</p>
           </div>
         </div>
       </div>
@@ -338,8 +338,8 @@
     <div class="fixed inset-y-0 right-0 w-80 bg-gray-900/90 border-l border-gray-700 p-4 z-40">
       <h3 class="text-lg font-bold mb-2">Action Log</h3>
       <div class="h-[80vh] overflow-y-auto space-y-2 text-xs">
-        @for (entry of gameEngine.logs(); track entry) {
-          <div class="text-gray-200">{{ entry }}</div>
+        @for (entry of gameEngine.logs(); track entry.text) {
+          <div [class]="entry.color">{{ entry.text }}</div>
         }
       </div>
     </div>

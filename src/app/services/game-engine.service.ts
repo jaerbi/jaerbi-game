@@ -2,6 +2,7 @@ import { Injectable, signal, computed } from '@angular/core';
 import { Unit, Position, Owner } from '../models/unit.model';
 import { CombatService } from './combat.service';
 import { BuildService } from './build.service';
+import { LogService } from './log.service';
 
 interface Wall {
   id: string;
@@ -77,7 +78,7 @@ export class GameEngineService {
   readonly gridRows = Array.from({ length: this.gridSize }, (_, i) => i);
   readonly gridCols = Array.from({ length: this.gridSize }, (_, i) => i);
 
-  constructor(private combat: CombatService, private build: BuildService) {
+  constructor(private combat: CombatService, private build: BuildService, private log: LogService) {
     this.resetGame();
   }
 
@@ -250,9 +251,23 @@ export class GameEngineService {
           }
         } else {
             const attackerBase = this.calculateTotalPoints(movingUnit);
-            const luck = this.getAttackLuckModifier(movingUnit);
-            const attackerPoints = Math.max(0, attackerBase + luck);
-            const defenderPoints = this.calculateTotalPoints(targetUnit) + this.getDefenseBonus(targetUnit);
+            const luckObj = this.getAttackLuckModifier(movingUnit);
+            const defenderBase = this.calculateTotalPoints(targetUnit);
+            const defBonus = this.combat.getDefenseBonus(targetUnit, updatedUnits);
+            const attackerPoints = Math.max(0, attackerBase + luckObj.delta);
+            const defenderPoints = defenderBase + defBonus.bonus;
+
+            const modifiersText = [...defBonus.tags, luckObj.tag ?? ''].filter(Boolean).join(', ') || 'None';
+            const formulaText =
+              `[Turn ${this.turnSignal()}] ${movingUnit.owner === 'player' ? 'Player' : 'AI'} T${movingUnit.tier}(L${movingUnit.level}) attacked ${targetUnit.owner === 'player' ? 'Player' : 'AI'} T${targetUnit.tier}(L${targetUnit.level}). ` +
+              `Power: ${attackerBase} vs ${defenderBase}. ` +
+              `Modifiers: ${modifiersText}. ` +
+              `Final: (${attackerBase}${luckObj.delta !== 0 ? (luckObj.delta > 0 ? `+${luckObj.delta}` : `${luckObj.delta}`) : ''}${defBonus.bonus > 0 ? ` - ${defBonus.bonus}` : ''}) - ${defenderBase} = ${Math.abs(attackerPoints - defenderPoints)}.`;
+            this.log.addCombat(movingUnit.owner, formulaText, !!luckObj.isCrit);
+
+            if (attackerPoints <= defenderPoints) {
+              this.queueCombatText('WEAK!', target);
+            }
 
             if (attackerPoints > defenderPoints) {
               const newPoints = attackerPoints - defenderPoints;
@@ -406,22 +421,10 @@ export class GameEngineService {
   }
 
   private getDefenseBonus(unit: Unit): number {
-    let bonus = 0;
-    if ((unit.turnsStationary ?? 0) >= 3) {
-      bonus += 1;
-    }
-    const hasSupport = this.unitsSignal().some(
-      u =>
-        u.owner === unit.owner &&
-        u.id !== unit.id &&
-        u.tier === unit.tier &&
-        Math.max(Math.abs(u.position.x - unit.position.x), Math.abs(u.position.y - unit.position.y)) === 1
-    );
-    if (hasSupport) bonus += 1;
-    return bonus;
+    return this.combat.getDefenseBonus(unit, this.unitsSignal()).bonus;
   }
 
-  private combatTextsSignal = signal<{ id: string; text: string; position: Position }[]>([]);
+  private combatTextsSignal = signal<{ id: string; text: string; position: Position; opacity: number }[]>([]);
   readonly combatTexts = this.combatTextsSignal.asReadonly();
   defenseBonus(unit: Unit): number {
     return this.getDefenseBonus(unit);
@@ -429,23 +432,28 @@ export class GameEngineService {
   hasDefenseBonus(unit: Unit): boolean {
     return this.getDefenseBonus(unit) > 0;
   }
-  getCombatTextAt(x: number, y: number): string[] {
-    return this.combatTextsSignal().filter(e => e.position.x === x && e.position.y === y).map(e => e.text);
+  getCombatTextEntriesAt(x: number, y: number): { id: string; text: string; opacity: number }[] {
+    return this.combatTextsSignal()
+      .filter(e => e.position.x === x && e.position.y === y)
+      .map(e => ({ id: e.id, text: e.text, opacity: e.opacity }));
   }
 
-  private getAttackLuckModifier(unit: Unit): number {
+  private getAttackLuckModifier(unit: Unit): { delta: number; tag?: string; isCrit?: boolean } {
     const res = this.combat.getAttackLuckModifier(unit);
     if (res.tag) this.queueCombatText(res.tag.startsWith('CRIT') ? 'CRIT!' : 'MISS!', unit.position);
-    return res.delta;
+    return res;
   }
 
   private queueCombatText(text: string, position: Position) {
     const id = crypto.randomUUID();
-    const entry = { id, text, position: { ...position } };
+    const entry = { id, text, position: { ...position }, opacity: 1 };
     this.combatTextsSignal.update(arr => [...arr, entry]);
     setTimeout(() => {
+      this.combatTextsSignal.update(arr => arr.map(e => (e.id === id ? { ...e, opacity: 0 } : e)));
+    }, 1500);
+    setTimeout(() => {
       this.combatTextsSignal.update(arr => arr.filter(e => e.id !== id));
-    }, 800);
+    }, 2000);
   }
 
   private calculateValidMoves(unit: Unit): Position[] {
@@ -826,10 +834,10 @@ export class GameEngineService {
     return this.logsOpenSignal();
   }
   logs() {
-    return this.logsSignal();
+    return this.log.logs();
   }
-  private appendLog(entry: string) {
-    this.logsSignal.update(arr => [...arr, entry]);
+  private appendLog(entry: string, color?: 'text-green-400' | 'text-red-400' | 'text-yellow-300' | 'text-gray-200') {
+    this.log.add(entry, color);
   }
 
   buildWallBetween(tile1: Position, tile2: Position) {

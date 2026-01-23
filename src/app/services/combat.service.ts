@@ -54,12 +54,12 @@ export class CombatService {
     }
     return { bonus, tags };
   }
-  getAttackLuckModifier(unit: Unit): { delta: number; tag?: string } {
+  getAttackLuckModifier(unit: Unit): { delta: number; tag?: string; isCrit?: boolean } {
     const roll = Math.random();
     const values: Record<number, number> = { 1: 1, 2: 2, 3: 4, 4: 8 };
     const delta = values[unit.tier] ?? 0;
-    if (roll < 0.1) return { delta, tag: `CRIT! +${delta}` };
-    if (roll > 0.9) return { delta: -delta, tag: `MISS! -${delta}` };
-    return { delta: 0 };
+    if (roll < 0.2) return { delta, tag: `CRIT! +${delta}`, isCrit: true };
+    if (roll > 0.8) return { delta: -delta, tag: `MISS! -${delta}`, isCrit: false };
+    return { delta: 0, isCrit: false };
   }
 }
