@@ -502,7 +502,7 @@ export class GameEngineService {
 
     if (this.gameStatus() === 'playing') {
         if (this.turnSignal() % 2 === 0) {
-            setTimeout(() => this.aiTurn(), 500);
+            setTimeout(() => this.aiTurn(), 150);
         }
     }
 
