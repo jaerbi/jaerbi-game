@@ -43,6 +43,11 @@ export class GameEngineService {
   private logsOpenSignal = signal<boolean>(false);
   private logsSignal = signal<string[]>([]);
   private activeSideSignal = signal<Owner>('ai');
+  private lastArrivedUnitIdSignal = signal<string | null>(null);
+  private attackerNudgeSignal = signal<{ id: string; dx: number; dy: number } | null>(null);
+  private shakenUnitIdSignal = signal<string | null>(null);
+  private shakenWallIdSignal = signal<string | null>(null);
+  private pulseUnitIdSignal = signal<string | null>(null);
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -64,6 +69,8 @@ export class GameEngineService {
   readonly fogDebugDisabled = this.fogDebugDisabledSignal.asReadonly();
   readonly wallBuiltThisTurn = this.wallBuiltThisTurnSignal.asReadonly();
   readonly rulesOpen = this.rulesOpenSignal.asReadonly();
+  readonly lastArrivedUnitId = this.lastArrivedUnitIdSignal.asReadonly();
+  readonly pulseUnitId = this.pulseUnitIdSignal.asReadonly();
   
   readonly selectedUnit = computed(() => 
     this.unitsSignal().find(u => u.id === this.selectedUnitIdSignal()) || null
@@ -172,6 +179,8 @@ export class GameEngineService {
                 )
                 .filter((w: any) => (w.health ?? w.hitsRemaining ?? 0) > 0)
             );
+            this.shakenWallIdSignal.set(wall.id);
+            setTimeout(() => this.shakenWallIdSignal.set(null), 200);
             this.appendLog(`[Turn ${this.turnSignal()}] ${movingUnit.owner === 'player' ? 'Player' : 'AI'} auto-hit wall between (${from.x},${from.y})-(${to.x},${to.y}) for ${dmgPercent}% damage.`);
             return updatedUnits;
           }
@@ -247,6 +256,10 @@ export class GameEngineService {
             return updatedUnits; // blocked by isValidMove; safety
           }
         } else {
+            this.attackerNudgeSignal.set({ id: movingUnit.id, dx: stepX * 8, dy: stepY * 8 });
+            setTimeout(() => this.attackerNudgeSignal.set(null), 150);
+            this.shakenUnitIdSignal.set(targetUnit.id);
+            setTimeout(() => this.shakenUnitIdSignal.set(null), 200);
             const attackerBase = this.calculateTotalPoints(movingUnit);
             const luckObj = this.getAttackLuckModifier(movingUnit);
             const defenderBase = this.calculateTotalPoints(targetUnit);
@@ -300,6 +313,8 @@ export class GameEngineService {
                   movingUnit.tier = tl.tier;
                   movingUnit.level = tl.level;
                   updatedUnits.splice(targetUnitIndex, 1);
+                  this.pulseUnitIdSignal.set(movingUnit.id);
+                  setTimeout(() => this.pulseUnitIdSignal.set(null), 400);
                   this.log.addCombat(movingUnit.owner, `[Turn ${this.turnSignal()}] Result: LUCKY - Attacker survived!`, false);
                 } else {
                   const baseMin = this.getPointsForTierLevel(targetUnit.tier, 1);
@@ -309,6 +324,8 @@ export class GameEngineService {
                   defender.level = tl.level;
                   updatedUnits[targetUnitIndex] = defender;
                   updatedUnits.splice(unitIndex, 1);
+                  this.pulseUnitIdSignal.set(defender.id);
+                  setTimeout(() => this.pulseUnitIdSignal.set(null), 400);
                   this.log.addCombat(movingUnit.owner, `[Turn ${this.turnSignal()}] Result: LUCKY - Defender survived!`, false);
                   return updatedUnits;
                 }
@@ -332,6 +349,8 @@ export class GameEngineService {
              const next = new Set(this.movedThisTurnSignal());
              next.add(movingUnit.id);
              this.movedThisTurnSignal.set(next);
+             this.lastArrivedUnitIdSignal.set(movingUnit.id);
+             setTimeout(() => this.lastArrivedUnitIdSignal.set(null), 250);
           }
       }
       
@@ -454,6 +473,16 @@ export class GameEngineService {
   }
   hasDefenseBonus(unit: Unit): boolean {
     return this.getDefenseBonus(unit) > 0;
+  }
+  getNudgeFor(unitId: string): { dx: number; dy: number } | null {
+    const n = this.attackerNudgeSignal();
+    return n && n.id === unitId ? { dx: n.dx, dy: n.dy } : null;
+  }
+  isUnitShaking(id: string): boolean {
+    return this.shakenUnitIdSignal() === id;
+  }
+  isWallShaking(id: string): boolean {
+    return this.shakenWallIdSignal() === id;
   }
   getCombatTextEntriesAt(x: number, y: number): { id: string; text: string; opacity: number }[] {
     return this.combatTextsSignal()
@@ -689,6 +718,11 @@ export class GameEngineService {
     const playerBase = { x: 0, y: 0 };
 
     const aiBase = this.getBasePosition('ai');
+    const aiNearCount = aiUnits.filter(u => {
+      const near = Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 1;
+      const onBase = u.position.x === aiBase.x && u.position.y === aiBase.y;
+      return near || onBase;
+    }).length;
     for (const unit of aiUnits) {
         const moves = this.calculateValidMoves(unit);
         const myPower = this.calculatePower(unit);
@@ -732,12 +766,26 @@ export class GameEngineService {
                 }
             }
 
+            const forests = this.forestsSignal();
+            const nearestForestDistCurrent = forests.length
+              ? Math.min(
+                  ...forests.map(f => Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y))
+                )
+              : Infinity;
+            const nearestForestDistMove = forests.length
+              ? Math.min(...forests.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y)))
+              : Infinity;
             if (this.isForest(move.x, move.y)) {
-                score += 80;
+                const greed = this.aiWoodSignal() < 40 ? 600 : 250;
+                score += greed;
+            } else if (nearestForestDistMove < nearestForestDistCurrent) {
+                score += 120 * (nearestForestDistCurrent - nearestForestDistMove);
             }
             // Prefer moving toward player's half (left/top)
             if (move.x <= Math.floor(this.gridSize / 2)) score += 30;
             if (move.y <= Math.floor(this.gridSize / 2)) score += 20;
+            const distFromAiBase = Math.abs(move.x - aiBase.x) + Math.abs(move.y - aiBase.y);
+            score += distFromAiBase * 25;
             // Never sit on base: strongly reward leaving base tile
             if (unit.position.x === aiBase.x && unit.position.y === aiBase.y) {
                 score += 500;
@@ -747,6 +795,30 @@ export class GameEngineService {
               if (isAdjToBase(unit.position) && !isAdjToBase(move)) {
                 // Base clearance gets very high priority when reserves are high and spawn is blocked
                 score += (aiReserves > 20 ? 1000 : 200);
+              }
+            }
+            if (aiNearCount > 3) {
+              const isCurrNear = nearBase || (unit.position.x === aiBase.x && unit.position.y === aiBase.y);
+              const isMoveNear = Math.max(Math.abs(move.x - aiBase.x), Math.abs(move.y - aiBase.y)) <= 1 || (move.x === aiBase.x && move.y === aiBase.y);
+              if (isCurrNear && isMoveNear) score -= 1000;
+              if (isCurrNear && !isMoveNear) score += 500;
+            }
+            if (unit.tier >= 2) {
+              const players = this.unitsSignal().filter(u => u.owner === 'player');
+              let nearestTargetDistCurrent = Math.abs(unit.position.x - playerBase.x) + Math.abs(unit.position.y - playerBase.y);
+              let nearestTargetDistMove = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
+              if (players.length > 0) {
+                nearestTargetDistCurrent = Math.min(
+                  nearestTargetDistCurrent,
+                  ...players.map(p => Math.abs(unit.position.x - p.position.x) + Math.abs(unit.position.y - p.position.y))
+                );
+                nearestTargetDistMove = Math.min(
+                  nearestTargetDistMove,
+                  ...players.map(p => Math.abs(move.x - p.position.x) + Math.abs(move.y - p.position.y))
+                );
+              }
+              if (nearestTargetDistMove < nearestTargetDistCurrent) {
+                score += 120 * (nearestTargetDistCurrent - nearestTargetDistMove);
               }
             }
 
@@ -1007,6 +1079,8 @@ export class GameEngineService {
         )
         .filter(w => w.health > 0)
     );
+    this.shakenWallIdSignal.set(wall.id);
+    setTimeout(() => this.shakenWallIdSignal.set(null), 200);
     this.appendLog(`[Turn ${this.turnSignal()}] Player hit AI wall (${tile1.x},${tile1.y})-(${tile2.x},${tile2.y}) for ${dmgPercent}% damage.`);
     this.endTurn();
   }

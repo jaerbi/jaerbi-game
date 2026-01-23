@@ -69,6 +69,32 @@
         transform: translateY(-12px);
       }
     }
+    .shake {
+      animation: defenderShake 200ms ease-out;
+    }
+    @keyframes defenderShake {
+      0% { transform: translate(0, 0); }
+      25% { transform: translate(2px, -2px); }
+      50% { transform: translate(-2px, 2px); }
+      75% { transform: translate(2px, 2px); }
+      100% { transform: translate(0, 0); }
+    }
+    .arrival-pop {
+      animation: arrivalPop 200ms ease-out;
+    }
+    @keyframes arrivalPop {
+      0% { transform: scale(1.0); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1.0); }
+    }
+    .pulse-glow {
+      animation: pulseGlow 400ms ease-out;
+    }
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 0px rgba(255, 215, 0, 0.0); }
+      50% { box-shadow: 0 0 12px rgba(255, 215, 0, 0.8); }
+      100% { box-shadow: 0 0 0px rgba(255, 215, 0, 0.0); }
+    }
   </style>
   <div class="grid grid-cols-10 bg-gray-800 p-2 rounded-lg border border-gray-700 select-none relative" [style.gap.px]="10">
     <!-- Base Indicators -->
@@ -160,7 +186,8 @@
                    [style.z-index]="40"
                    [style.transition]="'height 0.25s ease-out'"
                    [class.bg-lime-400]="vWall.owner === 'player'"
-                   [class.bg-red-400]="vWall.owner === 'ai'">
+                   [class.bg-red-400]="vWall.owner === 'ai'"
+                   [class.shake]="gameEngine.isWallShaking(vWall.id)">
                 @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x + 1, y: y })) {
                   <button
                     class="rounded-full shadow-lg flex items-center justify-center text-white"
@@ -214,7 +241,8 @@
                    [style.z-index]="40"
                    [style.transition]="'width 0.25s ease-out'"
                    [class.bg-lime-400]="hWall.owner === 'player'"
-                   [class.bg-red-400]="hWall.owner === 'ai'">
+                   [class.bg-red-400]="hWall.owner === 'ai'"
+                   [class.shake]="gameEngine.isWallShaking(hWall.id)">
                 @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
                   <button
                     class="rounded-full shadow-lg flex items-center justify-center text-white"
@@ -262,34 +290,41 @@
           @if (gameEngine.getUnitAt(x, y); as unit) {
             @if (unit.owner === 'player' || gameEngine.isVisibleToPlayer(x, y)) {
               @if (!(x === 0 && y === 0) && !(x === 9 && y === 9)) {
-              <div
-                class="w-9 h-9 flex items-center justify-center font-bold transition-all duration-300 shadow-lg pointer-events-none"
-                [class.bg-blue-500]="unit.owner === 'player'"
-                [class.bg-red-500]="unit.owner === 'ai'"
-                [class.text-white]="true"
-                [class.rounded-full]="unit.tier === 1"
-                [class.border-2]="unit.tier !== 2"
-                [class.border-blue-300]="unit.owner === 'player' && unit.tier !== 2"
-                [class.border-red-300]="unit.owner === 'ai' && unit.tier !== 2"
-                [class.rounded-none]="unit.tier === 3"
-                [class.rotate-45]="unit.tier === 4"
-                [class.scale-75]="unit.tier === 4"
-                [style.clip-path]="unit.tier === 2 ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : ''"
-                [style.padding-top]="unit.tier === 2 ? '0.25rem' : ''"
-                [class.ring-4]="gameEngine.selectedUnitId() === unit.id"
-                [class.ring-yellow-400]="gameEngine.selectedUnitId() === unit.id"
-                [class.ring-offset-2]="gameEngine.selectedUnitId() === unit.id"
-                [class.ring-offset-gray-800]="gameEngine.selectedUnitId() === unit.id"
-                [class.scale-110]="gameEngine.selectedUnitId() === unit.id && unit.tier !== 4 && !gameEngine.buildMode()"
-                [class.scale-90]="gameEngine.selectedUnitId() === unit.id && unit.tier === 4 && !gameEngine.buildMode()"
-                [class.scale-125]="gameEngine.lastMergedUnitId() === unit.id"
-                [class.scale-50]="gameEngine.buildMode()"
-                [class.animate-bounce]="gameEngine.lastRemainderUnitId() === unit.id"
-              >
-                <span [class.-rotate-45]="unit.tier === 4">{{ unit.level }}</span>
-                @if (gameEngine.hasDefenseBonus(unit)) {
-                  <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-200 text-blue-900 text-[10px] flex items-center justify-center" [style.z-index]="100">🛡</span>
-                }
+              <div class="pointer-events-none"
+                   [style.transition]="'transform 150ms ease-out'"
+                   [style.transform]="gameEngine.getNudgeFor(unit.id) ? 'translate(' + gameEngine.getNudgeFor(unit.id)!.dx + 'px,' + gameEngine.getNudgeFor(unit.id)!.dy + 'px)' : 'translate(0,0)'"
+                   [class.shake]="gameEngine.isUnitShaking(unit.id)">
+                <div
+                  class="w-9 h-9 flex items-center justify-center font-bold transition-all duration-300 shadow-lg"
+                  [class.bg-blue-500]="unit.owner === 'player'"
+                  [class.bg-red-500]="unit.owner === 'ai'"
+                  [class.text-white]="true"
+                  [class.rounded-full]="unit.tier === 1"
+                  [class.border-2]="unit.tier !== 2"
+                  [class.border-blue-300]="unit.owner === 'player' && unit.tier !== 2"
+                  [class.border-red-300]="unit.owner === 'ai' && unit.tier !== 2"
+                  [class.rounded-none]="unit.tier === 3"
+                  [class.rotate-45]="unit.tier === 4"
+                  [class.scale-75]="unit.tier === 4"
+                  [style.clip-path]="unit.tier === 2 ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : ''"
+                  [style.padding-top]="unit.tier === 2 ? '0.25rem' : ''"
+                  [class.ring-4]="gameEngine.selectedUnitId() === unit.id"
+                  [class.ring-yellow-400]="gameEngine.selectedUnitId() === unit.id"
+                  [class.ring-offset-2]="gameEngine.selectedUnitId() === unit.id"
+                  [class.ring-offset-gray-800]="gameEngine.selectedUnitId() === unit.id"
+                  [class.scale-110]="gameEngine.selectedUnitId() === unit.id && unit.tier !== 4 && !gameEngine.buildMode()"
+                  [class.scale-90]="gameEngine.selectedUnitId() === unit.id && unit.tier === 4 && !gameEngine.buildMode()"
+                  [class.scale-125]="gameEngine.lastMergedUnitId() === unit.id"
+                  [class.scale-50]="gameEngine.buildMode()"
+                  [class.animate-bounce]="gameEngine.lastRemainderUnitId() === unit.id"
+                  [class.arrival-pop]="gameEngine.lastArrivedUnitId() === unit.id"
+                  [class.pulse-glow]="gameEngine.pulseUnitId() === unit.id"
+                >
+                  <span [class.-rotate-45]="unit.tier === 4">{{ unit.level }}</span>
+                  @if (gameEngine.hasDefenseBonus(unit)) {
+                    <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-200 text-blue-900 text-[10px] flex items-center justify-center" [style.z-index]="100">🛡</span>
+                  }
+                </div>
               </div>
               }
             }
@@ -297,7 +332,15 @@
 
           @for (entry of gameEngine.getCombatTextEntriesAt(x, y); track entry.id) {
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-500 combat-text-anim" [style.z-index]="100" [style.opacity]="entry.opacity">
-              <span class="text-xs font-extrabold text-yellow-300">{{ entry.text }}</span>
+              <span
+                [class.text-xs]="entry.text !== 'LUCKY!' && entry.text !== 'DRAW'"
+                [class.text-base]="entry.text === 'LUCKY!' || entry.text === 'DRAW'"
+                [class.text-yellow-300]="entry.text !== 'LUCKY!' && entry.text !== 'DRAW'"
+                [class.text-yellow-400]="entry.text === 'LUCKY!' || entry.text === 'DRAW'"
+                class="font-extrabold"
+              >
+                {{ entry.text }}
+              </span>
             </div>
           }
         </div>
