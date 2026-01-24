@@ -54,6 +54,9 @@ export class GameEngineService {
   private pulseUnitIdSignal = signal<string | null>(null);
   private screenShakeSignal = signal<boolean>(false);
   private endOverlaySignal = signal<boolean>(false);
+  private combatOnlySignal = signal<boolean>(false);
+  private forestMonopolySignal = signal<{ player: number; ai: number }>({ player: 0, ai: 0 });
+  private hoveredUnitIdSignal = signal<string | null>(null);
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -134,6 +137,7 @@ export class GameEngineService {
     this.selectedUnitIdSignal.set(null);
     this.gameStatusSignal.set('playing');
     this.endOverlaySignal.set(false);
+    this.forestMonopolySignal.set({ player: 0, ai: 0 });
     this.lastMergedUnitIdSignal.set(null);
     this.lastRemainderUnitIdSignal.set(null);
     this.resourcesSignal.set({ wood: 0 });
@@ -569,10 +573,54 @@ export class GameEngineService {
   isDrawText(text: string): boolean {
     return text === 'DRAW';
   }
+  toggleCombatOnly() {
+    this.combatOnlySignal.update(v => !v);
+  }
+  combatOnly(): boolean {
+    return this.combatOnlySignal();
+  }
+  logsFiltered() {
+    return this.log.logs().filter(e => !this.combatOnlySignal() || e.type === 'combat');
+  }
+  aiWood(): number {
+    return this.aiWoodSignal();
+  }
+  monopolyCounter() {
+    return this.forestMonopolySignal();
+  }
+  private getLuckDeltaForTier(tier: number): number {
+    const values: Record<number, number> = { 1: 1, 2: 2, 3: 4, 4: 8 };
+    return values[tier] ?? 0;
+  }
+  setHoveredUnit(id: string | null) {
+    this.hoveredUnitIdSignal.set(id);
+  }
+  getHoverInfo(id: string): { atkMin: number; atkMax: number; hp: number; support: number } | null {
+    const u = this.unitsSignal().find(x => x.id === id);
+    if (!u) return null;
+    const base = this.calculateTotalPoints(u);
+    const luck = this.getLuckDeltaForTier(u.tier);
+    const def = this.getDefenseBonus(u);
+    return { atkMin: Math.max(0, base - luck), atkMax: base + luck, hp: u.points, support: def };
+  }
+  shouldRenderWall(tile1: Position, tile2: Position, owner?: Owner): boolean {
+    const wall = this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y);
+    if (!wall) return false;
+    const ow = owner ?? wall.owner;
+    if (ow === 'player') return true;
+    if (this.fogDebugDisabledSignal()) return true;
+    return this.isVisibleToPlayer(tile1.x, tile1.y) || this.isVisibleToPlayer(tile2.x, tile2.y);
+  }
   getCombatTextEntriesAt(x: number, y: number): { id: string; text: string; opacity: number }[] {
     return this.combatTextsSignal()
       .filter(e => e.position.x === x && e.position.y === y)
       .map(e => ({ id: e.id, text: e.text, opacity: e.opacity }));
+  }
+  formatHoverInfo(id: string): string {
+    const h = this.getHoverInfo(id);
+    if (!h) return '';
+    const def = h.support > 0 ? `+${h.support}` : '+0';
+    return `ATK: ${h.atkMin}-${h.atkMax} | HP: ${h.hp} | DEF: ${def}`;
   }
 
   private getAttackLuckModifier(unit: Unit): { delta: number; tag?: string; isCrit?: boolean } {
@@ -696,6 +744,9 @@ export class GameEngineService {
     this.deployTargetsSignal.set([]);
     this.baseDeployActiveSignal.set(false);
     this.recomputeVisibility();
+    if (ownerJustActed === 'player' && this.gameStatus() === 'playing') {
+      this.updateForestMonopoly();
+    }
     // Switch phase; when player finishes, increment turn and add reserves
     if (ownerJustActed === 'player') {
       this.turnSignal.update(t => t + 1);
@@ -705,6 +756,46 @@ export class GameEngineService {
       if (this.gameStatus() === 'playing') setTimeout(() => this.aiTurn(), 150);
     } else {
       this.activeSideSignal.set('player');
+    }
+  }
+  private updateForestMonopoly() {
+    const total = this.forestsSignal().length;
+    if (total === 0) {
+      this.forestMonopolySignal.set({ player: 0, ai: 0 });
+      return;
+    }
+    const playerHeld = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
+    const aiHeld = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
+    if (playerHeld === total) {
+      const next = { ...this.forestMonopolySignal() };
+      next.player = next.player + 1;
+      next.ai = 0;
+      this.forestMonopolySignal.set(next);
+      this.appendLog(`Forest Control: ${next.player}/10`, 'text-green-400');
+      if (next.player >= 10) {
+        this.gameStatusSignal.set('player wins');
+        this.screenShakeSignal.set(true);
+        setTimeout(() => {
+          this.screenShakeSignal.set(false);
+          this.endOverlaySignal.set(true);
+        }, 1000);
+      }
+    } else if (aiHeld === total) {
+      const next = { ...this.forestMonopolySignal() };
+      next.ai = next.ai + 1;
+      next.player = 0;
+      this.forestMonopolySignal.set(next);
+      this.appendLog(`Forest Control: ${next.ai}/10`, 'text-red-400');
+      if (next.ai >= 10) {
+        this.gameStatusSignal.set('ai wins');
+        this.screenShakeSignal.set(true);
+        setTimeout(() => {
+          this.screenShakeSignal.set(false);
+          this.endOverlaySignal.set(true);
+        }, 1000);
+      }
+    } else {
+      this.forestMonopolySignal.set({ player: 0, ai: 0 });
     }
   }
 
@@ -868,6 +959,13 @@ export class GameEngineService {
       isAdjToBase = (p: Position) => baseAdjKey.has(`${p.x},${p.y}`);
     }
  
+    const totalForests = this.forestsSignal().length;
+    const playerForestCount = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
+    const aiForestCount = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
+    const crisisMode = totalForests > 0 && playerForestCount / totalForests > 0.7;
+    if (crisisMode && aiForestCount < 2) {
+      this.aiReserveDump();
+    }
     const aiUnits = this.unitsSignal().filter(u => u.owner === 'ai');
     if (aiUnits.length === 0) {
       this.endTurn();
@@ -888,8 +986,7 @@ export class GameEngineService {
     const forests = this.forestsSignal();
     const freeForestsVisible = forests.filter(f => this.isVisibleToAi(f.x, f.y) && !this.getUnitAt(f.x, f.y));
     const reconNeeded = freeForestsVisible.length === 0;
-    const aiForestCount = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
-    const playerForestCount = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
+    // reuse previously computed playerForestCount/aiForestCount from above
     const siegeDesperation = playerForestCount > aiForestCount;
     const safeAiForests = this.unitsSignal()
       .filter(u => u.owner === 'ai' && u.tier >= 3 && this.isForest(u.position.x, u.position.y))
@@ -897,6 +994,10 @@ export class GameEngineService {
         .every(p => (Math.abs(p.position.x - u.position.x) + Math.abs(p.position.y - u.position.y)) > 3))
       .map(u => ({ x: u.position.x, y: u.position.y }));
     const corners: Position[] = [{ x: 0, y: 0 }, { x: this.gridSize - 1, y: 0 }, { x: 0, y: this.gridSize - 1 }, { x: this.gridSize - 1, y: this.gridSize - 1 }];
+    const playerForestUnits = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y))
+      .sort((a, b) => this.calculatePower(a) - this.calculatePower(b));
+    const weakestForestTarget = playerForestUnits.length ? playerForestUnits[0].position : null;
+    const monopolyThreat = this.forestMonopolySignal().player >= 5;
     const candidatesCollected: { unit: Unit, target: Position, score: number, weakAttack: boolean }[] = [];
     for (const unit of aiUnits) {
         const moves = this.calculateValidMoves(unit);
@@ -916,6 +1017,16 @@ export class GameEngineService {
               if (moveDist < currDist) {
                 score += 10000;
               }
+            }
+            if (crisisMode && weakestForestTarget) {
+              const currW = Math.abs(unit.position.x - weakestForestTarget.x) + Math.abs(unit.position.y - weakestForestTarget.y);
+              const moveW = Math.abs(move.x - weakestForestTarget.x) + Math.abs(move.y - weakestForestTarget.y);
+              if (moveW < currW) score += 8000;
+            }
+            if (monopolyThreat) {
+              const currF = forests.length ? Math.min(...forests.map(f => Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y))) : Infinity;
+              const moveF = forests.length ? Math.min(...forests.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y))) : Infinity;
+              if (moveF < currF) score += 2000;
             }
             // Movement desire: if unit stayed near/at base for >2 turns, prefer moving toward center
             const center = { x: Math.floor(this.gridSize / 2), y: Math.floor(this.gridSize / 2) };
@@ -1003,6 +1114,7 @@ export class GameEngineService {
                 if (unit.tier === 1 && !this.getUnitAt(move.x, move.y)) {
                   score += 3000;
                 }
+                if (crisisMode) score += 4000;
             } else if (nearestForestDistMove < nearestForestDistCurrent) {
                 score += 180 * (nearestForestDistCurrent - nearestForestDistMove);
             }
@@ -1050,7 +1162,7 @@ export class GameEngineService {
               }
               const targetAtMove = this.getUnitAt(move.x, move.y);
               if (targetAtMove && targetAtMove.owner === 'player' && this.isForest(move.x, move.y)) {
-                score += 2400;
+                score += crisisMode ? 8000 : 2400;
               }
               // Priority Targets: stronger units move toward player's occupied forests
               if (unit.tier >= 2) {
@@ -1160,6 +1272,35 @@ export class GameEngineService {
 
   // --- Spawning ---
 
+  private aiReserveDump() {
+    let aiRes = this.reservePointsSignal().ai;
+    const aiBase = this.getBasePosition('ai');
+    const adj: Position[] = [];
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue;
+        const x = aiBase.x + dx;
+        const y = aiBase.y + dy;
+        if (!this.inBounds(x, y)) continue;
+        if (!this.getUnitAt(x, y)) adj.push({ x, y });
+      }
+    }
+    const created: Unit[] = [];
+    while (aiRes > 0 && adj.length > 0) {
+      const cost = this.getHighestAffordableCost(aiRes);
+      if (cost <= 0) break;
+      const tl = this.calculateTierAndLevel(cost);
+      const target = adj.shift()!;
+      created.push({ id: crypto.randomUUID(), position: { ...target }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0 });
+      aiRes -= cost;
+    }
+    if (created.length > 0) {
+      this.unitsSignal.update(units => [...units, ...created]);
+      this.reservePointsSignal.update(r => ({ player: r.player, ai: aiRes }));
+      this.appendLog(`[Crisis] AI deployed ${created.length} units by reserve dump.`, 'text-red-400');
+      this.recomputeVisibility();
+    }
+  }
   spawnUnit(owner: Owner) {
     const basePosition: Position = this.getBasePosition(owner);
     this.unitsSignal.update(units => {

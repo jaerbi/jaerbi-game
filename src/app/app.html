@@ -33,6 +33,15 @@
       <span class="font-mono text-green-400">{{ gameEngine.resources().wood }}</span>
     </div>
     <div>
+      AI Wood:
+      <span class="font-mono text-red-400">{{ gameEngine.aiWood() }}</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span>Monopoly:</span>
+      <span class="font-mono text-green-400">P {{ gameEngine.monopolyCounter().player }}/10</span>
+      <span class="font-mono text-red-400">AI {{ gameEngine.monopolyCounter().ai }}/10</span>
+    </div>
+    <div>
       Difficulty:
       <span class="font-mono text-blue-300">{{ settings.difficultyLabel() }}</span>
     </div>
@@ -142,6 +151,7 @@
           [style.height.px]="gameEngine.tileSizePx"
           [style.minWidth.px]="gameEngine.tileMinSizePx"
           [style.minHeight.px]="gameEngine.tileMinSizePx"
+          [attr.title]="gameEngine.getUnitAt(x, y) && (gameEngine.getUnitAt(x, y)!.owner === 'player' || gameEngine.isVisibleToPlayer(x, y)) ? gameEngine.formatHoverInfo(gameEngine.getUnitAt(x, y)!.id) : null"
           [class.bg-gray-700]="!gameEngine.isValidMove(x, y)"
           [class.border-gray-600]="!gameEngine.isValidMove(x, y)"
           [class.bg-blue-900]="x === 0 && y === 0"
@@ -208,33 +218,35 @@
 
           @if (x < gameEngine.gridSize - 1) {
             @if (gameEngine.getWallBetween(x, y, x + 1, y); as vWall) {
-              <div class="absolute right-0 top-0 h-full flex items-center justify-center"
-                   [style.right.px]="-gameEngine.wallThicknessPx"
-                   [style.width.px]="gameEngine.wallThicknessPx"
-                   [style.height.%]="vWall.health"
-                   [style.z-index]="40"
-                   [style.transition]="'height 0.25s ease-out'"
-                   [class.bg-lime-400]="vWall.owner === 'player'"
-                   [class.bg-red-400]="vWall.owner === 'ai'"
-                   [class.shake]="gameEngine.isWallShaking(vWall.id)">
-                @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x + 1, y: y })) {
-                  <button
-                    class="rounded-full shadow-lg flex items-center justify-center text-white"
-                  [style.width.px]="gameEngine.iconSizePx"
-                  [style.height.px]="gameEngine.iconSizePx"
-                    [style.z-index]="45"
-                    [class.bg-red-600]="vWall.owner === 'player'"
-                    [class.bg-yellow-500]="vWall.owner === 'ai'"
-                    (click)="
-                      vWall.owner === 'player'
-                        ? onDestroyIconClick($event, x, y, x + 1, y)
-                        : onAttackIconClick($event, x, y, x + 1, y)
-                    "
-                  >
-                    {{ vWall.owner === 'player' ? '✖' : '⚔' }}
-                  </button>
-                }
-              </div>
+              @if (gameEngine.shouldRenderWall({ x: x, y: y }, { x: x + 1, y: y }, vWall.owner)) {
+                <div class="absolute right-0 top-0 h-full flex items-center justify-center"
+                     [style.right.px]="-gameEngine.wallThicknessPx"
+                     [style.width.px]="gameEngine.wallThicknessPx"
+                     [style.height.%]="vWall.health"
+                     [style.z-index]="40"
+                     [style.transition]="'height 0.25s ease-out'"
+                     [class.bg-lime-400]="vWall.owner === 'player'"
+                     [class.bg-red-400]="vWall.owner === 'ai'"
+                     [class.shake]="gameEngine.isWallShaking(vWall.id)">
+                  @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x + 1, y: y })) {
+                    <button
+                      class="rounded-full shadow-lg flex items-center justify-center text-white"
+                      [style.width.px]="gameEngine.iconSizePx"
+                      [style.height.px]="gameEngine.iconSizePx"
+                      [style.z-index]="45"
+                      [class.bg-red-600]="vWall.owner === 'player'"
+                      [class.bg-yellow-500]="vWall.owner === 'ai'"
+                      (click)="
+                        vWall.owner === 'player'
+                          ? onDestroyIconClick($event, x, y, x + 1, y)
+                          : onAttackIconClick($event, x, y, x + 1, y)
+                      "
+                    >
+                      {{ vWall.owner === 'player' ? '✖' : '⚔' }}
+                    </button>
+                  }
+                </div>
+              }
             } @else {
               <div
                 class="absolute right-0 top-0 h-full flex items-center justify-center"
@@ -264,33 +276,35 @@
 
           @if (y < gameEngine.gridSize - 1) {
             @if (gameEngine.getWallBetween(x, y, x, y + 1); as hWall) {
-              <div class="absolute left-0 bottom-0 w-full flex items-center justify-center"
-                   [style.bottom.px]="-gameEngine.wallThicknessPx"
-                   [style.height.px]="gameEngine.wallThicknessPx"
-                   [style.width.%]="hWall.health"
-                   [style.z-index]="40"
-                   [style.transition]="'width 0.25s ease-out'"
-                   [class.bg-lime-400]="hWall.owner === 'player'"
-                   [class.bg-red-400]="hWall.owner === 'ai'"
-                   [class.shake]="gameEngine.isWallShaking(hWall.id)">
-                @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
-                  <button
-                    class="rounded-full shadow-lg flex items-center justify-center text-white"
-                  [style.width.px]="gameEngine.iconSizePx"
-                  [style.height.px]="gameEngine.iconSizePx"
-                    [style.z-index]="45"
-                    [class.bg-red-600]="hWall.owner === 'player'"
-                    [class.bg-yellow-500]="hWall.owner === 'ai'"
-                    (click)="
-                      hWall.owner === 'player'
-                        ? onDestroyIconClick($event, x, y, x, y + 1)
-                        : onAttackIconClick($event, x, y, x, y + 1)
-                    "
-                  >
-                    {{ hWall.owner === 'player' ? '✖' : '⚔' }}
-                  </button>
-                }
-              </div>
+              @if (gameEngine.shouldRenderWall({ x: x, y: y }, { x: x, y: y + 1 }, hWall.owner)) {
+                <div class="absolute left-0 bottom-0 w-full flex items-center justify-center"
+                     [style.bottom.px]="-gameEngine.wallThicknessPx"
+                     [style.height.px]="gameEngine.wallThicknessPx"
+                     [style.width.%]="hWall.health"
+                     [style.z-index]="40"
+                     [style.transition]="'width 0.25s ease-out'"
+                     [class.bg-lime-400]="hWall.owner === 'player'"
+                     [class.bg-red-400]="hWall.owner === 'ai'"
+                     [class.shake]="gameEngine.isWallShaking(hWall.id)">
+                  @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
+                    <button
+                      class="rounded-full shadow-lg flex items-center justify-center text-white"
+                      [style.width.px]="gameEngine.iconSizePx"
+                      [style.height.px]="gameEngine.iconSizePx"
+                      [style.z-index]="45"
+                      [class.bg-red-600]="hWall.owner === 'player'"
+                      [class.bg-yellow-500]="hWall.owner === 'ai'"
+                      (click)="
+                        hWall.owner === 'player'
+                          ? onDestroyIconClick($event, x, y, x, y + 1)
+                          : onAttackIconClick($event, x, y, x, y + 1)
+                      "
+                    >
+                      {{ hWall.owner === 'player' ? '✖' : '⚔' }}
+                    </button>
+                  }
+                </div>
+              }
             } @else {
               <div
                 class="absolute left-0 bottom-0 w-full flex items-center justify-center"
@@ -330,6 +344,7 @@
                   [style.width.px]="gameEngine.tileUnitSizePx"
                   [style.height.px]="gameEngine.tileUnitSizePx"
                 [style.aspectRatio]="'1 / 1'"
+                  [attr.title]="gameEngine.formatHoverInfo(unit.id)"
                   [class.bg-blue-500]="unit.owner === 'player'"
                   [class.bg-red-500]="unit.owner === 'ai'"
                   [class.text-white]="true"
@@ -469,8 +484,13 @@
   @if (gameEngine.logOpen()) {
     <div class="fixed inset-y-0 right-0 w-80 bg-gray-900/90 border-l border-gray-700 p-4 z-40">
       <h3 class="text-lg font-bold mb-2">Action Log</h3>
-      <div class="h-[80vh] overflow-y-auto space-y-2 text-xs">
-        @for (entry of gameEngine.logs(); track entry.text) {
+      <label class="flex items-center gap-2 text-xs text-gray-300 mb-2 cursor-pointer">
+        <input type="checkbox" class="h-4 w-4 rounded border-gray-500 bg-gray-800 cursor-pointer"
+               [checked]="gameEngine.combatOnly()" (change)="gameEngine.toggleCombatOnly()" />
+        <span>Combat Only</span>
+      </label>
+      <div class="h-[78vh] overflow-y-auto space-y-2 text-xs">
+        @for (entry of gameEngine.logsFiltered(); track entry.text) {
           <div [class]="entry.color">{{ entry.text }}</div>
         }
       </div>
