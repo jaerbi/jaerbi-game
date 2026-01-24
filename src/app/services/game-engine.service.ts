@@ -52,6 +52,8 @@ export class GameEngineService {
   private shakenUnitIdSignal = signal<string | null>(null);
   private shakenWallIdSignal = signal<string | null>(null);
   private pulseUnitIdSignal = signal<string | null>(null);
+  private screenShakeSignal = signal<boolean>(false);
+  private endOverlaySignal = signal<boolean>(false);
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -131,6 +133,7 @@ export class GameEngineService {
     this.activeSideSignal.set('ai');
     this.selectedUnitIdSignal.set(null);
     this.gameStatusSignal.set('playing');
+    this.endOverlaySignal.set(false);
     this.lastMergedUnitIdSignal.set(null);
     this.lastRemainderUnitIdSignal.set(null);
     this.resourcesSignal.set({ wood: 0 });
@@ -179,6 +182,7 @@ export class GameEngineService {
   }
 
   private executeMove(unit: Unit, target: Position) {
+    let consumeTurn = true;
     let merged = false;
     let remainderId: string | null = null;
 
@@ -251,11 +255,13 @@ export class GameEngineService {
             const w3 = this.getWallBetween(target.x - stepX, target.y, target.x, target.y);
             const w4 = this.getWallBetween(target.x, target.y - stepY, target.x, target.y);
             if (w1 || w2 || w3 || w4) {
+              consumeTurn = false;
               return updatedUnits;
             }
           } else {
             const wallBetweenCombat = this.getWallBetween(lastFrom.x, lastFrom.y, target.x, target.y);
             if (wallBetweenCombat) {
+              consumeTurn = false;
               return updatedUnits;
             }
           }
@@ -357,7 +363,7 @@ export class GameEngineService {
                 return updatedUnits.filter(u => u.id !== movingUnit.id && u.id !== targetUnit.id);
               } else {
                 const survivorIsAttacker = Math.random() < 0.5;
-                this.queueCombatText('LUCKY!', target);
+                this.queueCombatText('LUCKY! (x1.25)', target);
                 if (survivorIsAttacker) {
                   const baseMin = this.getPointsForTierLevel(movingUnit.tier, 1);
                   movingUnit.points = baseMin;
@@ -379,6 +385,7 @@ export class GameEngineService {
                   this.pulseUnitIdSignal.set(defender.id);
                   setTimeout(() => this.pulseUnitIdSignal.set(null), 400);
                   this.log.addCombat(movingUnit.owner, `[Turn ${this.turnSignal()}] Result: LUCKY (x1.25) - Defender survived!`, false);
+                  this.queueCombatText('LUCKY DEFENSE!', target);
                   return updatedUnits;
                 }
               }
@@ -433,7 +440,7 @@ export class GameEngineService {
 
     this.checkBaseDefeat();
     
-    if (this.gameStatus() === 'playing') {
+    if (this.gameStatus() === 'playing' && consumeTurn) {
       this.endTurn();
     }
   }
@@ -509,8 +516,22 @@ export class GameEngineService {
     const hp = this.baseHealthSignal();
     if (hp.ai <= 0) {
       this.gameStatusSignal.set('player wins');
+      this.screenShakeSignal.set(true);
+      setTimeout(() => {
+        this.screenShakeSignal.set(false);
+        this.endOverlaySignal.set(true);
+      }, 1000);
+      const aiBase = this.getBasePosition('ai');
+      this.queueCombatText('💥', aiBase);
     } else if (hp.player <= 0) {
       this.gameStatusSignal.set('ai wins');
+      this.screenShakeSignal.set(true);
+      setTimeout(() => {
+        this.screenShakeSignal.set(false);
+        this.endOverlaySignal.set(true);
+      }, 1000);
+      const playerBase = this.getBasePosition('player');
+      this.queueCombatText('💥', playerBase);
     }
   }
 
@@ -535,6 +556,18 @@ export class GameEngineService {
   }
   isWallShaking(id: string): boolean {
     return this.shakenWallIdSignal() === id;
+  }
+  screenShake(): boolean {
+    return this.screenShakeSignal();
+  }
+  shouldShowEndOverlay(): boolean {
+    return this.endOverlaySignal();
+  }
+  isLuckyText(text: string): boolean {
+    return text.startsWith('LUCKY');
+  }
+  isDrawText(text: string): boolean {
+    return text === 'DRAW';
   }
   getCombatTextEntriesAt(x: number, y: number): { id: string; text: string; opacity: number }[] {
     return this.combatTextsSignal()
@@ -598,11 +631,7 @@ export class GameEngineService {
             y: unit.position.y + dir.y * (i - 1)
           };
           if (dir.x !== 0 && dir.y !== 0) {
-            const stepH = { x: from.x + dir.x, y: from.y };
-            const stepV = { x: from.x, y: from.y + dir.y };
-            const wallH = this.getWallBetween(from.x, from.y, stepH.x, stepH.y);
-            const wallV = this.getWallBetween(from.x, from.y, stepV.x, stepV.y);
-            if (wallH || wallV) {
+            if (this.isDiagonalBlocked(from, newPos)) {
               break;
             }
           } else {
@@ -881,6 +910,13 @@ export class GameEngineService {
             // Distance to player base
             const dist = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
             score -= dist * 10; 
+            if (this.settings.isNightmare() && reconNeeded && unit.tier >= 3) {
+              const currDist = Math.abs(unit.position.x - playerBase.x) + Math.abs(unit.position.y - playerBase.y);
+              const moveDist = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
+              if (moveDist < currDist) {
+                score += 10000;
+              }
+            }
             // Movement desire: if unit stayed near/at base for >2 turns, prefer moving toward center
             const center = { x: Math.floor(this.gridSize / 2), y: Math.floor(this.gridSize / 2) };
             const stationaryLong = (unit.turnsStationary ?? 0) >= 2;
@@ -1192,6 +1228,17 @@ export class GameEngineService {
         w.tile2.x === b.x &&
         w.tile2.y === b.y
     );
+  }
+ 
+  private isDiagonalBlocked(from: Position, to: Position): boolean {
+    const stepX = Math.sign(to.x - from.x);
+    const stepY = Math.sign(to.y - from.y);
+    if (stepX === 0 || stepY === 0) return false;
+    const w1 = this.getWallBetween(from.x, from.y, from.x + stepX, from.y);
+    const w2 = this.getWallBetween(from.x, from.y, from.x, from.y + stepY);
+    const w3 = this.getWallBetween(to.x - stepX, to.y, to.x, to.y);
+    const w4 = this.getWallBetween(to.x, to.y - stepY, to.x, to.y);
+    return !!(w1 || w2 || w3 || w4);
   }
  
   isValidMove(x: number, y: number): boolean {

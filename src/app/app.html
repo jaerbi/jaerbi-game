@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
+<div class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4" [class.shake]="gameEngine.screenShake()">
   <div class="w-full max-w-4xl flex items-center justify-between mb-4">
     <h1 class="text-3xl font-bold">Turn-Based Strategy</h1>
     <button
@@ -41,7 +41,7 @@
     }
   </div>
 
-  @if (gameEngine.gameStatus() !== 'playing') {
+  @if (gameEngine.shouldShowEndOverlay()) {
     <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div class="bg-gray-800 p-8 rounded-lg shadow-xl border border-gray-600 text-center">
         <h2
@@ -371,10 +371,10 @@
           @for (entry of gameEngine.getCombatTextEntriesAt(x, y); track entry.id) {
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-500 combat-text-anim" [style.z-index]="100" [style.opacity]="entry.opacity">
               <span
-                [class.text-xs]="entry.text !== 'LUCKY!' && entry.text !== 'DRAW'"
-                [class.text-base]="entry.text === 'LUCKY!' || entry.text === 'DRAW'"
-                [class.text-yellow-300]="entry.text !== 'LUCKY!' && entry.text !== 'DRAW'"
-                [class.text-yellow-400]="entry.text === 'LUCKY!' || entry.text === 'DRAW'"
+                [class.text-xs]="!gameEngine.isLuckyText(entry.text) && !gameEngine.isDrawText(entry.text)"
+                [class.text-base]="gameEngine.isLuckyText(entry.text) || gameEngine.isDrawText(entry.text)"
+                [class.text-yellow-300]="!gameEngine.isLuckyText(entry.text) && !gameEngine.isDrawText(entry.text)"
+                [class.text-yellow-400]="gameEngine.isLuckyText(entry.text) || gameEngine.isDrawText(entry.text)"
                 class="font-extrabold"
               >
                 {{ entry.text }}
