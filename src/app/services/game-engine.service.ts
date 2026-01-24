@@ -68,6 +68,9 @@ export class GameEngineService {
   private combatOnlySignal = signal<boolean>(true);
   private forestMonopolySignal = signal<{ player: number; ai: number }>({ player: 0, ai: 0 });
   private hoveredUnitIdSignal = signal<string | null>(null);
+  private autoDeployEnabledSignal = signal<boolean>(false);
+  private playerConvertedThisTurnSignal = signal<boolean>(false);
+  private unitQuadrantBiasSignal = signal<Map<string, { quadrant: number; until: number }>>(new Map());
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -484,6 +487,12 @@ export class GameEngineService {
           ]);
           ban.set(unit.id, { tiles, until: this.turnSignal() + 5 });
           this.unitStutterBanSignal.set(ban);
+          const center = { x: Math.floor(this.gridSize / 2), y: Math.floor(this.gridSize / 2) };
+          const currQuadrant = this.getQuadrant(unit.position, center);
+          const opposite = (currQuadrant + 2) % 4;
+          const biasMap = new Map(this.unitQuadrantBiasSignal());
+          biasMap.set(unit.id, { quadrant: opposite, until: this.turnSignal() + 5 });
+          this.unitQuadrantBiasSignal.set(biasMap);
         }
       }
       this.endTurn();
@@ -781,6 +790,10 @@ export class GameEngineService {
       this.activeSideSignal.set('ai');
       if (this.gameStatus() === 'playing') setTimeout(() => this.aiTurn(), 150);
     } else {
+      if (this.autoDeployEnabledSignal() && this.playerConvertedThisTurnSignal() && this.reservePointsSignal().player > 0) {
+        this.autoDeployFromReserves();
+        this.playerConvertedThisTurnSignal.set(false);
+      }
       this.activeSideSignal.set('player');
     }
   }
@@ -840,7 +853,13 @@ export class GameEngineService {
     const aiForestCount = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
     const controlRatio = totalForests > 0 ? aiForestCount / totalForests : 0;
     const baseScouted = this.isVisibleToAi(playerBase.x, playerBase.y) || this.isExploredByAi(playerBase.x, playerBase.y);
-    const siegeGate = baseScouted && controlRatio >= 0.4;
+    const localAdvantage = (() => {
+      const radius = 3;
+      const aiNearby = this.unitsSignal().filter(u => u.owner === 'ai' && Math.max(Math.abs(u.position.x - playerBase.x), Math.abs(u.position.y - playerBase.y)) <= radius);
+      const plNearby = this.unitsSignal().filter(u => u.owner === 'player' && Math.max(Math.abs(u.position.x - playerBase.x), Math.abs(u.position.y - playerBase.y)) <= radius);
+      const sum = (arr: Unit[]) => arr.reduce((t, u) => t + this.calculateTotalPoints(u), 0);
+      return sum(aiNearby) >= sum(plNearby);
+    })();
     const baseThreat3 = this.unitsSignal().some(u => u.owner === 'player' && (Math.abs(u.position.x - aiBase.x) + Math.abs(u.position.y - aiBase.y)) <= 3);
     const desperationMode = this.forestMonopolySignal().player >= 5;
     const aggroMode = aiUnitsCountPre > 5 && !baseThreat3;
@@ -848,6 +867,27 @@ export class GameEngineService {
       this.aiReserveDump();
       this.endTurn();
       return;
+    }
+    const clusterNearBase = this.unitsSignal().filter(u => u.owner === 'ai' && Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3);
+    if (clusterNearBase.length > 3) {
+      const candidate = clusterNearBase.find(u => {
+        const moves = this.calculateValidMoves(u);
+        return moves.some(m => {
+          const ally = this.getUnitAt(m.x, m.y);
+          return ally && ally.owner === 'ai' && ally.tier === u.tier;
+        });
+      });
+      if (candidate) {
+        const moves = this.calculateValidMoves(candidate);
+        const target = moves.find(m => {
+          const ally = this.getUnitAt(m.x, m.y);
+          return ally && ally.owner === 'ai' && ally.tier === candidate.tier;
+        });
+        if (target) {
+          this.executeMove(candidate, target);
+          return;
+        }
+      }
     }
     const aiReservesEarly = this.reservePointsSignal().ai;
     if (aiReservesEarly >= 25) {
@@ -1007,7 +1047,7 @@ export class GameEngineService {
       }
     }
     if (!this.wallBuiltThisTurnSignal()) {
-      if (siegeGate && this.tryLongWalls()) {
+      if (baseScouted && localAdvantage && this.tryLongWalls()) {
       }
     }
 
@@ -1078,8 +1118,7 @@ export class GameEngineService {
 
     let bestMove: { unit: Unit, target: Position } | null = null;
 
-    if (siegeGate) {
-      // Immediate base strike only if siege gate conditions are met
+    if (baseScouted && localAdvantage) {
       for (const u of aiUnits) {
         const moves = this.calculateValidMoves(u);
         const canHitBase = moves.some(m => m.x === playerBase.x && m.y === playerBase.y);
@@ -1302,6 +1341,12 @@ export class GameEngineService {
   toggleSettings() {
     this.settingsOpenSignal.update(v => !v);
   }
+  autoDeployEnabled(): boolean {
+    return this.autoDeployEnabledSignal();
+  }
+  toggleAutoDeploy() {
+    this.autoDeployEnabledSignal.update(v => !v);
+  }
   settingsOpen() {
     return this.settingsOpenSignal();
   }
@@ -1340,6 +1385,15 @@ export class GameEngineService {
     if (wood < 20) return;
     this.resourcesSignal.update(r => ({ wood: r.wood - 20 }));
     this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai }));
+    this.playerConvertedThisTurnSignal.set(true);
+  }
+  maxConvertWoodToReserve() {
+    const wood = this.resourcesSignal().wood;
+    const count = Math.floor(wood / 20);
+    if (count <= 0) return;
+    this.resourcesSignal.update(r => ({ wood: r.wood - count * 20 }));
+    this.reservePointsSignal.update(r => ({ player: r.player + count, ai: r.ai }));
+    this.playerConvertedThisTurnSignal.set(true);
   }
   startDeployFromBase() {
     const reserves = this.reservePointsSignal().player;
@@ -1363,6 +1417,35 @@ export class GameEngineService {
     }
     this.deployTargetsSignal.set(targets);
     this.baseDeployActiveSignal.set(true);
+  }
+  private autoDeployFromReserves() {
+    const base = this.getBasePosition('player');
+    const candidates: Position[] = [];
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dy = -2; dy <= 2; dy++) {
+        if (dx === 0 && dy === 0) continue;
+        const x = base.x + dx;
+        const y = base.y + dy;
+        if (!this.inBounds(x, y)) continue;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) > 2) continue;
+        if (!this.getUnitAt(x, y)) candidates.push({ x, y });
+      }
+    }
+    let reserves = this.reservePointsSignal().player;
+    const placed: Position[] = [];
+    for (const pos of candidates) {
+      if (reserves <= 0) break;
+      const cost = this.economy.getHighestAffordableCost(reserves);
+      if (cost <= 0) break;
+      const tl = this.calculateTierAndLevel(cost);
+      this.unitsSignal.update(units => [...units, { id: crypto.randomUUID(), position: { ...pos }, level: tl.level, tier: tl.tier, points: cost, owner: 'player', turnsStationary: 0 }]);
+      reserves -= cost;
+      placed.push(pos);
+    }
+    if (placed.length > 0) {
+      this.reservePointsSignal.update(r => ({ player: reserves, ai: r.ai }));
+      this.recomputeVisibility();
+    }
   }
 
   isDeployTarget(x: number, y: number): boolean {
@@ -1642,5 +1725,16 @@ export class GameEngineService {
   }
   private countNearbyAiUnits(tile: Position, r: number): number {
     return this.unitsSignal().filter(u => u.owner === 'ai' && Math.max(Math.abs(u.position.x - tile.x), Math.abs(u.position.y - tile.y)) <= r).length;
+  }
+  unitQuadrantBias(): Map<string, { quadrant: number; until: number }> {
+    return this.unitQuadrantBiasSignal();
+  }
+  private getQuadrant(p: Position, center: Position): number {
+    const left = p.x <= center.x;
+    const top = p.y <= center.y;
+    if (left && top) return 0;
+    if (!left && top) return 1;
+    if (left && !top) return 2;
+    return 3;
   }
 }
