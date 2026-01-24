@@ -169,7 +169,7 @@
           [class.ring-2]="(x === 0 && y === 0) || (x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1)"
           [class.ring-blue-300]="x === 0 && y === 0 && gameEngine.baseDeployActive()"
           [class.ring-red-300]="x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1"
-          [style.backgroundColor]="gameEngine.isForest(x, y) && gameEngine.isVisibleToPlayer(x, y) ? '#5D4037' : null"
+          [style.backgroundColor]="gameEngine.isForest(x, y) ? '#795548' : null"
           [class.bg-amber-900]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
           [class.border-amber-500]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
           [class.bg-gray-950]="!gameEngine.isVisibleToPlayer(x, y)"

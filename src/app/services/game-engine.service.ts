@@ -37,6 +37,9 @@ export class GameEngineService {
   private wallsSignal = signal<Wall[]>([]);
   private playerVisibilitySignal = signal<Set<string>>(new Set<string>());
   private aiVisibilitySignal = signal<Set<string>>(new Set<string>());
+  private playerExploredSignal = signal<Set<string>>(new Set<string>());
+  private aiExploredSignal = signal<Set<string>>(new Set<string>());
+  private unitMoveHistorySignal = signal<Map<string, Position[]>>(new Map<string, Position[]>());
   private buildModeSignal = signal<boolean>(false);
   private fogDebugDisabledSignal = signal<boolean>(false);
   private wallBuiltThisTurnSignal = signal<boolean>(false);
@@ -75,6 +78,8 @@ export class GameEngineService {
   readonly walls = this.wallsSignal.asReadonly();
   readonly playerVisibility = this.playerVisibilitySignal.asReadonly();
   readonly aiVisibility = this.aiVisibilitySignal.asReadonly();
+  readonly playerExplored = this.playerExploredSignal.asReadonly();
+  readonly aiExplored = this.aiExploredSignal.asReadonly();
   readonly buildMode = this.buildModeSignal.asReadonly();
   readonly fogDebugDisabled = this.fogDebugDisabledSignal.asReadonly();
   readonly wallBuiltThisTurn = this.wallBuiltThisTurnSignal.asReadonly();
@@ -147,6 +152,9 @@ export class GameEngineService {
     this.reservePointsSignal.set({ player: 5, ai: 5 });
     this.deployTargetsSignal.set([]);
     this.forestsSignal.set(this.generateForests());
+    const forestKeys = new Set(this.forestsSignal().map(p => `${p.x},${p.y}`));
+    this.playerExploredSignal.set(new Set(forestKeys));
+    this.aiExploredSignal.set(new Set(forestKeys));
     this.wallsSignal.set([]);
     this.baseDeployActiveSignal.set(false);
     this.buildModeSignal.set(false);
@@ -416,6 +424,13 @@ export class GameEngineService {
              this.movedThisTurnSignal.set(next);
              this.lastArrivedUnitIdSignal.set(movingUnit.id);
              setTimeout(() => this.lastArrivedUnitIdSignal.set(null), 250);
+             const map = new Map(this.unitMoveHistorySignal());
+             const hist = map.get(movingUnit.id) ?? [];
+             const startKey = { x: start.x, y: start.y };
+             const targetKey = { x: target.x, y: target.y };
+             const updatedHist = [...hist, startKey, targetKey].slice(-4);
+             map.set(movingUnit.id, updatedHist);
+             this.unitMoveHistorySignal.set(map);
           }
       }
       
@@ -502,6 +517,17 @@ export class GameEngineService {
     }
     this.playerVisibilitySignal.set(res.player);
     this.aiVisibilitySignal.set(res.ai);
+    // Persist explored tiles
+    this.playerExploredSignal.update(prev => {
+      const next = new Set(prev);
+      res.player.forEach(k => next.add(k));
+      return next;
+    });
+    this.aiExploredSignal.update(prev => {
+      const next = new Set(prev);
+      res.ai.forEach(k => next.add(k));
+      return next;
+    });
   }
   
   isVisibleToPlayer(x: number, y: number): boolean {
@@ -512,6 +538,12 @@ export class GameEngineService {
   isVisibleToAi(x: number, y: number): boolean {
     if (this.fogDebugDisabledSignal()) return true;
     return this.aiVisibilitySignal().has(`${x},${y}`);
+  }
+  isExploredByPlayer(x: number, y: number): boolean {
+    return this.playerExploredSignal().has(`${x},${y}`);
+  }
+  isExploredByAi(x: number, y: number): boolean {
+    return this.aiExploredSignal().has(`${x},${y}`);
   }
 
   private calculatePower(unit: Unit): number {
@@ -813,10 +845,67 @@ export class GameEngineService {
   private aiTurn() {
     if (this.gameStatus() !== 'playing') return;
     const aiUnitsCountPre = this.unitsSignal().filter(u => u.owner === 'ai').length;
+    const playerUnitsCountPre = this.unitsSignal().filter(u => u.owner === 'player').length;
     const aiBase = this.getBasePosition('ai');
+    const playerBase = { x: 0, y: 0 };
+    const totalForests = this.forestsSignal().length;
+    const playerForestCount = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
+    const aiForestCount = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
+    const controlRatio = totalForests > 0 ? aiForestCount / totalForests : 0;
+    const baseScouted = this.isVisibleToAi(playerBase.x, playerBase.y) || this.isExploredByAi(playerBase.x, playerBase.y);
+    const siegeGate = baseScouted && controlRatio >= 0.4;
     const baseThreat3 = this.unitsSignal().some(u => u.owner === 'player' && (Math.abs(u.position.x - aiBase.x) + Math.abs(u.position.y - aiBase.y)) <= 3);
     const desperationMode = this.forestMonopolySignal().player >= 5;
     const aggroMode = aiUnitsCountPre > 5 && !baseThreat3;
+    if (aiUnitsCountPre < playerUnitsCountPre && this.reservePointsSignal().ai > 0) {
+      this.aiReserveDump();
+      this.endTurn();
+      return;
+    }
+    const aiReservesEarly = this.reservePointsSignal().ai;
+    if (aiReservesEarly >= 25) {
+      const targets2: Position[] = [];
+      for (let dx = -2; dx <= 2; dx++) {
+        for (let dy = -2; dy <= 2; dy++) {
+          const x = aiBase.x + dx;
+          const y = aiBase.y + dy;
+          if (!this.inBounds(x, y)) continue;
+          if (dx === 0 && dy === 0) continue;
+          if (Math.max(Math.abs(dx), Math.abs(dy)) > 2) continue;
+          if (!this.getUnitAt(x, y)) targets2.push({ x, y });
+        }
+      }
+      if (targets2.length > 0) {
+        const pos = targets2[Math.floor(Math.random() * targets2.length)];
+        const cost = this.getHighestAffordableCost(aiReservesEarly);
+        if (cost > 0) {
+          const tl = this.calculateTierAndLevel(cost);
+          this.unitsSignal.update(units => [...units, { id: crypto.randomUUID(), position: { ...pos }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0 }]);
+          this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai - cost }));
+          this.recomputeVisibility();
+        }
+      }
+    }
+    // Base spawn using reserves if base tile empty
+    const baseOccupied = !!this.getUnitAt(aiBase.x, aiBase.y);
+    if (!baseOccupied && this.reservePointsSignal().ai > 0) {
+      const cost = this.getHighestAffordableCost(this.reservePointsSignal().ai);
+      if (cost > 0) {
+        const tl = this.calculateTierAndLevel(cost);
+        this.unitsSignal.update(units => [...units, { id: crypto.randomUUID(), position: { ...aiBase }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0 }]);
+        this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai - cost }));
+        this.recomputeVisibility();
+      }
+    }
+    // If wood > 40, convert into reserves and deploy
+    if (this.aiWoodSignal() > 40) {
+      let safety = 0;
+      while (this.aiWoodSignal() >= 20 && this.reservePointsSignal().ai < 20 && safety < 10) {
+        this.aiConvertWoodToReserve();
+        safety++;
+      }
+      this.aiReserveDump();
+    }
     if (desperationMode) this.aiReserveDump();
     if (this.aiWoodSignal() > 50) {
       let tries = 0;
@@ -841,7 +930,7 @@ export class GameEngineService {
         for (const e of edges) {
           const a = enemy.position;
           const b = e;
-          if (this.canBuildWallBetween(a, b)) {
+          if (this.canBuildWallBetween(a, b) && (this.countNearbyAiUnits(a, 2) >= 2 || this.countNearbyAiUnits(b, 2) >= 2)) {
             this.aiBuildWallBetween(a, b);
             this.wallBuiltThisTurnSignal.set(true);
             break;
@@ -870,7 +959,7 @@ export class GameEngineService {
             const db = Math.abs(b.x - 0) + Math.abs(b.y - 0);
             return da - db;
           })[0];
-          if (this.canBuildWallBetween(t, towardPlayer)) {
+          if (this.canBuildWallBetween(t, towardPlayer) && this.countNearbyAiUnits(t, 2) >= 2) {
             this.aiBuildWallBetween(t, towardPlayer);
             this.wallBuiltThisTurnSignal.set(true);
             break;
@@ -891,7 +980,7 @@ export class GameEngineService {
           { x: enemy.position.x, y: towardAiY }
         ];
         for (const b of bCandidates) {
-          if (this.canBuildWallBetween(a, b)) {
+          if (this.canBuildWallBetween(a, b) && (this.countNearbyAiUnits(a, 2) >= 2 || this.countNearbyAiUnits(b, 2) >= 2)) {
             this.aiBuildWallBetween(a, b);
             this.wallBuiltThisTurnSignal.set(true);
             break;
@@ -922,14 +1011,16 @@ export class GameEngineService {
         if (stepY !== 0) blocks.push({ x: f.position.x, y: f.position.y - stepY });
         for (const bt of blocks) {
           if (!this.inBounds(bt.x, bt.y)) continue;
-          this.aiBuildWallBetween(f.position, bt);
+          if (this.countNearbyAiUnits(f.position, 2) >= 2) {
+            this.aiBuildWallBetween(f.position, bt);
+          }
           if (this.wallBuiltThisTurnSignal()) break;
         }
         if (this.wallBuiltThisTurnSignal()) break;
       }
     }
     if (!this.wallBuiltThisTurnSignal()) {
-      if (this.tryLongWalls()) {
+      if (siegeGate && this.tryLongWalls()) {
       }
     }
 
@@ -988,9 +1079,6 @@ export class GameEngineService {
       isAdjToBase = (p: Position) => baseAdjKey.has(`${p.x},${p.y}`);
     }
  
-    const totalForests = this.forestsSignal().length;
-    const playerForestCount = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
-    const aiForestCount = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
     const crisisMode = totalForests > 0 && playerForestCount / totalForests > 0.7;
     if (crisisMode && aiForestCount < 2) {
       this.aiReserveDump();
@@ -1002,16 +1090,17 @@ export class GameEngineService {
     }
 
     let bestMove: { unit: Unit, target: Position, score: number } | null = null;
-    const playerBase = { x: 0, y: 0 };
 
-    // Immediate base strike: if any AI unit can reach player base, take it now
-    for (const u of aiUnits) {
-      const moves = this.calculateValidMoves(u);
-      const canHitBase = moves.some(m => m.x === playerBase.x && m.y === playerBase.y);
-      if (canHitBase) {
-        const target = moves.find(m => m.x === playerBase.x && m.y === playerBase.y)!;
-        this.executeMove(u, target);
-        return;
+    if (siegeGate) {
+      // Immediate base strike only if siege gate conditions are met
+      for (const u of aiUnits) {
+        const moves = this.calculateValidMoves(u);
+        const canHitBase = moves.some(m => m.x === playerBase.x && m.y === playerBase.y);
+        if (canHitBase) {
+          const target = moves.find(m => m.x === playerBase.x && m.y === playerBase.y)!;
+          this.executeMove(u, target);
+          return;
+        }
       }
     }
     const aiNearCount = aiUnits.filter(u => {
@@ -1022,8 +1111,8 @@ export class GameEngineService {
     const aggressionMultiplier = this.settings.isNightmare() ? 1.25 : 1.0;
     const baseThreat = this.unitsSignal().some(u => u.owner === 'player' && (Math.abs(u.position.x - aiBase.x) + Math.abs(u.position.y - aiBase.y)) <= 1);
     const forests = this.forestsSignal();
-    const freeForestsVisible = forests.filter(f => this.isVisibleToAi(f.x, f.y) && !this.getUnitAt(f.x, f.y));
-    const reconNeeded = freeForestsVisible.length === 0;
+    const unoccupiedForests = forests.filter(f => !this.getUnitAt(f.x, f.y));
+    const reconNeeded = unoccupiedForests.length === 0;
     // reuse previously computed playerForestCount/aiForestCount from above
     const siegeDesperation = playerForestCount > aiForestCount;
     const safeAiForests = this.unitsSignal()
@@ -1082,6 +1171,12 @@ export class GameEngineService {
               const moveF = forests.length ? Math.min(...forests.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y))) : Infinity;
               if (moveF < currF) score += 2000;
             }
+            const histMap = new Map(this.unitMoveHistorySignal());
+            const hist = histMap.get(unit.id) ?? [];
+            const stutter = hist.length >= 4 &&
+              hist[0].x === hist[2].x && hist[0].y === hist[2].y &&
+              hist[1].x === hist[3].x && hist[1].y === hist[3].y &&
+              (hist[0].x !== hist[1].x || hist[0].y !== hist[1].y);
             // Movement desire: if unit stayed near/at base for >2 turns, prefer moving toward center
             const center = { x: Math.floor(this.gridSize / 2), y: Math.floor(this.gridSize / 2) };
             const stationaryLong = (unit.turnsStationary ?? 0) >= 2;
@@ -1090,6 +1185,16 @@ export class GameEngineService {
             const moveDistToCenter = Math.abs(move.x - center.x) + Math.abs(move.y - center.y);
             if (stationaryLong && nearBase && moveDistToCenter < currDistToCenter) {
                 score += aggroMode ? 600 : 150;
+            }
+            if (stutter) {
+              if (moveDistToCenter < currDistToCenter) score += 5000;
+              const unexplored = forests.filter(f => !this.isExploredByAi(f.x, f.y));
+              if (unexplored.length > 0) {
+                const currU = Math.min(...unexplored.map(f => Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y)));
+                const moveU = Math.min(...unexplored.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y)));
+                if (moveU < currU) score += 3000;
+              }
+              if (hist.length >= 2 && move.x === hist[1].x && move.y === hist[1].y) score -= 6000;
             }
 
             const targetUnit = this.getUnitAt(move.x, move.y);
@@ -1172,8 +1277,18 @@ export class GameEngineService {
                 if (unit.tier >= 3 && hasT1 && this.isForest(unit.position.x, unit.position.y)) {
                   score -= 1000;
                 }
+                const allyAtMove = this.getUnitAt(move.x, move.y);
+                if (allyAtMove && allyAtMove.owner === 'ai') {
+                  score -= 4000;
+                }
             } else if (nearestForestDistMove < nearestForestDistCurrent) {
                 score += 180 * (nearestForestDistCurrent - nearestForestDistMove);
+            }
+            const unocc = forests.filter(f => !this.getUnitAt(f.x, f.y));
+            if (unocc.length > 0) {
+              const currUnocc = Math.min(...unocc.map(f => Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y)));
+              const moveUnocc = Math.min(...unocc.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y)));
+              if (moveUnocc < currUnocc) score += 1200 * (currUnocc - moveUnocc);
             }
             // Efficient Rotation: encourage T1 to approach safe AI forests
             if (unit.tier === 1 && safeAiForests.length > 0) {
@@ -1349,12 +1464,13 @@ export class GameEngineService {
     let aiRes = this.reservePointsSignal().ai;
     const aiBase = this.getBasePosition('ai');
     const adj: Position[] = [];
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dy = -2; dy <= 2; dy++) {
         if (dx === 0 && dy === 0) continue;
         const x = aiBase.x + dx;
         const y = aiBase.y + dy;
         if (!this.inBounds(x, y)) continue;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) > 2) continue;
         if (!this.getUnitAt(x, y)) adj.push({ x, y });
       }
     }
@@ -1391,7 +1507,7 @@ export class GameEngineService {
  
   private spawnStarterArmy(owner: Owner) {
     const base = this.getBasePosition(owner);
-    const radius = 3;
+    const radius = 2;
     const candidates: Position[] = [];
     for (let dx = -radius; dx <= radius; dx++) {
       for (let dy = -radius; dy <= radius; dy++) {
@@ -1399,6 +1515,7 @@ export class GameEngineService {
         const y = base.y + dy;
         if (!this.inBounds(x, y)) continue;
         if (dx === 0 && dy === 0) continue;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) > radius) continue;
         candidates.push({ x, y });
       }
     }
@@ -1475,8 +1592,8 @@ export class GameEngineService {
     const playerBase = this.getBasePosition('player');
     const aiBase = this.getBasePosition('ai');
     const inSpawnSafeZone = (x: number, y: number) => {
-      const dPlayer = Math.abs(x - playerBase.x) + Math.abs(y - playerBase.y);
-      const dAi = Math.abs(x - aiBase.x) + Math.abs(y - aiBase.y);
+      const dPlayer = Math.max(Math.abs(x - playerBase.x), Math.abs(y - playerBase.y));
+      const dAi = Math.max(Math.abs(x - aiBase.x), Math.abs(y - aiBase.y));
       return dPlayer <= 3 || dAi <= 3;
     };
     while (positions.length < count) {
@@ -1576,12 +1693,13 @@ export class GameEngineService {
       return;
     }
     const targets: Position[] = [];
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dy = -2; dy <= 2; dy++) {
         if (dx === 0 && dy === 0) continue;
         const x = base.x + dx;
         const y = base.y + dy;
         if (x < 0 || x >= this.gridSize || y < 0 || y >= this.gridSize) continue;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) > 2) continue;
         const occupiedUnit = this.getUnitAt(x, y);
         if (!occupiedUnit) targets.push({ x, y });
       }
@@ -1828,7 +1946,7 @@ export class GameEngineService {
       for (const [a, b] of edges) {
         if (!this.inBounds(a.x, a.y) || !this.inBounds(b.x, b.y)) continue;
         if (this.getWallBetween(a.x, a.y, b.x, b.y)) continue;
-        if (this.canBuildWallBetween(a, b)) {
+        if (this.canBuildWallBetween(a, b) && this.countNearbyAiUnits(f.position, 2) >= 2) {
           this.aiBuildWallBetween(a, b);
           if (this.wallBuiltThisTurnSignal()) return true;
         }
@@ -1842,6 +1960,7 @@ export class GameEngineService {
     const aiBase = this.getBasePosition('ai');
     const units = this.unitsSignal().filter(u => u.owner === 'ai');
     for (const u of units) {
+      if (this.countNearbyAiUnits(u.position, 2) < 2) continue;
       const towardX = Math.sign(aiBase.x - 0);
       const towardY = Math.sign(aiBase.y - 0);
       const targets: [Position, Position][] = [];
@@ -1863,5 +1982,8 @@ export class GameEngineService {
   }
   private isInNoBuildZone(tile: Position): boolean {
     return this.build.isInNoBuildZone(tile, this.getBasePosition('player'), this.getBasePosition('ai'));
+  }
+  private countNearbyAiUnits(tile: Position, r: number): number {
+    return this.unitsSignal().filter(u => u.owner === 'ai' && Math.max(Math.abs(u.position.x - tile.x), Math.abs(u.position.y - tile.y)) <= r).length;
   }
 }
