@@ -40,6 +40,10 @@ export class GameEngineService {
   private playerExploredSignal = signal<Set<string>>(new Set<string>());
   private aiExploredSignal = signal<Set<string>>(new Set<string>());
   private unitMoveHistorySignal = signal<Map<string, Position[]>>(new Map<string, Position[]>());
+  private unitStutterBanSignal = signal<Map<string, { tiles: Set<string>; until: number }>>(new Map());
+  private lastAiMovedUnitIdSignal = signal<string | null>(null);
+  private aiConsecMovesSignal = signal<number>(0);
+  private aiSpawnQuadrantSignal = signal<number>(0);
   private buildModeSignal = signal<boolean>(false);
   private fogDebugDisabledSignal = signal<boolean>(false);
   private wallBuiltThisTurnSignal = signal<boolean>(false);
@@ -462,6 +466,30 @@ export class GameEngineService {
     this.checkBaseDefeat();
     
     if (this.gameStatus() === 'playing' && consumeTurn) {
+      const isAi = unit.owner === 'ai';
+      if (isAi) {
+        const last = this.lastAiMovedUnitIdSignal();
+        if (last === unit.id) {
+          this.aiConsecMovesSignal.update(c => c + 1);
+        } else {
+          this.lastAiMovedUnitIdSignal.set(unit.id);
+          this.aiConsecMovesSignal.set(1);
+        }
+        const hist = new Map(this.unitMoveHistorySignal()).get(unit.id) ?? [];
+        const stutter = hist.length >= 4 &&
+          hist[0].x === hist[2].x && hist[0].y === hist[2].y &&
+          hist[1].x === hist[3].x && hist[1].y === hist[3].y &&
+          (hist[0].x !== hist[1].x || hist[0].y !== hist[1].y);
+        if (stutter) {
+          const ban = new Map(this.unitStutterBanSignal());
+          const tiles = new Set<string>([
+            `${hist[0].x},${hist[0].y}`,
+            `${hist[1].x},${hist[1].y}`
+          ]);
+          ban.set(unit.id, { tiles, until: this.turnSignal() + 5 });
+          this.unitStutterBanSignal.set(ban);
+        }
+      }
       this.endTurn();
     }
   }
@@ -1195,6 +1223,21 @@ export class GameEngineService {
                 if (moveU < currU) score += 3000;
               }
               if (hist.length >= 2 && move.x === hist[1].x && move.y === hist[1].y) score -= 6000;
+            }
+
+            // Over-goal: Only allow a 3rd consecutive move on same unit if it lands on an unoccupied forest
+            const isThirdConsecutive = this.lastAiMovedUnitIdSignal() === unit.id && this.aiConsecMovesSignal() >= 2;
+            if (isThirdConsecutive) {
+              const alreadyOnForest = this.isForest(unit.position.x, unit.position.y);
+              const landsOnForest = this.isForest(move.x, move.y);
+              const unoccupiedAtMove = !this.getUnitAt(move.x, move.y);
+              if (!alreadyOnForest && landsOnForest && unoccupiedAtMove) {
+                // Make this path the highest priority
+                score += 12000;
+              } else {
+                // Strongly discourage any other 3rd consecutive move
+                score -= 12000;
+              }
             }
 
             const targetUnit = this.getUnitAt(move.x, move.y);
