@@ -4,6 +4,9 @@ import { CombatService } from './combat.service';
 import { BuildService } from './build.service';
 import { LogService } from './log.service';
 import { SettingsService } from './settings.service';
+import { MapService } from './map.service';
+import { EconomyService } from './economy.service';
+import { AiStrategyService } from './ai-strategy.service';
 
 interface Wall {
   id: string;
@@ -136,7 +139,7 @@ export class GameEngineService {
     return Math.round(this.tileSizePx * 0.75);
   }
 
-  constructor(private combat: CombatService, private build: BuildService, private log: LogService, private settings: SettingsService) {
+  constructor(private combat: CombatService, private build: BuildService, private log: LogService, private settings: SettingsService, private map: MapService, private economy: EconomyService, private aiStrategy: AiStrategyService) {
     this.resetGame();
   }
 
@@ -155,7 +158,7 @@ export class GameEngineService {
     this.baseHealthSignal.set({ player: 100, ai: 100 });
     this.reservePointsSignal.set({ player: 5, ai: 5 });
     this.deployTargetsSignal.set([]);
-    this.forestsSignal.set(this.generateForests());
+    this.forestsSignal.set(this.map.generateForests(this.gridSize, this.getBasePosition('player'), this.getBasePosition('ai')));
     const forestKeys = new Set(this.forestsSignal().map(p => `${p.x},${p.y}`));
     this.playerExploredSignal.set(new Set(forestKeys));
     this.aiExploredSignal.set(new Set(forestKeys));
@@ -218,30 +221,27 @@ export class GameEngineService {
       const stepY = Math.sign(dyTotal);
       const steps = Math.max(Math.abs(dxTotal), Math.abs(dyTotal));
 
-      for (let i = 1; i <= steps; i++) {
-        const from = { x: start.x + stepX * (i - 1), y: start.y + stepY * (i - 1) };
-        const to = { x: start.x + stepX * i, y: start.y + stepY * i };
-        const wall = this.getWallBetween(from.x, from.y, to.x, to.y);
-        if (wall) {
-          if (wall.owner === movingUnit.owner) {
-            return updatedUnits;
-          } else {
-            const dmgPercent = this.combat.getWallHitPercent(movingUnit.tier);
-            this.wallsSignal.update(ws =>
-              ws
-                .map(w =>
-                  w.id === wall.id
-                    ? { ...w, health: Math.max(0, (w as any).health - dmgPercent) }
-                    : w
-                )
-                .filter((w: any) => (w.health ?? w.hitsRemaining ?? 0) > 0)
-            );
-            this.shakenWallIdSignal.set(wall.id);
-            setTimeout(() => this.shakenWallIdSignal.set(null), 200);
-            this.appendLog(`[Turn ${this.turnSignal()}] ${movingUnit.owner === 'player' ? 'Player' : 'AI'} auto-hit wall between (${from.x},${from.y})-(${to.x},${to.y}) for ${dmgPercent}% damage.`);
-            return updatedUnits;
-          }
-        }
+      const wallCheck = this.combat.checkWallAlongPath(start, target, movingUnit.owner, (x1, y1, x2, y2) => this.getWallBetween(x1, y1, x2, y2));
+      if (wallCheck.hitOwn) {
+        return updatedUnits;
+      }
+      if (wallCheck.hitEnemy) {
+        const lastFrom = wallCheck.lastFrom!;
+        const wall = this.getWallBetween(lastFrom.x, lastFrom.y, target.x, target.y)!;
+        const dmgPercent = this.combat.getWallHitPercent(movingUnit.tier);
+        this.wallsSignal.update(ws =>
+          ws
+            .map(w =>
+              w.id === wall.id
+                ? { ...w, health: Math.max(0, (w as any).health - dmgPercent) }
+                : w
+            )
+            .filter((w: any) => (w.health ?? w.hitsRemaining ?? 0) > 0)
+        );
+        this.shakenWallIdSignal.set(wall.id);
+        setTimeout(() => this.shakenWallIdSignal.set(null), 200);
+        this.appendLog(`[Turn ${this.turnSignal()}] ${movingUnit.owner === 'player' ? 'Player' : 'AI'} auto-hit wall between (${lastFrom.x},${lastFrom.y})-(${target.x},${target.y}) for ${dmgPercent}% damage.`);
+        return updatedUnits;
       }
 
       const opponentBase = this.getBasePosition(movingUnit.owner === 'player' ? 'ai' : 'player');
@@ -268,11 +268,7 @@ export class GameEngineService {
         if (this.inBounds(lastFrom.x, lastFrom.y)) {
           // Block diagonal attacks through corners: check corner walls
           if (stepX !== 0 && stepY !== 0) {
-            const w1 = this.getWallBetween(lastFrom.x, lastFrom.y, lastFrom.x + stepX, lastFrom.y);
-            const w2 = this.getWallBetween(lastFrom.x, lastFrom.y, lastFrom.x, lastFrom.y + stepY);
-            const w3 = this.getWallBetween(target.x - stepX, target.y, target.x, target.y);
-            const w4 = this.getWallBetween(target.x, target.y - stepY, target.x, target.y);
-            if (w1 || w2 || w3 || w4) {
+            if (this.combat.isDiagonalBlocked(lastFrom, target, (x1, y1, x2, y2) => this.getWallBetween(x1, y1, x2, y2))) {
               consumeTurn = false;
               return updatedUnits;
             }
@@ -508,54 +504,17 @@ export class GameEngineService {
     return this.combat.getPointsForTierLevel(tier, level);
   }
  
-  private getHighestAffordableCost(reserves: number): number {
-    const costs = [500, 375, 250, 125, 100, 75, 50, 25, 20, 15, 10, 5, 4, 3, 2, 1];
-    for (const c of costs) {
-      if (reserves >= c) return c;
-    }
-    return 0;
-  }
   
   private inBounds(x: number, y: number): boolean {
     return x >= 0 && x < this.gridSize && y >= 0 && y < this.gridSize;
   }
   
   private recomputeVisibility() {
-    const playerBase = this.getBasePosition('player');
-    const aiBase = this.getBasePosition('ai');
-    const res = { player: new Set<string>(), ai: new Set<string>() };
-    const units = this.unitsSignal();
-    const mark = (set: Set<string>, x: number, y: number) => {
-      if (this.inBounds(x, y)) set.add(`${x},${y}`);
-    };
-    const markRadius = (set: Set<string>, center: Position, radius: number) => {
-      for (let dx = -radius; dx <= radius; dx++) {
-        for (let dy = -radius; dy <= radius; dy++) {
-          const x = center.x + dx;
-          const y = center.y + dy;
-          if (Math.max(Math.abs(dx), Math.abs(dy)) <= radius) mark(set, x, y);
-        }
-      }
-    };
-    markRadius(res.player, playerBase, 3);
-    markRadius(res.ai, aiBase, 3);
-    for (const u of units) {
-      const set = u.owner === 'player' ? res.player : res.ai;
-      markRadius(set, u.position, 2);
-    }
+    const res = this.map.computeVisibility(this.gridSize, this.unitsSignal(), this.getBasePosition('player'), this.getBasePosition('ai'), this.fogDebugDisabledSignal());
     this.playerVisibilitySignal.set(res.player);
     this.aiVisibilitySignal.set(res.ai);
-    // Persist explored tiles
-    this.playerExploredSignal.update(prev => {
-      const next = new Set(prev);
-      res.player.forEach(k => next.add(k));
-      return next;
-    });
-    this.aiExploredSignal.update(prev => {
-      const next = new Set(prev);
-      res.ai.forEach(k => next.add(k));
-      return next;
-    });
+    this.playerExploredSignal.update(prev => this.map.mergeExplored(prev, res.player));
+    this.aiExploredSignal.update(prev => this.map.mergeExplored(prev, res.ai));
   }
   
   isVisibleToPlayer(x: number, y: number): boolean {
@@ -905,7 +864,7 @@ export class GameEngineService {
       }
       if (targets2.length > 0) {
         const pos = targets2[Math.floor(Math.random() * targets2.length)];
-        const cost = this.getHighestAffordableCost(aiReservesEarly);
+        const cost = this.economy.getHighestAffordableCost(aiReservesEarly);
         if (cost > 0) {
           const tl = this.calculateTierAndLevel(cost);
           this.unitsSignal.update(units => [...units, { id: crypto.randomUUID(), position: { ...pos }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0 }]);
@@ -917,7 +876,7 @@ export class GameEngineService {
     // Base spawn using reserves if base tile empty
     const baseOccupied = !!this.getUnitAt(aiBase.x, aiBase.y);
     if (!baseOccupied && this.reservePointsSignal().ai > 0) {
-      const cost = this.getHighestAffordableCost(this.reservePointsSignal().ai);
+      const cost = this.economy.getHighestAffordableCost(this.reservePointsSignal().ai);
       if (cost > 0) {
         const tl = this.calculateTierAndLevel(cost);
         this.unitsSignal.update(units => [...units, { id: crypto.randomUUID(), position: { ...aiBase }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0 }]);
@@ -1069,7 +1028,7 @@ export class GameEngineService {
       }
       const aiUnitsCountPre = this.unitsSignal().filter(u => u.owner === 'ai').length;
       if (targets.length > 0 && aiUnitsCountPre < 8) {
-        let cost = this.getHighestAffordableCost(aiReserves);
+        let cost = this.economy.getHighestAffordableCost(aiReserves);
         if (this.settings.isNightmare() && this.aiWoodSignal() > 30 && aiReserves > 10) {
           cost = Math.max(cost, 5);
         }
@@ -1117,7 +1076,7 @@ export class GameEngineService {
       return;
     }
 
-    let bestMove: { unit: Unit, target: Position, score: number } | null = null;
+    let bestMove: { unit: Unit, target: Position } | null = null;
 
     if (siegeGate) {
       // Immediate base strike only if siege gate conditions are met
@@ -1153,325 +1112,7 @@ export class GameEngineService {
       .sort((a, b) => this.calculatePower(a) - this.calculatePower(b));
     const weakestForestTarget = playerForestUnits.length ? playerForestUnits[0].position : null;
     const monopolyThreat = this.forestMonopolySignal().player >= 5;
-    const candidatesCollected: { unit: Unit, target: Position, score: number, weakAttack: boolean }[] = [];
-    for (const unit of aiUnits) {
-        const moves = this.calculateValidMoves(unit);
-        const limit = this.gridSize > 30 ? 16 : 64;
-        const evalMoves = moves.slice(0, limit);
-        const myPower = this.calculatePower(unit);
-        const hasT1 = this.unitsSignal().some(u => u.owner === 'ai' && u.tier === 1);
-
-        for (const move of evalMoves) {
-            let score = 0;
-            
-            // Distance to player base
-            const dist = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
-            score -= dist * 10; 
-            if (aggroMode) {
-              const towardPlayerHalf = (move.x <= Math.floor(this.gridSize / 2)) || (move.y <= Math.floor(this.gridSize / 2));
-              if (towardPlayerHalf) score += 600;
-              if (!this.getUnitAt(move.x, move.y)) score += 200;
-            }
-            if (this.settings.isNightmare() && reconNeeded && unit.tier >= 3) {
-              const currDist = Math.abs(unit.position.x - playerBase.x) + Math.abs(unit.position.y - playerBase.y);
-              const moveDist = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
-              if (moveDist < currDist) {
-                score += 10000;
-              }
-            }
-            // Meat shield: T1 units body-block player elites on Hard/Nightmare
-            if (unit.tier === 1 && (this.settings.isHard() || this.settings.isNightmare())) {
-              const adjacentElite = this.unitsSignal().some(p =>
-                p.owner === 'player' &&
-                p.tier >= 3 &&
-                Math.max(Math.abs(p.position.x - move.x), Math.abs(p.position.y - move.y)) === 1 &&
-                !this.getUnitAt(move.x, move.y)
-              );
-              if (adjacentElite) score += 7000;
-            }
-            if (crisisMode && weakestForestTarget) {
-              const currW = Math.abs(unit.position.x - weakestForestTarget.x) + Math.abs(unit.position.y - weakestForestTarget.y);
-              const moveW = Math.abs(move.x - weakestForestTarget.x) + Math.abs(move.y - weakestForestTarget.y);
-              if (moveW < currW) score += 8000;
-            }
-            if (monopolyThreat) {
-              const currF = forests.length ? Math.min(...forests.map(f => Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y))) : Infinity;
-              const moveF = forests.length ? Math.min(...forests.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y))) : Infinity;
-              if (moveF < currF) score += 2000;
-            }
-            const histMap = new Map(this.unitMoveHistorySignal());
-            const hist = histMap.get(unit.id) ?? [];
-            const stutter = hist.length >= 4 &&
-              hist[0].x === hist[2].x && hist[0].y === hist[2].y &&
-              hist[1].x === hist[3].x && hist[1].y === hist[3].y &&
-              (hist[0].x !== hist[1].x || hist[0].y !== hist[1].y);
-            // Movement desire: if unit stayed near/at base for >2 turns, prefer moving toward center
-            const center = { x: Math.floor(this.gridSize / 2), y: Math.floor(this.gridSize / 2) };
-            const stationaryLong = (unit.turnsStationary ?? 0) >= 2;
-            const nearBase = Math.max(Math.abs(unit.position.x - aiBase.x), Math.abs(unit.position.y - aiBase.y)) <= 1;
-            const currDistToCenter = Math.abs(unit.position.x - center.x) + Math.abs(unit.position.y - center.y);
-            const moveDistToCenter = Math.abs(move.x - center.x) + Math.abs(move.y - center.y);
-            if (stationaryLong && nearBase && moveDistToCenter < currDistToCenter) {
-                score += aggroMode ? 600 : 150;
-            }
-            if (stutter) {
-              if (moveDistToCenter < currDistToCenter) score += 5000;
-              const unexplored = forests.filter(f => !this.isExploredByAi(f.x, f.y));
-              if (unexplored.length > 0) {
-                const currU = Math.min(...unexplored.map(f => Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y)));
-                const moveU = Math.min(...unexplored.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y)));
-                if (moveU < currU) score += 3000;
-              }
-              if (hist.length >= 2 && move.x === hist[1].x && move.y === hist[1].y) score -= 6000;
-            }
-
-            // Over-goal: Only allow a 3rd consecutive move on same unit if it lands on an unoccupied forest
-            const isThirdConsecutive = this.lastAiMovedUnitIdSignal() === unit.id && this.aiConsecMovesSignal() >= 2;
-            if (isThirdConsecutive) {
-              const alreadyOnForest = this.isForest(unit.position.x, unit.position.y);
-              const landsOnForest = this.isForest(move.x, move.y);
-              const unoccupiedAtMove = !this.getUnitAt(move.x, move.y);
-              if (!alreadyOnForest && landsOnForest && unoccupiedAtMove) {
-                // Make this path the highest priority
-                score += 12000;
-              } else {
-                // Strongly discourage any other 3rd consecutive move
-                score -= 12000;
-              }
-            }
-
-            const targetUnit = this.getUnitAt(move.x, move.y);
-            if (targetUnit) {
-                if (targetUnit.owner === 'ai') {
-                    if (targetUnit.tier === unit.tier) {
-                      const nearAiBase = (Math.abs(unit.position.x - aiBase.x) + Math.abs(unit.position.y - aiBase.y)) <= 3;
-                      let mergeBase = (unit.tier <= 2 ? 250 : 80);
-                      if (nearAiBase) mergeBase = Math.floor(mergeBase * 0.2);
-                      const players = this.unitsSignal().filter(u => u.owner === 'player');
-                      let nearestTargetDistCurrent = Math.abs(unit.position.x - playerBase.x) + Math.abs(unit.position.y - playerBase.y);
-                      let nearestTargetDistMove = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
-                      if (players.length > 0) {
-                        nearestTargetDistCurrent = Math.min(
-                          nearestTargetDistCurrent,
-                          ...players.map(p => Math.abs(unit.position.x - p.position.x) + Math.abs(unit.position.y - p.position.y))
-                        );
-                        nearestTargetDistMove = Math.min(
-                          nearestTargetDistMove,
-                          ...players.map(p => Math.abs(move.x - p.position.x) + Math.abs(move.y - p.position.y))
-                        );
-                      }
-                      const movingTowardPlayer = nearestTargetDistMove < nearestTargetDistCurrent;
-                      if (this.isForest(move.x, move.y) || movingTowardPlayer) {
-                        score += mergeBase;
-                        const mergedPoints = this.calculateTotalPoints(unit) + this.calculateTotalPoints(targetUnit);
-                        const { tier } = this.calculateTierAndLevel(mergedPoints);
-                        if (tier > unit.tier) score += 30;
-                        // Strategic merging only if it helps win nearby fights or prep assault
-                        const nearbyPlayers = this.unitsSignal().filter(p => p.owner === 'player');
-                        let canWinSoon = false;
-                        for (const p of nearbyPlayers) {
-                          const d = Math.abs(move.x - p.position.x) + Math.abs(move.y - p.position.y);
-                          if (d <= 2) {
-                            const enemyPow = this.calculatePower(p);
-                            if (mergedPoints > enemyPow) { canWinSoon = true; break; }
-                          }
-                        }
-                        if (canWinSoon) score += 400;
-                        else score -= 150;
-                      } else {
-                        score -= 100;
-                      }
-                    }
-                } else {
-                    if (this.isVisibleToAi(move.x, move.y)) {
-                      const enemyPower = this.calculatePower(targetUnit);
-                      if (myPower > enemyPower) {
-                          let bonus = aggressionMultiplier * (100 + (enemyPower * 2));
-                          if (this.isForest(move.x, move.y)) bonus = Math.floor(bonus * 3);
-                          if (unit.tier >= 2) bonus += aggroMode ? 400 : 150;
-                          score += bonus;
-                      } else if (myPower < enemyPower) {
-                          score -= aggroMode ? 200 : (this.settings.isNightmare() ? 800 : 1200);
-                      } else {
-                          score -= aggroMode ? 0 : (this.settings.isNightmare() ? 20 : 50);
-                      }
-                    }
-                }
-            }
-
-            const nearestForestDistCurrent = forests.length
-              ? Math.min(
-                  ...forests.map(f => Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y))
-                )
-              : Infinity;
-            const nearestForestDistMove = forests.length
-              ? Math.min(...forests.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y)))
-              : Infinity;
-            // Forest Dominance: massively prefer occupying forests (500%+ increase)
-            if (this.isForest(move.x, move.y)) {
-                const baseGreed = this.aiWoodSignal() < 40 ? 800 : 400;
-                const greed = baseThreat ? baseGreed : baseGreed * 8;
-                score += greed;
-                // Farmer Role: Tier 1 gets top priority to occupy free forests
-                if (unit.tier === 1 && !this.getUnitAt(move.x, move.y)) {
-                  score += 3000;
-                }
-                if (crisisMode || aggroMode) score += 4000;
-                if (unit.tier >= 3 && hasT1 && this.isForest(unit.position.x, unit.position.y)) {
-                  score -= 1000;
-                }
-                const allyAtMove = this.getUnitAt(move.x, move.y);
-                if (allyAtMove && allyAtMove.owner === 'ai') {
-                  score -= 4000;
-                }
-            } else if (nearestForestDistMove < nearestForestDistCurrent) {
-                score += 180 * (nearestForestDistCurrent - nearestForestDistMove);
-            }
-            const unocc = forests.filter(f => !this.getUnitAt(f.x, f.y));
-            if (unocc.length > 0) {
-              const currUnocc = Math.min(...unocc.map(f => Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y)));
-              const moveUnocc = Math.min(...unocc.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y)));
-              if (moveUnocc < currUnocc) score += 1200 * (currUnocc - moveUnocc);
-            }
-            // Efficient Rotation: encourage T1 to approach safe AI forests
-            if (unit.tier === 1 && safeAiForests.length > 0) {
-              const currToSafe = Math.min(...safeAiForests.map(f => Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y)));
-              const moveToSafe = Math.min(...safeAiForests.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y)));
-              if (moveToSafe < currToSafe) score += 300 * (currToSafe - moveToSafe);
-            }
-            // Prefer moving toward player's half (left/top)
-            if (move.x <= Math.floor(this.gridSize / 2)) score += aggroMode ? 300 : 30;
-            if (move.y <= Math.floor(this.gridSize / 2)) score += aggroMode ? 200 : 20;
-            const distFromAiBase = Math.abs(move.x - aiBase.x) + Math.abs(move.y - aiBase.y);
-            score += aggroMode ? distFromAiBase * 90 : distFromAiBase * 45;
-            // Never sit on base: strongly reward leaving base tile
-            if (unit.position.x === aiBase.x && unit.position.y === aiBase.y) {
-                score += 500;
-            }
-            // Anti-deadlock: strongly prefer moving units away from base adjacency to clear spawn
-            if (typeof isAdjToBase === 'function' && !aggroMode) {
-              if (isAdjToBase(unit.position) && !isAdjToBase(move)) {
-                // Base clearance gets very high priority when reserves are high and spawn is blocked
-                score += (aiReserves > 20 ? 1000 : 200);
-              }
-            }
-            if (aiNearCount > 3 && !aggroMode) {
-              const isCurrNear = nearBase || (unit.position.x === aiBase.x && unit.position.y === aiBase.y);
-              const isMoveNear = Math.max(Math.abs(move.x - aiBase.x), Math.abs(move.y - aiBase.y)) <= 1 || (move.x === aiBase.x && move.y === aiBase.y);
-              const penalty = siegeDesperation ? 1500 : 1000;
-              const reward = siegeDesperation ? 750 : 500;
-              if (isCurrNear && isMoveNear) score -= penalty;
-              if (isCurrNear && !isMoveNear) score += reward;
-            }
-            // Resource Denial: prioritize attacking player units occupying forests
-            const playerOnForest = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y));
-            if (playerOnForest.length > 0) {
-              const nearestForestHolderDistCurrent = Math.min(
-                ...playerOnForest.map(p => Math.abs(unit.position.x - p.position.x) + Math.abs(unit.position.y - p.position.y))
-              );
-              const nearestForestHolderDistMove = Math.min(
-                ...playerOnForest.map(p => Math.abs(move.x - p.position.x) + Math.abs(move.y - p.position.y))
-              );
-              if (nearestForestHolderDistMove < nearestForestHolderDistCurrent) {
-                score += 600 * (nearestForestHolderDistCurrent - nearestForestHolderDistMove);
-              }
-              const targetAtMove = this.getUnitAt(move.x, move.y);
-              if (targetAtMove && targetAtMove.owner === 'player' && this.isForest(move.x, move.y)) {
-                score += crisisMode ? 8000 : 2400;
-              }
-              // Priority Targets: stronger units move toward player's occupied forests
-              if (unit.tier >= 2) {
-                const currToPlayerForest = nearestForestHolderDistCurrent;
-                const moveToPlayerForest = nearestForestHolderDistMove;
-                if (moveToPlayerForest < currToPlayerForest) score += 300 * (currToPlayerForest - moveToPlayerForest);
-              }
-            }
-
-            if (unit.tier >= 2) {
-              const players = this.unitsSignal().filter(u => u.owner === 'player');
-              let nearestTargetDistCurrent = Math.abs(unit.position.x - playerBase.x) + Math.abs(unit.position.y - playerBase.y);
-              let nearestTargetDistMove = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
-              if (players.length > 0) {
-                nearestTargetDistCurrent = Math.min(
-                  nearestTargetDistCurrent,
-                  ...players.map(p => Math.abs(unit.position.x - p.position.x) + Math.abs(unit.position.y - p.position.y))
-                );
-                nearestTargetDistMove = Math.min(
-                  nearestTargetDistMove,
-                  ...players.map(p => Math.abs(move.x - p.position.x) + Math.abs(move.y - p.position.y))
-                );
-              }
-              if (nearestTargetDistMove < nearestTargetDistCurrent) {
-                score += 120 * (nearestTargetDistCurrent - nearestTargetDistMove);
-              }
-            }
-
-            // Aggressive Defense: prefer staying on forest unless a strong attack or beneficial merge
-            const currentlyOnForest = this.isForest(unit.position.x, unit.position.y);
-            const movingOffForest = currentlyOnForest && !this.isForest(move.x, move.y);
-            if (movingOffForest && !(this.forestMonopolySignal().player >= 5) && !aggroMode) {
-              // Check if move is a strong attack or beneficial merge
-              const tu = this.getUnitAt(move.x, move.y);
-              let allowLeaveBonus = 0;
-              if (tu) {
-                if (tu.owner === 'ai' && tu.tier === unit.tier) {
-                  const mergedPoints = this.calculateTotalPoints(unit) + this.calculateTotalPoints(tu);
-                  const { tier } = this.calculateTierAndLevel(mergedPoints);
-                  if (tier > unit.tier) allowLeaveBonus += 600;
-                } else if (tu.owner === 'player') {
-                  const enemyPower = this.calculatePower(tu);
-                  const myPower = this.calculatePower(unit);
-                  if (myPower >= enemyPower) allowLeaveBonus += 700;
-                }
-              }
-              // Penalize leaving forest unless justified
-              score -= Math.max(0, 500 - allowLeaveBonus);
-            }
-            if (unit.tier >= 3 && hasT1 && currentlyOnForest && !this.isForest(move.x, move.y)) {
-              score += 800;
-            }
-            // Reconnaissance: if no free forests visible, send weakest units toward far corners
-            if (reconNeeded) {
-              const cornerDistances = corners.map(c => Math.abs(unit.position.x - c.x) + Math.abs(unit.position.y - c.y));
-              const targetCorner = corners[cornerDistances.indexOf(Math.max(...cornerDistances))];
-              const currCornerDist = Math.abs(unit.position.x - targetCorner.x) + Math.abs(unit.position.y - targetCorner.y);
-              const moveCornerDist = Math.abs(move.x - targetCorner.x) + Math.abs(move.y - targetCorner.y);
-              if (moveCornerDist < currCornerDist) {
-                const weakness = Math.max(1, 30 - this.calculateTotalPoints(unit));
-                score += 200 + weakness * 10;
-              }
-            }
-            // Pathfinding optimization: clear lane for stronger teammate
-            const axisX = Math.abs(unit.position.x - playerBase.x) >= Math.abs(unit.position.y - playerBase.y);
-            const strongerAhead = this.unitsSignal().some(u => {
-              if (u.owner !== 'ai') return false;
-              const stronger = this.calculateTotalPoints(u) > this.calculateTotalPoints(unit);
-              if (!stronger) return false;
-              if (axisX) {
-                return u.position.y === unit.position.y && Math.abs(u.position.x - playerBase.x) < Math.abs(unit.position.x - playerBase.x);
-              } else {
-                return u.position.x === unit.position.x && Math.abs(u.position.y - playerBase.y) < Math.abs(unit.position.y - playerBase.y);
-              }
-            });
-            if (strongerAhead) {
-              const sideStep = axisX ? (move.y !== unit.position.y) : (move.x !== unit.position.x);
-              const notCloserToBase = axisX
-                ? Math.abs(move.x - playerBase.x) >= Math.abs(unit.position.x - playerBase.x)
-                : Math.abs(move.y - playerBase.y) >= Math.abs(unit.position.y - playerBase.y);
-              if (sideStep && notCloserToBase) score += 250;
-            }
-
-            const targetUnitAtMove = this.getUnitAt(move.x, move.y);
-            const weakAttack = !!(targetUnitAtMove && targetUnitAtMove.owner === 'player' && myPower < this.calculatePower(targetUnitAtMove));
-            candidatesCollected.push({ unit, target: move, score, weakAttack });
-        }
-    }
-
-    const nonWeak = candidatesCollected.filter(c => !c.weakAttack);
-    const pool = (nonWeak.length > 0 && !(this.forestMonopolySignal().player >= 5)) ? nonWeak : candidatesCollected;
-    for (const c of pool) {
-      if (!bestMove || c.score > bestMove.score) bestMove = { unit: c.unit, target: c.target, score: c.score };
-    }
+    bestMove = this.aiStrategy.pickBestMove(this);
     if (bestMove) {
       const moving = bestMove.unit;
       const wasStrongOnForest = moving.owner === 'ai' && moving.tier >= 3 && this.isForest(moving.position.x, moving.position.y);
@@ -1504,31 +1145,11 @@ export class GameEngineService {
   // --- Spawning ---
 
   private aiReserveDump() {
-    let aiRes = this.reservePointsSignal().ai;
     const aiBase = this.getBasePosition('ai');
-    const adj: Position[] = [];
-    for (let dx = -2; dx <= 2; dx++) {
-      for (let dy = -2; dy <= 2; dy++) {
-        if (dx === 0 && dy === 0) continue;
-        const x = aiBase.x + dx;
-        const y = aiBase.y + dy;
-        if (!this.inBounds(x, y)) continue;
-        if (Math.max(Math.abs(dx), Math.abs(dy)) > 2) continue;
-        if (!this.getUnitAt(x, y)) adj.push({ x, y });
-      }
-    }
-    const created: Unit[] = [];
-    while (aiRes > 0 && adj.length > 0) {
-      const cost = this.getHighestAffordableCost(aiRes);
-      if (cost <= 0) break;
-      const tl = this.calculateTierAndLevel(cost);
-      const target = adj.shift()!;
-      created.push({ id: crypto.randomUUID(), position: { ...target }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0 });
-      aiRes -= cost;
-    }
-    if (created.length > 0) {
-      this.unitsSignal.update(units => [...units, ...created]);
-      this.reservePointsSignal.update(r => ({ player: r.player, ai: aiRes }));
+    const info = this.economy.computeAiReserveDump(this.gridSize, aiBase, this.reservePointsSignal().ai, (x, y) => this.getUnitAt(x, y) || null);
+    if (info.created.length > 0) {
+      this.unitsSignal.update(units => [...units, ...info.created]);
+      this.reservePointsSignal.update(r => ({ player: r.player, ai: info.remaining }));
       this.recomputeVisibility();
     }
   }
@@ -1610,14 +1231,7 @@ export class GameEngineService {
   }
  
   private isDiagonalBlocked(from: Position, to: Position): boolean {
-    const stepX = Math.sign(to.x - from.x);
-    const stepY = Math.sign(to.y - from.y);
-    if (stepX === 0 || stepY === 0) return false;
-    const w1 = this.getWallBetween(from.x, from.y, from.x + stepX, from.y);
-    const w2 = this.getWallBetween(from.x, from.y, from.x, from.y + stepY);
-    const w3 = this.getWallBetween(to.x - stepX, to.y, to.x, to.y);
-    const w4 = this.getWallBetween(to.x, to.y - stepY, to.x, to.y);
-    return !!(w1 || w2 || w3 || w4);
+    return this.combat.isDiagonalBlocked(from, to, (x1, y1, x2, y2) => this.getWallBetween(x1, y1, x2, y2));
   }
  
   isValidMove(x: number, y: number): boolean {
@@ -1759,7 +1373,7 @@ export class GameEngineService {
     if (!this.isDeployTarget(target.x, target.y)) return;
     const reserves = this.reservePointsSignal().player;
     if (reserves <= 0) return;
-    const cost = this.getHighestAffordableCost(reserves);
+    const cost = this.economy.getHighestAffordableCost(reserves);
     if (cost <= 0) return;
     const tl = this.calculateTierAndLevel(cost);
     this.unitsSignal.update(units => {

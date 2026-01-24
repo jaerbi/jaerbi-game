@@ -67,4 +67,36 @@ export class CombatService {
     if (tier === 2) return 51;
     return 100;
   }
+
+  isDiagonalBlocked(from: Position, to: Position, getWallBetween: (x1: number, y1: number, x2: number, y2: number) => any): boolean {
+    const stepX = Math.sign(to.x - from.x);
+    const stepY = Math.sign(to.y - from.y);
+    if (stepX === 0 || stepY === 0) return false;
+    const w1 = getWallBetween(from.x, from.y, from.x + stepX, from.y);
+    const w2 = getWallBetween(from.x, from.y, from.x, from.y + stepY);
+    const w3 = getWallBetween(to.x - stepX, to.y, to.x, to.y);
+    const w4 = getWallBetween(to.x, to.y - stepY, to.x, to.y);
+    return !!(w1 || w2 || w3 || w4);
+  }
+
+  checkWallAlongPath(start: Position, target: Position, owner: string, getWallBetween: (x1: number, y1: number, x2: number, y2: number) => any): { hitOwn: boolean; hitEnemy: boolean; lastFrom?: Position } {
+    const dxTotal = target.x - start.x;
+    const dyTotal = target.y - start.y;
+    const stepX = Math.sign(dxTotal);
+    const stepY = Math.sign(dyTotal);
+    const steps = Math.max(Math.abs(dxTotal), Math.abs(dyTotal));
+    for (let i = 1; i <= steps; i++) {
+      const from = { x: start.x + stepX * (i - 1), y: start.y + stepY * (i - 1) };
+      const to = { x: start.x + stepX * i, y: start.y + stepY * i };
+      const wall = getWallBetween(from.x, from.y, to.x, to.y);
+      if (wall) {
+        if (wall.owner === owner) {
+          return { hitOwn: true, hitEnemy: false };
+        } else {
+          return { hitOwn: false, hitEnemy: true, lastFrom: from };
+        }
+      }
+    }
+    return { hitOwn: false, hitEnemy: false };
+  }
 }
