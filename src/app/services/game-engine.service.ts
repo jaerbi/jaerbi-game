@@ -54,7 +54,8 @@ export class GameEngineService {
   private pulseUnitIdSignal = signal<string | null>(null);
   private screenShakeSignal = signal<boolean>(false);
   private endOverlaySignal = signal<boolean>(false);
-  private combatOnlySignal = signal<boolean>(false);
+  private endReasonSignal = signal<string | null>(null);
+  private combatOnlySignal = signal<boolean>(true);
   private forestMonopolySignal = signal<{ player: number; ai: number }>({ player: 0, ai: 0 });
   private hoveredUnitIdSignal = signal<string | null>(null);
 
@@ -137,6 +138,7 @@ export class GameEngineService {
     this.selectedUnitIdSignal.set(null);
     this.gameStatusSignal.set('playing');
     this.endOverlaySignal.set(false);
+    this.endReasonSignal.set(null);
     this.forestMonopolySignal.set({ player: 0, ai: 0 });
     this.lastMergedUnitIdSignal.set(null);
     this.lastRemainderUnitIdSignal.set(null);
@@ -567,6 +569,9 @@ export class GameEngineService {
   shouldShowEndOverlay(): boolean {
     return this.endOverlaySignal();
   }
+  endReason(): string | null {
+    return this.endReasonSignal();
+  }
   isLuckyText(text: string): boolean {
     return text.startsWith('LUCKY');
   }
@@ -619,8 +624,11 @@ export class GameEngineService {
   formatHoverInfo(id: string): string {
     const h = this.getHoverInfo(id);
     if (!h) return '';
+    const u = this.unitsSignal().find(x => x.id === id);
+    if (!u) return '';
+    const maxHp = this.combat.getPointsForTierLevel(u.tier, 4);
     const def = h.support > 0 ? `+${h.support}` : '+0';
-    return `ATK: ${h.atkMin}-${h.atkMax} | HP: ${h.hp} | DEF: ${def}`;
+    return `Unit T${u.tier} | HP: ${h.hp}/${maxHp} | ATK: ${h.atkMin}-${h.atkMax} | DEF: ${def}`;
   }
 
   private getAttackLuckModifier(unit: Unit): { delta: number; tag?: string; isCrit?: boolean } {
@@ -737,7 +745,6 @@ export class GameEngineService {
           this.resourcesSignal.update(r => ({ wood: r.wood + countOnForest * 2 }));
         } else {
           this.aiWoodSignal.update(w => w + countOnForest * 2);
-          this.appendLog(`[Economy] AI harvested +${countOnForest * 2} wood from occupied forests.`, 'text-red-400');
         }
       }
     }
@@ -775,6 +782,7 @@ export class GameEngineService {
       if (next.player >= 10) {
         this.gameStatusSignal.set('player wins');
         this.screenShakeSignal.set(true);
+        this.endReasonSignal.set('ECONOMIC DOMINATION! All forests held for 10 turns.');
         setTimeout(() => {
           this.screenShakeSignal.set(false);
           this.endOverlaySignal.set(true);
@@ -789,6 +797,7 @@ export class GameEngineService {
       if (next.ai >= 10) {
         this.gameStatusSignal.set('ai wins');
         this.screenShakeSignal.set(true);
+        this.endReasonSignal.set('ECONOMIC DOMINATION! All forests held for 10 turns.');
         setTimeout(() => {
           this.screenShakeSignal.set(false);
           this.endOverlaySignal.set(true);
@@ -803,9 +812,22 @@ export class GameEngineService {
 
   private aiTurn() {
     if (this.gameStatus() !== 'playing') return;
+    const aiUnitsCountPre = this.unitsSignal().filter(u => u.owner === 'ai').length;
+    const aiBase = this.getBasePosition('ai');
+    const baseThreat3 = this.unitsSignal().some(u => u.owner === 'player' && (Math.abs(u.position.x - aiBase.x) + Math.abs(u.position.y - aiBase.y)) <= 3);
+    const desperationMode = this.forestMonopolySignal().player >= 5;
+    const aggroMode = aiUnitsCountPre > 5 && !baseThreat3;
+    if (desperationMode) this.aiReserveDump();
+    if (this.aiWoodSignal() > 50) {
+      let tries = 0;
+      while (this.aiWoodSignal() >= 20 && this.unitsSignal().filter(u => u.owner === 'ai').length < 8 && tries < 20) {
+        this.aiConvertWoodToReserve();
+        tries++;
+      }
+      this.aiReserveDump();
+    }
 
     if (!this.wallBuiltThisTurnSignal()) {
-      const aiBase = this.getBasePosition('ai');
       const candidates = this.unitsSignal()
         .filter(u => u.owner === 'player')
         .filter(u => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= (this.settings.isNightmare() ? 4 : 3))
@@ -826,6 +848,10 @@ export class GameEngineService {
           }
         }
         if (this.wallBuiltThisTurnSignal()) break;
+      }
+    }
+    if (!this.wallBuiltThisTurnSignal()) {
+      if (this.tryFarmerCage()) {
       }
     }
     // Choke Point Logic: build walls in narrow passages (only 2 free neighbors)
@@ -854,7 +880,6 @@ export class GameEngineService {
     }
     // Nightmare refinement: attempt extra blocking when enough wood remains
     if (this.settings.isNightmare() && !this.wallBuiltThisTurnSignal() && this.aiWoodSignal() >= 20) {
-      const aiBase = this.getBasePosition('ai');
       const blockers = this.unitsSignal().filter(u => u.owner === 'player');
       for (const enemy of blockers) {
         // try to place a wall closer to center line to slow approach
@@ -901,6 +926,10 @@ export class GameEngineService {
           if (this.wallBuiltThisTurnSignal()) break;
         }
         if (this.wallBuiltThisTurnSignal()) break;
+      }
+    }
+    if (!this.wallBuiltThisTurnSignal()) {
+      if (this.tryLongWalls()) {
       }
     }
 
@@ -975,7 +1004,7 @@ export class GameEngineService {
     let bestMove: { unit: Unit, target: Position, score: number } | null = null;
     const playerBase = { x: 0, y: 0 };
 
-    const aiBase = this.getBasePosition('ai');
+    // reuse aiBase computed earlier
     const aiNearCount = aiUnits.filter(u => {
       const near = Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 1;
       const onBase = u.position.x === aiBase.x && u.position.y === aiBase.y;
@@ -1004,6 +1033,7 @@ export class GameEngineService {
         const limit = this.gridSize > 30 ? 16 : 64;
         const evalMoves = moves.slice(0, limit);
         const myPower = this.calculatePower(unit);
+        const hasT1 = this.unitsSignal().some(u => u.owner === 'ai' && u.tier === 1);
 
         for (const move of evalMoves) {
             let score = 0;
@@ -1011,6 +1041,11 @@ export class GameEngineService {
             // Distance to player base
             const dist = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
             score -= dist * 10; 
+            if (aggroMode) {
+              const towardPlayerHalf = (move.x <= Math.floor(this.gridSize / 2)) || (move.y <= Math.floor(this.gridSize / 2));
+              if (towardPlayerHalf) score += 600;
+              if (!this.getUnitAt(move.x, move.y)) score += 200;
+            }
             if (this.settings.isNightmare() && reconNeeded && unit.tier >= 3) {
               const currDist = Math.abs(unit.position.x - playerBase.x) + Math.abs(unit.position.y - playerBase.y);
               const moveDist = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
@@ -1035,7 +1070,7 @@ export class GameEngineService {
             const currDistToCenter = Math.abs(unit.position.x - center.x) + Math.abs(unit.position.y - center.y);
             const moveDistToCenter = Math.abs(move.x - center.x) + Math.abs(move.y - center.y);
             if (stationaryLong && nearBase && moveDistToCenter < currDistToCenter) {
-                score += 150;
+                score += aggroMode ? 600 : 150;
             }
 
             const targetUnit = this.getUnitAt(move.x, move.y);
@@ -1086,12 +1121,12 @@ export class GameEngineService {
                       if (myPower > enemyPower) {
                           let bonus = aggressionMultiplier * (100 + (enemyPower * 2));
                           if (this.isForest(move.x, move.y)) bonus = Math.floor(bonus * 3);
-                          if (unit.tier >= 2) bonus += 150; // Warrior role: stronger units emphasize combat
+                          if (unit.tier >= 2) bonus += aggroMode ? 400 : 150;
                           score += bonus;
                       } else if (myPower < enemyPower) {
-                          score -= this.settings.isNightmare() ? 800 : 1200;
+                          score -= aggroMode ? 200 : (this.settings.isNightmare() ? 800 : 1200);
                       } else {
-                          score -= this.settings.isNightmare() ? 20 : 50;
+                          score -= aggroMode ? 0 : (this.settings.isNightmare() ? 20 : 50);
                       }
                     }
                 }
@@ -1114,7 +1149,10 @@ export class GameEngineService {
                 if (unit.tier === 1 && !this.getUnitAt(move.x, move.y)) {
                   score += 3000;
                 }
-                if (crisisMode) score += 4000;
+                if (crisisMode || aggroMode) score += 4000;
+                if (unit.tier >= 3 && hasT1 && this.isForest(unit.position.x, unit.position.y)) {
+                  score -= 1000;
+                }
             } else if (nearestForestDistMove < nearestForestDistCurrent) {
                 score += 180 * (nearestForestDistCurrent - nearestForestDistMove);
             }
@@ -1125,22 +1163,22 @@ export class GameEngineService {
               if (moveToSafe < currToSafe) score += 300 * (currToSafe - moveToSafe);
             }
             // Prefer moving toward player's half (left/top)
-            if (move.x <= Math.floor(this.gridSize / 2)) score += 30;
-            if (move.y <= Math.floor(this.gridSize / 2)) score += 20;
+            if (move.x <= Math.floor(this.gridSize / 2)) score += aggroMode ? 300 : 30;
+            if (move.y <= Math.floor(this.gridSize / 2)) score += aggroMode ? 200 : 20;
             const distFromAiBase = Math.abs(move.x - aiBase.x) + Math.abs(move.y - aiBase.y);
-            score += distFromAiBase * 45;
+            score += aggroMode ? distFromAiBase * 90 : distFromAiBase * 45;
             // Never sit on base: strongly reward leaving base tile
             if (unit.position.x === aiBase.x && unit.position.y === aiBase.y) {
                 score += 500;
             }
             // Anti-deadlock: strongly prefer moving units away from base adjacency to clear spawn
-            if (typeof isAdjToBase === 'function') {
+            if (typeof isAdjToBase === 'function' && !aggroMode) {
               if (isAdjToBase(unit.position) && !isAdjToBase(move)) {
                 // Base clearance gets very high priority when reserves are high and spawn is blocked
                 score += (aiReserves > 20 ? 1000 : 200);
               }
             }
-            if (aiNearCount > 3) {
+            if (aiNearCount > 3 && !aggroMode) {
               const isCurrNear = nearBase || (unit.position.x === aiBase.x && unit.position.y === aiBase.y);
               const isMoveNear = Math.max(Math.abs(move.x - aiBase.x), Math.abs(move.y - aiBase.y)) <= 1 || (move.x === aiBase.x && move.y === aiBase.y);
               const penalty = siegeDesperation ? 1500 : 1000;
@@ -1194,7 +1232,7 @@ export class GameEngineService {
             // Aggressive Defense: prefer staying on forest unless a strong attack or beneficial merge
             const currentlyOnForest = this.isForest(unit.position.x, unit.position.y);
             const movingOffForest = currentlyOnForest && !this.isForest(move.x, move.y);
-            if (movingOffForest) {
+            if (movingOffForest && !(this.forestMonopolySignal().player >= 5) && !aggroMode) {
               // Check if move is a strong attack or beneficial merge
               const tu = this.getUnitAt(move.x, move.y);
               let allowLeaveBonus = 0;
@@ -1211,6 +1249,9 @@ export class GameEngineService {
               }
               // Penalize leaving forest unless justified
               score -= Math.max(0, 500 - allowLeaveBonus);
+            }
+            if (unit.tier >= 3 && hasT1 && currentlyOnForest && !this.isForest(move.x, move.y)) {
+              score += 800;
             }
             // Reconnaissance: if no free forests visible, send weakest units toward far corners
             if (reconNeeded) {
@@ -1250,7 +1291,7 @@ export class GameEngineService {
     }
 
     const nonWeak = candidatesCollected.filter(c => !c.weakAttack);
-    const pool = nonWeak.length > 0 ? nonWeak : candidatesCollected;
+    const pool = (nonWeak.length > 0 && !(this.forestMonopolySignal().player >= 5)) ? nonWeak : candidatesCollected;
     for (const c of pool) {
       if (!bestMove || c.score > bestMove.score) bestMove = { unit: c.unit, target: c.target, score: c.score };
     }
@@ -1262,10 +1303,23 @@ export class GameEngineService {
       const leavingForest = !this.isForest(bestMove.target.x, bestMove.target.y);
       if (wasStrongOnForest && noImmediateThreat && leavingForest) {
         const hasT1 = this.unitsSignal().some(u => u.owner === 'ai' && u.tier === 1);
-        if (hasT1) this.appendLog(`[Strategy] AI rotated units to free up Elite forces.`, 'text-yellow-300');
       }
       this.executeMove(bestMove.unit, bestMove.target);
     } else {
+      const playerBase = { x: 0, y: 0 };
+      const mover = this.unitsSignal().filter(u => u.owner === 'ai').find(u => !this.isForest(u.position.x, u.position.y));
+      if (mover) {
+        const moves = this.calculateValidMoves(mover);
+        const forward = moves.sort((a, b) => {
+          const da = Math.abs(a.x - playerBase.x) + Math.abs(a.y - playerBase.y);
+          const db = Math.abs(b.x - playerBase.x) + Math.abs(b.y - playerBase.y);
+          return da - db;
+        })[0];
+        if (forward) {
+          this.executeMove(mover, forward);
+          return;
+        }
+      }
       this.endTurn();
     }
   }
@@ -1297,9 +1351,14 @@ export class GameEngineService {
     if (created.length > 0) {
       this.unitsSignal.update(units => [...units, ...created]);
       this.reservePointsSignal.update(r => ({ player: r.player, ai: aiRes }));
-      this.appendLog(`[Crisis] AI deployed ${created.length} units by reserve dump.`, 'text-red-400');
       this.recomputeVisibility();
     }
+  }
+  private aiConvertWoodToReserve() {
+    const w = this.aiWoodSignal();
+    if (w < 20) return;
+    this.aiWoodSignal.update(x => x - 20);
+    this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + 1 }));
   }
   spawnUnit(owner: Owner) {
     const basePosition: Position = this.getBasePosition(owner);
@@ -1476,7 +1535,6 @@ export class GameEngineService {
     this.resourcesSignal.update(r => ({ wood: r.wood - 10 }));
     this.buildModeSignal.set(false);
     this.wallBuiltThisTurnSignal.set(true);
-    this.appendLog(`[Turn ${this.turnSignal()}] Player built wall between (${a.x},${a.y})-(${b.x},${b.y}). Cost: 10 Wood.`);
   }
  
   convertWoodToReserve() {
@@ -1484,7 +1542,6 @@ export class GameEngineService {
     if (wood < 20) return;
     this.resourcesSignal.update(r => ({ wood: r.wood - 20 }));
     this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai }));
-    this.appendLog(`[Turn ${this.turnSignal()}] Player converted 20 Wood → +1 Reserve.`);
   }
   startDeployFromBase() {
     const reserves = this.reservePointsSignal().player;
@@ -1664,6 +1721,7 @@ export class GameEngineService {
     if (!this.areAdjacent(tile1, tile2)) return;
     if (this.isInNoBuildZone(tile1) || this.isInNoBuildZone(tile2)) return;
     if (this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y)) return;
+    if (this.wouldCageElite(tile1, tile2) && !this.isBaseProtectionEdge(tile1, tile2)) return;
     const adjacentAI = this.unitsSignal().some(
       u =>
         u.owner === 'ai' &&
@@ -1684,6 +1742,100 @@ export class GameEngineService {
     ]);
     this.aiWoodSignal.update(w => w - 10);
     this.wallBuiltThisTurnSignal.set(true);
+  }
+  private isBaseProtectionEdge(tile1: Position, tile2: Position): boolean {
+    const aiBase = this.getBasePosition('ai');
+    const near = (p: Position) => Math.max(Math.abs(p.x - aiBase.x), Math.abs(p.y - aiBase.y)) <= 1 || (p.x === aiBase.x && p.y === aiBase.y);
+    return near(tile1) || near(tile2);
+  }
+  private wouldCageElite(tile1: Position, tile2: Position): boolean {
+    const extraEdge = (x1: number, y1: number, x2: number, y2: number) => {
+      const a = this.sortEdgeEndpoints({ x: x1, y: y1 }, { x: x2, y: y2 });
+      const b = this.sortEdgeEndpoints(tile1, tile2);
+      return a[0].x === b[0].x && a[0].y === b[0].y && a[1].x === b[1].x && a[1].y === b[1].y;
+    };
+    const blocked = (from: Position, to: Position): boolean => {
+      if (from.x === to.x || from.y === to.y) {
+        const w = this.getWallBetween(from.x, from.y, to.x, to.y);
+        if (w) return true;
+        if (extraEdge(from.x, from.y, to.x, to.y)) return true;
+        return false;
+      } else {
+        const sx = Math.sign(to.x - from.x);
+        const sy = Math.sign(to.y - from.y);
+        const w1 = this.getWallBetween(from.x, from.y, from.x + sx, from.y);
+        const w2 = this.getWallBetween(from.x, from.y, from.x, from.y + sy);
+        const w3 = this.getWallBetween(to.x - sx, to.y, to.x, to.y);
+        const w4 = this.getWallBetween(to.x, to.y - sy, to.x, to.y);
+        if (w1 || w2 || w3 || w4) return true;
+        if (extraEdge(from.x, from.y, from.x + sx, from.y)) return true;
+        if (extraEdge(from.x, from.y, from.x, from.y + sy)) return true;
+        if (extraEdge(to.x - sx, to.y, to.x, to.y)) return true;
+        if (extraEdge(to.x, to.y - sy, to.x, to.y)) return true;
+        return false;
+      }
+    };
+    const dirs: Position[] = [
+      { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
+      { x: 1, y: 1 }, { x: -1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: -1 }
+    ];
+    for (const u of this.unitsSignal()) {
+      if (u.owner !== 'ai') continue;
+      if (u.tier < 2) continue;
+      const allowed = dirs.filter(d => {
+        const to = { x: u.position.x + d.x, y: u.position.y + d.y };
+        if (!this.inBounds(to.x, to.y)) return false;
+        return !blocked(u.position, to);
+      });
+      if (allowed.length < 2) return true;
+    }
+    return false;
+  }
+  private tryFarmerCage(): boolean {
+    if (this.wallBuiltThisTurnSignal()) return false;
+    const farmers = this.unitsSignal().filter(u => u.owner === 'ai' && u.tier === 1 && this.isForest(u.position.x, u.position.y));
+    for (const f of farmers) {
+      const edges: [Position, Position][] = [
+        [{ x: f.position.x, y: f.position.y }, { x: f.position.x + 1, y: f.position.y }],
+        [{ x: f.position.x, y: f.position.y }, { x: f.position.x, y: f.position.y + 1 }],
+        [{ x: f.position.x - 1, y: f.position.y }, { x: f.position.x, y: f.position.y }],
+        [{ x: f.position.x, y: f.position.y - 1 }, { x: f.position.x, y: f.position.y }]
+      ];
+      for (const [a, b] of edges) {
+        if (!this.inBounds(a.x, a.y) || !this.inBounds(b.x, b.y)) continue;
+        if (this.getWallBetween(a.x, a.y, b.x, b.y)) continue;
+        if (this.canBuildWallBetween(a, b)) {
+          this.aiBuildWallBetween(a, b);
+          if (this.wallBuiltThisTurnSignal()) return true;
+        }
+      }
+    }
+    return false;
+  }
+  private tryLongWalls(): boolean {
+    if (this.wallBuiltThisTurnSignal()) return false;
+    if (this.aiWoodSignal() <= 100) return false;
+    const aiBase = this.getBasePosition('ai');
+    const units = this.unitsSignal().filter(u => u.owner === 'ai');
+    for (const u of units) {
+      const towardX = Math.sign(aiBase.x - 0);
+      const towardY = Math.sign(aiBase.y - 0);
+      const targets: [Position, Position][] = [];
+      const a = { x: u.position.x, y: u.position.y };
+      const b1 = { x: u.position.x + towardX, y: u.position.y };
+      const b2 = { x: u.position.x, y: u.position.y + towardY };
+      if (this.inBounds(b1.x, b1.y)) targets.push([a, b1]);
+      if (this.inBounds(b2.x, b2.y)) targets.push([a, b2]);
+      let built = 0;
+      for (const [p, q] of targets) {
+        if (this.canBuildWallBetween(p, q)) {
+          this.aiBuildWallBetween(p, q);
+          built++;
+          if (built >= 3 || this.wallBuiltThisTurnSignal()) return true;
+        }
+      }
+    }
+    return false;
   }
   private isInNoBuildZone(tile: Position): boolean {
     return this.build.isInNoBuildZone(tile, this.getBasePosition('player'), this.getBasePosition('ai'));

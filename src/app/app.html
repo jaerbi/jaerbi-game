@@ -38,8 +38,8 @@
     </div>
     <div class="flex items-center gap-2">
       <span>Monopoly:</span>
-      <span class="font-mono text-green-400">P {{ gameEngine.monopolyCounter().player }}/10</span>
-      <span class="font-mono text-red-400">AI {{ gameEngine.monopolyCounter().ai }}/10</span>
+      <span class="font-mono text-green-400" [class.animate-pulse]="gameEngine.monopolyCounter().player >= 7" [class.scale-125]="gameEngine.monopolyCounter().player >= 7">P {{ gameEngine.monopolyCounter().player }}/10</span>
+      <span class="font-mono text-red-400" [class.animate-pulse]="gameEngine.monopolyCounter().ai >= 7" [class.scale-125]="gameEngine.monopolyCounter().ai >= 7">AI {{ gameEngine.monopolyCounter().ai }}/10</span>
     </div>
     <div>
       Difficulty:
@@ -60,6 +60,9 @@
         >
           {{ gameEngine.gameStatus() | titlecase }}!
         </h2>
+        @if (gameEngine.endReason()) {
+          <div class="text-sm text-gray-300 mb-4">{{ gameEngine.endReason() }}</div>
+        }
         <button
           (click)="gameEngine.resetGame()"
           class="px-6 py-3 bg-green-600 hover:bg-green-500 rounded text-white font-bold text-lg cursor-pointer"
@@ -136,11 +139,13 @@
         {{ gameEngine.baseHealth().player }}
       </span>
     </div>
-    <div
-      class="absolute bottom-2 right-2 w-12 h-12 border-2 border-red-500/30 rounded pointer-events-none flex items-center justify-center"
-    >
-      <span class="text-white font-bold bg-red-600 px-1 rounded shadow text-xs">{{ gameEngine.baseHealth().ai }}</span>
-    </div>
+    @if (gameEngine.isVisibleToPlayer(gameEngine.gridSize - 1, gameEngine.gridSize - 1)) {
+      <div
+        class="absolute bottom-2 right-2 w-12 h-12 border-2 border-red-500/30 rounded pointer-events-none flex items-center justify-center"
+      >
+        <span class="text-white font-bold bg-red-600 px-1 rounded shadow text-xs">{{ gameEngine.baseHealth().ai }}</span>
+      </div>
+    }
 
     @for (y of gameEngine.gridRows; track y) {
       @for (x of gameEngine.gridCols; track x) {
@@ -204,16 +209,18 @@
             </span>
           }
           @if (x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1) {
-            <span
-              class="absolute inset-x-0 top-0 m-0.5 text-[10px] font-extrabold text-red-900 bg-red-300/80 rounded px-1 pointer-events-none"
-            >
-              {{ gameEngine.baseHealth().ai }}
-            </span>
-            <span
-              class="absolute right-0 bottom-0 m-0.5 text-[10px] font-extrabold text-white bg-red-600/90 rounded px-1 pointer-events-none"
-            >
-              {{ gameEngine.reservePoints().ai }}
-            </span>
+            @if (gameEngine.isVisibleToPlayer(x, y)) {
+              <span
+                class="absolute inset-x-0 top-0 m-0.5 text-[10px] font-extrabold text-red-900 bg-red-300/80 rounded px-1 pointer-events-none"
+              >
+                {{ gameEngine.baseHealth().ai }}
+              </span>
+              <span
+                class="absolute right-0 bottom-0 m-0.5 text-[10px] font-extrabold text-white bg-red-600/90 rounded px-1 pointer-events-none"
+              >
+                {{ gameEngine.reservePoints().ai }}
+              </span>
+            }
           }
 
           @if (x < gameEngine.gridSize - 1) {
