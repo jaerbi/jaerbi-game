@@ -778,7 +778,7 @@ export class GameEngineService {
       next.player = next.player + 1;
       next.ai = 0;
       this.forestMonopolySignal.set(next);
-      this.appendLog(`Forest Control: ${next.player}/10`, 'text-green-400');
+      // removed non-combat log
       if (next.player >= 10) {
         this.gameStatusSignal.set('player wins');
         this.screenShakeSignal.set(true);
@@ -793,7 +793,7 @@ export class GameEngineService {
       next.ai = next.ai + 1;
       next.player = 0;
       this.forestMonopolySignal.set(next);
-      this.appendLog(`Forest Control: ${next.ai}/10`, 'text-red-400');
+      // removed non-combat log
       if (next.ai >= 10) {
         this.gameStatusSignal.set('ai wins');
         this.screenShakeSignal.set(true);
@@ -1004,7 +1004,16 @@ export class GameEngineService {
     let bestMove: { unit: Unit, target: Position, score: number } | null = null;
     const playerBase = { x: 0, y: 0 };
 
-    // reuse aiBase computed earlier
+    // Immediate base strike: if any AI unit can reach player base, take it now
+    for (const u of aiUnits) {
+      const moves = this.calculateValidMoves(u);
+      const canHitBase = moves.some(m => m.x === playerBase.x && m.y === playerBase.y);
+      if (canHitBase) {
+        const target = moves.find(m => m.x === playerBase.x && m.y === playerBase.y)!;
+        this.executeMove(u, target);
+        return;
+      }
+    }
     const aiNearCount = aiUnits.filter(u => {
       const near = Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 1;
       const onBase = u.position.x === aiBase.x && u.position.y === aiBase.y;
@@ -1052,6 +1061,16 @@ export class GameEngineService {
               if (moveDist < currDist) {
                 score += 10000;
               }
+            }
+            // Meat shield: T1 units body-block player elites on Hard/Nightmare
+            if (unit.tier === 1 && (this.settings.isHard() || this.settings.isNightmare())) {
+              const adjacentElite = this.unitsSignal().some(p =>
+                p.owner === 'player' &&
+                p.tier >= 3 &&
+                Math.max(Math.abs(p.position.x - move.x), Math.abs(p.position.y - move.y)) === 1 &&
+                !this.getUnitAt(move.x, move.y)
+              );
+              if (adjacentElite) score += 7000;
             }
             if (crisisMode && weakestForestTarget) {
               const currW = Math.abs(unit.position.x - weakestForestTarget.x) + Math.abs(unit.position.y - weakestForestTarget.y);
@@ -1453,12 +1472,17 @@ export class GameEngineService {
     const total = this.gridSize * this.gridSize;
     const count = Math.max(1, Math.floor(total * 0.1));
     const positions: Position[] = [];
-    const forbidden = new Set([`0,0`, `${this.gridSize - 1},${this.gridSize - 1}`]);
+    const playerBase = this.getBasePosition('player');
+    const aiBase = this.getBasePosition('ai');
+    const inSpawnSafeZone = (x: number, y: number) => {
+      const dPlayer = Math.abs(x - playerBase.x) + Math.abs(y - playerBase.y);
+      const dAi = Math.abs(x - aiBase.x) + Math.abs(y - aiBase.y);
+      return dPlayer <= 3 || dAi <= 3;
+    };
     while (positions.length < count) {
       const x = Math.floor(Math.random() * this.gridSize);
       const y = Math.floor(Math.random() * this.gridSize);
-      const key = `${x},${y}`;
-      if (forbidden.has(key)) continue;
+      if (inSpawnSafeZone(x, y)) continue;
       if (positions.some(p => p.x === x && p.y === y)) continue;
       positions.push({ x, y });
     }

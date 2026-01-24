@@ -151,11 +151,13 @@
       @for (x of gameEngine.gridCols; track x) {
         <div
           (click)="onTileClick(x, y)"
-          class="tile rounded flex items-center justify-center border transition-colors duration-200 cursor-pointer"
+          class="tile rounded flex items-center justify-center border transition-colors duration-200"
           [style.width.px]="gameEngine.tileSizePx"
           [style.height.px]="gameEngine.tileSizePx"
           [style.minWidth.px]="gameEngine.tileMinSizePx"
           [style.minHeight.px]="gameEngine.tileMinSizePx"
+          [class.cursor-pointer]="gameEngine.isValidMove(x, y)"
+          [class.cursor-not-allowed]="!gameEngine.isValidMove(x, y)"
           [attr.title]="gameEngine.getUnitAt(x, y) && (gameEngine.getUnitAt(x, y)!.owner === 'player' || gameEngine.isVisibleToPlayer(x, y)) ? gameEngine.formatHoverInfo(gameEngine.getUnitAt(x, y)!.id) : null"
           [class.bg-gray-700]="!gameEngine.isValidMove(x, y)"
           [class.border-gray-600]="!gameEngine.isValidMove(x, y)"
@@ -167,7 +169,7 @@
           [class.ring-2]="(x === 0 && y === 0) || (x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1)"
           [class.ring-blue-300]="x === 0 && y === 0 && gameEngine.baseDeployActive()"
           [class.ring-red-300]="x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1"
-          [class.bg-green-800]="gameEngine.isForest(x, y) && !gameEngine.isValidMove(x, y)"
+          [style.backgroundColor]="gameEngine.isForest(x, y) && gameEngine.isVisibleToPlayer(x, y) ? '#5D4037' : null"
           [class.bg-amber-900]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
           [class.border-amber-500]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
           [class.bg-gray-950]="!gameEngine.isVisibleToPlayer(x, y)"
@@ -189,7 +191,8 @@
             ></div>
           }
           @if (gameEngine.isForest(x, y) && gameEngine.isVisibleToPlayer(x, y)) {
-            <span class="absolute bottom-0 left-0 text-[10px] text-green-400 p-0.5 font-bold pointer-events-none">
+            <span class="absolute text-[10px] text-amber-300 font-bold pointer-events-none"
+                  [style.left.px]="1" [style.bottom.px]="1">
               W
             </span>
           }
@@ -379,7 +382,7 @@
                   <span [class.-rotate-45]="unit.tier === 4">{{ unit.level }}</span>
                 </div>
                 @if (gameEngine.hasDefenseBonus(unit)) {
-                  <span class="absolute -top-1 -right-1 rounded-full bg-blue-200 text-blue-900 flex items-center justify-center"
+            <span class="absolute -top-1 -right-1 rounded-full bg-blue-200 text-blue-900 flex items-center justify-center"
                         [style.width.px]="gameEngine.iconSizePx"
                         [style.height.px]="gameEngine.iconSizePx"
                         [style.fontSize.px]="(gameEngine.iconSizePx - 2) > 8 ? (gameEngine.iconSizePx - 2) : 8"

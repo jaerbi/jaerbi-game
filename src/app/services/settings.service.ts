@@ -24,6 +24,9 @@ export class SettingsService {
     const d = this.difficultySignal();
     return d === 'normal' ? 1 : d === 'hard' ? 2 : 3;
   }
+  isHard(): boolean {
+    return this.difficultySignal() === 'hard';
+  }
   isNightmare(): boolean {
     return this.difficultySignal() === 'nightmare';
   }
