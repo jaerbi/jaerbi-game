@@ -13,6 +13,13 @@
     </button>
     <button
       class="flex items-center gap-1 px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-sm cursor-pointer"
+      (click)="gameEngine.toggleHighScores()"
+    >
+      <span class="w-5 h-5 flex items-center justify-center rounded-full bg-yellow-500 text-white text-sm">🏆</span>
+      <span>High Scores</span>
+    </button>
+    <button
+      class="flex items-center gap-1 px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-sm cursor-pointer"
       (click)="gameEngine.toggleSettings()"
     >
       <span class="w-5 h-5 flex items-center justify-center rounded-full bg-gray-500 text-white text-sm">⚙️</span>
@@ -26,43 +33,36 @@
       <span>Log</span>
     </button>
   </div>
-  <div class="mb-4 text-xl flex gap-4 items-center">
-    <div>
-      Turn:
-      <span class="font-mono text-yellow-400">{{ gameEngine.turn() }}</span>
-    </div>
-    <div>
-      Wood:
-      <span class="font-mono text-green-400">{{ gameEngine.resources().wood }}</span>
-    </div>
-    <div>
-      AI Wood:
-      <span class="font-mono text-red-400">{{ gameEngine.aiWood() }}</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <span>Monopoly:</span>
-      <span
-        class="font-mono text-green-400"
-        [class.animate-pulse]="gameEngine.monopolyCounter().player >= 7"
-        [class.scale-125]="gameEngine.monopolyCounter().player >= 7"
-      >
-        P {{ gameEngine.monopolyCounter().player }}/10
+  <div class="w-full max-w-4xl flex items-center justify-between mb-3 px-3 py-2 rounded-xl bg-white/5 backdrop-blur border border-gray-600/30">
+    <div class="flex items-center gap-4 text-xs">
+      <span class="text-blue-300 font-semibold">Player</span>
+      <span class="flex items-center gap-1">
+        🪵 <span>Wood:</span>
+        <span class="font-mono text-green-400">{{ gameEngine.resources().wood }}</span>
       </span>
-      <span
-        class="font-mono text-red-400"
-        [class.animate-pulse]="gameEngine.monopolyCounter().ai >= 7"
-        [class.scale-125]="gameEngine.monopolyCounter().ai >= 7"
-      >
-        AI {{ gameEngine.monopolyCounter().ai }}/10
+      <span class="flex items-center gap-1">
+        <span>Forests:</span>
+        <span class="font-mono text-blue-300">{{ gameEngine.getForestControl().player }}/{{ gameEngine.getForestControl().total }}</span>
       </span>
     </div>
-    <div>
-      Difficulty:
-      <span class="font-mono text-blue-300">{{ settings.difficultyLabel() }}</span>
+    <div class="text-sm">
+      <span class="text-gray-300">Turn:</span>
+      <span class="font-bold text-yellow-400">{{ gameEngine.turn() }}</span>
+      @if (gameEngine.gameStatus() !== 'playing') {
+        <span class="ml-2 text-xs font-bold text-red-400">{{ gameEngine.gameStatus() | titlecase }}</span>
+      }
     </div>
-    @if (gameEngine.gameStatus() !== 'playing') {
-      <div class="font-bold text-red-500 animate-pulse">{{ gameEngine.gameStatus() | titlecase }}</div>
-    }
+    <div class="flex items-center gap-4 text-xs">
+      <span class="text-red-300 font-semibold">AI</span>
+      <span class="flex items-center gap-1">
+        🪵 <span>Wood:</span>
+        <span class="font-mono text-red-400">{{ gameEngine.aiWood() }}</span>
+      </span>
+      <span class="flex items-center gap-1">
+        <span>Forests:</span>
+        <span class="font-mono text-red-300">{{ gameEngine.getForestControl().ai }}/{{ gameEngine.getForestControl().total }}</span>
+      </span>
+    </div>
   </div>
 
   @if (gameEngine.shouldShowEndOverlay()) {
@@ -315,6 +315,7 @@
                     [style.transition]="'height 0.25s ease-out'"
                     [class.bg-lime-400]="vWall.owner === 'player'"
                     [class.bg-red-400]="vWall.owner === 'ai'"
+                    [class.bg-gray-300]="vWall.owner === 'neutral'"
                     [class.shake]="gameEngine.isWallShaking(vWall.id)"
                   >
                     @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x + 1, y: y })) {
@@ -325,6 +326,7 @@
                         [style.z-index]="45"
                         [class.bg-red-600]="vWall.owner === 'player'"
                         [class.bg-yellow-500]="vWall.owner === 'ai'"
+                        [class.bg-gray-600]="vWall.owner === 'neutral'"
                         (click)="
                           vWall.owner === 'player'
                             ? onDestroyIconClick($event, x, y, x + 1, y)
@@ -379,6 +381,7 @@
                     [style.transition]="'width 0.25s ease-out'"
                     [class.bg-lime-400]="hWall.owner === 'player'"
                     [class.bg-red-400]="hWall.owner === 'ai'"
+                    [class.bg-gray-300]="hWall.owner === 'neutral'"
                     [class.shake]="gameEngine.isWallShaking(hWall.id)"
                   >
                     @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
@@ -389,6 +392,7 @@
                         [style.z-index]="45"
                         [class.bg-red-600]="hWall.owner === 'player'"
                         [class.bg-yellow-500]="hWall.owner === 'ai'"
+                        [class.bg-gray-600]="hWall.owner === 'neutral'"
                         (click)="
                           hWall.owner === 'player'
                             ? onDestroyIconClick($event, x, y, x, y + 1)
@@ -544,26 +548,27 @@
     <div class="flex gap-4 items-center">
       <button
         (click)="gameEngine.toggleBuildMode()"
-        class="px-3 py-1 rounded text-sm cursor-pointer"
-        [class.bg-gray-700]="!gameEngine.buildMode()"
-        [class.bg-blue-700]="gameEngine.buildMode()"
-        [disabled]="gameEngine.wallBuiltThisTurn() || !gameEngine.canBuildThisTurn()"
+        class="px-4 py-2 rounded-xl text-sm cursor-pointer bg-gradient-to-b from-blue-600 to-blue-800 text-white shadow-inner hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0.5 transition transform flex items-center gap-2"
         [class.opacity-50]="gameEngine.wallBuiltThisTurn() || !gameEngine.canBuildThisTurn()"
+        [disabled]="gameEngine.wallBuiltThisTurn() || !gameEngine.canBuildThisTurn()"
       >
-        Build Wall (10)
+        <span>🧱</span>
+        <span>Build Wall (10)</span>
       </button>
       <button
         (click)="gameEngine.convertWoodToReserve()"
-        class="px-3 py-1 rounded text-sm bg-green-700 hover:bg-green-600 cursor-pointer"
+        class="px-4 py-2 rounded-xl text-sm cursor-pointer bg-gradient-to-b from-blue-600 to-blue-800 text-white shadow-inner hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0.5 transition transform flex items-center gap-2"
       >
-        Convert 20 Wood → +1 Reserve
+        <span>🪵</span>
+        <span>Convert 20 Wood → +1 Reserve</span>
       </button>
     </div>
     <button
       (click)="gameEngine.maxConvertWoodToReserve()"
-      class="px-3 py-1 rounded text-sm bg-emerald-700 hover:bg-emerald-600 cursor-pointer"
+      class="px-4 py-2 rounded-xl text-sm cursor-pointer bg-gradient-to-b from-blue-600 to-blue-800 text-white shadow-inner hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0.5 transition transform flex items-center gap-2"
     >
-      MAX CONVERT
+      <span>⚡</span>
+      <span>MAX CONVERT</span>
     </button>
     <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
       <input
@@ -587,180 +592,7 @@
   <div class="fixed bottom-4 right-4 text-[12px] text-gray-500">version: 0.1.2 | Created by jaerbi and just</div>
 
   @if (gameEngine.rulesOpen()) {
-    <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 w-[960px] max-w-[95vw] mx-4 shadow-xl">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl font-bold">Game Guide</h2>
-          <button
-            class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 text-lg cursor-pointer"
-            (click)="gameEngine.closeRules()"
-          >
-            ✖
-          </button>
-        </div>
-        <div class="grid grid-cols-1 gap-6 overflow-y-auto max-h-[70vh] pr-2">
-          <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
-            <h3 class="text-lg font-semibold mb-3">Unit Encyclopedia</h3>
-            <div class="grid grid-cols-4 gap-4">
-              <div class="flex flex-col items-center gap-2">
-                <div class="flex items-center justify-center font-bold text-white bg-blue-500 rounded-full w-12 h-12">1</div>
-                <div class="text-xs text-gray-300">Tier 1</div>
-                <div class="text-xs text-gray-400">Points: 1–4</div>
-                <div class="text-xs text-emerald-400">Role: Gatherer</div>
-              </div>
-              <div class="flex flex-col items-center gap-2">
-                <div class="flex items-center justify-center font-bold text-white bg-blue-500 w-12 h-12" [style.clip-path]="'polygon(50% 0%, 0% 100%, 100% 100%)'">
-                  5
-                </div>
-                <div class="text-xs text-gray-300">Tier 2</div>
-                <div class="text-xs text-gray-400">Points: 5–20</div>
-                <div class="text-xs text-emerald-400">Role: Defender</div>
-              </div>
-              <div class="flex flex-col items-center gap-2">
-                <div class="flex items-center justify-center font-bold text-white bg-blue-500 w-12 h-12">25</div>
-                <div class="text-xs text-gray-300">Tier 3</div>
-                <div class="text-xs text-gray-400">Points: 25–100</div>
-                <div class="text-xs text-emerald-400">Role: Hunter</div>
-              </div>
-              <div class="flex flex-col items-center gap-2">
-                <div class="flex items-center justify-center font-bold text-white bg-blue-500 rotate-45 scale-75 w-12 h-12">125</div>
-                <div class="text-xs text-gray-300">Tier 4</div>
-                <div class="text-xs text-gray-400">Points: 125–500</div>
-                <div class="text-xs text-emerald-400">Role: Siege</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
-            <h3 class="text-lg font-semibold mb-3">How To Play</h3>
-            <div class="grid grid-cols-3 gap-4">
-              <div class="rounded-lg border border-gray-700 p-3 bg-gray-900/40">
-                <div class="text-sm font-semibold mb-2">Forest Activation</div>
-                <div class="grid grid-cols-3 gap-2">
-                  <div class="flex flex-col items-center gap-1">
-                    <div class="w-12 h-12 rounded bg-[#795548] border border-gray-700 relative">
-                      <div class="absolute inset-0 flex items-center justify-center">
-                        <div class="flex items-center justify-center font-bold text-white bg-blue-500 rounded-full w-7 h-7">1</div>
-                      </div>
-                    </div>
-                    <div class="text-[11px] text-gray-300">Step 1</div>
-                  </div>
-                  <div class="flex flex-col items-center gap-1">
-                    <div class="w-12 h-12 rounded bg-[#795548] border border-gray-700 relative">
-                      <div class="absolute inset-0 flex items-center justify-center">
-                        <div class="flex items-center justify-center font-bold text-white bg-blue-500 rounded-full w-7 h-7">1</div>
-                      </div>
-                      <span class="absolute -bottom-1 -right-1 text-[14px]">🌱</span>
-                    </div>
-                    <div class="text-[11px] text-gray-300">Turn 2</div>
-                  </div>
-                  <div class="flex flex-col items-center gap-1">
-                    <div class="w-12 h-12 rounded bg-[#795548] border border-gray-700 relative">
-                      <div class="absolute inset-0 flex items-center justify-center">
-                        <div class="flex items-center justify-center font-bold text-white bg-blue-500 rounded-full w-7 h-7">1</div>
-                      </div>
-                      <span class="absolute -bottom-1 -right-1 text-[14px]">🌳</span>
-                    </div>
-                    <div class="text-[11px] text-gray-300">Turn 3 • +2 Wood</div>
-                  </div>
-                </div>
-              </div>
-              <div class="rounded-lg border border-gray-700 p-3 bg-gray-900/40">
-                <div class="text-sm font-semibold mb-2">Wall Building</div>
-                <div class="grid grid-cols-2 gap-1 w-28">
-                  <div class="w-12 h-12 rounded bg-[#795548] border border-gray-700 relative">
-                    <div class="absolute inset-0 flex items-center justify-center">
-                      <div class="flex items-center justify-center font-bold text-white bg-red-500 w-7 h-7">A</div>
-                    </div>
-                  </div>
-                  <div class="w-12 h-12 rounded bg-gray-700 border border-gray-700 relative">
-                    <div class="absolute inset-0 flex items-center justify-center">
-                      <div class="flex items-center justify-center font-bold text-white bg-blue-500 rounded-full w-7 h-7">1</div>
-                    </div>
-                  </div>
-                  <div class="col-span-2 relative h-2">
-                    <div class="absolute left-0 right-0 mx-auto w-10 h-2 bg-green-500 rounded"></div>
-                  </div>
-                </div>
-                <div class="text-[11px] text-gray-300 mt-2">Place wall between enemy and forest</div>
-              </div>
-              <div class="rounded-lg border border-gray-700 p-3 bg-gray-900/40">
-                <div class="text-sm font-semibold mb-2">Merging</div>
-                <div class="flex items-center gap-2">
-                  <div class="flex items-center justify-center font-bold text-white bg-blue-500 rounded-full w-10 h-10">4</div>
-                  <div class="text-white">+</div>
-                  <div class="flex items-center justify-center font-bold text-white bg-blue-500 rounded-full w-10 h-10">1</div>
-                  <div class="text-white">→</div>
-                  <div class="flex items-center justify-center font-bold text-white bg-blue-500 w-10 h-10" [style.clip-path]="'polygon(50% 0%, 0% 100%, 100% 100%)'">5</div>
-                </div>
-                <div class="text-[11px] text-gray-300 mt-2">T1(4) + T1(1) = T2(5)</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
-            <h3 class="text-lg font-semibold mb-3">Victory Conditions</h3>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="rounded-lg border border-gray-700 p-3 bg-gray-900/40">
-                <div class="text-sm font-semibold mb-2">Domination</div>
-                <div class="flex items-center gap-2">
-                  <div class="w-12 h-12 border-2 border-blue-400 rounded flex items-center justify-center">
-                    <span class="text-white font-bold bg-blue-600 px-1 rounded shadow text-xs">{{ gameEngine.baseHealth().player }}</span>
-                  </div>
-                  <div class="w-12 h-12 border-2 border-red-400 rounded flex items-center justify-center">
-                    <span class="text-white font-bold bg-red-600 px-1 rounded shadow text-xs">{{ gameEngine.baseHealth().ai }}</span>
-                  </div>
-                </div>
-                <div class="text-[11px] text-gray-300 mt-2">Destroy enemy base (0/100)</div>
-              </div>
-              <div class="rounded-lg border border-gray-700 p-3 bg-gray-900/40">
-                <div class="text-sm font-semibold mb-2">Monopoly</div>
-                <div class="space-y-2">
-                  <div>
-                    <div class="flex justify-between text-[11px] text-gray-300 mb-1">
-                      <span>Player</span>
-                      <span>{{ gameEngine.monopolyCounter().player }}</span>
-                    </div>
-                    <div class="h-2 bg-gray-700 rounded">
-                      <div class="h-2 bg-blue-500 rounded" [style.width.%]="(gameEngine.monopolyCounter().player / (gameEngine.monopolyCounter().player + gameEngine.monopolyCounter().ai || 1)) * 100"></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div class="flex justify-between text-[11px] text-gray-300 mb-1">
-                      <span>AI</span>
-                      <span>{{ gameEngine.monopolyCounter().ai }}</span>
-                    </div>
-                    <div class="h-2 bg-gray-700 rounded">
-                      <div class="h-2 bg-red-500 rounded" [style.width.%]="(gameEngine.monopolyCounter().ai / (gameEngine.monopolyCounter().player + gameEngine.monopolyCounter().ai || 1)) * 100"></div>
-                    </div>
-                  </div>
-                </div>
-                <div class="text-[11px] text-gray-300 mt-2">Hold all forests for 10 turns</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
-            <h3 class="text-lg font-semibold mb-3">Combat & Luck</h3>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="rounded-lg border border-gray-700 p-3 bg-gray-900/40">
-                <div class="flex items-center gap-2">
-                  <span class="rounded-full bg-blue-200 text-blue-900 flex items-center justify-center w-6 h-6 text-xs">🛡</span>
-                  <span class="text-sm">Staying still 3+ turns grants +1 defense</span>
-                </div>
-              </div>
-              <div class="rounded-lg border border-gray-700 p-3 bg-gray-900/40">
-                <div class="flex items-center gap-3">
-                  <span class="text-yellow-300 font-extrabold text-sm">CRIT! +2</span>
-                  <span class="text-yellow-300 font-extrabold text-sm">MISS -2</span>
-                </div>
-                <div class="text-[11px] text-gray-300 mt-2">20% Crit/Miss; bonus scales by Tier</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <app-game-rules />
   }
   @if (gameEngine.logOpen()) {
     <div class="fixed inset-y-0 right-0 w-80 bg-gray-900/90 border-l border-gray-700 p-4 z-40">
@@ -840,6 +672,51 @@
           >
             30x30
           </button>
+        </div>
+      </div>
+    </div>
+  }
+  @if (gameEngine.highScoresOpen()) {
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-600 w-[680px] max-w-[95vw]">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-2xl font-bold">High Scores</h2>
+          <button
+            class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 text-lg cursor-pointer"
+            (click)="gameEngine.closeHighScores()"
+          >
+            ✖
+          </button>
+        </div>
+        <div class="text-sm text-gray-300 mb-2">
+          Current: {{ settings.difficultyLabel() }} • {{ settings.mapSizeLabel() }}
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-3">
+            <h3 class="text-lg font-semibold mb-2 text-green-400">Player Wins (Top 3)</h3>
+            @for (s of gameEngine.getHighScoresForCurrentCombo().wins; track s.date) {
+              <div class="flex justify-between text-sm">
+                <span>{{ (s.date | date:'yyyy-MM-dd HH:mm') }}</span>
+                <span class="font-mono text-yellow-300">{{ s.turns }} turns</span>
+              </div>
+            } @empty {
+              <div class="text-xs text-gray-400">No records yet</div>
+            }
+          </div>
+          <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-3">
+            <h3 class="text-lg font-semibold mb-2 text-red-400">Player Losses (Top 3)</h3>
+            @for (s of gameEngine.getHighScoresForCurrentCombo().losses; track s.date) {
+              <div class="flex justify-between text-sm">
+                <span>{{ (s.date | date:'yyyy-MM-dd HH:mm') }}</span>
+                <span class="font-mono text-yellow-300">{{ s.turns }} turns</span>
+              </div>
+            } @empty {
+              <div class="text-xs text-gray-400">No records yet</div>
+            }
+          </div>
+        </div>
+        <div class="mt-4 text-xs text-gray-400">
+          Change Difficulty or Map Size in Settings to view other boards.
         </div>
       </div>
     </div>

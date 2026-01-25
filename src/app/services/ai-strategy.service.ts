@@ -15,7 +15,7 @@ export class AiStrategyService {
     return null;
   }
 
-  chooseBestEndingAction(engine: any): { type: 'move' | 'attack' | 'merge'; unit: Unit; target: Position; reason: string } | null {
+  chooseBestEndingAction(engine: any): { type: 'move' | 'attack' | 'merge' | 'wall_attack'; unit: Unit; target: Position; reason: string; edge?: { from: Position; to: Position } } | null {
     const alreadyMoved: Set<string> = new Set(engine.movedThisTurnSignal?.() ?? []);
     const aiUnits = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && !alreadyMoved.has(u.id));
     if (aiUnits.length === 0) return null;
@@ -33,7 +33,7 @@ export class AiStrategyService {
     const immediateThreat = immediateThreatEnemies.length > 0;
     const baseProximity = playerUnits.some((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 5);
     const aggression = typeof engine.aggressionMode === 'function' ? !!engine.aggressionMode() : (playerUnits.filter((p: Unit) => engine.isForest(p.position.x, p.position.y)).length * 2) >= (aiUnits.filter((a: Unit) => engine.isForest(a.position.x, a.position.y)).length * 2);
-    let best: { unit: Unit; target: Position; score: number; type: 'move' | 'attack' | 'merge'; reason: string } | null = null;
+    let best: { unit: Unit; target: Position; score: number; type: 'move' | 'attack' | 'merge' | 'wall_attack'; reason: string; edge?: { from: Position; to: Position } } | null = null;
     const clusterCount = aiUnits.filter((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3).length;
     const center = { x: Math.floor(engine.gridSize / 2), y: Math.floor(engine.gridSize / 2) };
     const primaryThreat = baseThreatEnemies.length > 0 ? baseThreatEnemies.reduce((acc, e) => {
@@ -151,6 +151,104 @@ export class AiStrategyService {
           }
         }
       }
+      let breachTarget: Position | null = null;
+      if (goal && engine.isForest(goal.x, goal.y) && !engine.getUnitAt(goal.x, goal.y)) {
+        const neighbors: Position[] = [
+          { x: goal.x + 1, y: goal.y },
+          { x: goal.x - 1, y: goal.y },
+          { x: goal.x, y: goal.y + 1 },
+          { x: goal.x, y: goal.y - 1 }
+        ].filter(p => engine.inBounds(p.x, p.y));
+        const breachables = neighbors.filter(n => {
+          const w = engine.getWallBetween(n.x, n.y, goal.x, goal.y);
+          return !!(w && w.owner === 'neutral');
+        });
+        if (breachables.length > 0) {
+          breachTarget = breachables.reduce((acc, n) => {
+            const dAcc = Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y);
+            const dN = Math.abs(unit.position.x - n.x) + Math.abs(unit.position.y - n.y) + 3;
+            return dN < dAcc ? n : acc;
+          }, breachables[0]);
+        }
+      }
+      const adjDirs = [
+        { x: 1, y: 0 },
+        { x: -1, y: 0 },
+        { x: 0, y: 1 },
+        { x: 0, y: -1 }
+      ];
+      for (const dxy of adjDirs) {
+        const fTile = { x: unit.position.x + dxy.x, y: unit.position.y + dxy.y };
+        if (!engine.inBounds(fTile.x, fTile.y)) continue;
+        if (!engine.isForest(fTile.x, fTile.y)) continue;
+        const occupant = engine.getUnitAt(fTile.x, fTile.y);
+        if (occupant) continue;
+        const wall = engine.getWallBetween(unit.position.x, unit.position.y, fTile.x, fTile.y);
+        if (wall && wall.owner === 'neutral') {
+          const score = 900000;
+          const reason = 'Breach Neutral Wall to Forest';
+          if (best === null || score > best.score) {
+            best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: { from: { ...unit.position }, to: fTile } };
+          }
+        } else if (wall && wall.owner === 'player') {
+          const neighbors: Position[] = [
+            { x: fTile.x + 1, y: fTile.y },
+            { x: fTile.x - 1, y: fTile.y },
+            { x: fTile.x, y: fTile.y + 1 },
+            { x: fTile.x, y: fTile.y - 1 }
+          ].filter(p => engine.inBounds(p.x, p.y));
+          const alternatives = neighbors.filter(n => {
+            if (engine.getUnitAt(n.x, n.y)) return false;
+            const w2 = engine.getWallBetween(n.x, n.y, fTile.x, fTile.y);
+            return !w2;
+          });
+          const dDirect = Math.abs(unit.position.x - fTile.x) + Math.abs(unit.position.y - fTile.y);
+          const dAlt = alternatives.length > 0
+            ? alternatives.reduce((acc, n) => {
+                const d = Math.abs(unit.position.x - n.x) + Math.abs(unit.position.y - n.y) + 1;
+                return Math.min(acc, d);
+              }, Infinity)
+            : Infinity;
+          if (dAlt - dDirect > 4) {
+            const score = 850000;
+            const reason = 'Attack Player Wall to Forest';
+            if (best === null || score > best.score) {
+              best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: { from: { ...unit.position }, to: fTile } };
+            }
+          }
+        }
+      }
+      // Base adjacency breach for hunters
+      const playerBase = engine.getBasePosition('player');
+      for (const dxy of adjDirs) {
+        const bTile = { x: unit.position.x + dxy.x, y: unit.position.y + dxy.y };
+        if (bTile.x === playerBase.x && bTile.y === playerBase.y) {
+          const w = engine.getWallBetween(unit.position.x, unit.position.y, bTile.x, bTile.y);
+          if (w && (w.owner === 'neutral' || w.owner === 'player') && unit.tier >= 3) {
+            const score = 900000;
+            const reason = 'Breach Wall to Base';
+            if (best === null || score > best.score) {
+              best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: { from: { ...unit.position }, to: bTile } };
+            }
+          }
+        }
+      }
+      // Anti-stagnation: break out from neutral walls near base or with no clear forest path
+      const noClearForestPath = visibleFree.length === 0 && fogForests.length === 0 && !breachTarget;
+      if (stagnantTurns >= 2 && noClearForestPath) {
+        for (const dxy of adjDirs) {
+          const nTile = { x: unit.position.x + dxy.x, y: unit.position.y + dxy.y };
+          if (!engine.inBounds(nTile.x, nTile.y)) continue;
+          const w = engine.getWallBetween(unit.position.x, unit.position.y, nTile.x, nTile.y);
+          if (w && w.owner === 'neutral') {
+            const score = 800000;
+            const reason = 'Anti-Stagnation: Break Out';
+            if (best === null || score > best.score) {
+              best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: { from: { ...unit.position }, to: nTile } };
+            }
+          }
+        }
+      }
       const adjacentEnemies = playerUnits.filter(p => Math.max(Math.abs(p.position.x - unit.position.x), Math.abs(p.position.y - unit.position.y)) === 1);
       const strongestAdjEnemy = adjacentEnemies.length > 0 ? adjacentEnemies.reduce((acc, e) => (this.combat.calculateTotalPoints(e) > this.combat.calculateTotalPoints(acc) ? e : acc), adjacentEnemies[0]) : null;
       const canReachBlockingTile = blockingTiles.length > 0 && moves.some(m => blockingTiles.some(b => b.x === m.x && b.y === m.y));
@@ -200,6 +298,18 @@ export class AiStrategyService {
             if (dMove < dCurr) {
               score += 50000 * (dCurr - dMove);
               reason = visibleFree.length > 0 ? `Priority 1: Toward Forest ${goal.x},${goal.y}` : (fogForests.length > 0 ? `Priority 7: Toward Fog Forest ${goal.x},${goal.y}` : `Toward Goal ${goal.x},${goal.y}`);
+            }
+          }
+          if (breachTarget) {
+            const dBCurr = Math.abs(unit.position.x - breachTarget.x) + Math.abs(unit.position.y - breachTarget.y);
+            const dBMove = Math.abs(move.x - breachTarget.x) + Math.abs(move.y - breachTarget.y);
+            if (dBMove < dBCurr) {
+              score += 200000 * (dBCurr - dBMove);
+              reason = 'Approach Neutral Wall to Forest';
+            }
+            if (move.x === breachTarget.x && move.y === breachTarget.y) {
+              score += 500000;
+              reason = 'Position for Wall Breach';
             }
           }
           const playerBase = engine.getBasePosition('player');
@@ -305,7 +415,7 @@ export class AiStrategyService {
     const goal = this.goals.get(best.unit.id);
     const goalText = goal ? `Goal: Forest at ${goal.x},${goal.y}` : 'Goal: None';
     console.log(`[AI Decision] Unit ${best.unit.id} moving to (${best.target.x},${best.target.y}) targeting ${goalText}.`);
-    return { type: best.type, unit: best.unit, target: best.target, reason: best.reason };
+    return { type: best.type, unit: best.unit, target: best.target, reason: best.reason, edge: (best as any).edge };
   }
 
   getWallBuildActions(engine: any): { from: Position; to: Position }[] {

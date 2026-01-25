@@ -1,5 +1,6 @@
 import { Component, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { GameRulesComponent } from './components/game-rules/game-rules.component';
 import { GameEngineService } from './services/game-engine.service';
 import { SettingsService } from './services/settings.service';
 import { Unit } from './models/unit.model';
@@ -7,7 +8,7 @@ import { Unit } from './models/unit.model';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, GameRulesComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

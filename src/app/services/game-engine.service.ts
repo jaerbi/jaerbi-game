@@ -8,12 +8,12 @@ import { MapService } from './map.service';
 import { EconomyService } from './economy.service';
 import { AiStrategyService } from './ai-strategy.service';
 
-interface Wall {
+ interface Wall {
   id: string;
   tile1: Position;
   tile2: Position;
   health: number;
-  owner: Owner;
+  owner: 'player' | 'ai' | 'neutral';
 }
 
 @Injectable({
@@ -69,6 +69,8 @@ export class GameEngineService {
   private forestMonopolySignal = signal<{ player: number; ai: number }>({ player: 0, ai: 0 });
   private hoveredUnitIdSignal = signal<string | null>(null);
   private autoDeployEnabledSignal = signal<boolean>(false);
+  private highScoresOpenSignal = signal<boolean>(false);
+  private highScoresSignal = signal<Record<string, { wins: { turns: number; date: number }[]; losses: { turns: number; date: number }[] }>>({});
   private playerConvertedThisTurnSignal = signal<boolean>(false);
   private unitQuadrantBiasSignal = signal<Map<string, { quadrant: number; until: number }>>(new Map());
   private aiUnitTimeNearBaseSignal = signal<Map<string, number>>(new Map());
@@ -149,8 +151,15 @@ export class GameEngineService {
   get tileUnitSizePx(): number {
     return Math.round(this.tileSizePx * 0.75);
   }
+  getForestControl() {
+    const total = this.forestsSignal().length;
+    const player = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
+    const ai = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
+    return { total, player, ai };
+  }
 
   constructor(private combat: CombatService, private build: BuildService, private log: LogService, private settings: SettingsService, private map: MapService, private economy: EconomyService, private aiStrategy: AiStrategyService) {
+    this.loadHighScores();
     this.resetGame();
   }
 
@@ -174,6 +183,7 @@ export class GameEngineService {
     this.playerExploredSignal.set(new Set(forestKeys));
     this.aiExploredSignal.set(new Set(forestKeys));
     this.wallsSignal.set([]);
+    this.placeNeutralWalls();
     this.baseDeployActiveSignal.set(false);
     this.buildModeSignal.set(false);
     this.fogDebugDisabledSignal.set(false);
@@ -239,7 +249,7 @@ export class GameEngineService {
       if (wallCheck.hitEnemy) {
         const lastFrom = wallCheck.lastFrom!;
         const wall = this.getWallBetween(lastFrom.x, lastFrom.y, target.x, target.y)!;
-        const dmgPercent = this.combat.getWallHitPercent(movingUnit.tier);
+        const dmgPercent = wall.owner === 'neutral' ? 100 : this.combat.getWallHitPercent(movingUnit.tier);
         this.wallsSignal.update(ws =>
           ws
             .map(w =>
@@ -507,6 +517,10 @@ export class GameEngineService {
         this.endTurn();
       }
     }
+    const sel = this.selectedUnitIdSignal();
+    if (sel && !this.unitsSignal().some(u => u.id === sel)) {
+      this.selectedUnitIdSignal.set(null);
+    }
   }
 
   // --- Helper Methods ---
@@ -567,6 +581,7 @@ export class GameEngineService {
       }, 1000);
       const aiBase = this.getBasePosition('ai');
       this.queueCombatText('💥', aiBase);
+      this.recordHighScore('player wins');
     } else if (hp.player <= 0) {
       this.gameStatusSignal.set('ai wins');
       this.screenShakeSignal.set(true);
@@ -576,6 +591,7 @@ export class GameEngineService {
       }, 1000);
       const playerBase = this.getBasePosition('player');
       this.queueCombatText('💥', playerBase);
+      this.recordHighScore('ai wins');
     }
   }
 
@@ -609,6 +625,20 @@ export class GameEngineService {
   }
   endReason(): string | null {
     return this.endReasonSignal();
+  }
+  highScoresOpen(): boolean {
+    return this.highScoresOpenSignal();
+  }
+  toggleHighScores() {
+    this.highScoresOpenSignal.update(v => !v);
+  }
+  closeHighScores() {
+    this.highScoresOpenSignal.set(false);
+  }
+  getHighScoresForCurrentCombo(): { wins: { turns: number; date: number }[]; losses: { turns: number; date: number }[] } {
+    const key = `${this.settings.difficulty()}|${this.settings.mapSize()}`;
+    const store = this.highScoresSignal();
+    return store[key] ?? { wins: [], losses: [] };
   }
   isLuckyText(text: string): boolean {
     return text.startsWith('LUCKY');
@@ -646,7 +676,7 @@ export class GameEngineService {
     const def = this.getDefenseBonus(u);
     return { atkMin: Math.max(0, base - luck), atkMax: base + luck, hp: u.points, support: def };
   }
-  shouldRenderWall(tile1: Position, tile2: Position, owner?: Owner): boolean {
+  shouldRenderWall(tile1: Position, tile2: Position, owner?: 'player' | 'ai' | 'neutral'): boolean {
     const wall = this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y);
     if (!wall) return false;
     const ow = owner ?? wall.owner;
@@ -667,6 +697,38 @@ export class GameEngineService {
     const maxHp = this.combat.getPointsForTierLevel(u.tier, 4);
     const def = h.support > 0 ? `+${h.support}` : '+0';
     return `Unit T${u.tier} | HP: ${h.hp}/${maxHp} | ATK: ${h.atkMin}-${h.atkMax} | DEF: ${def}`;
+  }
+  private loadHighScores() {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem('highScores');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          this.highScoresSignal.set(parsed);
+        }
+      }
+    } catch {}
+  }
+  private persistHighScores() {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('highScores', JSON.stringify(this.highScoresSignal()));
+    } catch {}
+  }
+  private recordHighScore(result: 'player wins' | 'ai wins') {
+    const key = `${this.settings.difficulty()}|${this.settings.mapSize()}`;
+    const current = { ...this.highScoresSignal() };
+    const entry = { turns: this.turnSignal(), date: Date.now() };
+    const bucket = current[key] ?? { wins: [], losses: [] };
+    if (result === 'player wins') {
+      bucket.wins = [...bucket.wins, entry].sort((a, b) => a.turns - b.turns).slice(0, 3);
+    } else {
+      bucket.losses = [...bucket.losses, entry].sort((a, b) => a.turns - b.turns).slice(0, 3);
+    }
+    current[key] = bucket;
+    this.highScoresSignal.set(current);
+    this.persistHighScores();
   }
 
   private getAttackLuckModifier(unit: Unit): { delta: number; tag?: string; isCrit?: boolean } {
@@ -760,7 +822,6 @@ export class GameEngineService {
   // --- Turn Management ---
 
   private endTurn() {
-    this.selectedUnitIdSignal.set(null); 
     const ownerJustActed: Owner = this.activeSideSignal();
     // Update stationary counters based on who just acted
     const movedIds = new Set(this.movedThisTurnSignal());
@@ -870,7 +931,7 @@ export class GameEngineService {
     this.aiBatchingActions = true;
     const aiBase = this.getBasePosition('ai');
     console.log('[AI] Phase: Economy');
-    while (this.aiWoodSignal() >= 20) {
+    while (this.aiWoodSignal() > 30) {
       this.aiConvertWoodToReserve();
     }
     await new Promise(r => setTimeout(r, 100));
@@ -974,9 +1035,13 @@ export class GameEngineService {
         return;
       }
       const tag = decision.reason;
-      const kind = decision.reason.includes('Attack') ? 'Move/Attack' : (decision.reason.includes('Merge') ? 'Merge' : 'Move');
+      const kind = decision.type === 'wall_attack' ? 'Attack Wall' : (decision.reason.includes('Attack') ? 'Move/Attack' : (decision.reason.includes('Merge') ? 'Merge' : 'Move'));
       console.log(`[AI] Phase: ${kind} (${tag})`);
-      this.executeMove(decision.unit, decision.target);
+      if (decision.type === 'wall_attack' && decision.edge) {
+        this.attackOrDestroyWallBetween(decision.edge.from, decision.edge.to, false);
+      } else {
+        this.executeMove(decision.unit, decision.target);
+      }
     }
     console.log('>>> SWITCHING TO PLAYER SIDE NOW <<<');
     this.endTurn();
@@ -1422,19 +1487,22 @@ export class GameEngineService {
     return this.build.sortEdgeEndpoints(a, b);
   }
 
-  attackOrDestroyWallBetween(tile1: Position, tile2: Position) {
+  attackOrDestroyWallBetween(tile1: Position, tile2: Position, consumeTurn: boolean = true) {
     const wall = this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y);
     if (!wall) return;
 
-    if (wall.owner === 'player') {
+    const actor: Owner = this.activeSideSignal();
+    if (wall.owner === 'player' && actor === 'player') {
       this.destroyOwnWallBetween(tile1, tile2);
       return;
     }
-
-    const unit = this.getBestAdjacentPlayerUnit(tile1, tile2);
+    const unit =
+      actor === 'player'
+        ? this.getBestAdjacentPlayerUnit(tile1, tile2)
+        : this.getBestAdjacentAiUnit(tile1, tile2);
     if (!unit) return;
 
-    const dmgPercent = this.combat.getWallHitPercent(unit.tier);
+    const dmgPercent = wall.owner === 'neutral' ? 100 : this.combat.getWallHitPercent(unit.tier);
     this.wallsSignal.update(ws =>
       ws
         .map(w =>
@@ -1446,8 +1514,16 @@ export class GameEngineService {
     );
     this.shakenWallIdSignal.set(wall.id);
     setTimeout(() => this.shakenWallIdSignal.set(null), 200);
-    this.appendLog(`[Turn ${this.turnSignal()}] Player hit AI wall (${tile1.x},${tile1.y})-(${tile2.x},${tile2.y}) for ${dmgPercent}% damage.`);
-    this.endTurn();
+    const actorText = actor === 'player' ? 'Player' : 'AI';
+    const targetOwnerText =
+      wall.owner === 'neutral' ? 'Neutral' : (wall.owner === 'player' ? 'Player' : 'AI');
+    this.appendLog(`[Turn ${this.turnSignal()}] ${actorText} hit ${targetOwnerText} wall (${tile1.x},${tile1.y})-(${tile2.x},${tile2.y}) for ${dmgPercent}% damage.`);
+    if (actor === 'ai') {
+      this.appendLog(`[AI Pathfinding] Breaking through wall at (${tile2.x},${tile2.y}) to reach target.`);
+    }
+    if (consumeTurn) {
+      this.endTurn();
+    }
   }
 
   destroyOwnWallBetween(tile1: Position, tile2: Position) {
@@ -1469,7 +1545,7 @@ export class GameEngineService {
   canAttackEnemyWall(tile1: Position, tile2: Position): boolean {
     const wall = this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y);
     if (!wall) return false;
-    if (wall.owner !== 'ai') return false;
+    if (wall.owner === 'player') return false;
     const unit = this.getBestAdjacentPlayerUnit(tile1, tile2);
     if (!unit) return false;
     return true;
@@ -1516,6 +1592,21 @@ export class GameEngineService {
  
   private getBestAdjacentPlayerUnit(tile1: Position, tile2: Position): Unit | null {
     const candidates = this.getAdjacentPlayerUnits(tile1, tile2);
+    if (candidates.length === 0) return null;
+    return candidates.reduce((best, u) =>
+      this.calculateTotalPoints(u) > this.calculateTotalPoints(best) ? u : best
+    );
+  }
+  private getAdjacentAiUnits(tile1: Position, tile2: Position): Unit[] {
+    return this.unitsSignal().filter(
+      u =>
+        u.owner === 'ai' &&
+        ((u.position.x === tile1.x && u.position.y === tile1.y) ||
+          (u.position.x === tile2.x && u.position.y === tile2.y))
+    );
+  }
+  private getBestAdjacentAiUnit(tile1: Position, tile2: Position): Unit | null {
+    const candidates = this.getAdjacentAiUnits(tile1, tile2);
     if (candidates.length === 0) return null;
     return candidates.reduce((best, u) =>
       this.calculateTotalPoints(u) > this.calculateTotalPoints(best) ? u : best
@@ -1647,6 +1738,8 @@ export class GameEngineService {
       if (!this.isForest(u.position.x, u.position.y)) continue;
       const enemies = playerUnits.filter(p => Math.max(Math.abs(p.position.x - u.position.x), Math.abs(p.position.y - u.position.y)) <= 2);
       for (const e of enemies) {
+        const myPower = this.calculateTotalPoints(u);
+        const enemyPower = this.calculateTotalPoints(e);
         const cheb = Math.max(Math.abs(e.position.x - u.position.x), Math.abs(e.position.y - u.position.y));
         const stepX = Math.sign(e.position.x - u.position.x);
         const stepY = Math.sign(e.position.y - u.position.y);
@@ -1662,7 +1755,9 @@ export class GameEngineService {
         const a = u.position;
         const b = targetNeighbor;
         if (this.getWallBetween(a.x, a.y, b.x, b.y)) continue;
-        this.aiBuildWallBetween(a, b);
+        if (enemyPower > myPower && this.aiWoodSignal() >= 30) {
+          this.aiBuildWallBetween(a, b);
+        }
         if (this.wallBuiltThisTurnSignal()) {
           return true;
         }
@@ -1712,5 +1807,46 @@ export class GameEngineService {
     if (!left && top) return 1;
     if (left && !top) return 2;
     return 3;
+  }
+
+  private placeNeutralWalls() {
+    const addNeutral = (a: Position, b: Position) => {
+      if (!this.areAdjacent(a, b)) return;
+      if (!this.inBounds(a.x, a.y) || !this.inBounds(b.x, b.y)) return;
+      if (this.getWallBetween(a.x, a.y, b.x, b.y)) return;
+      const [p, q] = this.sortEdgeEndpoints(a, b);
+      this.wallsSignal.update(ws => [
+        ...ws,
+        {
+          id: crypto.randomUUID(),
+          tile1: { x: p.x, y: p.y },
+          tile2: { x: q.x, y: q.y },
+          health: 100,
+          owner: 'neutral'
+        }
+      ]);
+    };
+    const bases = [this.getBasePosition('player'), this.getBasePosition('ai')];
+    for (const base of bases) {
+      const neighbors: Position[] = [
+        { x: base.x + 1, y: base.y },
+        { x: base.x - 1, y: base.y },
+        { x: base.x, y: base.y + 1 },
+        { x: base.x, y: base.y - 1 }
+      ];
+      for (const n of neighbors) {
+        if (this.inBounds(n.x, n.y)) addNeutral(base, n);
+      }
+    }
+    for (const f of this.forestsSignal()) {
+      const east = { x: f.x + 1, y: f.y };
+      const south = { x: f.x, y: f.y + 1 };
+      const west = { x: f.x - 1, y: f.y };
+      const north = { x: f.x, y: f.y - 1 };
+      if (this.inBounds(east.x, east.y)) addNeutral(f, east);
+      if (this.inBounds(south.x, south.y)) addNeutral(f, south);
+      if (this.inBounds(west.x, west.y)) addNeutral(f, west);
+      if (this.inBounds(north.x, north.y)) addNeutral(f, north);
+    }
   }
 }

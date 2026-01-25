@@ -1,7 +1,7 @@
 # Game Rules & Architecture Reference
 
 > **Status**: Living Document
-> **Last Updated**: 2026-01-24
+> **Last Updated**: 2026-01-25
 
 This document serves as the primary reference for game mechanics, AI priorities, and project architecture. All code changes must verify against these rules to ensure consistency.
 
@@ -36,10 +36,17 @@ This document serves as the primary reference for game mechanics, AI priorities,
 *   **Walls**:
     *   **Cost**: 10 Wood per wall segment.
     *   **Placement**: Between two adjacent tiles.
+        *   At game start, Neutral Silver/Gray walls are auto-placed:
+            *   Around both bases (all four adjacent edges).
+            *   On all four edges of every forest tile (full enclosure).
     *   **Destruction**:
         *   Tier 1 Unit: Deals ~34% damage per hit (3 hits to destroy).
         *   Tier 2 Unit: Deals ~51% damage per hit (2 hits to destroy).
         *   Tier 3+ Unit: Instantly destroys walls (100% damage).
+        *   Neutral Strategic Walls: Always take exactly 34% damage per hit from any unit (fixed 3 hits to destroy); non-buildable by Player/AI.
+    *   **AI Interaction**:
+        *   The AI treats Neutral Walls as destructible obstacles.
+        *   When an unoccupied forest is enclosed, AI prioritizes attacking the adjacent neutral wall to open a path.
 *   **Reserve System**:
     *   Reserves are global currency stored per player.
     *   Can be used to spawn units directly at the base or designated spawn zones.
@@ -82,6 +89,15 @@ This project includes a visual, interactive rules guide accessible in the app (R
 - Combat & Luck:
   - Shield bonus for staying still 3+ turns.
   - Crit/Miss samples to illustrate 20% luck mechanics.
+
+### Wall Color Legend
+- Green: Player-built walls (cost 10 Wood).
+- Red: AI-built walls.
+- Silver/Gray: Neutral strategic walls (non-buildable; fixed 3 hits to destroy).
+
+### AI Defense & Hunter Roles
+- AI Defense: Якщо база під загрозою на відстані ≤3 клітин, ШІ агресивно спавнить сильні блокери біля бази (ефект “Wall of Flesh”) та пріоритизує оборону.
+- T3+ Hunter: Юніти Tier 3 і вище пріоритизують полювання та тиск на базу/ворога над заготівлею дерева; захоплення лісів дозволено лише за сприятливих умов (відсутність близьких ворогів і брак низьких тиранів поруч).
 
 ## 3. AI Strategic Cycle
 
