@@ -43,10 +43,12 @@ This document serves as the primary reference for game mechanics, AI priorities,
         *   Tier 1 Unit: Deals ~34% damage per hit (3 hits to destroy).
         *   Tier 2 Unit: Deals ~51% damage per hit (2 hits to destroy).
         *   Tier 3+ Unit: Instantly destroys walls (100% damage).
-        *   Neutral Strategic Walls: Always take exactly 34% damage per hit from any unit (fixed 3 hits to destroy); non-buildable by Player/AI.
+        *   Neutral Strategic Walls: Take 100% damage per hit from any unit; non-buildable by Player/AI.
+        *   Rebuild Cooldown: When any wall segment is destroyed or removed, that specific tile edge enters a 5-turn cooldown; no new wall can be built on that edge during cooldown.
     *   **AI Interaction**:
         *   The AI treats Neutral Walls as destructible obstacles.
         *   When an unoccupied forest is enclosed, AI prioritizes attacking the adjacent neutral wall to open a path.
+        *   The AI respects the wall cooldown and never attempts to build on cooling edges.
 *   **Reserve System**:
     *   Reserves are global currency stored per player.
     *   Can be used to spawn units directly at the base or designated spawn zones.
@@ -93,7 +95,7 @@ This project includes a visual, interactive rules guide accessible in the app (R
 ### Wall Color Legend
 - Green: Player-built walls (cost 10 Wood).
 - Red: AI-built walls.
-- Silver/Gray: Neutral strategic walls (non-buildable; fixed 3 hits to destroy).
+- Silver/Gray: Neutral strategic walls (non-buildable; take full damage per hit).
 
 ### AI Defense & Hunter Roles
 - AI Defense: Якщо база під загрозою на відстані ≤3 клітин, ШІ агресивно спавнить сильні блокери біля бази (ефект “Wall of Flesh”) та пріоритизує оборону.
@@ -144,7 +146,7 @@ C. **Combat Loop (Engage/Retreat)**
   - Prioritize forests and local defense. Hold forests to start production on turn 3.
 - **Tier 3–4: Interceptors & Siege**
   - Prioritize intercepting enemies near AI base, press enemy base, then attack enemies on forests. Capture empty forests only when no enemies are visible.
-  - Dynamic Early Flex: May occupy and activate forests only if no friendly T1/T2 is within 3 tiles of that forest and no enemies are visible nearby; immediately hand over to approaching T1/T2 and switch to Hunter mode.
+  - Early-Game Handover: On spawn in the opening, a Tier 3 must immediately move to occupy the nearest forest and remain to activate; once a Tier 1 or Tier 2 is adjacent to that forest, the Tier 3 hands over and switches to the Hunter role (leave the forest and pressure enemies/base).
 
 ### Absolute Victory Priority
 - If any AI unit can attack the Player Base, it must do so immediately, overriding all other priorities (including forest blocking and near-activation states).

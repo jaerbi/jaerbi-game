@@ -365,6 +365,11 @@
                       ✔
                     </button>
                   }
+                  @if (gameEngine.edgeCooldownRemaining({ x: x, y: y }, { x: x + 1, y: y }) > 0) {
+                    <span class="absolute right-0 top-0 text-[10px] text-yellow-300 px-1">
+                      Cooldown: {{ gameEngine.edgeCooldownRemaining({ x: x, y: y }, { x: x + 1, y: y }) }} turns
+                    </span>
+                  }
                 </div>
               }
             }
@@ -430,6 +435,11 @@
                     >
                       ✔
                     </button>
+                  }
+                  @if (gameEngine.edgeCooldownRemaining({ x: x, y: y }, { x: x, y: y + 1 }) > 0) {
+                    <span class="absolute left-0 bottom-0 text-[10px] text-yellow-300 px-1">
+                      Cooldown: {{ gameEngine.edgeCooldownRemaining({ x: x, y: y }, { x: x, y: y + 1 }) }} turns
+                    </span>
                   }
                 </div>
               }

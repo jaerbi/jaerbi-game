@@ -77,6 +77,7 @@ export class GameEngineService {
   private aiBatchingActions: boolean = false;
   private isAiThinking: boolean = false;
   private aggressionModeSignal = signal<boolean>(false);
+  private wallCooldownSignal = signal<Map<string, number>>(new Map());
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -1498,6 +1499,30 @@ export class GameEngineService {
   private sortEdgeEndpoints(a: Position, b: Position): [Position, Position] {
     return this.build.sortEdgeEndpoints(a, b);
   }
+  private edgeKey(a: Position, b: Position): string {
+    const [s1, s2] = this.sortEdgeEndpoints(a, b);
+    return `${s1.x},${s1.y}|${s2.x},${s2.y}`;
+  }
+  private registerWallDestroyedEdge(a: Position, b: Position) {
+    const key = this.edgeKey(a, b);
+    const map = new Map(this.wallCooldownSignal());
+    map.set(key, this.turnSignal());
+    this.wallCooldownSignal.set(map);
+  }
+  isEdgeOnCooldown(tile1: Position, tile2: Position): boolean {
+    const key = this.edgeKey(tile1, tile2);
+    const last = this.wallCooldownSignal().get(key);
+    if (last === undefined) return false;
+    const remaining = 5 - (this.turnSignal() - last);
+    return remaining > 0;
+  }
+  edgeCooldownRemaining(tile1: Position, tile2: Position): number {
+    const key = this.edgeKey(tile1, tile2);
+    const last = this.wallCooldownSignal().get(key);
+    if (last === undefined) return 0;
+    const remaining = 5 - (this.turnSignal() - last);
+    return Math.max(0, remaining);
+  }
 
   attackOrDestroyWallBetween(tile1: Position, tile2: Position, consumeTurn: boolean = true) {
     const wall = this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y);
@@ -1515,6 +1540,8 @@ export class GameEngineService {
     if (!unit) return;
 
     const dmgPercent = wall.owner === 'neutral' ? 100 : this.combat.getWallHitPercent(unit.tier);
+    const [a, b] = this.sortEdgeEndpoints(tile1, tile2);
+    const nextHealth = Math.max(0, wall.health - dmgPercent);
     this.wallsSignal.update(ws =>
       ws
         .map(w =>
@@ -1524,6 +1551,9 @@ export class GameEngineService {
         )
         .filter(w => w.health > 0)
     );
+    if (nextHealth <= 0) {
+      this.registerWallDestroyedEdge(a, b);
+    }
     this.shakenWallIdSignal.set(wall.id);
     setTimeout(() => this.shakenWallIdSignal.set(null), 200);
     const actorText = actor === 'player' ? 'Player' : 'AI';
@@ -1544,6 +1574,8 @@ export class GameEngineService {
     if (wall.owner !== 'player') return;
     if (!this.isAnyPlayerUnitAdjacentToEdge(tile1, tile2)) return;
     this.wallsSignal.update(ws => ws.filter(w => w.id !== wall.id));
+    const [a, b] = this.sortEdgeEndpoints(tile1, tile2);
+    this.registerWallDestroyedEdge(a, b);
     this.appendLog(`[Turn ${this.turnSignal()}] Player removed own wall between (${tile1.x},${tile1.y})-(${tile2.x},${tile2.y}).`);
   }
 
@@ -1641,6 +1673,7 @@ export class GameEngineService {
     if (!this.isVisibleToPlayer(tile1.x, tile1.y) && !this.isVisibleToPlayer(tile2.x, tile2.y)) return false;
     if (this.isInNoBuildZone(tile1) || this.isInNoBuildZone(tile2)) return false;
     if (!!this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y)) return false;
+    if (this.isEdgeOnCooldown(tile1, tile2)) return false;
     return true;
   }
 
@@ -1650,6 +1683,7 @@ export class GameEngineService {
     if (!this.areAdjacent(tile1, tile2)) return;
     if (this.isInNoBuildZone(tile1) || this.isInNoBuildZone(tile2)) return;
     if (this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y)) return;
+    if (this.isEdgeOnCooldown(tile1, tile2)) return;
     if (this.wouldCageElite(tile1, tile2) && !this.isBaseProtectionEdge(tile1, tile2)) return;
     const adjacentAI = this.unitsSignal().some(
       u =>

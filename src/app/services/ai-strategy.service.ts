@@ -113,15 +113,30 @@ export class AiStrategyService {
       const inSession = isOnForest && (unit.forestOccupationTurns ?? 0) > 0 && !(unit.productionActive ?? false);
       const lowTierNearby = engine.unitsSignal().some((u2: Unit) =>
         u2.owner === 'ai' && u2.id !== unit.id && u2.tier <= 2 &&
-        Math.max(Math.abs(u2.position.x - unit.position.x), Math.abs(u2.position.y - unit.position.y)) <= 3
+        Math.max(Math.abs(u2.position.x - unit.position.x), Math.abs(u2.position.y - unit.position.y)) <= 1
       );
       if (inSession && !baseProximity && unit.tier < 3) {
         this.goals.set(unit.id, { x: unit.position.x, y: unit.position.y });
         console.log(`[AI Block] Unit ${unit.id} is blocked in the forest at (${unit.position.x},${unit.position.y}). Progress: ${(unit.forestOccupationTurns ?? 0)}/3.`);
         continue;
       }
-      if (unit.tier >= 3 && isOnForest && (lowTierNearby || baseProximity)) {
-        this.goals.set(unit.id, { x: aiBase.x, y: aiBase.y });
+      if (unit.tier >= 3) {
+        const allForests = forests;
+        const nearestForest = allForests.length
+          ? allForests.reduce((acc, f) => {
+              const d = Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y);
+              const da = Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y);
+              return d < da ? f : acc;
+            }, allForests[0])
+          : null;
+        const fresh = (unit.forestOccupationTurns ?? 0) === 0 && !isOnForest;
+        if (fresh && nearestForest) {
+          goal = { x: nearestForest.x, y: nearestForest.y };
+          this.goals.set(unit.id, goal);
+        }
+        if (isOnForest && lowTierNearby) {
+          this.goals.set(unit.id, { x: playerBase.x, y: playerBase.y });
+        }
       }
       const canAttackBaseNow = moves.some(m => m.x === playerBase.x && m.y === playerBase.y);
       if (canAttackBaseNow) {
@@ -312,15 +327,19 @@ export class AiStrategyService {
             if (unit.tier >= 3) {
               const lowTierWithin3 = engine.unitsSignal().some((u2: Unit) =>
                 u2.owner === 'ai' && u2.tier <= 2 &&
-                Math.max(Math.abs(u2.position.x - move.x), Math.abs(u2.position.y - move.y)) <= 3
+                Math.max(Math.abs(u2.position.x - move.x), Math.abs(u2.position.y - move.y)) <= 1
               );
               const enemiesVisibleNear = playerUnits.some((p: Unit) =>
                 Math.max(Math.abs(p.position.x - unit.position.x), Math.abs(p.position.y - unit.position.y)) <= 2 &&
                 engine.isVisibleToAi(p.position.x, p.position.y)
               );
-              if (!lowTierWithin3 && !enemiesVisibleNear) {
+              const fresh = (unit.forestOccupationTurns ?? 0) === 0 && !isOnForest;
+              if (fresh && !enemiesVisibleNear) {
+                score = 1200000;
+                reason = 'Opening: T3 occupy forest';
+              } else if (!lowTierWithin3 && !enemiesVisibleNear) {
                 score = 500000;
-                reason = 'Early Flex: T3 capture forest';
+                reason = 'T3 capture forest';
               } else {
                 score = -1;
                 reason = 'Hunter: Avoid Forest';
