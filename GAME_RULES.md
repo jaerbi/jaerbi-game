@@ -106,7 +106,17 @@ C. **Combat Loop (Engage/Retreat)**
 
 5. **Forest Blocking**
 - If a unit has started occupation (forestOccupationTurns > 0), movement to any other tile is heavily penalized and generally forbidden until production starts.
-- No exceptions (including attacks or high-value targets) during occupation buildup; rely on wall building for defense.
+- Exception: If the AI base is threatened (enemy within 5 tiles), blocking is disabled; units may move to intercept. Tier 3+ units are exempt from blocking and act as hunters.
+
+## 5. Unit Roles
+- **Tier 1–2: Gatherers & Defenders**
+  - Prioritize forests and local defense. Hold forests to start production on turn 3.
+- **Tier 3–4: Interceptors & Siege**
+  - Prioritize intercepting enemies near AI base, press enemy base, then attack enemies on forests. Capture empty forests only when no enemies are visible.
+  - Dynamic Early Flex: May occupy and activate forests only if no friendly T1/T2 is within 3 tiles of that forest and no enemies are visible nearby; immediately hand over to approaching T1/T2 and switch to Hunter mode.
+
+### Absolute Victory Priority
+- If any AI unit can attack the Player Base, it must do so immediately, overriding all other priorities (including forest blocking and near-activation states).
 
 4. **Aggressive Combat**
 - If MyPower >= EnemyPower: ATTACK.

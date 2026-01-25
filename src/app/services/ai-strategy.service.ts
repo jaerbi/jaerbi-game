@@ -27,6 +27,9 @@ export class AiStrategyService {
     const aiForestCount = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && engine.isForest(u.position.x, u.position.y)).length;
     const playerUnits: Unit[] = engine.unitsSignal().filter((u: Unit) => u.owner === 'player');
     const enemyNearBase = playerUnits.some((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3);
+    const baseThreatEnemies = playerUnits.filter((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 2);
+    const baseThreat = baseThreatEnemies.length > 0;
+    const baseProximity = playerUnits.some((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 5);
     const aggression = typeof engine.aggressionMode === 'function' ? !!engine.aggressionMode() : (playerUnits.filter((p: Unit) => engine.isForest(p.position.x, p.position.y)).length * 2) >= (aiUnits.filter((a: Unit) => engine.isForest(a.position.x, a.position.y)).length * 2);
     let best: { unit: Unit; target: Position; score: number; type: 'move' | 'attack' | 'merge'; reason: string } | null = null;
     const clusterCount = aiUnits.filter((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3).length;
@@ -42,7 +45,7 @@ export class AiStrategyService {
         const gUnit = engine.getUnitAt(goal!.x, goal!.y);
         return !!(gUnit && gUnit.owner === 'ai' && this.combat.calculateTotalPoints(gUnit) >= this.combat.calculateTotalPoints(unit));
       })() : false;
-      const needNewGoal = !hasGoal || goalOccupiedByStrongerAlly;
+      const needNewGoal = (!hasGoal || goalOccupiedByStrongerAlly) && (!engine.isForest(unit.position.x, unit.position.y) || baseProximity || unit.tier >= 3);
       if (needNewGoal) {
         const enemyOnForest = playerUnits.filter(p => engine.isForest(p.position.x, p.position.y));
         if (aggression && enemyOnForest.length > 0) {
@@ -86,8 +89,18 @@ export class AiStrategyService {
       }
       const isOnForest = engine.isForest(unit.position.x, unit.position.y);
       const inSession = isOnForest && (unit.forestOccupationTurns ?? 0) > 0 && !(unit.productionActive ?? false);
-      if (inSession) {
+      const lowTierNearby = engine.unitsSignal().some((u2: Unit) =>
+        u2.owner === 'ai' && u2.id !== unit.id && u2.tier <= 2 &&
+        Math.max(Math.abs(u2.position.x - unit.position.x), Math.abs(u2.position.y - unit.position.y)) <= 3
+      );
+      if (inSession && !baseProximity && unit.tier < 3) {
+        this.goals.set(unit.id, { x: unit.position.x, y: unit.position.y });
+        console.log(`[AI Block] Unit ${unit.id} is blocked in the forest at (${unit.position.x},${unit.position.y}). Progress: ${(unit.forestOccupationTurns ?? 0)}/3.`);
         continue;
+      }
+      if (unit.tier >= 3 && isOnForest && (lowTierNearby || baseProximity)) {
+        // Handover: abandon forest to lower tier or leave if base threatened
+        this.goals.set(unit.id, { x: aiBase.x, y: aiBase.y });
       }
       if (goal) {
         const enemyAtGoal = engine.getUnitAt(goal.x, goal.y);
@@ -139,8 +152,26 @@ export class AiStrategyService {
         }
         if (!targetUnit) {
           if (engine.isForest(move.x, move.y) && !engine.getUnitAt(move.x, move.y)) {
-            score = 1000000;
-            reason = aiForestCount < 3 ? `Priority 0: Capture Forest ${move.x},${move.y}` : `Priority 1: Capture Forest ${move.x},${move.y}`;
+            if (unit.tier >= 3) {
+              const lowTierWithin3 = engine.unitsSignal().some((u2: Unit) =>
+                u2.owner === 'ai' && u2.tier <= 2 &&
+                Math.max(Math.abs(u2.position.x - move.x), Math.abs(u2.position.y - move.y)) <= 3
+              );
+              const enemiesVisibleNear = playerUnits.some((p: Unit) =>
+                Math.max(Math.abs(p.position.x - unit.position.x), Math.abs(p.position.y - unit.position.y)) <= 2 &&
+                engine.isVisibleToAi(p.position.x, p.position.y)
+              );
+              if (!lowTierWithin3 && !enemiesVisibleNear) {
+                score = 500000;
+                reason = 'Early Flex: T3 capture forest';
+              } else {
+                score = -1;
+                reason = 'Hunter: Avoid Forest';
+              }
+            } else {
+              score = 1000000;
+              reason = aiForestCount < 3 ? `Priority 0: Capture Forest ${move.x},${move.y}` : `Priority 1: Capture Forest ${move.x},${move.y}`;
+            }
           }
           if (goal) {
             const dCurr = Math.abs(unit.position.x - goal.x) + Math.abs(unit.position.y - goal.y);
@@ -148,6 +179,34 @@ export class AiStrategyService {
             if (dMove < dCurr) {
               score += 50000 * (dCurr - dMove);
               reason = visibleFree.length > 0 ? `Priority 1: Toward Forest ${goal.x},${goal.y}` : (fogForests.length > 0 ? `Priority 7: Toward Fog Forest ${goal.x},${goal.y}` : `Toward Goal ${goal.x},${goal.y}`);
+            }
+          }
+          // Base attack override: if move hits player base, supersede priorities
+          const playerBase = engine.getBasePosition('player');
+          if (move.x === playerBase.x && move.y === playerBase.y) {
+            score += 10000;
+            reason = 'Attack Base (Override)';
+          }
+          if (baseThreat) {
+            const nearest = baseThreatEnemies.reduce((acc, e) => {
+              const d = Math.abs(unit.position.x - e.position.x) + Math.abs(unit.position.y - e.position.y);
+              const da = Math.abs(unit.position.x - acc.position.x) + Math.abs(unit.position.y - acc.position.y);
+              return d < da ? e : acc;
+            }, baseThreatEnemies[0]);
+            const dCurr = Math.abs(unit.position.x - nearest.position.x) + Math.abs(unit.position.y - nearest.position.y);
+            const dMove = Math.abs(move.x - nearest.position.x) + Math.abs(move.y - nearest.position.y);
+            if (dMove < dCurr) {
+              score += 5000 * (dCurr - dMove);
+              if (unit.tier >= 3) score += 4000;
+              reason = 'Defense 1: Intercept Threat';
+            }
+          }
+          if (unit.tier >= 3) {
+            const bCurr = Math.abs(unit.position.x - playerBase.x) + Math.abs(unit.position.y - playerBase.y);
+            const bMove = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
+            if (bMove < bCurr) {
+              score += 2000 * (bCurr - bMove);
+              reason = 'Hunter: Toward Base';
             }
           }
           if (nearBase && nearestForestMove < nearestForestCurrent) {

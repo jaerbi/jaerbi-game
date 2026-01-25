@@ -769,7 +769,9 @@ export class GameEngineService {
         if (u.owner !== ownerJustActed) return u;
         const moved = movedIds.has(u.id);
         const onForest = this.isForest(u.position.x, u.position.y);
-        const occ = onForest ? (moved ? 0 : (u.forestOccupationTurns ?? 0) + 1) : 0;
+        const occ = onForest
+          ? (moved ? 1 : (u.forestOccupationTurns ?? 0) + 1)
+          : (moved ? 0 : 0);
         const active = onForest ? occ >= 3 : false;
         return {
           ...u,
@@ -889,6 +891,11 @@ export class GameEngineService {
     const aggression = playerIncome >= aiIncome;
     this.aggressionModeSignal.set(aggression);
     console.log(`[AI Economy] Player Income: ${playerIncome}, AI Income: ${aiIncome}. AGGRESSION MODE: ${aggression}`);
+    const threats2 = this.unitsSignal().filter(u => u.owner === 'player' && Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 2);
+    if (threats2.length > 0) {
+      const highest = threats2.reduce((acc, e) => this.calculateTotalPoints(e) > this.calculateTotalPoints(acc) ? e : acc, threats2[0]);
+      this.aiDefenseSpawn(highest);
+    }
     if (!this.wallBuiltThisTurnSignal()) {
       this.tryDefensiveWallsNearForests();
     }
@@ -957,6 +964,33 @@ export class GameEngineService {
     this.isAiThinking = false;
     this.aiBatchingActions = false;
     return;
+  }
+  private aiDefenseSpawn(threat: Unit) {
+    const aiBase = this.getBasePosition('ai');
+    const stepX = Math.sign(threat.position.x - aiBase.x);
+    const stepY = Math.sign(threat.position.y - aiBase.y);
+    const candidates: Position[] = [];
+    const first: Position = { x: aiBase.x + (Math.abs(stepX) === 1 ? stepX : 0), y: aiBase.y + (Math.abs(stepY) === 1 ? stepY : 0) };
+    const alt: Position[] = [
+      { x: aiBase.x + stepX, y: aiBase.y },
+      { x: aiBase.x, y: aiBase.y + stepY }
+    ];
+    if (this.inBounds(first.x, first.y)) candidates.push(first);
+    for (const p of alt) if (this.inBounds(p.x, p.y)) candidates.push(p);
+    const open = candidates.find(p => !this.getUnitAt(p.x, p.y));
+    const desiredTier = Math.min(4, threat.tier + 1);
+    const cost = this.getPointsForTierLevel(desiredTier, 1);
+    while (this.aiWoodSignal() >= 20 && this.reservePointsSignal().ai < cost) this.aiConvertWoodToReserve();
+    if (this.reservePointsSignal().ai < cost) return;
+    if (open) {
+      const tl = this.calculateTierAndLevel(cost);
+      this.unitsSignal.update(units => [...units, { id: crypto.randomUUID(), position: { ...open }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0, forestOccupationTurns: 0, productionActive: false }]);
+      this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai - cost }));
+      this.recomputeVisibility();
+      console.log('[AI Defense] Spawned blocker at', open);
+      return;
+    }
+    this.aiSpawnTier(desiredTier, 1, new Set<string>());
   }
 
   // --- Spawning ---
@@ -1561,18 +1595,24 @@ export class GameEngineService {
     const aiBase = this.getBasePosition('ai');
     for (const u of aiUnits) {
       if (!this.isForest(u.position.x, u.position.y)) continue;
-      const adjacentEnemies = playerUnits.filter(p => Math.max(Math.abs(p.position.x - u.position.x), Math.abs(p.position.y - u.position.y)) === 1);
-      for (const e of adjacentEnemies) {
-        if (e.tier < u.tier) continue;
-        const dx = Math.sign(e.position.x - u.position.x);
-        const dy = Math.sign(e.position.y - u.position.y);
-        if (Math.abs(dx) + Math.abs(dy) !== 1) continue;
+      const enemies = playerUnits.filter(p => Math.max(Math.abs(p.position.x - u.position.x), Math.abs(p.position.y - u.position.y)) <= 2);
+      for (const e of enemies) {
+        const cheb = Math.max(Math.abs(e.position.x - u.position.x), Math.abs(e.position.y - u.position.y));
+        const stepX = Math.sign(e.position.x - u.position.x);
+        const stepY = Math.sign(e.position.y - u.position.y);
+        if (Math.abs(stepX) + Math.abs(stepY) === 2) continue;
+        const targetNeighbor: Position = cheb === 1
+          ? { x: u.position.x + stepX, y: u.position.y + stepY }
+          : { x: u.position.x + Math.sign(e.position.x - u.position.x), y: u.position.y + Math.sign(e.position.y - u.position.y) };
+        if (!this.inBounds(targetNeighbor.x, targetNeighbor.y)) continue;
         const bx = Math.sign(aiBase.x - u.position.x);
         const by = Math.sign(aiBase.y - u.position.y);
-        const dot = dx * bx + dy * by;
+        const dot = (targetNeighbor.x - u.position.x) * bx + (targetNeighbor.y - u.position.y) * by;
         if (dot > 0) continue;
-        if (this.getWallBetween(u.position.x, u.position.y, e.position.x, e.position.y)) continue;
-        this.aiBuildWallBetween(u.position, e.position);
+        const a = u.position;
+        const b = targetNeighbor;
+        if (this.getWallBetween(a.x, a.y, b.x, b.y)) continue;
+        this.aiBuildWallBetween(a, b);
         if (this.wallBuiltThisTurnSignal()) {
           return true;
         }
