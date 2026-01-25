@@ -57,6 +57,7 @@ export class AiStrategyService {
       }
     }
     const timeMap: Map<string, number> = new Map(engine.aiUnitTimeNearBase());
+    const stutterBan: Map<string, { tiles: Set<string>; until: number }> = new Map(engine.unitStutterBanSignal?.() ?? new Map());
     for (const unit of aiUnits) {
       const moves: Position[] = engine.calculateValidMoves(unit);
       const nearBase = Math.max(Math.abs(unit.position.x - aiBase.x), Math.abs(unit.position.y - aiBase.y)) <= 3;
@@ -136,6 +137,22 @@ export class AiStrategyService {
         }
         if (isOnForest && lowTierNearby) {
           this.goals.set(unit.id, { x: playerBase.x, y: playerBase.y });
+          const neighbors: Position[] = [
+            { x: unit.position.x + 1, y: unit.position.y },
+            { x: unit.position.x - 1, y: unit.position.y },
+            { x: unit.position.x, y: unit.position.y + 1 },
+            { x: unit.position.x, y: unit.position.y - 1 }
+          ].filter(p => engine.inBounds(p.x, p.y));
+          const blockedNeighbors = neighbors.filter(n => !!engine.getWallBetween(unit.position.x, unit.position.y, n.x, n.y));
+          if (blockedNeighbors.length === neighbors.length) {
+            const towardBase = neighbors.reduce((acc, n) => {
+              const db = Math.abs(n.x - playerBase.x) + Math.abs(n.y - playerBase.y);
+              const da = Math.abs(acc.x - playerBase.x) + Math.abs(acc.y - playerBase.y);
+              return db < da ? n : acc;
+            });
+            best = { unit, target: { x: unit.position.x, y: unit.position.y }, score: 2200000, type: 'wall_attack', reason: 'Siege: Breakthrough (Handover)', edge: { from: { ...unit.position }, to: towardBase } };
+            continue;
+          }
         }
       }
       const canAttackBaseNow = moves.some(m => m.x === playerBase.x && m.y === playerBase.y);
@@ -317,8 +334,20 @@ export class AiStrategyService {
         const histRaw = histMap.get(unit.id);
         const hist: Position[] = Array.isArray(histRaw) ? (histRaw as Position[]) : [];
         const prevTile = hist.length >= 2 ? hist[hist.length - 2] : null;
+        const prevPrevTile = hist.length >= 3 ? hist[hist.length - 3] : null;
         const returning = prevTile && move.x === prevTile.x && move.y === prevTile.y;
         const leavingForest = isOnForest && !(engine.isForest(move.x, move.y));
+        const banInfo = stutterBan.get(unit.id);
+        const bannedNow = banInfo && banInfo.until > engine.turnSignal() && banInfo.tiles.has(`${move.x},${move.y}`);
+        const loopLastTwo = unit.tier === 1 && ((prevTile && move.x === prevTile.x && move.y === prevTile.y) || (prevPrevTile && move.x === prevPrevTile.x && move.y === prevPrevTile.y));
+        if (loopLastTwo) {
+          score -= 25000;
+          reason = 'Anti-Loop Penalty';
+        }
+        if (bannedNow) {
+          score -= 30000;
+          reason = 'Stutter Ban Penalty';
+        }
         if (isOnForest && adjacentEnemies.length === 0 && !targetUnit && leavingForest && !baseThreat) {
           score = -1000;
         }
@@ -355,6 +384,19 @@ export class AiStrategyService {
             if (dMove < dCurr) {
               score += 50000 * (dCurr - dMove);
               reason = visibleFree.length > 0 ? `Priority 1: Toward Forest ${goal.x},${goal.y}` : (fogForests.length > 0 ? `Priority 7: Toward Fog Forest ${goal.x},${goal.y}` : `Toward Goal ${goal.x},${goal.y}`);
+            }
+            const towardGoalWall = (() => {
+              const sx = Math.sign(goal.x - unit.position.x);
+              const sy = Math.sign(goal.y - unit.position.y);
+              const nx = unit.position.x + (sx !== 0 ? sx : 0);
+              const ny = unit.position.y + (sy !== 0 ? sy : 0);
+              if (!engine.inBounds(nx, ny)) return false;
+              const w = engine.getWallBetween(unit.position.x, unit.position.y, nx, ny);
+              return !!(w && w.owner === 'neutral');
+            })();
+            if (towardGoalWall && move.x === unit.position.x && move.y === unit.position.y) {
+              score += 800000;
+              reason = 'Siege: Breakthrough';
             }
           }
           if (breachTarget) {
@@ -458,6 +500,27 @@ export class AiStrategyService {
         if (targetUnit && targetUnit.owner === 'ai' && targetUnit.tier === unit.tier) type = 'merge';
         if (returning) {
           score = Math.floor(score * 0.1);
+        }
+        const histLoop3 = (() => {
+          const last6 = hist.slice(-6);
+          const uniq = new Set(last6.map(p => `${p.x},${p.y}`));
+          return last6.length >= 6 && uniq.size <= 3;
+        })();
+        if (unit.tier === 1 && histLoop3) {
+          const candidates = visibleFree.length > 0 ? visibleFree : fogForests;
+          if (candidates.length > 0) {
+            const nearest = candidates.reduce((acc, f) => {
+              const d = Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y);
+              const da = Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y);
+              return d < da ? f : acc;
+            }, candidates[0]);
+            const dCurr = Math.abs(unit.position.x - nearest.x) + Math.abs(unit.position.y - nearest.y);
+            const dMove = Math.abs(move.x - nearest.x) + Math.abs(move.y - nearest.y);
+            if (dMove < dCurr) {
+              score += 100000 * (dCurr - dMove);
+              reason = 'Breakout: Toward Forest';
+            }
+          }
         }
         if ((unit.forestOccupationTurns ?? 0) > 0 && (move.x !== unit.position.x || move.y !== unit.position.y)) {
           score -= 2000;
