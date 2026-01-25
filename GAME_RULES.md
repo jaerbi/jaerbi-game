@@ -68,6 +68,21 @@ Combat has a 20% chance for critical success or failure.
 *   **CRIT** (Roll < 0.2): Damage + Tier Value (T1=1, T2=2, T3=4, T4=8).
 *   **MISS** (Roll > 0.8): Damage - Tier Value.
 
+## Visual Guide Overview
+
+This project includes a visual, interactive rules guide accessible in the app (Rules panel). It presents:
+- Unit Encyclopedia for Tiers 1–4 with point ranges and roles.
+- How To Play cards:
+  - Forest Activation (3-turn sequence with seedling → tree icons).
+  - Wall Building (wall segment placed between unit and adjacent enemy).
+  - Merging (example: T1(4) + T1(1) = T2(5)).
+- Victory Conditions:
+  - Domination (base health overlay).
+  - Monopoly (forest capture progress for Player vs AI).
+- Combat & Luck:
+  - Shield bonus for staying still 3+ turns.
+  - Crit/Miss samples to illustrate 20% luck mechanics.
+
 ## 3. AI Strategic Cycle
 
 A. **Forest Anchor Rule**

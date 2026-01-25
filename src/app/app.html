@@ -588,9 +588,9 @@
 
   @if (gameEngine.rulesOpen()) {
     <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl">
+      <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 w-[960px] max-w-[95vw] mx-4 shadow-xl">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl font-bold">Game Rules</h2>
+          <h2 class="text-2xl font-bold">Game Guide</h2>
           <button
             class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 text-lg cursor-pointer"
             (click)="gameEngine.closeRules()"
@@ -598,38 +598,165 @@
             ✖
           </button>
         </div>
-        <div class="space-y-4 text-sm text-gray-200">
-          <div>
-            <h3 class="font-semibold mb-1">Exponential Tiers</h3>
-            <p>
-              Units use exponential points: Tier 1 starts at 1, Tier 2 at 5, Tier 3 at 25, Tier 4 at 125. Merging and
-              combat always use pure point math.
-            </p>
+        <div class="grid grid-cols-1 gap-6 overflow-y-auto max-h-[70vh] pr-2">
+          <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
+            <h3 class="text-lg font-semibold mb-3">Unit Encyclopedia</h3>
+            <div class="grid grid-cols-4 gap-4">
+              <div class="flex flex-col items-center gap-2">
+                <div class="flex items-center justify-center font-bold text-white bg-blue-500 rounded-full w-12 h-12">1</div>
+                <div class="text-xs text-gray-300">Tier 1</div>
+                <div class="text-xs text-gray-400">Points: 1–4</div>
+                <div class="text-xs text-emerald-400">Role: Gatherer</div>
+              </div>
+              <div class="flex flex-col items-center gap-2">
+                <div class="flex items-center justify-center font-bold text-white bg-blue-500 w-12 h-12" [style.clip-path]="'polygon(50% 0%, 0% 100%, 100% 100%)'">
+                  5
+                </div>
+                <div class="text-xs text-gray-300">Tier 2</div>
+                <div class="text-xs text-gray-400">Points: 5–20</div>
+                <div class="text-xs text-emerald-400">Role: Defender</div>
+              </div>
+              <div class="flex flex-col items-center gap-2">
+                <div class="flex items-center justify-center font-bold text-white bg-blue-500 w-12 h-12">25</div>
+                <div class="text-xs text-gray-300">Tier 3</div>
+                <div class="text-xs text-gray-400">Points: 25–100</div>
+                <div class="text-xs text-emerald-400">Role: Hunter</div>
+              </div>
+              <div class="flex flex-col items-center gap-2">
+                <div class="flex items-center justify-center font-bold text-white bg-blue-500 rotate-45 scale-75 w-12 h-12">125</div>
+                <div class="text-xs text-gray-300">Tier 4</div>
+                <div class="text-xs text-gray-400">Points: 125–500</div>
+                <div class="text-xs text-emerald-400">Role: Siege</div>
+              </div>
+            </div>
           </div>
-          <div>
-            <h3 class="font-semibold mb-1">Walls & Durability</h3>
-            <p>
-              Walls have 4 durability. Tier 4 hits for 4, Tier 3 for 2, Tier 1–2 for 1. Building costs 10 Wood for both
-              sides. Walls block movement and combat until removed or destroyed.
-            </p>
+
+          <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
+            <h3 class="text-lg font-semibold mb-3">How To Play</h3>
+            <div class="grid grid-cols-3 gap-4">
+              <div class="rounded-lg border border-gray-700 p-3 bg-gray-900/40">
+                <div class="text-sm font-semibold mb-2">Forest Activation</div>
+                <div class="grid grid-cols-3 gap-2">
+                  <div class="flex flex-col items-center gap-1">
+                    <div class="w-12 h-12 rounded bg-[#795548] border border-gray-700 relative">
+                      <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="flex items-center justify-center font-bold text-white bg-blue-500 rounded-full w-7 h-7">1</div>
+                      </div>
+                    </div>
+                    <div class="text-[11px] text-gray-300">Step 1</div>
+                  </div>
+                  <div class="flex flex-col items-center gap-1">
+                    <div class="w-12 h-12 rounded bg-[#795548] border border-gray-700 relative">
+                      <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="flex items-center justify-center font-bold text-white bg-blue-500 rounded-full w-7 h-7">1</div>
+                      </div>
+                      <span class="absolute -bottom-1 -right-1 text-[14px]">🌱</span>
+                    </div>
+                    <div class="text-[11px] text-gray-300">Turn 2</div>
+                  </div>
+                  <div class="flex flex-col items-center gap-1">
+                    <div class="w-12 h-12 rounded bg-[#795548] border border-gray-700 relative">
+                      <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="flex items-center justify-center font-bold text-white bg-blue-500 rounded-full w-7 h-7">1</div>
+                      </div>
+                      <span class="absolute -bottom-1 -right-1 text-[14px]">🌳</span>
+                    </div>
+                    <div class="text-[11px] text-gray-300">Turn 3 • +2 Wood</div>
+                  </div>
+                </div>
+              </div>
+              <div class="rounded-lg border border-gray-700 p-3 bg-gray-900/40">
+                <div class="text-sm font-semibold mb-2">Wall Building</div>
+                <div class="grid grid-cols-2 gap-1 w-28">
+                  <div class="w-12 h-12 rounded bg-[#795548] border border-gray-700 relative">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                      <div class="flex items-center justify-center font-bold text-white bg-red-500 w-7 h-7">A</div>
+                    </div>
+                  </div>
+                  <div class="w-12 h-12 rounded bg-gray-700 border border-gray-700 relative">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                      <div class="flex items-center justify-center font-bold text-white bg-blue-500 rounded-full w-7 h-7">1</div>
+                    </div>
+                  </div>
+                  <div class="col-span-2 relative h-2">
+                    <div class="absolute left-0 right-0 mx-auto w-10 h-2 bg-green-500 rounded"></div>
+                  </div>
+                </div>
+                <div class="text-[11px] text-gray-300 mt-2">Place wall between enemy and forest</div>
+              </div>
+              <div class="rounded-lg border border-gray-700 p-3 bg-gray-900/40">
+                <div class="text-sm font-semibold mb-2">Merging</div>
+                <div class="flex items-center gap-2">
+                  <div class="flex items-center justify-center font-bold text-white bg-blue-500 rounded-full w-10 h-10">4</div>
+                  <div class="text-white">+</div>
+                  <div class="flex items-center justify-center font-bold text-white bg-blue-500 rounded-full w-10 h-10">1</div>
+                  <div class="text-white">→</div>
+                  <div class="flex items-center justify-center font-bold text-white bg-blue-500 w-10 h-10" [style.clip-path]="'polygon(50% 0%, 0% 100%, 100% 100%)'">5</div>
+                </div>
+                <div class="text-[11px] text-gray-300 mt-2">T1(4) + T1(1) = T2(5)</div>
+              </div>
+            </div>
           </div>
-          <div>
-            <h3 class="font-semibold mb-1">Fog of War</h3>
-            <p>
-              You only see tiles around your base and units. Enemy units hidden in the fog are not revealed until they
-              enter your vision.
-            </p>
+
+          <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
+            <h3 class="text-lg font-semibold mb-3">Victory Conditions</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="rounded-lg border border-gray-700 p-3 bg-gray-900/40">
+                <div class="text-sm font-semibold mb-2">Domination</div>
+                <div class="flex items-center gap-2">
+                  <div class="w-12 h-12 border-2 border-blue-400 rounded flex items-center justify-center">
+                    <span class="text-white font-bold bg-blue-600 px-1 rounded shadow text-xs">{{ gameEngine.baseHealth().player }}</span>
+                  </div>
+                  <div class="w-12 h-12 border-2 border-red-400 rounded flex items-center justify-center">
+                    <span class="text-white font-bold bg-red-600 px-1 rounded shadow text-xs">{{ gameEngine.baseHealth().ai }}</span>
+                  </div>
+                </div>
+                <div class="text-[11px] text-gray-300 mt-2">Destroy enemy base (0/100)</div>
+              </div>
+              <div class="rounded-lg border border-gray-700 p-3 bg-gray-900/40">
+                <div class="text-sm font-semibold mb-2">Monopoly</div>
+                <div class="space-y-2">
+                  <div>
+                    <div class="flex justify-between text-[11px] text-gray-300 mb-1">
+                      <span>Player</span>
+                      <span>{{ gameEngine.monopolyCounter().player }}</span>
+                    </div>
+                    <div class="h-2 bg-gray-700 rounded">
+                      <div class="h-2 bg-blue-500 rounded" [style.width.%]="(gameEngine.monopolyCounter().player / (gameEngine.monopolyCounter().player + gameEngine.monopolyCounter().ai || 1)) * 100"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] text-gray-300 mb-1">
+                      <span>AI</span>
+                      <span>{{ gameEngine.monopolyCounter().ai }}</span>
+                    </div>
+                    <div class="h-2 bg-gray-700 rounded">
+                      <div class="h-2 bg-red-500 rounded" [style.width.%]="(gameEngine.monopolyCounter().ai / (gameEngine.monopolyCounter().player + gameEngine.monopolyCounter().ai || 1)) * 100"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="text-[11px] text-gray-300 mt-2">Hold all forests for 10 turns</div>
+              </div>
+            </div>
           </div>
-          <div>
-            <h3 class="font-semibold mb-1">Shield & Support</h3>
-            <p>
-              Staying on a tile for 3+ turns grants +1 defense. Being adjacent to a friendly unit of the same Tier
-              grants +1 defense.
-            </p>
-          </div>
-          <div>
-            <h3 class="font-semibold mb-1">Combat Luck</h3>
-            <p>Attacks can Crit (20%) or Miss (20%). Bonus/Malus: T1:+1, T2:+2, T3:+4, T4:+8.</p>
+
+          <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
+            <h3 class="text-lg font-semibold mb-3">Combat & Luck</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="rounded-lg border border-gray-700 p-3 bg-gray-900/40">
+                <div class="flex items-center gap-2">
+                  <span class="rounded-full bg-blue-200 text-blue-900 flex items-center justify-center w-6 h-6 text-xs">🛡</span>
+                  <span class="text-sm">Staying still 3+ turns grants +1 defense</span>
+                </div>
+              </div>
+              <div class="rounded-lg border border-gray-700 p-3 bg-gray-900/40">
+                <div class="flex items-center gap-3">
+                  <span class="text-yellow-300 font-extrabold text-sm">CRIT! +2</span>
+                  <span class="text-yellow-300 font-extrabold text-sm">MISS -2</span>
+                </div>
+                <div class="text-[11px] text-gray-300 mt-2">20% Crit/Miss; bonus scales by Tier</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
