@@ -77,6 +77,7 @@ export class GameEngineService {
   private aggressionModeSignal = signal<boolean>(false);
   private wallCooldownSignal = signal<Map<string, number>>(new Map());
   private aiQueuedUnitIdSignal = signal<string | null>(null);
+  private internalDifficultySignal = signal<'normal' | 'hard' | 'nightmare'>('normal');
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -108,6 +109,12 @@ export class GameEngineService {
   }
   queuedUnitId(): string | null {
     return this.aiQueuedUnitIdSignal();
+  }
+  internalDifficulty(): 'normal' | 'hard' | 'nightmare' {
+    return this.internalDifficultySignal();
+  }
+  isAggressiveInternal(): boolean {
+    return this.internalDifficultySignal() !== this.settings.difficulty();
   }
   
   readonly selectedUnit = computed(() => 
@@ -163,6 +170,7 @@ export class GameEngineService {
 
   constructor(private combat: CombatService, private build: BuildService, private log: LogService, private settings: SettingsService, private map: MapService, private economy: EconomyService, private aiStrategy: AiStrategyService) {
     this.loadHighScores();
+    this.internalDifficultySignal.set(this.settings.difficulty());
     this.resetGame();
   }
 
@@ -936,6 +944,24 @@ export class GameEngineService {
     while (this.aiWoodSignal() > 30) {
       this.aiConvertWoodToReserve();
     }
+    // Adaptive internal difficulty (stealth)
+    try {
+      const totalForests = this.forestsSignal().length;
+      const aiForests = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
+      const playerForests = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
+      const baseline = this.settings.difficulty();
+      const current = this.internalDifficultySignal();
+      const next = (d: 'normal' | 'hard' | 'nightmare'): 'hard' | 'nightmare' => (d === 'normal' ? 'hard' : 'nightmare');
+      if (playerForests > aiForests + 2) {
+        const escalated = current === 'normal' ? 'hard' : 'nightmare';
+        this.internalDifficultySignal.set(escalated);
+      } else {
+        const aiPct = totalForests > 0 ? aiForests / totalForests : 0;
+        if (aiPct >= 0.7) {
+          this.internalDifficultySignal.set(baseline);
+        }
+      }
+    } catch {}
     await new Promise(r => setTimeout(r, 100));
     const currentAiUnits = this.unitsSignal().filter(u => u.owner === 'ai');
     const timeMap = new Map(this.aiUnitTimeNearBaseSignal());
@@ -1724,9 +1750,9 @@ export class GameEngineService {
         const a = u.position;
         const b = targetNeighbor;
         if (this.getWallBetween(a.x, a.y, b.x, b.y)) continue;
-        if (enemyLevel <= myLevel && this.aiWoodSignal() >= 30) {
+        if (enemyLevel >= myLevel && this.aiWoodSignal() >= 20) {
           this.aiBuildWallBetween(a, b);
-          this.appendLog(`[Turn ${this.turnSignal()}] Defense: Wall Build at (${a.x},${a.y})-(${b.x},${b.y}).`);
+          this.appendLog(`[Turn ${this.turnSignal()}] [AI Stealth] Defensive wall triggered against Player threat. Edge: (${a.x},${a.y})-(${b.x},${b.y}).`);
         }
         if (this.wallBuiltThisTurnSignal()) {
           return true;
