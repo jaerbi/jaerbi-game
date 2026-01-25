@@ -24,9 +24,10 @@ export class AiStrategyService {
     const unoccupied = forests.filter(f => !engine.getUnitAt(f.x, f.y));
     const visibleFree = unoccupied.filter(f => engine.isVisibleToAi(f.x, f.y));
     const fogForests = forests.filter(f => !engine.isVisibleToAi(f.x, f.y));
-    const reconNeeded = visibleFree.length === 0;
     const aiForestCount = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && engine.isForest(u.position.x, u.position.y)).length;
-    const enemyNearBase = engine.unitsSignal().some((u: Unit) => u.owner === 'player' && Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3);
+    const playerUnits: Unit[] = engine.unitsSignal().filter((u: Unit) => u.owner === 'player');
+    const enemyNearBase = playerUnits.some((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3);
+    const aggression = typeof engine.aggressionMode === 'function' ? !!engine.aggressionMode() : (playerUnits.filter((p: Unit) => engine.isForest(p.position.x, p.position.y)).length * 2) >= (aiUnits.filter((a: Unit) => engine.isForest(a.position.x, a.position.y)).length * 2);
     let best: { unit: Unit; target: Position; score: number; type: 'move' | 'attack' | 'merge'; reason: string } | null = null;
     const clusterCount = aiUnits.filter((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3).length;
     const center = { x: Math.floor(engine.gridSize / 2), y: Math.floor(engine.gridSize / 2) };
@@ -35,7 +36,6 @@ export class AiStrategyService {
       const moves: Position[] = engine.calculateValidMoves(unit);
       const nearBase = Math.max(Math.abs(unit.position.x - aiBase.x), Math.abs(unit.position.y - aiBase.y)) <= 3;
       const stagnantTurns = (timeMap.get(unit.id) || 0);
-      const stagnant = stagnantTurns > 2;
       let goal: Position | null = this.goals.get(unit.id) || null;
       const hasGoal = goal !== null;
       const goalOccupiedByStrongerAlly = hasGoal ? (() => {
@@ -44,18 +44,39 @@ export class AiStrategyService {
       })() : false;
       const needNewGoal = !hasGoal || goalOccupiedByStrongerAlly;
       if (needNewGoal) {
-        if (visibleFree.length > 0) {
+        const enemyOnForest = playerUnits.filter(p => engine.isForest(p.position.x, p.position.y));
+        if (aggression && enemyOnForest.length > 0) {
+          const nearestEF = enemyOnForest.reduce((acc, e) => {
+            const d = Math.abs(unit.position.x - e.position.x) + Math.abs(unit.position.y - e.position.y);
+            const da = Math.abs(unit.position.x - acc.position.x) + Math.abs(unit.position.y - acc.position.y);
+            return d < da ? e : acc;
+          }, enemyOnForest[0]);
+          goal = { x: nearestEF.position.x, y: nearestEF.position.y };
+        } else {
+          const nearestEnemy = (() => {
+            if (playerUnits.length === 0) return null;
+            const sorted = [...playerUnits].sort((a, b) => {
+              const da = Math.abs(unit.position.x - a.position.x) + Math.abs(unit.position.y - a.position.y);
+              const db = Math.abs(unit.position.x - b.position.x) + Math.abs(unit.position.y - b.position.y);
+              return da - db;
+            });
+            return sorted[0];
+          })();
+          if (nearestEnemy) {
+            goal = { x: nearestEnemy.position.x, y: nearestEnemy.position.y };
+          } else if (visibleFree.length > 0) {
           goal = visibleFree.reduce((acc, f) => {
             const d = Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y);
             return d < (Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y)) ? f : acc;
           }, visibleFree[0]);
-        } else if (fogForests.length > 0) {
+          } else if (fogForests.length > 0) {
           goal = fogForests.reduce((acc, f) => {
             const d = Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y);
             return d < (Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y)) ? f : acc;
           }, fogForests[0]);
-        } else {
+          } else {
           goal = { x: 0, y: 0 };
+        }
         }
         this.goals.set(unit.id, goal!);
       }
@@ -63,16 +84,48 @@ export class AiStrategyService {
       if (forceCenter) {
         goal = center;
       }
+      const isOnForest = engine.isForest(unit.position.x, unit.position.y);
+      const inSession = isOnForest && (unit.forestOccupationTurns ?? 0) > 0 && !(unit.productionActive ?? false);
+      if (inSession) {
+        continue;
+      }
+      if (goal) {
+        const enemyAtGoal = engine.getUnitAt(goal.x, goal.y);
+        if (enemyAtGoal && enemyAtGoal.owner === 'player' && engine.isForest(goal.x, goal.y)) {
+          const gx = goal.x;
+          const gy = goal.y;
+          const canAttack = moves.some(m => m.x === gx && m.y === gy);
+          if (canAttack) {
+            const score = 300000;
+            const reason = 'Attack Enemy on Forest';
+            if (best === null || score > best.score) {
+              best = { unit, target: { x: gx, y: gy }, score, type: 'attack', reason };
+            }
+            continue;
+          } else {
+            const candidates = visibleFree.length > 0 ? visibleFree : fogForests;
+            if (candidates.length > 0) {
+              const nearest = candidates.reduce((acc, f) => {
+                const d = Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y);
+                const da = Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y);
+                return d < da ? f : acc;
+              }, candidates[0]);
+              goal = nearest;
+              this.goals.set(unit.id, goal);
+            } else {
+              continue;
+            }
+          }
+        }
+      }
+      const adjacentEnemies = playerUnits.filter(p => Math.max(Math.abs(p.position.x - unit.position.x), Math.abs(p.position.y - unit.position.y)) === 1);
+      const strongestAdjEnemy = adjacentEnemies.length > 0 ? adjacentEnemies.reduce((acc, e) => (this.combat.calculateTotalPoints(e) > this.combat.calculateTotalPoints(acc) ? e : acc), adjacentEnemies[0]) : null;
       for (const move of moves) {
         let score = 0;
         let reason = 'Action';
         const targetUnit = engine.getUnitAt(move.x, move.y);
         const baseDistCurr = Math.max(Math.abs(unit.position.x - aiBase.x), Math.abs(unit.position.y - aiBase.y));
         const baseDistMove = Math.max(Math.abs(move.x - aiBase.x), Math.abs(move.y - aiBase.y));
-        const nearestVisibleCurrent = visibleFree.length ? Math.min(...visibleFree.map(f => Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y))) : Infinity;
-        const nearestVisibleMove = visibleFree.length ? Math.min(...visibleFree.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y))) : Infinity;
-        const nearestFogCurrent = fogForests.length ? Math.min(...fogForests.map(f => Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y))) : Infinity;
-        const nearestFogMove = fogForests.length ? Math.min(...fogForests.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y))) : Infinity;
         const nearestForestCurrent = forests.length ? Math.min(...forests.map(f => Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y))) : Infinity;
         const nearestForestMove = forests.length ? Math.min(...forests.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y))) : Infinity;
         const histMap = new Map(engine.unitMoveHistorySignal());
@@ -80,6 +133,10 @@ export class AiStrategyService {
         const hist: Position[] = Array.isArray(histRaw) ? (histRaw as Position[]) : [];
         const prevTile = hist.length >= 2 ? hist[hist.length - 2] : null;
         const returning = prevTile && move.x === prevTile.x && move.y === prevTile.y;
+        const leavingForest = isOnForest && !(engine.isForest(move.x, move.y));
+        if (isOnForest && adjacentEnemies.length === 0 && !targetUnit && leavingForest) {
+          score = -1000;
+        }
         if (!targetUnit) {
           if (engine.isForest(move.x, move.y) && !engine.getUnitAt(move.x, move.y)) {
             score = 1000000;
@@ -99,23 +156,29 @@ export class AiStrategyService {
           if (baseDistMove > baseDistCurr && nearestForestMove < nearestForestCurrent) {
             score += 500;
           }
-          if (returning) {
-            score = Math.floor(score * 0.1);
+          if (strongestAdjEnemy && this.combat.calculateTotalPoints(strongestAdjEnemy) > this.combat.calculateTotalPoints(unit)) {
+            const dCurrSE = Math.abs(unit.position.x - strongestAdjEnemy.position.x) + Math.abs(unit.position.y - strongestAdjEnemy.position.y);
+            const dMoveSE = Math.abs(move.x - strongestAdjEnemy.position.x) + Math.abs(move.y - strongestAdjEnemy.position.y);
+            if (dMoveSE > dCurrSE) {
+              score += 75000 * (dMoveSE - dCurrSE);
+              reason = 'Retreat';
+            }
           }
         } else {
           if (targetUnit.owner === 'player') {
             const myPower = this.combat.calculateTotalPoints(unit);
             const enemyPower = this.combat.calculateTotalPoints(targetUnit);
-            if (myPower >= enemyPower) {
-              score = 3000 + enemyPower * 50;
-              reason = 'Attack Enemy';
+            const alliesNearTarget = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && u.id !== unit.id && Math.max(Math.abs(u.position.x - move.x), Math.abs(u.position.y - move.y)) === 1).length;
+            if (myPower >= enemyPower || (aggression && unit.tier >= targetUnit.tier) || (myPower < enemyPower && alliesNearTarget >= 2)) {
+              score = 200000;
+              reason = (aggression && unit.tier >= targetUnit.tier) ? `Attack (Wood War / Equal Tier)` : (myPower < enemyPower ? 'Attack (Swarm)' : 'Attack Enemy');
               if (enemyNearBase) score += 5000;
             }
           } else {
             if (targetUnit.tier === unit.tier && baseDistMove > baseDistCurr) {
               const mergedPoints = this.combat.calculateTotalPoints(unit) + this.combat.calculateTotalPoints(targetUnit);
               const { tier } = this.combat.calculateTierAndLevel(mergedPoints);
-              if (tier > unit.tier && !nearBase) {
+              if (tier > unit.tier && !nearBase && !isOnForest) {
                 score = 1000;
                 reason = 'Merge Up';
               }
@@ -125,6 +188,12 @@ export class AiStrategyService {
         let type: 'move' | 'attack' | 'merge' = 'move';
         if (targetUnit && targetUnit.owner === 'player') type = 'attack';
         if (targetUnit && targetUnit.owner === 'ai' && targetUnit.tier === unit.tier) type = 'merge';
+        if (returning) {
+          score = Math.floor(score * 0.1);
+        }
+        if ((unit.forestOccupationTurns ?? 0) > 0 && (move.x !== unit.position.x || move.y !== unit.position.y)) {
+          score -= 2000;
+        }
         if (best === null || score > best.score) {
           best = { unit, target: move, score, type, reason };
         }

@@ -13,4 +13,6 @@ export interface Unit {
   points: number;
   owner: Owner;
   turnsStationary: number;
+  forestOccupationTurns?: number;
+  productionActive?: boolean;
 }

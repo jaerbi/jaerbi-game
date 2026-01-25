@@ -57,7 +57,7 @@ export class EconomyService {
       if (cost <= 0) break;
       const tl = this.calculateTierAndLevel(cost);
       const target = adj.shift()!;
-      created.push({ id: crypto.randomUUID(), position: { ...target }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0 });
+      created.push({ id: crypto.randomUUID(), position: { ...target }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0, forestOccupationTurns: 0, productionActive: false });
       aiRes -= cost;
     }
     return { created, remaining: aiRes };

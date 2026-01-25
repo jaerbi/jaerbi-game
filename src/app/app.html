@@ -1,4 +1,7 @@
-<div class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4" [class.shake]="gameEngine.screenShake()">
+<div
+  class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4"
+  [class.shake]="gameEngine.screenShake()"
+>
   <div class="w-full max-w-4xl flex items-center justify-between mb-4">
     <h1 class="text-3xl font-bold">Turn-Based Strategy</h1>
     <button
@@ -38,8 +41,20 @@
     </div>
     <div class="flex items-center gap-2">
       <span>Monopoly:</span>
-      <span class="font-mono text-green-400" [class.animate-pulse]="gameEngine.monopolyCounter().player >= 7" [class.scale-125]="gameEngine.monopolyCounter().player >= 7">P {{ gameEngine.monopolyCounter().player }}/10</span>
-      <span class="font-mono text-red-400" [class.animate-pulse]="gameEngine.monopolyCounter().ai >= 7" [class.scale-125]="gameEngine.monopolyCounter().ai >= 7">AI {{ gameEngine.monopolyCounter().ai }}/10</span>
+      <span
+        class="font-mono text-green-400"
+        [class.animate-pulse]="gameEngine.monopolyCounter().player >= 7"
+        [class.scale-125]="gameEngine.monopolyCounter().player >= 7"
+      >
+        P {{ gameEngine.monopolyCounter().player }}/10
+      </span>
+      <span
+        class="font-mono text-red-400"
+        [class.animate-pulse]="gameEngine.monopolyCounter().ai >= 7"
+        [class.scale-125]="gameEngine.monopolyCounter().ai >= 7"
+      >
+        AI {{ gameEngine.monopolyCounter().ai }}/10
+      </span>
     </div>
     <div>
       Difficulty:
@@ -74,7 +89,9 @@
   }
 
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
     .tile {
       min-width: 64px;
       min-height: 64px;
@@ -96,319 +113,428 @@
       animation: defenderShake 200ms ease-out;
     }
     @keyframes defenderShake {
-      0% { transform: translate(0, 0); }
-      25% { transform: translate(2px, -2px); }
-      50% { transform: translate(-2px, 2px); }
-      75% { transform: translate(2px, 2px); }
-      100% { transform: translate(0, 0); }
+      0% {
+        transform: translate(0, 0);
+      }
+      25% {
+        transform: translate(2px, -2px);
+      }
+      50% {
+        transform: translate(-2px, 2px);
+      }
+      75% {
+        transform: translate(2px, 2px);
+      }
+      100% {
+        transform: translate(0, 0);
+      }
     }
     .arrival-pop {
       animation: arrivalPop 200ms ease-out;
     }
     @keyframes arrivalPop {
-      0% { transform: scale(1.0); }
-      50% { transform: scale(1.1); }
-      100% { transform: scale(1.0); }
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+      }
     }
     .pulse-glow {
       animation: pulseGlow 400ms ease-out;
     }
     @keyframes pulseGlow {
-      0% { box-shadow: 0 0 0px rgba(255, 215, 0, 0.0); }
-      50% { box-shadow: 0 0 12px rgba(255, 215, 0, 0.8); }
-      100% { box-shadow: 0 0 0px rgba(255, 215, 0, 0.0); }
+      0% {
+        box-shadow: 0 0 0px rgba(255, 215, 0, 0);
+      }
+      50% {
+        box-shadow: 0 0 12px rgba(255, 215, 0, 0.8);
+      }
+      100% {
+        box-shadow: 0 0 0px rgba(255, 215, 0, 0);
+      }
     }
     .wood-pulse-icon {
       animation: woodPulse 1000ms ease-in-out infinite;
       filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.7));
     }
     @keyframes woodPulse {
-      0% { transform: scale(0.9); opacity: 0.6; }
-      50% { transform: scale(1.1); opacity: 1.0; }
-      100% { transform: scale(0.9); opacity: 0.6; }
-    }
-  </style>
-  <div #boardContainer class="max-w-[90vw] max-h-[90vh] overflow-auto bg-gray-800 p-2 rounded-lg border border-gray-700 select-none relative mx-auto my-auto">
-    <div class="grid" [style.gridTemplateColumns]="'repeat(' + gameEngine.gridSize + ', minmax(' + gameEngine.tileMinSizePx + 'px, ' + gameEngine.tileSizePx + 'px))'"
-         [style.gap.px]="gameEngine.wallThicknessPx">
-      <!-- Base Indicators -->
-    <div
-      class="absolute top-2 left-2 w-12 h-12 border-2 border-blue-500/30 rounded pointer-events-none flex items-center justify-center"
-    >
-      <span class="text-white font-bold bg-blue-600 px-1 rounded shadow text-xs">
-        {{ gameEngine.baseHealth().player }}
-      </span>
-    </div>
-    @if (gameEngine.isVisibleToPlayer(gameEngine.gridSize - 1, gameEngine.gridSize - 1)) {
-      <div
-        class="absolute bottom-2 right-2 w-12 h-12 border-2 border-red-500/30 rounded pointer-events-none flex items-center justify-center"
-      >
-        <span class="text-white font-bold bg-red-600 px-1 rounded shadow text-xs">{{ gameEngine.baseHealth().ai }}</span>
-      </div>
-    }
-
-    @for (y of gameEngine.gridRows; track y) {
-      @for (x of gameEngine.gridCols; track x) {
-        <div
-          (click)="onTileClick(x, y)"
-          class="tile rounded flex items-center justify-center border transition-colors duration-200"
-          [style.width.px]="gameEngine.tileSizePx"
-          [style.height.px]="gameEngine.tileSizePx"
-          [style.minWidth.px]="gameEngine.tileMinSizePx"
-          [style.minHeight.px]="gameEngine.tileMinSizePx"
-          [class.cursor-pointer]="gameEngine.isValidMove(x, y)"
-          [attr.title]="gameEngine.getUnitAt(x, y) && (gameEngine.getUnitAt(x, y)!.owner === 'player' || gameEngine.isVisibleToPlayer(x, y)) ? gameEngine.formatHoverInfo(gameEngine.getUnitAt(x, y)!.id) : null"
-          [class.bg-gray-700]="!gameEngine.isValidMove(x, y)"
-          [class.border-gray-600]="!gameEngine.isValidMove(x, y)"
-          [class.bg-blue-900]="x === 0 && y === 0"
-          [class.bg-red-900]="x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1"
-          [class.border-4]="(x === 0 && y === 0) || (x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1)"
-          [class.border-blue-400]="x === 0 && y === 0"
-          [class.border-red-400]="x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1"
-          [class.ring-2]="(x === 0 && y === 0) || (x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1)"
-          [class.ring-blue-300]="x === 0 && y === 0 && gameEngine.baseDeployActive()"
-          [class.ring-red-300]="x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1"
-          [class.spawn-zone-highlight]="gameEngine.baseDeployActive() && x <= 2 && y <= 2 && (x !== 0 || y !== 0)"
-          [style.backgroundColor]="gameEngine.isForest(x, y) ? '#795548' : null"
-          [class.bg-amber-900]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
-          [class.border-amber-500]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
-          [class.bg-gray-950]="!gameEngine.isVisibleToPlayer(x, y)"
-          [class.border-gray-800]="!gameEngine.isVisibleToPlayer(x, y)"
-          [class.bg-green-900]="gameEngine.isValidMove(x, y) && !gameEngine.getUnitAt(x, y)"
-          [class.border-green-500]="gameEngine.isValidMove(x, y) && !gameEngine.getUnitAt(x, y)"
-          [class.bg-cyan-900]="gameEngine.isValidMove(x, y) && gameEngine.getUnitAt(x, y)"
-          [class.border-cyan-500]="gameEngine.isValidMove(x, y) && gameEngine.getUnitAt(x, y)"
-          [class.animate-pulse]="gameEngine.isValidMove(x, y) && gameEngine.getUnitAt(x, y)"
-          [class.hover:bg-gray-600]="!gameEngine.isValidMove(x, y)"
-          [class.hover:bg-green-800]="gameEngine.isValidMove(x, y) && !gameEngine.getUnitAt(x, y)"
-          [class.hover:bg-cyan-800]="gameEngine.isValidMove(x, y) && gameEngine.getUnitAt(x, y)"
-        >
-        <!-- Grid coordinate helper -->
-          <span class="absolute top-0 right-0 text-[8px] text-gray-500 p-0.5 pointer-events-none">{{ x }},{{ y }}</span>
-          @if (gameEngine.buildMode() && gameEngine.isInSafeZone(x, y)) {
-            <div
-              class="absolute inset-0 bg-red-800/20 border-2 border-red-500/40 border-dashed pointer-events-none"
-            ></div>
-          }
-          @if (gameEngine.isForest(x, y) && gameEngine.isVisibleToPlayer(x, y)) {
-            <span class="absolute text-[10px] text-amber-300 font-bold pointer-events-none"
-                  [style.left.px]="1" [style.bottom.px]="1">
-              W
-            </span>
-          }
-          @if (gameEngine.isForest(x, y) && gameEngine.getUnitAt(x, y) && gameEngine.isVisibleToPlayer(x, y)) {
-            <div class="absolute top-0 left-0 right-0 bg-green-400/70 pointer-events-none" [style.height.px]="2"></div>
-          }
-          @if (x === 0 && y === 0) {
-            <span
-              class="absolute inset-x-0 top-0 m-0.5 text-[10px] font-extrabold text-blue-900 bg-blue-300/80 rounded px-1 pointer-events-none"
-            >
-              {{ gameEngine.baseHealth().player }}
-            </span>
-            <span
-              class="absolute left-0 bottom-0 m-0.5 text-[10px] font-extrabold text-white bg-blue-600/90 rounded px-1 pointer-events-none"
-            >
-              {{ gameEngine.reservePoints().player }}
-            </span>
-          }
-          @if (x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1) {
-            @if (gameEngine.isVisibleToPlayer(x, y)) {
-              <span
-                class="absolute inset-x-0 top-0 m-0.5 text-[10px] font-extrabold text-red-900 bg-red-300/80 rounded px-1 pointer-events-none"
-              >
-                {{ gameEngine.baseHealth().ai }}
-              </span>
-              <span
-                class="absolute right-0 bottom-0 m-0.5 text-[10px] font-extrabold text-white bg-red-600/90 rounded px-1 pointer-events-none"
-              >
-                {{ gameEngine.reservePoints().ai }}
-              </span>
-            }
-          }
-
-          @if (x < gameEngine.gridSize - 1) {
-            @if (gameEngine.getWallBetween(x, y, x + 1, y); as vWall) {
-              @if (gameEngine.shouldRenderWall({ x: x, y: y }, { x: x + 1, y: y }, vWall.owner)) {
-                <div class="absolute right-0 top-0 h-full flex items-center justify-center"
-                     [style.right.px]="-gameEngine.wallThicknessPx"
-                     [style.width.px]="gameEngine.wallThicknessPx"
-                     [style.height.%]="vWall.health"
-                     [style.z-index]="40"
-                     [style.transition]="'height 0.25s ease-out'"
-                     [class.bg-lime-400]="vWall.owner === 'player'"
-                     [class.bg-red-400]="vWall.owner === 'ai'"
-                     [class.shake]="gameEngine.isWallShaking(vWall.id)">
-                  @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x + 1, y: y })) {
-                    <button
-                      class="rounded-full shadow-lg flex items-center justify-center text-white"
-                      [style.width.px]="gameEngine.iconSizePx"
-                      [style.height.px]="gameEngine.iconSizePx"
-                      [style.z-index]="45"
-                      [class.bg-red-600]="vWall.owner === 'player'"
-                      [class.bg-yellow-500]="vWall.owner === 'ai'"
-                      (click)="
-                        vWall.owner === 'player'
-                          ? onDestroyIconClick($event, x, y, x + 1, y)
-                          : onAttackIconClick($event, x, y, x + 1, y)
-                      "
-                    >
-                      {{ vWall.owner === 'player' ? '✖' : '⚔' }}
-                    </button>
-                  }
-                </div>
-              }
-            } @else {
-              <div
-                class="absolute right-0 top-0 h-full flex items-center justify-center"
-                [style.right.px]="-gameEngine.wallThicknessPx"
-                [style.width.px]="gameEngine.wallThicknessPx"
-                [style.height.%]="100"
-                [style.z-index]="40"
-                [style.transition]="'height 0.25s ease-out'"
-                [class.bg-lime-700]="gameEngine.buildMode() && gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x + 1, y: y })"
-                [class.bg-transparent]="!gameEngine.buildMode() || !gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x + 1, y: y })"
-              >
-                @if (gameEngine.canShowBuildIcon({ x: x, y: y }, { x: x + 1, y: y })) {
-                  <button
-                    class="bg-green-500 text-white rounded-full shadow-lg flex items-center justify-center"
-                    [style.fontSize.px]="gameEngine.iconSizePx"
-                    [style.width.px]="gameEngine.iconSizePx"
-                    [style.height.px]="gameEngine.iconSizePx"
-                    [style.z-index]="45"
-                    (click)="onBuildIconClick($event, x, y, x + 1, y)"
-                  >
-                    ✔
-                  </button>
-                }
-              </div>
-            }
-          }
-
-          @if (y < gameEngine.gridSize - 1) {
-            @if (gameEngine.getWallBetween(x, y, x, y + 1); as hWall) {
-              @if (gameEngine.shouldRenderWall({ x: x, y: y }, { x: x, y: y + 1 }, hWall.owner)) {
-                <div class="absolute left-0 bottom-0 w-full flex items-center justify-center"
-                     [style.bottom.px]="-gameEngine.wallThicknessPx"
-                     [style.height.px]="gameEngine.wallThicknessPx"
-                     [style.width.%]="hWall.health"
-                     [style.z-index]="40"
-                     [style.transition]="'width 0.25s ease-out'"
-                     [class.bg-lime-400]="hWall.owner === 'player'"
-                     [class.bg-red-400]="hWall.owner === 'ai'"
-                     [class.shake]="gameEngine.isWallShaking(hWall.id)">
-                  @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
-                    <button
-                      class="rounded-full shadow-lg flex items-center justify-center text-white"
-                      [style.width.px]="gameEngine.iconSizePx"
-                      [style.height.px]="gameEngine.iconSizePx"
-                      [style.z-index]="45"
-                      [class.bg-red-600]="hWall.owner === 'player'"
-                      [class.bg-yellow-500]="hWall.owner === 'ai'"
-                      (click)="
-                        hWall.owner === 'player'
-                          ? onDestroyIconClick($event, x, y, x, y + 1)
-                          : onAttackIconClick($event, x, y, x, y + 1)
-                      "
-                    >
-                      {{ hWall.owner === 'player' ? '✖' : '⚔' }}
-                    </button>
-                  }
-                </div>
-              }
-            } @else {
-              <div
-                class="absolute left-0 bottom-0 w-full flex items-center justify-center"
-                [style.bottom.px]="-gameEngine.wallThicknessPx"
-                [style.height.px]="gameEngine.wallThicknessPx"
-                [style.width.%]="100"
-                [style.z-index]="40"
-                [style.transition]="'width 0.25s ease-out'"
-                [class.bg-lime-700]="gameEngine.buildMode() && gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x, y: y + 1 })"
-                [class.bg-transparent]="!gameEngine.buildMode() || !gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x, y: y + 1 })"
-              >
-                @if (gameEngine.canShowBuildIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
-                  <button
-                    class="bg-green-500 text-white rounded-full shadow-lg flex items-center justify-center"
-                    [style.fontSize.px]="gameEngine.iconSizePx"
-                    [style.width.px]="gameEngine.iconSizePx"
-                    [style.height.px]="gameEngine.iconSizePx"
-                    [style.z-index]="45"
-                    (click)="onBuildIconClick($event, x, y, x, y + 1)"
-                  >
-                    ✔
-                  </button>
-                }
-              </div>
-            }
-          }
-
-          @if (gameEngine.getUnitAt(x, y); as unit) {
-            @if (unit.owner === 'player' || gameEngine.isVisibleToPlayer(x, y)) {
-              @if (!(x === 0 && y === 0) && !(x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1)) {
-              <div class="pointer-events-none"
-                   [style.transition]="'transform 150ms ease-out'"
-                   [style.transform]="gameEngine.getNudgeFor(unit.id) ? 'translate(' + gameEngine.getNudgeFor(unit.id)!.dx + 'px,' + gameEngine.getNudgeFor(unit.id)!.dy + 'px)' : 'translate(0,0)'"
-                   [class.shake]="gameEngine.isUnitShaking(unit.id)">
-                <div
-                  class="flex items-center justify-center font-bold transition-all duration-300 shadow-lg"
-                  [style.width.px]="gameEngine.tileUnitSizePx"
-                  [style.height.px]="gameEngine.tileUnitSizePx"
-                [style.aspectRatio]="'1 / 1'"
-                  [attr.title]="gameEngine.formatHoverInfo(unit.id)"
-                  [class.bg-blue-500]="unit.owner === 'player'"
-                  [class.bg-red-500]="unit.owner === 'ai'"
-                  [class.text-white]="true"
-                  [class.rounded-full]="unit.tier === 1"
-                  [class.border-2]="unit.tier !== 2"
-                  [class.border-blue-300]="unit.owner === 'player' && unit.tier !== 2"
-                  [class.border-red-300]="unit.owner === 'ai' && unit.tier !== 2"
-                  [class.rounded-none]="unit.tier === 3"
-                  [class.rotate-45]="unit.tier === 4"
-                  [class.scale-75]="unit.tier === 4"
-                  [style.clip-path]="unit.tier === 2 ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : ''"
-                  [style.padding-top]="unit.tier === 2 ? '0.25rem' : ''"
-                  [class.ring-4]="gameEngine.selectedUnitId() === unit.id"
-                  [class.ring-yellow-400]="gameEngine.selectedUnitId() === unit.id"
-                  [class.ring-offset-2]="gameEngine.selectedUnitId() === unit.id"
-                  [class.ring-offset-gray-800]="gameEngine.selectedUnitId() === unit.id"
-                  [class.scale-110]="gameEngine.selectedUnitId() === unit.id && unit.tier !== 4 && !gameEngine.buildMode()"
-                  [class.scale-90]="gameEngine.selectedUnitId() === unit.id && unit.tier === 4 && !gameEngine.buildMode()"
-                  [class.scale-125]="gameEngine.lastMergedUnitId() === unit.id"
-                  [class.scale-50]="gameEngine.buildMode()"
-                  [class.animate-bounce]="gameEngine.lastRemainderUnitId() === unit.id"
-                  [class.arrival-pop]="gameEngine.lastArrivedUnitId() === unit.id"
-                  [class.pulse-glow]="gameEngine.pulseUnitId() === unit.id"
-                >
-                  <span [class.-rotate-45]="unit.tier === 4">{{ unit.level }}</span>
-                </div>
-                @if (gameEngine.hasDefenseBonus(unit)) {
-            <span class="absolute -top-1 -right-1 rounded-full bg-blue-200 text-blue-900 flex items-center justify-center"
-                        [style.width.px]="gameEngine.iconSizePx"
-                        [style.height.px]="gameEngine.iconSizePx"
-                        [style.fontSize.px]="(gameEngine.iconSizePx - 2) > 8 ? (gameEngine.iconSizePx - 2) : 8"
-                        [style.z-index]="100">🛡</span>
-                }
-              </div>
-              }
-            }
-          }
-
-          @for (entry of gameEngine.getCombatTextEntriesAt(x, y); track entry.id) {
-            <div class="absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-500 combat-text-anim" [style.z-index]="100" [style.opacity]="entry.opacity">
-              <span
-                [class.text-xs]="!gameEngine.isLuckyText(entry.text) && !gameEngine.isDrawText(entry.text)"
-                [class.text-base]="gameEngine.isLuckyText(entry.text) || gameEngine.isDrawText(entry.text)"
-                [class.text-yellow-300]="!gameEngine.isLuckyText(entry.text) && !gameEngine.isDrawText(entry.text)"
-                [class.text-yellow-400]="gameEngine.isLuckyText(entry.text) || gameEngine.isDrawText(entry.text)"
-                class="font-extrabold"
-              >
-                {{ entry.text }}
-              </span>
-            </div>
-          }
-        </div>
+      0% {
+        transform: scale(0.9);
+        opacity: 0.6;
+      }
+      50% {
+        transform: scale(1.1);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(0.9);
+        opacity: 0.6;
       }
     }
+  </style>
+  <div
+    #boardContainer
+    class="max-w-[90vw] max-h-[90vh] overflow-auto bg-gray-800 p-2 rounded-lg border border-gray-700 select-none relative mx-auto my-auto"
+  >
+    <div
+      class="grid"
+      [style.gridTemplateColumns]="
+        'repeat(' +
+        gameEngine.gridSize +
+        ', minmax(' +
+        gameEngine.tileMinSizePx +
+        'px, ' +
+        gameEngine.tileSizePx +
+        'px))'
+      "
+      [style.gap.px]="gameEngine.wallThicknessPx"
+    >
+      <!-- Base Indicators -->
+      <div
+        class="absolute top-2 left-2 w-12 h-12 border-2 border-blue-500/30 rounded pointer-events-none flex items-center justify-center"
+      >
+        <span class="text-white font-bold bg-blue-600 px-1 rounded shadow text-xs">
+          {{ gameEngine.baseHealth().player }}
+        </span>
+      </div>
+      @if (gameEngine.isVisibleToPlayer(gameEngine.gridSize - 1, gameEngine.gridSize - 1)) {
+        <div
+          class="absolute bottom-2 right-2 w-12 h-12 border-2 border-red-500/30 rounded pointer-events-none flex items-center justify-center"
+        >
+          <span class="text-white font-bold bg-red-600 px-1 rounded shadow text-xs">
+            {{ gameEngine.baseHealth().ai }}
+          </span>
+        </div>
+      }
+
+      @for (y of gameEngine.gridRows; track y) {
+        @for (x of gameEngine.gridCols; track x) {
+          <div
+            (click)="onTileClick(x, y)"
+            class="tile rounded flex items-center justify-center border transition-colors duration-200"
+            [style.width.px]="gameEngine.tileSizePx"
+            [style.height.px]="gameEngine.tileSizePx"
+            [style.minWidth.px]="gameEngine.tileMinSizePx"
+            [style.minHeight.px]="gameEngine.tileMinSizePx"
+            [class.cursor-pointer]="gameEngine.isValidMove(x, y)"
+            [attr.title]="
+              gameEngine.getUnitAt(x, y) &&
+              (gameEngine.getUnitAt(x, y)!.owner === 'player' || gameEngine.isVisibleToPlayer(x, y))
+                ? gameEngine.formatHoverInfo(gameEngine.getUnitAt(x, y)!.id)
+                : null
+            "
+            [class.bg-gray-700]="!gameEngine.isValidMove(x, y)"
+            [class.border-gray-600]="!gameEngine.isValidMove(x, y)"
+            [class.bg-blue-900]="x === 0 && y === 0"
+            [class.bg-red-900]="x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1"
+            [class.border-4]="(x === 0 && y === 0) || (x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1)"
+            [class.border-blue-400]="x === 0 && y === 0"
+            [class.border-red-400]="x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1"
+            [class.ring-2]="(x === 0 && y === 0) || (x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1)"
+            [class.ring-blue-300]="x === 0 && y === 0 && gameEngine.baseDeployActive()"
+            [class.ring-red-300]="x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1"
+            [class.spawn-zone-highlight]="gameEngine.baseDeployActive() && x <= 2 && y <= 2 && (x !== 0 || y !== 0)"
+            [style.backgroundColor]="gameEngine.isForest(x, y) ? '#795548' : null"
+            [class.bg-amber-900]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
+            [class.border-amber-500]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
+            [class.bg-gray-950]="!gameEngine.isVisibleToPlayer(x, y)"
+            [class.border-gray-800]="!gameEngine.isVisibleToPlayer(x, y)"
+            [class.bg-green-900]="gameEngine.isValidMove(x, y) && !gameEngine.getUnitAt(x, y)"
+            [class.border-green-500]="gameEngine.isValidMove(x, y) && !gameEngine.getUnitAt(x, y)"
+            [class.bg-cyan-900]="gameEngine.isValidMove(x, y) && gameEngine.getUnitAt(x, y)"
+            [class.border-cyan-500]="gameEngine.isValidMove(x, y) && gameEngine.getUnitAt(x, y)"
+            [class.animate-pulse]="gameEngine.isValidMove(x, y) && gameEngine.getUnitAt(x, y)"
+            [class.hover:bg-gray-600]="!gameEngine.isValidMove(x, y)"
+            [class.hover:bg-green-800]="gameEngine.isValidMove(x, y) && !gameEngine.getUnitAt(x, y)"
+            [class.hover:bg-cyan-800]="gameEngine.isValidMove(x, y) && gameEngine.getUnitAt(x, y)"
+          >
+            <!-- Grid coordinate helper -->
+            <span class="absolute top-0 right-0 text-[8px] text-gray-500 p-0.5 pointer-events-none">
+              {{ x }},{{ y }}
+            </span>
+            @if (gameEngine.buildMode() && gameEngine.isInSafeZone(x, y)) {
+              <div
+                class="absolute inset-0 bg-red-800/20 border-2 border-red-500/40 border-dashed pointer-events-none"
+              ></div>
+            }
+            @if (gameEngine.isForest(x, y) && gameEngine.isVisibleToPlayer(x, y)) {
+              <span
+                class="absolute text-[10px] text-amber-300 font-bold pointer-events-none"
+                [style.left.px]="1"
+                [style.bottom.px]="1"
+              >
+                W
+              </span>
+            }
+            @if (gameEngine.isForest(x, y) && gameEngine.getUnitAt(x, y) && gameEngine.isVisibleToPlayer(x, y)) {
+              <div
+                class="absolute top-0 left-0 right-0 bg-green-400/70 pointer-events-none"
+                [style.height.px]="2"
+              ></div>
+            }
+            @if (x === 0 && y === 0) {
+              <span
+                class="absolute inset-x-0 top-0 m-0.5 text-[10px] font-extrabold text-blue-900 bg-blue-300/80 rounded px-1 pointer-events-none"
+              >
+                {{ gameEngine.baseHealth().player }}
+              </span>
+              <span
+                class="absolute left-0 bottom-0 m-0.5 text-[10px] font-extrabold text-white bg-blue-600/90 rounded px-1 pointer-events-none"
+              >
+                {{ gameEngine.reservePoints().player }}
+              </span>
+            }
+            @if (x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1) {
+              @if (gameEngine.isVisibleToPlayer(x, y)) {
+                <span
+                  class="absolute inset-x-0 top-0 m-0.5 text-[10px] font-extrabold text-red-900 bg-red-300/80 rounded px-1 pointer-events-none"
+                >
+                  {{ gameEngine.baseHealth().ai }}
+                </span>
+                <span
+                  class="absolute right-0 bottom-0 m-0.5 text-[10px] font-extrabold text-white bg-red-600/90 rounded px-1 pointer-events-none"
+                >
+                  {{ gameEngine.reservePoints().ai }}
+                </span>
+              }
+            }
+
+            @if (x < gameEngine.gridSize - 1) {
+              @if (gameEngine.getWallBetween(x, y, x + 1, y); as vWall) {
+                @if (gameEngine.shouldRenderWall({ x: x, y: y }, { x: x + 1, y: y }, vWall.owner)) {
+                  <div
+                    class="absolute right-0 top-0 h-full flex items-center justify-center"
+                    [style.right.px]="-gameEngine.wallThicknessPx"
+                    [style.width.px]="gameEngine.wallThicknessPx"
+                    [style.height.%]="vWall.health"
+                    [style.z-index]="40"
+                    [style.transition]="'height 0.25s ease-out'"
+                    [class.bg-lime-400]="vWall.owner === 'player'"
+                    [class.bg-red-400]="vWall.owner === 'ai'"
+                    [class.shake]="gameEngine.isWallShaking(vWall.id)"
+                  >
+                    @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x + 1, y: y })) {
+                      <button
+                        class="rounded-full shadow-lg flex items-center justify-center text-white"
+                        [style.width.px]="gameEngine.iconSizePx"
+                        [style.height.px]="gameEngine.iconSizePx"
+                        [style.z-index]="45"
+                        [class.bg-red-600]="vWall.owner === 'player'"
+                        [class.bg-yellow-500]="vWall.owner === 'ai'"
+                        (click)="
+                          vWall.owner === 'player'
+                            ? onDestroyIconClick($event, x, y, x + 1, y)
+                            : onAttackIconClick($event, x, y, x + 1, y)
+                        "
+                      >
+                        {{ vWall.owner === 'player' ? '✖' : '⚔' }}
+                      </button>
+                    }
+                  </div>
+                }
+              } @else {
+                <div
+                  class="absolute right-0 top-0 h-full flex items-center justify-center"
+                  [style.right.px]="-gameEngine.wallThicknessPx"
+                  [style.width.px]="gameEngine.wallThicknessPx"
+                  [style.height.%]="100"
+                  [style.z-index]="40"
+                  [style.transition]="'height 0.25s ease-out'"
+                  [class.bg-lime-700]="
+                    gameEngine.buildMode() && gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x + 1, y: y })
+                  "
+                  [class.bg-transparent]="
+                    !gameEngine.buildMode() || !gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x + 1, y: y })
+                  "
+                >
+                  @if (gameEngine.canShowBuildIcon({ x: x, y: y }, { x: x + 1, y: y })) {
+                    <button
+                      class="bg-green-500 text-white rounded-full shadow-lg flex items-center justify-center"
+                      [style.fontSize.px]="gameEngine.iconSizePx"
+                      [style.width.px]="gameEngine.iconSizePx"
+                      [style.height.px]="gameEngine.iconSizePx"
+                      [style.z-index]="45"
+                      (click)="onBuildIconClick($event, x, y, x + 1, y)"
+                    >
+                      ✔
+                    </button>
+                  }
+                </div>
+              }
+            }
+
+            @if (y < gameEngine.gridSize - 1) {
+              @if (gameEngine.getWallBetween(x, y, x, y + 1); as hWall) {
+                @if (gameEngine.shouldRenderWall({ x: x, y: y }, { x: x, y: y + 1 }, hWall.owner)) {
+                  <div
+                    class="absolute left-0 bottom-0 w-full flex items-center justify-center"
+                    [style.bottom.px]="-gameEngine.wallThicknessPx"
+                    [style.height.px]="gameEngine.wallThicknessPx"
+                    [style.width.%]="hWall.health"
+                    [style.z-index]="40"
+                    [style.transition]="'width 0.25s ease-out'"
+                    [class.bg-lime-400]="hWall.owner === 'player'"
+                    [class.bg-red-400]="hWall.owner === 'ai'"
+                    [class.shake]="gameEngine.isWallShaking(hWall.id)"
+                  >
+                    @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
+                      <button
+                        class="rounded-full shadow-lg flex items-center justify-center text-white"
+                        [style.width.px]="gameEngine.iconSizePx"
+                        [style.height.px]="gameEngine.iconSizePx"
+                        [style.z-index]="45"
+                        [class.bg-red-600]="hWall.owner === 'player'"
+                        [class.bg-yellow-500]="hWall.owner === 'ai'"
+                        (click)="
+                          hWall.owner === 'player'
+                            ? onDestroyIconClick($event, x, y, x, y + 1)
+                            : onAttackIconClick($event, x, y, x, y + 1)
+                        "
+                      >
+                        {{ hWall.owner === 'player' ? '✖' : '⚔' }}
+                      </button>
+                    }
+                  </div>
+                }
+              } @else {
+                <div
+                  class="absolute left-0 bottom-0 w-full flex items-center justify-center"
+                  [style.bottom.px]="-gameEngine.wallThicknessPx"
+                  [style.height.px]="gameEngine.wallThicknessPx"
+                  [style.width.%]="100"
+                  [style.z-index]="40"
+                  [style.transition]="'width 0.25s ease-out'"
+                  [class.bg-lime-700]="
+                    gameEngine.buildMode() && gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x, y: y + 1 })
+                  "
+                  [class.bg-transparent]="
+                    !gameEngine.buildMode() || !gameEngine.canBuildWallBetween({ x: x, y: y }, { x: x, y: y + 1 })
+                  "
+                >
+                  @if (gameEngine.canShowBuildIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
+                    <button
+                      class="bg-green-500 text-white rounded-full shadow-lg flex items-center justify-center"
+                      [style.fontSize.px]="gameEngine.iconSizePx"
+                      [style.width.px]="gameEngine.iconSizePx"
+                      [style.height.px]="gameEngine.iconSizePx"
+                      [style.z-index]="45"
+                      (click)="onBuildIconClick($event, x, y, x, y + 1)"
+                    >
+                      ✔
+                    </button>
+                  }
+                </div>
+              }
+            }
+
+            @if (gameEngine.getUnitAt(x, y); as unit) {
+              @if (unit.owner === 'player' || gameEngine.isVisibleToPlayer(x, y)) {
+                @if (!(x === 0 && y === 0) && !(x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1)) {
+                  <div
+                    class="pointer-events-none"
+                    [style.transition]="'transform 150ms ease-out'"
+                    [style.transform]="
+                      gameEngine.getNudgeFor(unit.id)
+                        ? 'translate(' +
+                          gameEngine.getNudgeFor(unit.id)!.dx +
+                          'px,' +
+                          gameEngine.getNudgeFor(unit.id)!.dy +
+                          'px)'
+                        : 'translate(0,0)'
+                    "
+                    [class.shake]="gameEngine.isUnitShaking(unit.id)"
+                  >
+                    <div
+                      class="flex items-center justify-center font-bold transition-all duration-300 shadow-lg"
+                      [style.width.px]="gameEngine.tileUnitSizePx"
+                      [style.height.px]="gameEngine.tileUnitSizePx"
+                      [style.aspectRatio]="'1 / 1'"
+                      [attr.title]="gameEngine.formatHoverInfo(unit.id)"
+                      [class.bg-blue-500]="unit.owner === 'player'"
+                      [class.bg-red-500]="unit.owner === 'ai'"
+                      [class.text-white]="true"
+                      [class.rounded-full]="unit.tier === 1"
+                      [class.border-2]="unit.tier !== 2"
+                      [class.border-blue-300]="unit.owner === 'player' && unit.tier !== 2"
+                      [class.border-red-300]="unit.owner === 'ai' && unit.tier !== 2"
+                      [class.rounded-none]="unit.tier === 3"
+                      [class.rotate-45]="unit.tier === 4"
+                      [class.scale-75]="unit.tier === 4"
+                      [style.clip-path]="unit.tier === 2 ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : ''"
+                      [style.padding-top]="unit.tier === 2 ? '0.25rem' : ''"
+                      [class.ring-4]="gameEngine.selectedUnitId() === unit.id"
+                      [class.ring-yellow-400]="gameEngine.selectedUnitId() === unit.id"
+                      [class.ring-offset-2]="gameEngine.selectedUnitId() === unit.id"
+                      [class.ring-offset-gray-800]="gameEngine.selectedUnitId() === unit.id"
+                      [class.scale-110]="
+                        gameEngine.selectedUnitId() === unit.id && unit.tier !== 4 && !gameEngine.buildMode()
+                      "
+                      [class.scale-90]="
+                        gameEngine.selectedUnitId() === unit.id && unit.tier === 4 && !gameEngine.buildMode()
+                      "
+                      [class.scale-125]="gameEngine.lastMergedUnitId() === unit.id"
+                      [class.scale-50]="gameEngine.buildMode()"
+                      [class.animate-bounce]="gameEngine.lastRemainderUnitId() === unit.id"
+                      [class.arrival-pop]="gameEngine.lastArrivedUnitId() === unit.id"
+                      [class.pulse-glow]="gameEngine.pulseUnitId() === unit.id"
+                    >
+                      <span [class.-rotate-45]="unit.tier === 4">{{ unit.level }}</span>
+                    </div>
+                    @if (gameEngine.hasDefenseBonus(unit)) {
+                      <span
+                        class="absolute -top-1 -right-1 rounded-full bg-blue-200 text-blue-900 flex items-center justify-center"
+                        [style.width.px]="gameEngine.iconSizePx"
+                        [style.height.px]="gameEngine.iconSizePx"
+                        [style.fontSize.px]="gameEngine.iconSizePx - 2 > 8 ? gameEngine.iconSizePx - 2 : 8"
+                        [style.z-index]="100"
+                      >
+                        🛡
+                      </span>
+                    }
+                    @if (unit.productionActive) {
+                      <span class="absolute -bottom-1 -right-1 [filter:drop-shadow(0_0_2px_rgba(0,0,0,0.5))]" [style.z-index]="100">
+                        <svg [style.width.px]="gameEngine.iconSizePx" [style.height.px]="gameEngine.iconSizePx" viewBox="0 0 16 16">
+                          <rect x="7" y="9" width="2" height="6" fill="#8B5A2B"></rect>
+                          <circle cx="8" cy="7" r="5" fill="#22c55e"></circle>
+                        </svg>
+                      </span>
+                    } @else if ((unit.forestOccupationTurns ?? 0) > 0) {
+                      <span class="absolute -bottom-1 -right-1 opacity-70 [filter:drop-shadow(0_0_2px_rgba(0,0,0,0.5))]" [style.z-index]="100">
+                        <svg [style.width.px]="gameEngine.iconSizePx" [style.height.px]="gameEngine.iconSizePx" viewBox="0 0 16 16">
+                          <rect x="7" y="9" width="2" height="6" fill="#8B5A2B"></rect>
+                          <circle cx="8" cy="7" r="5" fill="none" stroke="#22c55e" stroke-width="2"></circle>
+                        </svg>
+                      </span>
+                    }
+                  </div>
+                }
+              }
+            }
+
+            @for (entry of gameEngine.getCombatTextEntriesAt(x, y); track entry.id) {
+              <div
+                class="absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-500 combat-text-anim"
+                [style.z-index]="100"
+                [style.opacity]="entry.opacity"
+              >
+                <span
+                  [class.text-xs]="!gameEngine.isLuckyText(entry.text) && !gameEngine.isDrawText(entry.text)"
+                  [class.text-base]="gameEngine.isLuckyText(entry.text) || gameEngine.isDrawText(entry.text)"
+                  [class.text-yellow-300]="!gameEngine.isLuckyText(entry.text) && !gameEngine.isDrawText(entry.text)"
+                  [class.text-yellow-400]="gameEngine.isLuckyText(entry.text) || gameEngine.isDrawText(entry.text)"
+                  class="font-extrabold"
+                >
+                  {{ entry.text }}
+                </span>
+              </div>
+            }
+          </div>
+        }
+      }
     </div>
   </div>
 
@@ -431,12 +557,12 @@
         Convert 20 Wood → +1 Reserve
       </button>
     </div>
-      <button
-        (click)="gameEngine.maxConvertWoodToReserve()"
-        class="px-3 py-1 rounded text-sm bg-emerald-700 hover:bg-emerald-600 cursor-pointer"
-      >
-        MAX CONVERT
-      </button>
+    <button
+      (click)="gameEngine.maxConvertWoodToReserve()"
+      class="px-3 py-1 rounded text-sm bg-emerald-700 hover:bg-emerald-600 cursor-pointer"
+    >
+      MAX CONVERT
+    </button>
     <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
       <input
         type="checkbox"
@@ -447,17 +573,16 @@
       <span>Disable Fog of War (Debug)</span>
     </label>
   </div>
-    <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-      <input
-        type="checkbox"
-        class="h-4 w-4 rounded border-gray-500 bg-gray-800 cursor-pointer"
-        [checked]="gameEngine.autoDeployEnabled()"
-        (change)="gameEngine.toggleAutoDeploy()"
-      />
-      <span>Auto-Deploy</span>
-    </label>
-  <div class="fixed bottom-4 right-4 text-[12px] text-gray-500">version: 0.0.9 | Created by jaerbi and just</div>
-  <div class="fixed bottom-4 right-4 text-[12px] text-gray-500">version: 0.0.9 | Created by jaerbi and just</div>
+  <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+    <input
+      type="checkbox"
+      class="h-4 w-4 rounded border-gray-500 bg-gray-800 cursor-pointer"
+      [checked]="gameEngine.autoDeployEnabled()"
+      (change)="gameEngine.toggleAutoDeploy()"
+    />
+    <span>Auto-Deploy</span>
+  </label>
+  <div class="fixed bottom-4 right-4 text-[12px] text-gray-500">version: 0.0.10 | Created by jaerbi and just</div>
 
   @if (gameEngine.rulesOpen()) {
     <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
@@ -474,19 +599,31 @@
         <div class="space-y-4 text-sm text-gray-200">
           <div>
             <h3 class="font-semibold mb-1">Exponential Tiers</h3>
-            <p>Units use exponential points: Tier 1 starts at 1, Tier 2 at 5, Tier 3 at 25, Tier 4 at 125. Merging and combat always use pure point math.</p>
+            <p>
+              Units use exponential points: Tier 1 starts at 1, Tier 2 at 5, Tier 3 at 25, Tier 4 at 125. Merging and
+              combat always use pure point math.
+            </p>
           </div>
           <div>
             <h3 class="font-semibold mb-1">Walls & Durability</h3>
-            <p>Walls have 4 durability. Tier 4 hits for 4, Tier 3 for 2, Tier 1–2 for 1. Building costs 10 Wood for both sides. Walls block movement and combat until removed or destroyed.</p>
+            <p>
+              Walls have 4 durability. Tier 4 hits for 4, Tier 3 for 2, Tier 1–2 for 1. Building costs 10 Wood for both
+              sides. Walls block movement and combat until removed or destroyed.
+            </p>
           </div>
           <div>
             <h3 class="font-semibold mb-1">Fog of War</h3>
-            <p>You only see tiles around your base and units. Enemy units hidden in the fog are not revealed until they enter your vision.</p>
+            <p>
+              You only see tiles around your base and units. Enemy units hidden in the fog are not revealed until they
+              enter your vision.
+            </p>
           </div>
           <div>
             <h3 class="font-semibold mb-1">Shield & Support</h3>
-            <p>Staying on a tile for 3+ turns grants +1 defense. Being adjacent to a friendly unit of the same Tier grants +1 defense.</p>
+            <p>
+              Staying on a tile for 3+ turns grants +1 defense. Being adjacent to a friendly unit of the same Tier
+              grants +1 defense.
+            </p>
           </div>
           <div>
             <h3 class="font-semibold mb-1">Combat Luck</h3>
@@ -500,8 +637,12 @@
     <div class="fixed inset-y-0 right-0 w-80 bg-gray-900/90 border-l border-gray-700 p-4 z-40">
       <h3 class="text-lg font-bold mb-2">Action Log</h3>
       <label class="flex items-center gap-2 text-xs text-gray-300 mb-2 cursor-pointer">
-        <input type="checkbox" class="h-4 w-4 rounded border-gray-500 bg-gray-800 cursor-pointer"
-               [checked]="gameEngine.combatOnly()" (change)="gameEngine.toggleCombatOnly()" />
+        <input
+          type="checkbox"
+          class="h-4 w-4 rounded border-gray-500 bg-gray-800 cursor-pointer"
+          [checked]="gameEngine.combatOnly()"
+          (change)="gameEngine.toggleCombatOnly()"
+        />
         <span>Combat Only</span>
       </label>
       <div class="h-[78vh] overflow-y-auto space-y-2 text-xs">
@@ -517,37 +658,61 @@
       <div class="mb-3">
         <label class="text-sm mb-1 block">Difficulty</label>
         <div class="flex gap-2">
-          <button class="px-3 py-1 rounded text-sm cursor-pointer"
-                  [class.bg-blue-600]="settings.difficulty() === 'normal'"
-                  [class.bg-gray-700]="settings.difficulty() !== 'normal'"
-                  (click)="settings.setDifficulty('normal')">Normal</button>
-          <button class="px-3 py-1 rounded text-sm cursor-pointer"
-                  [class.bg-blue-600]="settings.difficulty() === 'hard'"
-                  [class.bg-gray-700]="settings.difficulty() !== 'hard'"
-                  (click)="settings.setDifficulty('hard')">Hard</button>
-          <button class="px-3 py-1 rounded text-sm cursor-pointer"
-                  [class.bg-blue-600]="settings.difficulty() === 'nightmare'"
-                  [class.bg-gray-700]="settings.difficulty() !== 'nightmare'"
-                  (click)="settings.setDifficulty('nightmare')">Nightmare</button>
+          <button
+            class="px-3 py-1 rounded text-sm cursor-pointer"
+            [class.bg-blue-600]="settings.difficulty() === 'normal'"
+            [class.bg-gray-700]="settings.difficulty() !== 'normal'"
+            (click)="settings.setDifficulty('normal')"
+          >
+            Normal
+          </button>
+          <button
+            class="px-3 py-1 rounded text-sm cursor-pointer"
+            [class.bg-blue-600]="settings.difficulty() === 'hard'"
+            [class.bg-gray-700]="settings.difficulty() !== 'hard'"
+            (click)="settings.setDifficulty('hard')"
+          >
+            Hard
+          </button>
+          <button
+            class="px-3 py-1 rounded text-sm cursor-pointer"
+            [class.bg-blue-600]="settings.difficulty() === 'nightmare'"
+            [class.bg-gray-700]="settings.difficulty() !== 'nightmare'"
+            (click)="settings.setDifficulty('nightmare')"
+          >
+            Nightmare
+          </button>
         </div>
       </div>
       <div class="mb-3">
         <label class="text-sm mb-1 block">Map Size</label>
         <div class="flex gap-2">
-          <button class="px-3 py-1 rounded text-sm cursor-pointer"
-                  [class.bg-indigo-600]="settings.mapSize() === 10"
-                  [class.bg-gray-700]="settings.mapSize() !== 10"
-                  (click)="onMapSizeChange(10)">10x10</button>
-          <button class="px-3 py-1 rounded text-sm cursor-pointer"
-                  [class.bg-indigo-600]="settings.mapSize() === 20"
-                  [class.bg-gray-700]="settings.mapSize() !== 20"
-                  (click)="onMapSizeChange(20)">20x20</button>
-          <button class="px-3 py-1 rounded text-sm cursor-pointer"
-                  [class.bg-indigo-600]="settings.mapSize() === 30"
-                  [class.bg-gray-700]="settings.mapSize() !== 30"
-                  (click)="onMapSizeChange(30)">30x30</button>
-          
+          <button
+            class="px-3 py-1 rounded text-sm cursor-pointer"
+            [class.bg-indigo-600]="settings.mapSize() === 10"
+            [class.bg-gray-700]="settings.mapSize() !== 10"
+            (click)="onMapSizeChange(10)"
+          >
+            10x10
+          </button>
+          <button
+            class="px-3 py-1 rounded text-sm cursor-pointer"
+            [class.bg-indigo-600]="settings.mapSize() === 20"
+            [class.bg-gray-700]="settings.mapSize() !== 20"
+            (click)="onMapSizeChange(20)"
+          >
+            20x20
+          </button>
+          <button
+            class="px-3 py-1 rounded text-sm cursor-pointer"
+            [class.bg-indigo-600]="settings.mapSize() === 30"
+            [class.bg-gray-700]="settings.mapSize() !== 30"
+            (click)="onMapSizeChange(30)"
+          >
+            30x30
+          </button>
         </div>
       </div>
     </div>
   }
+</div>
