@@ -27,13 +27,34 @@ export class AiStrategyService {
     const aiForestCount = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && engine.isForest(u.position.x, u.position.y)).length;
     const playerUnits: Unit[] = engine.unitsSignal().filter((u: Unit) => u.owner === 'player');
     const enemyNearBase = playerUnits.some((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3);
-    const baseThreatEnemies = playerUnits.filter((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 2);
+    const baseThreatEnemies = playerUnits.filter((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3);
     const baseThreat = baseThreatEnemies.length > 0;
+    const immediateThreatEnemies = baseThreatEnemies.filter((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 2);
+    const immediateThreat = immediateThreatEnemies.length > 0;
     const baseProximity = playerUnits.some((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 5);
     const aggression = typeof engine.aggressionMode === 'function' ? !!engine.aggressionMode() : (playerUnits.filter((p: Unit) => engine.isForest(p.position.x, p.position.y)).length * 2) >= (aiUnits.filter((a: Unit) => engine.isForest(a.position.x, a.position.y)).length * 2);
     let best: { unit: Unit; target: Position; score: number; type: 'move' | 'attack' | 'merge'; reason: string } | null = null;
     const clusterCount = aiUnits.filter((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3).length;
     const center = { x: Math.floor(engine.gridSize / 2), y: Math.floor(engine.gridSize / 2) };
+    const primaryThreat = baseThreatEnemies.length > 0 ? baseThreatEnemies.reduce((acc, e) => {
+      const d = Math.max(Math.abs(e.position.x - aiBase.x), Math.abs(e.position.y - aiBase.y));
+      const da = Math.max(Math.abs(acc.position.x - aiBase.x), Math.abs(acc.position.y - aiBase.y));
+      return d < da ? e : acc;
+    }, baseThreatEnemies[0]) : null;
+    const blockingTiles: Position[] = [];
+    if (primaryThreat) {
+      let cx = primaryThreat.position.x;
+      let cy = primaryThreat.position.y;
+      const stepX = Math.sign(aiBase.x - cx);
+      const stepY = Math.sign(aiBase.y - cy);
+      while (cx !== aiBase.x || cy !== aiBase.y) {
+        cx += stepX;
+        cy += stepY;
+        if (!engine.inBounds(cx, cy)) break;
+        if (cx === aiBase.x && cy === aiBase.y) break;
+        blockingTiles.push({ x: cx, y: cy });
+      }
+    }
     const timeMap: Map<string, number> = new Map(engine.aiUnitTimeNearBase());
     for (const unit of aiUnits) {
       const moves: Position[] = engine.calculateValidMoves(unit);
@@ -99,7 +120,6 @@ export class AiStrategyService {
         continue;
       }
       if (unit.tier >= 3 && isOnForest && (lowTierNearby || baseProximity)) {
-        // Handover: abandon forest to lower tier or leave if base threatened
         this.goals.set(unit.id, { x: aiBase.x, y: aiBase.y });
       }
       if (goal) {
@@ -133,6 +153,7 @@ export class AiStrategyService {
       }
       const adjacentEnemies = playerUnits.filter(p => Math.max(Math.abs(p.position.x - unit.position.x), Math.abs(p.position.y - unit.position.y)) === 1);
       const strongestAdjEnemy = adjacentEnemies.length > 0 ? adjacentEnemies.reduce((acc, e) => (this.combat.calculateTotalPoints(e) > this.combat.calculateTotalPoints(acc) ? e : acc), adjacentEnemies[0]) : null;
+      const canReachBlockingTile = blockingTiles.length > 0 && moves.some(m => blockingTiles.some(b => b.x === m.x && b.y === m.y));
       for (const move of moves) {
         let score = 0;
         let reason = 'Action';
@@ -147,7 +168,7 @@ export class AiStrategyService {
         const prevTile = hist.length >= 2 ? hist[hist.length - 2] : null;
         const returning = prevTile && move.x === prevTile.x && move.y === prevTile.y;
         const leavingForest = isOnForest && !(engine.isForest(move.x, move.y));
-        if (isOnForest && adjacentEnemies.length === 0 && !targetUnit && leavingForest) {
+        if (isOnForest && adjacentEnemies.length === 0 && !targetUnit && leavingForest && !baseThreat) {
           score = -1000;
         }
         if (!targetUnit) {
@@ -181,24 +202,37 @@ export class AiStrategyService {
               reason = visibleFree.length > 0 ? `Priority 1: Toward Forest ${goal.x},${goal.y}` : (fogForests.length > 0 ? `Priority 7: Toward Fog Forest ${goal.x},${goal.y}` : `Toward Goal ${goal.x},${goal.y}`);
             }
           }
-          // Base attack override: if move hits player base, supersede priorities
           const playerBase = engine.getBasePosition('player');
           if (move.x === playerBase.x && move.y === playerBase.y) {
             score += 10000;
             reason = 'Attack Base (Override)';
           }
-          if (baseThreat) {
-            const nearest = baseThreatEnemies.reduce((acc, e) => {
-              const d = Math.abs(unit.position.x - e.position.x) + Math.abs(unit.position.y - e.position.y);
-              const da = Math.abs(unit.position.x - acc.position.x) + Math.abs(unit.position.y - acc.position.y);
-              return d < da ? e : acc;
-            }, baseThreatEnemies[0]);
-            const dCurr = Math.abs(unit.position.x - nearest.position.x) + Math.abs(unit.position.y - nearest.position.y);
-            const dMove = Math.abs(move.x - nearest.position.x) + Math.abs(move.y - nearest.position.y);
-            if (dMove < dCurr) {
-              score += 5000 * (dCurr - dMove);
+          if (primaryThreat) {
+            const isBlocking = blockingTiles.some(b => b.x === move.x && b.y === move.y);
+            const distCurrThreat = Math.abs(unit.position.x - primaryThreat.position.x) + Math.abs(unit.position.y - primaryThreat.position.y);
+            const distMoveThreat = Math.abs(move.x - primaryThreat.position.x) + Math.abs(move.y - primaryThreat.position.y);
+            const threatDistToBase = Math.max(Math.abs(primaryThreat.position.x - aiBase.x), Math.abs(primaryThreat.position.y - aiBase.y));
+            const threatNextTurn = threatDistToBase <= 2;
+            const staying = move.x === unit.position.x && move.y === unit.position.y;
+            if (isBlocking) {
+              const baseScore = threatNextTurn ? 2000000 : 1200000;
+              if (score < baseScore) {
+                score = baseScore;
+              }
+              score += threatNextTurn ? 20000 : 5000;
+              reason = threatNextTurn ? 'Panic Defense: Block Path To Base' : 'Defense: Block Path To Base';
+            } else if (distMoveThreat < distCurrThreat) {
+              score += 5000 * (distCurrThreat - distMoveThreat);
               if (unit.tier >= 3) score += 4000;
-              reason = 'Defense 1: Intercept Threat';
+              reason = 'Defense: Move Toward Base Threat';
+            }
+            if (staying && canReachBlockingTile) {
+              score -= threatNextTurn ? 50000 : 10000;
+              if (immediateThreat) {
+                reason = 'Penalty: Standing Still With Imminent Base Threat';
+              } else if (baseThreat) {
+                reason = 'Penalty: Standing Still With Base Threat';
+              }
             }
           }
           if (unit.tier >= 3) {
@@ -225,13 +259,22 @@ export class AiStrategyService {
           }
         } else {
           if (targetUnit.owner === 'player') {
-            const myPower = this.combat.calculateTotalPoints(unit);
-            const enemyPower = this.combat.calculateTotalPoints(targetUnit);
-            const alliesNearTarget = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && u.id !== unit.id && Math.max(Math.abs(u.position.x - move.x), Math.abs(u.position.y - move.y)) === 1).length;
-            if (myPower >= enemyPower || (aggression && unit.tier >= targetUnit.tier) || (myPower < enemyPower && alliesNearTarget >= 2)) {
-              score = 200000;
-              reason = (aggression && unit.tier >= targetUnit.tier) ? `Attack (Wood War / Equal Tier)` : (myPower < enemyPower ? 'Attack (Swarm)' : 'Attack Enemy');
-              if (enemyNearBase) score += 5000;
+            const distTargetBase = Math.max(Math.abs(targetUnit.position.x - aiBase.x), Math.abs(targetUnit.position.y - aiBase.y));
+            const targetThreateningBase = distTargetBase <= 3;
+            const targetCanReachBaseNextTurn = distTargetBase <= 2;
+            if (targetThreateningBase) {
+              const baseScore = targetCanReachBaseNextTurn ? 2000000 : 1500000;
+              score = baseScore;
+              reason = targetCanReachBaseNextTurn ? 'Panic Defense: Attack Base Threat' : 'Defense: Attack Base Threat';
+            } else {
+              const myPower = this.combat.calculateTotalPoints(unit);
+              const enemyPower = this.combat.calculateTotalPoints(targetUnit);
+              const alliesNearTarget = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && u.id !== unit.id && Math.max(Math.abs(u.position.x - move.x), Math.abs(u.position.y - move.y)) === 1).length;
+              if (myPower >= enemyPower || (aggression && unit.tier >= targetUnit.tier) || (myPower < enemyPower && alliesNearTarget >= 2)) {
+                score = 200000;
+                reason = (aggression && unit.tier >= targetUnit.tier) ? `Attack (Wood War / Equal Tier)` : (myPower < enemyPower ? 'Attack (Swarm)' : 'Attack Enemy');
+                if (enemyNearBase) score += 5000;
+              }
             }
           } else {
             if (targetUnit.tier === unit.tier && baseDistMove > baseDistCurr) {

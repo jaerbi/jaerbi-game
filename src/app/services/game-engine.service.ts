@@ -891,9 +891,9 @@ export class GameEngineService {
     const aggression = playerIncome >= aiIncome;
     this.aggressionModeSignal.set(aggression);
     console.log(`[AI Economy] Player Income: ${playerIncome}, AI Income: ${aiIncome}. AGGRESSION MODE: ${aggression}`);
-    const threats2 = this.unitsSignal().filter(u => u.owner === 'player' && Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 2);
-    if (threats2.length > 0) {
-      const highest = threats2.reduce((acc, e) => this.calculateTotalPoints(e) > this.calculateTotalPoints(acc) ? e : acc, threats2[0]);
+    const threatsBase = this.unitsSignal().filter(u => u.owner === 'player' && Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3 && u.tier >= 2);
+    if (threatsBase.length > 0) {
+      const highest = threatsBase.reduce((acc, e) => this.calculateTotalPoints(e) > this.calculateTotalPoints(acc) ? e : acc, threatsBase[0]);
       this.aiDefenseSpawn(highest);
     }
     if (!this.wallBuiltThisTurnSignal()) {
@@ -967,30 +967,58 @@ export class GameEngineService {
   }
   private aiDefenseSpawn(threat: Unit) {
     const aiBase = this.getBasePosition('ai');
-    const stepX = Math.sign(threat.position.x - aiBase.x);
-    const stepY = Math.sign(threat.position.y - aiBase.y);
-    const candidates: Position[] = [];
-    const first: Position = { x: aiBase.x + (Math.abs(stepX) === 1 ? stepX : 0), y: aiBase.y + (Math.abs(stepY) === 1 ? stepY : 0) };
-    const alt: Position[] = [
-      { x: aiBase.x + stepX, y: aiBase.y },
-      { x: aiBase.x, y: aiBase.y + stepY }
-    ];
-    if (this.inBounds(first.x, first.y)) candidates.push(first);
-    for (const p of alt) if (this.inBounds(p.x, p.y)) candidates.push(p);
-    const open = candidates.find(p => !this.getUnitAt(p.x, p.y));
-    const desiredTier = Math.min(4, threat.tier + 1);
-    const cost = this.getPointsForTierLevel(desiredTier, 1);
-    while (this.aiWoodSignal() >= 20 && this.reservePointsSignal().ai < cost) this.aiConvertWoodToReserve();
-    if (this.reservePointsSignal().ai < cost) return;
-    if (open) {
-      const tl = this.calculateTierAndLevel(cost);
-      this.unitsSignal.update(units => [...units, { id: crypto.randomUUID(), position: { ...open }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0, forestOccupationTurns: 0, productionActive: false }]);
-      this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai - cost }));
-      this.recomputeVisibility();
-      console.log('[AI Defense] Spawned blocker at', open);
-      return;
+    const positions: Position[] = [];
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue;
+        const x = aiBase.x + dx;
+        const y = aiBase.y + dy;
+        if (!this.inBounds(x, y)) continue;
+        if (this.getUnitAt(x, y)) continue;
+        positions.push({ x, y });
+      }
     }
-    this.aiSpawnTier(desiredTier, 1, new Set<string>());
+    if (positions.length === 0) return;
+    while (this.aiWoodSignal() >= 20) {
+      this.aiConvertWoodToReserve();
+    }
+    let reserves = this.reservePointsSignal().ai;
+    const costT2 = this.getPointsForTierLevel(2, 1);
+    const costT1 = this.getPointsForTierLevel(1, 1);
+    const placed: Unit[] = [];
+    for (const pos of positions) {
+      if (reserves < costT1) break;
+      let usedCost = costT1;
+      let tier = 1;
+      let level = 1;
+      if (reserves >= costT2) {
+        const tl2 = this.calculateTierAndLevel(costT2);
+        usedCost = costT2;
+        tier = tl2.tier;
+        level = tl2.level;
+      } else {
+        const tl1 = this.calculateTierAndLevel(costT1);
+        tier = tl1.tier;
+        level = tl1.level;
+      }
+      placed.push({
+        id: crypto.randomUUID(),
+        position: { ...pos },
+        level,
+        tier,
+        points: usedCost,
+        owner: 'ai',
+        turnsStationary: 0,
+        forestOccupationTurns: 0,
+        productionActive: false
+      });
+      reserves -= usedCost;
+    }
+    if (placed.length === 0) return;
+    this.unitsSignal.update(units => [...units, ...placed]);
+    this.reservePointsSignal.update(r => ({ player: r.player, ai: reserves }));
+    this.recomputeVisibility();
+    console.log('[AI Defense] Spawned wall of blockers at', positions);
   }
 
   // --- Spawning ---
