@@ -17,7 +17,11 @@ export class AiStrategyService {
 
   chooseBestEndingAction(engine: any): { type: 'move' | 'attack' | 'merge' | 'wall_attack'; unit: Unit; target: Position; reason: string; edge?: { from: Position; to: Position } } | null {
     const alreadyMoved: Set<string> = new Set(engine.movedThisTurnSignal?.() ?? []);
-    const aiUnits = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && !alreadyMoved.has(u.id));
+    let aiUnits = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && !alreadyMoved.has(u.id));
+    const queued = typeof engine.queuedUnitId === 'function' ? engine.queuedUnitId() : null;
+    if (queued) {
+      aiUnits = aiUnits.filter((u: Unit) => u.id === queued);
+    }
     if (aiUnits.length === 0) return null;
     const aiBase: Position = engine.getBasePosition('ai');
     const playerBase: Position = engine.getBasePosition('player');

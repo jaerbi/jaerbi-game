@@ -76,6 +76,7 @@ export class GameEngineService {
   private isAiThinking: boolean = false;
   private aggressionModeSignal = signal<boolean>(false);
   private wallCooldownSignal = signal<Map<string, number>>(new Map());
+  private aiQueuedUnitIdSignal = signal<string | null>(null);
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -104,6 +105,9 @@ export class GameEngineService {
   readonly aiUnitTimeNearBase = this.aiUnitTimeNearBaseSignal.asReadonly();
   aggressionMode(): boolean {
     return this.aggressionModeSignal();
+  }
+  queuedUnitId(): string | null {
+    return this.aiQueuedUnitIdSignal();
   }
   
   readonly selectedUnit = computed(() => 
@@ -950,6 +954,26 @@ export class GameEngineService {
     const aggression = playerIncome >= aiIncome;
     this.aggressionModeSignal.set(aggression);
     console.log(`[AI Economy] Player Income: ${playerIncome}, AI Income: ${aiIncome}. AGGRESSION MODE: ${aggression}`);
+    const forestsAll = this.forestsSignal();
+    const unoccupied = forestsAll.filter(f => !this.getUnitAt(f.x, f.y));
+    const visibleFree = unoccupied.filter(f => this.isVisibleToAi(f.x, f.y));
+    const aiUnitsList = this.unitsSignal().filter(u => u.owner === 'ai');
+    if (this.turnSignal() <= 15) {
+      const queued = this.aiQueuedUnitIdSignal();
+      const queuedUnit = queued ? aiUnitsList.find(u => u.id === queued) : null;
+      const queuedActive = queuedUnit && !this.isForest(queuedUnit.position.x, queuedUnit.position.y) && visibleFree.length > 0;
+      if (!queuedActive) {
+        const candidates = aiUnitsList.filter(u => u.tier <= 2 && !this.isForest(u.position.x, u.position.y));
+        const pick = candidates.length > 0 && visibleFree.length > 0 ? candidates.reduce((acc, u) => {
+          const dU = Math.min(...visibleFree.map(f => Math.abs(u.position.x - f.x) + Math.abs(u.position.y - f.y)));
+          const dA = Math.min(...visibleFree.map(f => Math.abs(acc.position.x - f.x) + Math.abs(acc.position.y - f.y)));
+          return dU < dA ? u : acc;
+        }, candidates[0]) : null;
+        this.aiQueuedUnitIdSignal.set(pick ? pick.id : null);
+      }
+    } else {
+      this.aiQueuedUnitIdSignal.set(null);
+    }
     // Mandatory T3 Hunter Threshold
     try {
       const t3Cost = this.getPointsForTierLevel(3, 1);
@@ -978,16 +1002,17 @@ export class GameEngineService {
     if (decision && Math.max(Math.abs(decision.target.x - aiBase.x), Math.abs(decision.target.y - aiBase.y)) <= 2) {
       blocked.add(`${decision.target.x},${decision.target.y}`);
     }
-    const opening = this.turnSignal() <= 3;
-    const banT1 = this.turnSignal() > 8 && !enemyNearBase;
-    if (banT1) {
-      console.log('[AI Spawn] Turn > 8. Refusing to spawn T1. Saving for T3/T4.');
-    }
-    if (opening && aiForestCount < 3) {
-      this.aiSpawnTier(1, 2, blocked);
+    const openingTurns = this.turnSignal() <= 15;
+    const queuedId = this.aiQueuedUnitIdSignal();
+    const canAnyReachVisible = openingTurns && visibleFree.length > 0 && aiUnitsList.some(u => {
+      const moves = this.calculateValidMoves(u);
+      return moves.some(m => visibleFree.some(f => f.x === m.x && f.y === m.y));
+    });
+    const shouldSpawnT1 = openingTurns && visibleFree.length > 0 && !queuedId && !canAnyReachVisible;
+    if (shouldSpawnT1) {
+      this.aiSpawnTier(1, 1, blocked);
     } else {
       const playerUnits = this.unitsSignal().filter(u => u.owner === 'player');
-      const forestsAll = this.forestsSignal();
       const threatEnemies = playerUnits.filter(p => {
         const nearBase = Math.max(Math.abs(p.position.x - aiBase.x), Math.abs(p.position.y - aiBase.y)) <= 3;
         const nearForest = forestsAll.some(f => Math.max(Math.abs(p.position.x - f.x), Math.abs(p.position.y - f.y)) <= 3);
