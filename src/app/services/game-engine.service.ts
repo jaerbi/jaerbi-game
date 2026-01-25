@@ -891,6 +891,17 @@ export class GameEngineService {
     const aggression = playerIncome >= aiIncome;
     this.aggressionModeSignal.set(aggression);
     console.log(`[AI Economy] Player Income: ${playerIncome}, AI Income: ${aiIncome}. AGGRESSION MODE: ${aggression}`);
+    // Mandatory T3 Hunter Threshold
+    try {
+      const t3Cost = this.getPointsForTierLevel(3, 1);
+      const totalForests = this.forestsSignal().length;
+      const aiControlCount = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
+      const aiControlPct = totalForests > 0 ? aiControlCount / totalForests : 0;
+      const reservesNow = this.reservePointsSignal().ai;
+      if (reservesNow >= t3Cost && aiControlPct <= 0.6) {
+        this.aiSpawnTier(3, 1, new Set<string>());
+      }
+    } catch {}
     const threatsBase = this.unitsSignal().filter(u => u.owner === 'player' && Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3 && u.tier >= 2);
     if (threatsBase.length > 0) {
       const highest = threatsBase.reduce((acc, e) => this.calculateTotalPoints(e) > this.calculateTotalPoints(acc) ? e : acc, threatsBase[0]);
@@ -923,7 +934,16 @@ export class GameEngineService {
         const nearForest = forestsAll.some(f => Math.max(Math.abs(p.position.x - f.x), Math.abs(p.position.y - f.y)) <= 3);
         return nearBase || nearForest;
       });
-      if (threatEnemies.length > 0) {
+      const antiHoarding = aiForestCount === 0 || aggression;
+      if (antiHoarding) {
+        const t4Cost = this.getPointsForTierLevel(4, 1);
+        const t3Cost = this.getPointsForTierLevel(3, 1);
+        if (reserves >= t4Cost) {
+          this.aiSpawnTier(4, 1, blocked);
+        } else if (reserves >= t3Cost) {
+          this.aiSpawnTier(3, 1, blocked);
+        }
+      } else if (threatEnemies.length > 0) {
         const maxTier = Math.max(...threatEnemies.map(e => e.tier));
         const desiredTier = Math.min(4, maxTier + 1);
         const requiredCost = this.getPointsForTierLevel(desiredTier, 1);
@@ -967,58 +987,60 @@ export class GameEngineService {
   }
   private aiDefenseSpawn(threat: Unit) {
     const aiBase = this.getBasePosition('ai');
-    const positions: Position[] = [];
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        if (dx === 0 && dy === 0) continue;
-        const x = aiBase.x + dx;
-        const y = aiBase.y + dy;
-        if (!this.inBounds(x, y)) continue;
-        if (this.getUnitAt(x, y)) continue;
-        positions.push({ x, y });
-      }
+    // Compute path tiles between threat and base (blocking corridor)
+    const path: Position[] = [];
+    let cx = threat.position.x;
+    let cy = threat.position.y;
+    const stepX = Math.sign(aiBase.x - cx);
+    const stepY = Math.sign(aiBase.y - cy);
+    while (cx !== aiBase.x || cy !== aiBase.y) {
+      cx += stepX;
+      cy += stepY;
+      if (!this.inBounds(cx, cy)) break;
+      if (cx === aiBase.x && cy === aiBase.y) break;
+      path.push({ x: cx, y: cy });
     }
-    if (positions.length === 0) return;
+    // Pick the most critical empty tile: closest to base along the path
+    const critical =
+      path.reverse().find(p => !this.getUnitAt(p.x, p.y)) ||
+      (() => {
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            const x = aiBase.x + dx;
+            const y = aiBase.y + dy;
+            if (!this.inBounds(x, y)) continue;
+            if (this.getUnitAt(x, y)) continue;
+            return { x, y };
+          }
+        }
+        return null;
+      })();
+    if (!critical) return;
     while (this.aiWoodSignal() >= 20) {
       this.aiConvertWoodToReserve();
     }
-    let reserves = this.reservePointsSignal().ai;
-    const costT2 = this.getPointsForTierLevel(2, 1);
-    const costT1 = this.getPointsForTierLevel(1, 1);
-    const placed: Unit[] = [];
-    for (const pos of positions) {
-      if (reserves < costT1) break;
-      let usedCost = costT1;
-      let tier = 1;
-      let level = 1;
-      if (reserves >= costT2) {
-        const tl2 = this.calculateTierAndLevel(costT2);
-        usedCost = costT2;
-        tier = tl2.tier;
-        level = tl2.level;
-      } else {
-        const tl1 = this.calculateTierAndLevel(costT1);
-        tier = tl1.tier;
-        level = tl1.level;
-      }
-      placed.push({
+    const reserves = this.reservePointsSignal().ai;
+    const cost = this.economy.getHighestAffordableCost(reserves);
+    if (cost <= 0) return;
+    const tl = this.calculateTierAndLevel(cost);
+    this.unitsSignal.update(units => [
+      ...units,
+      {
         id: crypto.randomUUID(),
-        position: { ...pos },
-        level,
-        tier,
-        points: usedCost,
+        position: { ...critical },
+        level: tl.level,
+        tier: tl.tier,
+        points: cost,
         owner: 'ai',
         turnsStationary: 0,
         forestOccupationTurns: 0,
         productionActive: false
-      });
-      reserves -= usedCost;
-    }
-    if (placed.length === 0) return;
-    this.unitsSignal.update(units => [...units, ...placed]);
-    this.reservePointsSignal.update(r => ({ player: r.player, ai: reserves }));
+      }
+    ]);
+    this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai - cost }));
     this.recomputeVisibility();
-    console.log('[AI Defense] Spawned wall of blockers at', positions);
+    console.log('[AI Defense] Spawned single strongest blocker at', critical, 'cost', cost);
   }
 
   // --- Spawning ---
