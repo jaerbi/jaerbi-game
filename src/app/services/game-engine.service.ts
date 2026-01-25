@@ -1139,6 +1139,8 @@ export class GameEngineService {
       }
     }
     let reserves = this.reservePointsSignal().ai;
+    const t1CountExisting = this.unitsSignal().filter(u => u.owner === 'ai' && u.tier === 1).length;
+    const baseThreat = this.unitsSignal().some(u => u.owner === 'player' && Math.max(Math.abs(u.position.x - base.x), Math.abs(u.position.y - base.y)) <= 3);
     let created = 0;
     const placed: Unit[] = [];
     const posUsed = new Set<string>();
@@ -1148,6 +1150,9 @@ export class GameEngineService {
       const cost = this.economy.getHighestAffordableCost(reserves);
       if (cost <= 0) break;
       const tl = this.calculateTierAndLevel(cost);
+      if (tl.tier === 1 && !baseThreat && (t1CountExisting + placed.filter(p => p.tier === 1).length) >= 5) {
+        continue;
+      }
       const key = `${pos.x},${pos.y}`;
       if (posUsed.has(key)) continue;
       placed.push({ id: crypto.randomUUID(), position: { ...pos }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0, forestOccupationTurns: 0, productionActive: false });
@@ -1185,6 +1190,13 @@ export class GameEngineService {
     const cost = this.getPointsForTierLevel(tier, 1);
     let created = 0;
     const placed: Unit[] = [];
+    if (tier === 1) {
+      const t1CountExisting = this.unitsSignal().filter(u => u.owner === 'ai' && u.tier === 1).length;
+      const baseThreat = this.unitsSignal().some(u => u.owner === 'player' && Math.max(Math.abs(u.position.x - base.x), Math.abs(u.position.y - base.y)) <= 3);
+      if (!baseThreat && t1CountExisting >= 5) {
+        return 0;
+      }
+    }
     for (const pos of candidates) {
       if (created >= maxCount) break;
       if (reserves < cost) break;
@@ -1736,7 +1748,11 @@ export class GameEngineService {
     const aiBase = this.getBasePosition('ai');
     for (const u of aiUnits) {
       if (!this.isForest(u.position.x, u.position.y)) continue;
-      const enemies = playerUnits.filter(p => Math.max(Math.abs(p.position.x - u.position.x), Math.abs(p.position.y - u.position.y)) <= 2);
+      const enemies = playerUnits.filter(p => {
+        const cheb = Math.max(Math.abs(p.position.x - u.position.x), Math.abs(p.position.y - u.position.y));
+        const range = p.tier >= 3 ? (p.tier === 4 ? 3 : 2) : 1;
+        return cheb <= range;
+      });
       for (const e of enemies) {
         const myPower = this.calculateTotalPoints(u);
         const enemyPower = this.calculateTotalPoints(e);

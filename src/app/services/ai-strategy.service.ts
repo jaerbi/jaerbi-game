@@ -20,6 +20,7 @@ export class AiStrategyService {
     const aiUnits = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && !alreadyMoved.has(u.id));
     if (aiUnits.length === 0) return null;
     const aiBase: Position = engine.getBasePosition('ai');
+    const playerBase: Position = engine.getBasePosition('player');
     const forests: Position[] = engine.forestsSignal();
     const unoccupied = forests.filter(f => !engine.getUnitAt(f.x, f.y));
     const visibleFree = unoccupied.filter(f => engine.isVisibleToAi(f.x, f.y));
@@ -122,6 +123,44 @@ export class AiStrategyService {
       if (unit.tier >= 3 && isOnForest && (lowTierNearby || baseProximity)) {
         this.goals.set(unit.id, { x: aiBase.x, y: aiBase.y });
       }
+      const canAttackBaseNow = moves.some(m => m.x === playerBase.x && m.y === playerBase.y);
+      if (canAttackBaseNow) {
+        const score = 2500000;
+        const reason = 'Siege: Attack Base';
+        if (best === null || score > best.score) {
+          best = { unit, target: { x: playerBase.x, y: playerBase.y }, score, type: 'attack', reason };
+        }
+      } else {
+        const baseNeighbors: Position[] = [
+          { x: playerBase.x + 1, y: playerBase.y },
+          { x: playerBase.x - 1, y: playerBase.y },
+          { x: playerBase.x, y: playerBase.y + 1 },
+          { x: playerBase.x, y: playerBase.y - 1 }
+        ].filter(p => engine.inBounds(p.x, p.y));
+        for (const nb of baseNeighbors) {
+          const wBase = engine.getWallBetween(playerBase.x, playerBase.y, nb.x, nb.y);
+          if (wBase && wBase.owner === 'neutral') {
+            const onEndpoint = (unit.position.x === nb.x && unit.position.y === nb.y) || (unit.position.x === playerBase.x && unit.position.y === playerBase.y);
+            if (onEndpoint) {
+              const score = 2000000;
+              const reason = 'Siege: Destroy Base Wall';
+              if (best === null || score > best.score) {
+                best = { unit, target: { ...unit.position }, score, type: 'wall_attack', reason, edge: { from: { x: playerBase.x, y: playerBase.y }, to: { x: nb.x, y: nb.y } } };
+              }
+            } else {
+              const canStepToEndpoint = moves.some(m => (m.x === nb.x && m.y === nb.y) || (m.x === playerBase.x && m.y === playerBase.y));
+              if (canStepToEndpoint) {
+                const endpoint = moves.find(m => (m.x === nb.x && m.y === nb.y) || (m.x === playerBase.x && m.y === playerBase.y))!;
+                const score = 1800000;
+                const reason = 'Siege: Position at Base Wall';
+                if (best === null || score > best.score) {
+                  best = { unit, target: { x: endpoint.x, y: endpoint.y }, score, type: 'move', reason };
+                }
+              }
+            }
+          }
+        }
+      }
       if (goal) {
         const enemyAtGoal = engine.getUnitAt(goal.x, goal.y);
         if (enemyAtGoal && enemyAtGoal.owner === 'player' && engine.isForest(goal.x, goal.y)) {
@@ -219,7 +258,6 @@ export class AiStrategyService {
         }
       }
       // Base adjacency breach for hunters
-      const playerBase = engine.getBasePosition('player');
       for (const dxy of adjDirs) {
         const bTile = { x: unit.position.x + dxy.x, y: unit.position.y + dxy.y };
         if (bTile.x === playerBase.x && bTile.y === playerBase.y) {
@@ -312,7 +350,6 @@ export class AiStrategyService {
               reason = 'Position for Wall Breach';
             }
           }
-          const playerBase = engine.getBasePosition('player');
           if (move.x === playerBase.x && move.y === playerBase.y) {
             score += 10000;
             reason = 'Attack Base (Override)';
