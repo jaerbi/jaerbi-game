@@ -497,17 +497,19 @@
                     }
                     @if (unit.productionActive) {
                       <span class="absolute -bottom-1 -right-1 [filter:drop-shadow(0_0_2px_rgba(0,0,0,0.5))]" [style.z-index]="100">
-                        <svg [style.width.px]="gameEngine.iconSizePx" [style.height.px]="gameEngine.iconSizePx" viewBox="0 0 16 16">
+                        <!-- <svg [style.width.px]="gameEngine.iconSizePx" [style.height.px]="gameEngine.iconSizePx" viewBox="0 0 16 16">
                           <rect x="7" y="9" width="2" height="6" fill="#8B5A2B"></rect>
                           <circle cx="8" cy="7" r="5" fill="#22c55e"></circle>
-                        </svg>
+                        </svg> -->
+                        🌳
                       </span>
                     } @else if ((unit.forestOccupationTurns ?? 0) > 0) {
                       <span class="absolute -bottom-1 -right-1 opacity-70 [filter:drop-shadow(0_0_2px_rgba(0,0,0,0.5))]" [style.z-index]="100">
-                        <svg [style.width.px]="gameEngine.iconSizePx" [style.height.px]="gameEngine.iconSizePx" viewBox="0 0 16 16">
+                        <!-- <svg [style.width.px]="gameEngine.iconSizePx" [style.height.px]="gameEngine.iconSizePx" viewBox="0 0 16 16">
                           <rect x="7" y="9" width="2" height="6" fill="#8B5A2B"></rect>
                           <circle cx="8" cy="7" r="5" fill="none" stroke="#22c55e" stroke-width="2"></circle>
-                        </svg>
+                        </svg> -->
+                        🌱
                       </span>
                     }
                   </div>
