@@ -73,6 +73,7 @@ export class GameEngineService {
   private unitQuadrantBiasSignal = signal<Map<string, { quadrant: number; until: number }>>(new Map());
   private aiUnitTimeNearBaseSignal = signal<Map<string, number>>(new Map());
   private aiBatchingActions: boolean = false;
+  private isAiThinking: boolean = false;
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -176,7 +177,7 @@ export class GameEngineService {
     this.spawnStarterArmy('player');
     this.spawnStarterArmy('ai');
     this.recomputeVisibility();
-    setTimeout(() => this.aiTurn(), 0);
+    setTimeout(() => this.aiTurn(), 10);
   }
 
   // --- Selection & Movement ---
@@ -788,18 +789,20 @@ export class GameEngineService {
       this.updateForestMonopoly();
     }
     // Switch phase; when player finishes, increment turn and add reserves
+    const nextSide: Owner = ownerJustActed === 'player' ? 'ai' : 'player';
     if (ownerJustActed === 'player') {
       this.turnSignal.update(t => t + 1);
       const aiBonus = this.settings.getAiReserveBonus();
       this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai + aiBonus }));
-      this.activeSideSignal.set('ai');
-      if (this.gameStatus() === 'playing') setTimeout(() => this.aiTurn(), 150);
     } else {
       if (this.autoDeployEnabledSignal() && this.playerConvertedThisTurnSignal() && this.reservePointsSignal().player > 0) {
         this.autoDeployFromReserves();
         this.playerConvertedThisTurnSignal.set(false);
       }
-      this.activeSideSignal.set('player');
+    }
+    this.activeSideSignal.set(nextSide);
+    if (nextSide === 'ai' && this.gameStatus() === 'playing') {
+      setTimeout(() => this.aiTurn(), 10);
     }
   }
   private updateForestMonopoly() {
@@ -847,232 +850,67 @@ export class GameEngineService {
 
   // --- AI Logic ---
 
-  private aiTurn() {
+  private async aiTurn() {
     if (this.activeSideSignal() !== 'ai' || this.gameStatus() !== 'playing') return;
-
-    const aiBase = this.getBasePosition('ai');
-    const playerBase = { x: 0, y: 0 };
+    if (this.isAiThinking) return;
+    this.isAiThinking = true;
+    console.trace('AI TURN START TRACE');
     this.aiBatchingActions = true;
-    const MAX_ACTIONS = 4;
-    let actionsDone = 0;
-    const clearedByMerge = new Set<string>();
-    const addAction = () => { actionsDone++; };
-    const shouldStop = () => actionsDone >= MAX_ACTIONS;
-    
-    // --- 0. Update Trackers ---
+    const aiBase = this.getBasePosition('ai');
+    console.log('[AI] Phase: Economy');
+    while (this.aiWoodSignal() >= 20) {
+      this.aiConvertWoodToReserve();
+    }
+    await new Promise(r => setTimeout(r, 100));
     const currentAiUnits = this.unitsSignal().filter(u => u.owner === 'ai');
     const timeMap = new Map(this.aiUnitTimeNearBaseSignal());
     const currentIds = new Set(currentAiUnits.map(u => u.id));
     for (const id of timeMap.keys()) {
-        if (!currentIds.has(id)) timeMap.delete(id);
+      if (!currentIds.has(id)) timeMap.delete(id);
     }
     for (const unit of currentAiUnits) {
-        const dist = Math.max(Math.abs(unit.position.x - aiBase.x), Math.abs(unit.position.y - aiBase.y));
-        if (dist <= 3) {
-            timeMap.set(unit.id, (timeMap.get(unit.id) || 0) + 1);
-        } else {
-            timeMap.set(unit.id, 0);
-        }
+      const dist = Math.max(Math.abs(unit.position.x - aiBase.x), Math.abs(unit.position.y - aiBase.y));
+      if (dist <= 3) timeMap.set(unit.id, (timeMap.get(unit.id) || 0) + 1);
+      else timeMap.set(unit.id, 0);
     }
     this.aiUnitTimeNearBaseSignal.set(timeMap);
-
-    // --- 1. Analysis & State ---
-    const aiUnitsCountPre = currentAiUnits.length;
-    const playerUnitsCountPre = this.unitsSignal().filter(u => u.owner === 'player').length;
-    const totalForests = this.forestsSignal().length;
-    const playerForestCount = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
+    console.log('[AI] Phase: Expansion');
+    const decision = this.aiStrategy.chooseBestEndingAction(this);
     const aiForestCount = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
-    
-    const baseScouted = this.isVisibleToAi(playerBase.x, playerBase.y) || this.isExploredByAi(playerBase.x, playerBase.y);
-    const localAdvantage = (() => {
-      const radius = 3;
-      const aiNearby = this.unitsSignal().filter(u => u.owner === 'ai' && Math.max(Math.abs(u.position.x - playerBase.x), Math.abs(u.position.y - playerBase.y)) <= radius);
-      const plNearby = this.unitsSignal().filter(u => u.owner === 'player' && Math.max(Math.abs(u.position.x - playerBase.x), Math.abs(u.position.y - playerBase.y)) <= radius);
-      const sum = (arr: Unit[]) => arr.reduce((t, u) => t + this.calculateTotalPoints(u), 0);
-      return sum(aiNearby) >= sum(plNearby);
-    })();
-    const baseThreat3 = this.unitsSignal().some(u => u.owner === 'player' && (Math.abs(u.position.x - aiBase.x) + Math.abs(u.position.y - aiBase.y)) <= 3);
-
-    // --- 2. MOVEMENT (Executed FIRST to clear space) ---
-    let moved = false;
-    const clusterNearBase = this.unitsSignal().filter(u => u.owner === 'ai' && Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3);
-
-    // Standard Movement (if no merge happened)
-    if (!moved) {
-        let bestMove: { unit: Unit, target: Position } | null = null;
-        
-        // Check for Base Snipe Opportunity
-        if (baseScouted && localAdvantage) {
-            for (const u of currentAiUnits) {
-                const moves = this.calculateValidMoves(u);
-                const canHitBase = moves.some(m => m.x === playerBase.x && m.y === playerBase.y);
-                if (canHitBase) {
-                    const target = moves.find(m => m.x === playerBase.x && m.y === playerBase.y)!;
-                    console.log(`[AI Move] SNIPE! Unit ${u.id} attacking player base.`);
-                    this.executeMove(u, target);
-                    moved = true;
-                    break;
-                }
-            }
-        }
-
-        if (!moved) {
-            bestMove = this.aiStrategy.pickBestMove(this);
-            if (bestMove) {
-                console.log(`[AI Move] Moving unit ${bestMove.unit.id} to (${bestMove.target.x},${bestMove.target.y})`);
-                this.executeMove(bestMove.unit, bestMove.target);
-                moved = true;
-                addAction();
-                if (shouldStop()) {
-                  this.aiBatchingActions = false;
-                  this.endTurn();
-                  return;
-                }
-            } else {
-                // Fallback: Just move SOMEWHERE if possible, especially if near base
-                const mover = this.unitsSignal().filter(u => u.owner === 'ai').find(u => !this.isForest(u.position.x, u.position.y));
-                if (mover) {
-                    const moves = this.calculateValidMoves(mover);
-                    const forward = moves.sort((a, b) => {
-                        const da = Math.abs(a.x - playerBase.x) + Math.abs(a.y - playerBase.y);
-                        const db = Math.abs(b.x - playerBase.x) + Math.abs(b.y - playerBase.y);
-                        return da - db;
-                    })[0];
-                    if (forward) {
-                        console.log(`[AI Move] Fallback move for ${mover.id}`);
-                        this.executeMove(mover, forward);
-                        moved = true;
-                        addAction();
-                        if (shouldStop()) {
-                          this.aiBatchingActions = false;
-                          this.endTurn();
-                          return;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Merge Logic for clusters near base (Anti-Congestion / Tech Up) AFTER movement
-    if (!moved && clusterNearBase.length > 3 && !shouldStop()) {
-      const candidate = clusterNearBase.find(u => {
-        const moves = this.calculateValidMoves(u);
-        return moves.some(m => {
-          const ally = this.getUnitAt(m.x, m.y);
-          if (!(ally && ally.owner === 'ai' && ally.tier === u.tier)) return false;
-          const sumPoints = this.calculateTotalPoints(u) + this.calculateTotalPoints(ally);
-          const tl = this.calculateTierAndLevel(sumPoints);
-          const upgradesTier = tl.tier > u.tier;
-          const stagnant = (u.turnsStationary ?? 0) >= 2;
-          return upgradesTier || stagnant;
-        });
-      });
-      if (candidate) {
-        const moves = this.calculateValidMoves(candidate);
-        const target = moves.find(m => {
-          const ally = this.getUnitAt(m.x, m.y);
-          if (!(ally && ally.owner === 'ai' && ally.tier === candidate.tier)) return false;
-          const sumPoints = this.calculateTotalPoints(candidate) + this.calculateTotalPoints(ally);
-          const tl = this.calculateTierAndLevel(sumPoints);
-          const upgradesTier = tl.tier > candidate.tier;
-          const stagnant = (candidate.turnsStationary ?? 0) >= 2;
-          return upgradesTier || stagnant;
-        });
-        if (target) {
-          console.log(`[AI Move] Merging unit ${candidate.id} to clear base congestion.`);
-          clearedByMerge.add(`${candidate.position.x},${candidate.position.y}`);
-          this.executeMove(candidate, target);
-          moved = true;
-          addAction();
-          if (shouldStop()) {
-            this.aiBatchingActions = false;
-            this.endTurn();
-            return;
-          }
-        }
-      }
-    }
-
-    // --- 3. SPAWNING (Executed AFTER Movement) ---
-    const aiReservesEarly = this.reservePointsSignal().ai;
     const enemyNearBase = this.unitsSignal().some(u => u.owner === 'player' && Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3);
-    const enemyNearUnit = this.unitsSignal().some(u => u.owner === 'player' && this.unitsSignal().some(ai => ai.owner === 'ai' && Math.max(Math.abs(ai.position.x - u.position.x), Math.abs(ai.position.y - u.position.y)) <= 3));
-    
-    // Rule 0 & Rule 5 Logic Combined
-    const isEarlyGame = aiForestCount < 3;
-    const isPanic = enemyNearBase || (isEarlyGame && enemyNearUnit);
-    
-    // Rule 5: Accumulate reserves (25 Wood equivalent/Points)
-    // Check if we have enough reserves OR if we are in Panic mode
-    const isRich = aiReservesEarly >= 25;
-    const shouldSpawn = isEarlyGame ? isPanic : (isPanic || isRich);
-
-    // Wood Conversion Logic (Rule 6 Buffer)
-    if (this.aiWoodSignal() >= 20) {
-      let safety = 0;
-      // Keep 10 wood buffer for walls (Rule 6)
-      while (this.aiWoodSignal() >= 30 && safety < 50) {
-        this.aiConvertWoodToReserve();
-        safety++;
+    const reserves = this.reservePointsSignal().ai;
+    const blocked = new Set<string>();
+    if (decision && Math.max(Math.abs(decision.target.x - aiBase.x), Math.abs(decision.target.y - aiBase.y)) <= 2) {
+      blocked.add(`${decision.target.x},${decision.target.y}`);
+    }
+    const wantEarly = aiForestCount < 3;
+    const wantElite = reserves >= 25;
+    const canSpawn = reserves > 0;
+    const shouldSpawn = (wantEarly || wantElite || enemyNearBase);
+    if (canSpawn && shouldSpawn) {
+      this.aiLimitedSpawn(1, blocked);
+    }
+    if (decision) {
+      const movedSet = new Set(this.movedThisTurnSignal());
+      if (movedSet.has(decision.unit.id)) {
+        console.log('[AI] Decision rejected: unit already moved this turn');
+        this.endTurn();
+        console.log('--- AI TURN FINISHED, WAITING FOR PLAYER ---');
+        this.isAiThinking = false;
+        this.aiBatchingActions = false;
+        return;
       }
+      const tag = decision.reason;
+      const kind = decision.reason.includes('Attack') ? 'Move/Attack' : (decision.reason.includes('Merge') ? 'Merge' : 'Move');
+      console.log(`[AI] Phase: ${kind} (${tag})`);
+      this.executeMove(decision.unit, decision.target);
     }
-    
-    // Execute Spawning (Limited)
-    if (!shouldStop()) {
-      const actionsLeft = MAX_ACTIONS - actionsDone;
-      if (actionsLeft > 0) {
-        const currentAiReserves = this.reservePointsSignal().ai;
-        if (currentAiReserves > 0 && shouldSpawn) {
-          console.log(`[AI Spawn] Limited spawning. Reserves: ${currentAiReserves}, Panic: ${isPanic}, Rich: ${isRich}, ActionsLeft: ${actionsLeft}`);
-          const spawned = this.aiLimitedSpawn(actionsLeft, clearedByMerge);
-          for (let i = 0; i < spawned; i++) addAction();
-          if (shouldStop()) {
-            this.aiBatchingActions = false;
-            this.endTurn();
-            return;
-          }
-        }
-      }
-    }
-
-    // --- 4. Wall Building (Rule 6: Adaptive Wall Formation) ---
-    // "Walls are built only as a reaction to an approaching enemy."
-    if (!this.wallBuiltThisTurnSignal()) {
-      const wallActions = this.aiStrategy.getWallBuildActions(this);
-      for (const action of wallActions) {
-        if (shouldStop()) break;
-        if (this.canBuildWallBetween(action.from, action.to)) {
-          this.aiBuildWallBetween(action.from, action.to);
-          this.wallBuiltThisTurnSignal.set(true);
-          addAction();
-          if (shouldStop()) break;
-          // If we want to allow multiple walls per turn as per "build walls on all 4 sides", we continue.
-          // But we must check if we still have wood. aiBuildWallBetween consumes wood.
-          if (this.aiWoodSignal() < 10) break; 
-        }
-      }
-    }
-
-    // Crisis Mode Backup
-    const crisisMode = totalForests > 0 && playerForestCount / totalForests > 0.7;
-    if (crisisMode && aiForestCount < 2) {
-      if (!shouldStop()) {
-        const left = MAX_ACTIONS - actionsDone;
-        if (left > 0) {
-          const spawned = this.aiLimitedSpawn(left, clearedByMerge);
-          for (let i = 0; i < spawned; i++) addAction();
-        }
-      }
-    }
-    
-    const aiUnitsFinal = this.unitsSignal().filter(u => u.owner === 'ai');
-    if (aiUnitsFinal.length === 0 && this.reservePointsSignal().ai === 0) {
-        // Truly nothing to do
-    }
-    
-    this.aiBatchingActions = false;
+    console.log('>>> SWITCHING TO PLAYER SIDE NOW <<<');
     this.endTurn();
+    console.log('--- AI TURN FINISHED, WAITING FOR PLAYER ---');
+    this.isAiThinking = false;
+    this.aiBatchingActions = false;
+    return;
   }
 
   // --- Spawning ---
