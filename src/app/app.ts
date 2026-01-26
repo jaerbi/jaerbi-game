@@ -1,17 +1,40 @@
-import { Component } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { GameRulesComponent } from './components/game-rules/game-rules.component';
 import { GameEngineService } from './services/game-engine.service';
+import { SettingsService } from './services/settings.service';
 import { Unit } from './models/unit.model';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, GameRulesComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
 export class App {
-  constructor(public gameEngine: GameEngineService) {}
+  @ViewChild('boardContainer') boardContainer?: ElementRef<HTMLDivElement>;
+  constructor(public gameEngine: GameEngineService, public settings: SettingsService) {}
+  
+  ngAfterViewInit() {
+    setTimeout(() => {
+      const el: any = this.boardContainer?.nativeElement;
+      if (typeof window !== 'undefined' && el && typeof el.scrollTo === 'function') {
+        el.scrollTo({ left: 0, top: 0 });
+      }
+    }, 0);
+  }
+  
+  onMapSizeChange(size: number) {
+    this.settings.setMapSize(size as any);
+    this.gameEngine.resetGame();
+    setTimeout(() => {
+      const el: any = this.boardContainer?.nativeElement;
+      if (typeof window !== 'undefined' && el && typeof el.scrollTo === 'function') {
+        el.scrollTo({ left: 0, top: 0 });
+      }
+    }, 0);
+  }
 
   onTileClick(x: number, y: number) {
     if (this.gameEngine.gameStatus() !== 'playing') return;
@@ -64,5 +87,18 @@ export class App {
     event.stopPropagation();
     if (this.gameEngine.gameStatus() !== 'playing') return;
     this.gameEngine.destroyOwnWallBetween({ x: x1, y: y1 }, { x: x2, y: y2 });
+  }
+
+  onBuildIconClick(event: MouseEvent, x1: number, y1: number, x2: number, y2: number) {
+    event.stopPropagation();
+    if (this.gameEngine.gameStatus() !== 'playing') return;
+    if (!this.gameEngine.buildMode()) return;
+    this.gameEngine.buildWallBetween({ x: x1, y: y1 }, { x: x2, y: y2 });
+  }
+
+  onAttackIconClick(event: MouseEvent, x1: number, y1: number, x2: number, y2: number) {
+    event.stopPropagation();
+    if (this.gameEngine.gameStatus() !== 'playing') return;
+    this.gameEngine.attackOrDestroyWallBetween({ x: x1, y: y1 }, { x: x2, y: y2 });
   }
 }
