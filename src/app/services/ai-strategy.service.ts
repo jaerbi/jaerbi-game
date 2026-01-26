@@ -163,7 +163,8 @@ export class AiStrategyService {
       }
       const canAttackBaseNow = moves.some(m => m.x === playerBase.x && m.y === playerBase.y);
       if (canAttackBaseNow) {
-        const score = 2500000 + aggressiveBonus;
+        const siegeBonus = ((unit.tier === 3 && unit.level >= 2) || unit.tier >= 4) ? 300000 : 0;
+        const score = 2500000 + aggressiveBonus + siegeBonus;
         const reason = 'Siege: Attack Base';
         if (best === null || score > best.score) {
           best = { unit, target: { x: playerBase.x, y: playerBase.y }, score, type: 'attack', reason };
@@ -180,7 +181,8 @@ export class AiStrategyService {
           if (wBase && wBase.owner === 'neutral') {
             const onEndpoint = (unit.position.x === nb.x && unit.position.y === nb.y) || (unit.position.x === playerBase.x && unit.position.y === playerBase.y);
             if (onEndpoint) {
-            const score = 2000000 + aggressiveBonus;
+            const siegeBonus = ((unit.tier === 3 && unit.level >= 2) || unit.tier >= 4) ? 300000 : 0;
+            const score = 2000000 + aggressiveBonus + siegeBonus;
               const reason = 'Siege: Destroy Base Wall';
               if (best === null || score > best.score) {
                 best = { unit, target: { ...unit.position }, score, type: 'wall_attack', reason, edge: { from: { x: playerBase.x, y: playerBase.y }, to: { x: nb.x, y: nb.y } } };
@@ -189,7 +191,8 @@ export class AiStrategyService {
               const canStepToEndpoint = moves.some(m => (m.x === nb.x && m.y === nb.y) || (m.x === playerBase.x && m.y === playerBase.y));
               if (canStepToEndpoint) {
                 const endpoint = moves.find(m => (m.x === nb.x && m.y === nb.y) || (m.x === playerBase.x && m.y === playerBase.y))!;
-              const score = 1800000 + aggressiveBonus;
+              const siegeBonus = ((unit.tier === 3 && unit.level >= 2) || unit.tier >= 4) ? 300000 : 0;
+              const score = 1800000 + aggressiveBonus + siegeBonus;
                 const reason = 'Siege: Position at Base Wall';
                 if (best === null || score > best.score) {
                   best = { unit, target: { x: endpoint.x, y: endpoint.y }, score, type: 'move', reason };
@@ -287,7 +290,7 @@ export class AiStrategyService {
               }, Infinity)
             : Infinity;
           if (dAlt - dDirect > 4) {
-            const score = 850000 + aggressiveBonus;
+            const score = ((unit.tier === 3 && unit.level === 1) ? 1050000 : 850000) + aggressiveBonus;
             const reason = 'Attack Player Wall to Forest';
             if (best === null || score > best.score) {
               best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: { from: { ...unit.position }, to: fTile } };
@@ -305,6 +308,31 @@ export class AiStrategyService {
             const reason = 'Breach Wall to Base';
             if (best === null || score > best.score) {
               best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: { from: { ...unit.position }, to: bTile } };
+            }
+          }
+        }
+      }
+      // Anti-clustering fallback near goal
+      if (goal) {
+        const sx = Math.sign(goal.x - unit.position.x);
+        const sy = Math.sign(goal.y - unit.position.y);
+        const nx = unit.position.x + (sx !== 0 ? sx : 0);
+        const ny = unit.position.y + (sy !== 0 ? sy : 0);
+        if (engine.inBounds(nx, ny)) {
+          const blocker = engine.getUnitAt(nx, ny);
+          if (blocker && blocker.owner === 'ai') {
+            for (const dxy of adjDirs) {
+              const nTile = { x: unit.position.x + dxy.x, y: unit.position.y + dxy.y };
+              if (!engine.inBounds(nTile.x, nTile.y)) continue;
+              const wAdj = engine.getWallBetween(unit.position.x, unit.position.y, nTile.x, nTile.y);
+              if (wAdj && (wAdj.owner === 'player' || wAdj.owner === 'neutral')) {
+                const bonus = wAdj.owner === 'player' ? 650000 : 600000;
+                const score = bonus + aggressiveBonus;
+                const reason = 'Anti-Clustering: Adjacent Wall Attack';
+                if (best === null || score > best.score) {
+                  best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: { from: { ...unit.position }, to: nTile } };
+                }
+              }
             }
           }
         }
@@ -488,6 +516,9 @@ export class AiStrategyService {
                 score = 200000;
                 reason = (aggression && unit.tier >= targetUnit.tier) ? `Attack (Wood War / Equal Tier)` : (myPower < enemyPower ? 'Attack (Swarm)' : 'Attack Enemy');
                 if (enemyNearBase) score += 5000;
+                if (((unit.tier === 3 && unit.level >= 2) || unit.tier >= 4) && targetUnit.tier >= 3) {
+                  score += 300000;
+                }
               }
             }
           } else {

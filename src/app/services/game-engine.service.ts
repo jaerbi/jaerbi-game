@@ -964,7 +964,9 @@ export class GameEngineService {
       const aiPct = totalForests > 0 ? aiForests / totalForests : 0;
       const playerPct = totalForests > 0 ? playerForests / totalForests : 0;
       let mood: 'none' | 'angry' | 'rage' = 'none';
-      if (playerPct >= 0.9 || playerForests >= 9) {
+      if (playerForests <= aiForests) {
+        mood = 'none';
+      } else if (playerPct >= 0.9 || playerForests >= 9) {
         mood = 'rage';
       } else if (playerForests >= aiForests + 2) {
         mood = 'angry';
@@ -976,13 +978,13 @@ export class GameEngineService {
         const escalated = current === 'normal' ? 'hard' : 'nightmare';
         this.internalDifficultySignal.set(escalated);
       } else {
-        if (aiPct >= 0.7) {
-          this.internalDifficultySignal.set(baseline);
-        }
+        this.internalDifficultySignal.set(baseline);
       }
-      const passive = mood === 'rage' ? 3 : mood === 'angry' ? 1 : 0;
-      if (passive > 0) {
-        this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + passive }));
+      const isEvenTurn = this.turnSignal() % 2 === 0;
+      if (mood === 'rage') {
+        this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + 1 }));
+      } else if (mood === 'angry' && isEvenTurn) {
+        this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + 1 }));
       }
     } catch {}
     await new Promise(r => setTimeout(r, 100));
@@ -1202,6 +1204,13 @@ export class GameEngineService {
     const cost = this.getPointsForTierLevel(tier, 1);
     let created = 0;
     const placed: Unit[] = [];
+    if (tier === 3) {
+      const huntersExisting = this.unitsSignal().filter(u => u.owner === 'ai' && u.tier === 3 && u.level === 1).length;
+      const cap = Math.floor(this.gridSize / 2);
+      if (huntersExisting >= cap) {
+        return 0;
+      }
+    }
     if (tier === 1) {
       const t1CountExisting = this.unitsSignal().filter(u => u.owner === 'ai' && u.tier === 1).length;
       const baseThreat = this.unitsSignal().some(u => u.owner === 'player' && Math.max(Math.abs(u.position.x - base.x), Math.abs(u.position.y - base.y)) <= 3);
@@ -1212,6 +1221,11 @@ export class GameEngineService {
     for (const pos of candidates) {
       if (created >= maxCount) break;
       if (reserves < cost) break;
+      if (tier === 3) {
+        const huntersExisting = this.unitsSignal().filter(u => u.owner === 'ai' && u.tier === 3 && u.level === 1).length;
+        const cap = Math.floor(this.gridSize / 2);
+        if (huntersExisting >= cap) break;
+      }
       const tl = this.calculateTierAndLevel(cost);
       placed.push({ id: crypto.randomUUID(), position: { ...pos }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0, forestOccupationTurns: 0, productionActive: false });
       reserves -= cost;
