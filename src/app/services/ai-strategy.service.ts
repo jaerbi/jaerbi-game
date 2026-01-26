@@ -21,6 +21,7 @@ export class AiStrategyService {
   chooseBestEndingAction(engine: any): { type: 'move' | 'attack' | 'merge' | 'wall_attack'; unit: Unit; target: Position; reason: string; edge?: { from: Position; to: Position } } | null {
     const alreadyMoved: Set<string> = new Set(engine.movedThisTurnSignal?.() ?? []);
     let aiUnits = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && !alreadyMoved.has(u.id));
+    aiUnits = aiUnits.filter((u: Unit) => !(u.tier <= 2 && engine.isForest(u.position.x, u.position.y) && engine.isAnchoredGatherer(u.id)));
     const queued = typeof engine.queuedUnitId === 'function' ? engine.queuedUnitId() : null;
     if (queued) {
       aiUnits = aiUnits.filter((u: Unit) => u.id === queued);
@@ -300,9 +301,9 @@ export class AiStrategyService {
         const occupant = engine.getUnitAt(fTile.x, fTile.y);
         if (occupant) continue;
         const wall = engine.getWallBetween(unit.position.x, unit.position.y, fTile.x, fTile.y);
-        if (wall && wall.owner === 'neutral') {
+          if (wall && (wall.owner === 'neutral' || wall.owner === 'ai')) {
           const score = 900000 + aggressiveBonus;
-          const reason = 'Breach Neutral Wall to Forest';
+          const reason = wall.owner === 'ai' ? 'Sabotage Own Wall to Forest' : 'Breach Neutral Wall to Forest';
           if (best === null || score > best.score) {
             best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: { from: { ...unit.position }, to: fTile } };
           }
@@ -414,6 +415,10 @@ export class AiStrategyService {
           score -= 25000;
           reason = 'Anti-Loop Penalty';
         }
+        if (unit.tier <= 2 && !targetUnit && prevPrevTile && move.x === prevPrevTile.x && move.y === prevPrevTile.y) {
+          score = -1000000;
+          reason = 'Anti-Loop: Stay or different path';
+        }
         if (bannedNow) {
           score -= 30000;
           reason = 'Stutter Ban Penalty';
@@ -469,11 +474,14 @@ export class AiStrategyService {
               const ny = unit.position.y + (sy !== 0 ? sy : 0);
               if (!engine.inBounds(nx, ny)) return false;
               const w = engine.getWallBetween(unit.position.x, unit.position.y, nx, ny);
-              return !!(w && w.owner === 'neutral');
+              return !!w;
             })();
             if (towardGoalWall && move.x === unit.position.x && move.y === unit.position.y) {
-              score += 800000 + aggressiveBonus;
-              reason = 'Siege: Breakthrough';
+              const w = engine.getWallBetween(unit.position.x, unit.position.y, unit.position.x + Math.sign(goal.x - unit.position.x), unit.position.y + Math.sign(goal.y - unit.position.y));
+              const owner = w?.owner;
+              const base = owner === 'ai' ? 700000 : 800000;
+              score += base + aggressiveBonus;
+              reason = owner === 'ai' ? 'Sabotage: Own Wall Blocks Path' : 'Siege: Breakthrough';
             }
           }
           if (breachTarget) {

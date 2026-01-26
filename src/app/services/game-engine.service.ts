@@ -79,6 +79,8 @@ export class GameEngineService {
     private aiQueuedUnitIdSignal = signal<string | null>(null);
     private internalDifficultySignal = signal<'normal' | 'hard' | 'nightmare'>('normal');
     private aiMoodSignal = signal<'none' | 'angry' | 'rage'>('none');
+    private rageCaptureCounterSignal = signal<number>(0);
+    private anchoredGatherersSignal = signal<Set<string>>(new Set<string>());
 
     // Computed signals
     readonly units = this.unitsSignal.asReadonly();
@@ -107,6 +109,19 @@ export class GameEngineService {
     readonly aiUnitTimeNearBase = this.aiUnitTimeNearBaseSignal.asReadonly();
     aggressionMode(): boolean {
         return this.aggressionModeSignal();
+    }
+    isAnchoredGatherer(id: string): boolean {
+        return this.anchoredGatherersSignal().has(id);
+    }
+    private anchorGatherer(id: string) {
+        const next = new Set(this.anchoredGatherersSignal());
+        next.add(id);
+        this.anchoredGatherersSignal.set(next);
+    }
+    unanchorGatherer(id: string) {
+        const next = new Set(this.anchoredGatherersSignal());
+        next.delete(id);
+        this.anchoredGatherersSignal.set(next);
     }
     queuedUnitId(): string | null {
         return this.aiQueuedUnitIdSignal();
@@ -464,6 +479,9 @@ export class GameEngineService {
                     if (idx !== -1) updatedUnits[idx] = movingUnit;
                     if (movingUnit.owner === 'ai' && movingUnit.tier < 3 && this.isForest(target.x, target.y)) {
                         this.aiStrategy.setGoal(movingUnit.id, { x: target.x, y: target.y });
+                        if (movingUnit.tier <= 2) {
+                            this.anchorGatherer(movingUnit.id);
+                        }
                     }
                     const next = new Set(this.movedThisTurnSignal());
                     next.add(movingUnit.id);
