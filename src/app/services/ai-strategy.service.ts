@@ -421,6 +421,13 @@ export class AiStrategyService {
         if (isOnForest && adjacentEnemies.length === 0 && !targetUnit && leavingForest && !baseThreat) {
           score = -1000;
         }
+        if (isOnForest && unit.tier <= 2 && leavingForest && adjacentEnemies.length > 0) {
+          const threatening = adjacentEnemies.some(e => this.combat.calculateTotalPoints(e) > this.combat.calculateTotalPoints(unit));
+          if (threatening) {
+            score = -1000000;
+            reason = 'Hold Forest';
+          }
+        }
         if (!targetUnit) {
           if (engine.isForest(move.x, move.y) && !engine.getUnitAt(move.x, move.y)) {
             if (unit.tier >= 3) {

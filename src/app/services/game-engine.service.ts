@@ -69,7 +69,7 @@ export class GameEngineService {
   private hoveredUnitIdSignal = signal<string | null>(null);
   private autoDeployEnabledSignal = signal<boolean>(false);
   private highScoresOpenSignal = signal<boolean>(false);
-  private highScoresSignal = signal<Record<string, { wins: { turns: number; date: number }[]; losses: { turns: number; date: number }[] }>>({});
+  private highScoresSignal = signal<Record<string, { wins: { turns: number; date: number; playerName?: string; wood?: number; forests?: number }[]; losses: { turns: number; date: number; playerName?: string; wood?: number; forests?: number }[] }>>({});
   private playerConvertedThisTurnSignal = signal<boolean>(false);
   private unitQuadrantBiasSignal = signal<Map<string, { quadrant: number; until: number }>>(new Map());
   private aiUnitTimeNearBaseSignal = signal<Map<string, number>>(new Map());
@@ -80,6 +80,7 @@ export class GameEngineService {
   private aiQueuedUnitIdSignal = signal<string | null>(null);
   private internalDifficultySignal = signal<'normal' | 'hard' | 'nightmare'>('normal');
   private aiMoodSignal = signal<'none' | 'angry' | 'rage'>('none');
+  private rageCaptureCounterSignal = signal<number>(0);
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -662,7 +663,7 @@ export class GameEngineService {
   closeHighScores() {
     this.highScoresOpenSignal.set(false);
   }
-  getHighScoresForCurrentCombo(): { wins: { turns: number; date: number }[]; losses: { turns: number; date: number }[] } {
+  getHighScoresForCurrentCombo(): { wins: { turns: number; date: number; playerName?: string; wood?: number; forests?: number }[]; losses: { turns: number; date: number; playerName?: string; wood?: number; forests?: number }[] } {
     const key = `${this.settings.difficulty()}|${this.settings.mapSize()}`;
     const store = this.highScoresSignal();
     return store[key] ?? { wins: [], losses: [] };
@@ -746,7 +747,10 @@ export class GameEngineService {
   private recordHighScore(result: 'player wins' | 'ai wins') {
     const key = `${this.settings.difficulty()}|${this.settings.mapSize()}`;
     const current = { ...this.highScoresSignal() };
-    const entry = { turns: this.turnSignal(), date: Date.now() };
+    const playerName = 'Player';
+    const wood = this.resourcesSignal().wood;
+    const forests = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
+    const entry = { turns: this.turnSignal(), date: Date.now(), playerName, wood, forests };
     const bucket = current[key] ?? { wins: [], losses: [] };
     if (result === 'player wins') {
       bucket.wins = [...bucket.wins, entry].sort((a, b) => a.turns - b.turns).slice(0, 3);
@@ -978,6 +982,13 @@ export class GameEngineService {
       } else if (playerForests >= aiForests + 2) {
         mood = 'angry';
       }
+      const prevMood = this.aiMoodSignal();
+      if (prevMood === 'rage' && this.rageCaptureCounterSignal() < 2) {
+        mood = 'rage';
+      }
+      if (prevMood !== 'rage' && mood === 'rage') {
+        this.rageCaptureCounterSignal.set(0);
+      }
       this.aiMoodSignal.set(mood);
       if (mood === 'rage') {
         this.internalDifficultySignal.set('nightmare');
@@ -1012,6 +1023,7 @@ export class GameEngineService {
     const aggression = playerIncome >= aiIncome;
     this.aggressionModeSignal.set(aggression);
     console.log(`[AI Economy] Player Income: ${playerIncome}, AI Income: ${aiIncome}. AGGRESSION MODE: ${aggression}`);
+    const aiForestsBefore = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
     const forestsAll = this.forestsSignal();
     const unoccupied = forestsAll.filter(f => !this.getUnitAt(f.x, f.y));
     const visibleFree = unoccupied.filter(f => this.isVisibleToAi(f.x, f.y));
@@ -1139,6 +1151,13 @@ export class GameEngineService {
         this.attackOrDestroyWallBetween(decision.edge.from, decision.edge.to, false);
       } else {
         this.executeMove(decision.unit, decision.target);
+      }
+      const aiForestsAfter = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
+      if (this.aiMoodSignal() === 'rage') {
+        const gained = aiForestsAfter - aiForestsBefore;
+        if (gained > 0) {
+          this.rageCaptureCounterSignal.update(c => c + gained);
+        }
       }
     }
     console.log('>>> SWITCHING TO PLAYER SIDE NOW <<<');
@@ -1772,7 +1791,8 @@ export class GameEngineService {
     ];
     for (const u of this.unitsSignal()) {
       if (u.owner !== 'ai') continue;
-      if (u.tier < 2) continue;
+      if (!this.isForest(u.position.x, u.position.y)) continue;
+      if (u.tier > 2) continue;
       const allowed = dirs.filter(d => {
         const to = { x: u.position.x + d.x, y: u.position.y + d.y };
         if (!this.inBounds(to.x, to.y)) return false;
@@ -1791,7 +1811,7 @@ export class GameEngineService {
       if (!this.isForest(u.position.x, u.position.y)) continue;
       const enemies = playerUnits.filter(p => {
         const cheb = Math.max(Math.abs(p.position.x - u.position.x), Math.abs(p.position.y - u.position.y));
-        return cheb <= 2;
+        return cheb <= 1;
       });
       for (const e of enemies) {
         const myLevel = u.level ?? this.calculateTierAndLevel(u.points).level;
