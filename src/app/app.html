@@ -132,6 +132,17 @@
       </div>
     </div>
   }
+  <button
+    class="fixed bottom-4 right-4 z-50 px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-500 text-white shadow-xl cursor-pointer flex items-center gap-2"
+    (click)="gameEngine.toggleSupport()"
+    aria-label="Support the Project"
+  >
+    <span class="text-lg">❤️</span>
+    <span class="text-lg mb-[2px]">Support</span>
+  </button>
+  @if (gameEngine.supportOpen()) {
+    <app-support-community />
+  }
 
   <style>
     * {
@@ -705,7 +716,7 @@
       <span>Disable Fog of War (Debug)</span>
     </label>
   </div>
-  <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+  <!-- <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
     <input
       type="checkbox"
       class="h-4 w-4 rounded border-gray-500 bg-gray-800 cursor-pointer"
@@ -713,8 +724,8 @@
       (change)="gameEngine.toggleAutoDeploy()"
     />
     <span>Auto-Deploy</span>
-  </label>
-  <div class="fixed bottom-4 right-4 text-[12px] text-gray-500">version: 0.2.2 | Created by jaerbi and just</div>
+  </label> -->
+  <div class="fixed bottom-4 left-4 text-[12px] text-gray-500">version: 0.2.3 | Created by jaerbi and just</div>
 
   @if (gameEngine.rulesOpen()) {
     <app-game-rules />

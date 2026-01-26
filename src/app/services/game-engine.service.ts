@@ -68,6 +68,7 @@ export class GameEngineService {
     private hoveredUnitIdSignal = signal<string | null>(null);
     private autoDeployEnabledSignal = signal<boolean>(false);
     private highScoresOpenSignal = signal<boolean>(false);
+    private supportOpenSignal = signal<boolean>(false);
     private highScoresSignal = signal<Record<string, { wins: { turns: number; date: number }[]; losses: { turns: number; date: number }[] }>>({});
     private playerConvertedThisTurnSignal = signal<boolean>(false);
     private unitQuadrantBiasSignal = signal<Map<string, { quadrant: number; until: number }>>(new Map());
@@ -672,11 +673,27 @@ export class GameEngineService {
     highScoresOpen(): boolean {
         return this.highScoresOpenSignal();
     }
+    supportOpen(): boolean {
+        return this.supportOpenSignal();
+    }
     toggleHighScores() {
         this.highScoresOpenSignal.update(v => !v);
     }
     closeHighScores() {
         this.highScoresOpenSignal.set(false);
+    }
+    toggleSupport() {
+        this.supportOpenSignal.update(v => !v);
+    }
+    closeSupport() {
+        this.supportOpenSignal.set(false);
+    }
+    copySupportLink(url: string) {
+        try {
+            if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url);
+            }
+        } catch {}
     }
     getHighScoresForCurrentCombo(): { wins: { turns: number; date: number }[]; losses: { turns: number; date: number }[] } {
         const key = `${this.settings.difficulty()}|${this.settings.mapSize()}`;
