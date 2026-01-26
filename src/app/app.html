@@ -224,6 +224,7 @@
   <div
     #boardContainer
     [class.shake]="gameEngine.screenShake()"
+    [class.mood-none]="gameEngine.currentMood() === 'none'"
     [class.mood-angry]="gameEngine.currentMood() === 'angry'"
     [class.mood-rage]="gameEngine.currentMood() === 'rage'"
     class="max-w-[90vw] max-h-[90vh] overflow-auto bg-gray-800 p-2 rounded-lg border border-gray-700 select-none relative mx-auto my-auto"
