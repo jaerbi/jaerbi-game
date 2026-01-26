@@ -101,3 +101,12 @@
   50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
   100% { opacity: 0; transform: translateX(-50%) scale(0.8); }
 }
+
+.mood-angry {
+  box-shadow: 0 0 0 1px rgba(255, 237, 77, 0.9), 0 0 28px rgba(255, 237, 77, 0.5);
+}
+
+.mood-rage {
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.9), 0 0 28px rgba(239, 68, 68, 0.5);
+}
+
