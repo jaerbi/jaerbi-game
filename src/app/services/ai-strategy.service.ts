@@ -22,7 +22,8 @@ export class AiStrategyService {
     if (queued) {
       aiUnits = aiUnits.filter((u: Unit) => u.id === queued);
     }
-    const aggressiveBonus = typeof engine.isAggressiveInternal === 'function' && engine.isAggressiveInternal() ? 10000 : 0;
+    const mood = typeof engine.currentMood === 'function' ? engine.currentMood() : 'none';
+    const aggressiveBonus = mood === 'rage' ? 50000 : (mood === 'angry' ? 10000 : 0);
     if (aiUnits.length === 0) return null;
     const aiBase: Position = engine.getBasePosition('ai');
     const playerBase: Position = engine.getBasePosition('player');

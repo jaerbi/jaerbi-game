@@ -78,6 +78,7 @@ export class GameEngineService {
   private wallCooldownSignal = signal<Map<string, number>>(new Map());
   private aiQueuedUnitIdSignal = signal<string | null>(null);
   private internalDifficultySignal = signal<'normal' | 'hard' | 'nightmare'>('normal');
+  private aiMoodSignal = signal<'none' | 'angry' | 'rage'>('none');
 
   // Computed signals
   readonly units = this.unitsSignal.asReadonly();
@@ -115,6 +116,15 @@ export class GameEngineService {
   }
   isAggressiveInternal(): boolean {
     return this.internalDifficultySignal() !== this.settings.difficulty();
+  }
+  currentMood(): 'none' | 'angry' | 'rage' {
+    return this.aiMoodSignal();
+  }
+  isAngry(): boolean {
+    return this.aiMoodSignal() === 'angry';
+  }
+  isRage(): boolean {
+    return this.aiMoodSignal() === 'rage';
   }
   
   readonly selectedUnit = computed(() => 
@@ -951,15 +961,28 @@ export class GameEngineService {
       const playerForests = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
       const baseline = this.settings.difficulty();
       const current = this.internalDifficultySignal();
-      const next = (d: 'normal' | 'hard' | 'nightmare'): 'hard' | 'nightmare' => (d === 'normal' ? 'hard' : 'nightmare');
-      if (playerForests > aiForests + 2) {
+      const aiPct = totalForests > 0 ? aiForests / totalForests : 0;
+      const playerPct = totalForests > 0 ? playerForests / totalForests : 0;
+      let mood: 'none' | 'angry' | 'rage' = 'none';
+      if (playerPct >= 0.9 || playerForests >= 9) {
+        mood = 'rage';
+      } else if (playerForests >= aiForests + 2) {
+        mood = 'angry';
+      }
+      this.aiMoodSignal.set(mood);
+      if (mood === 'rage') {
+        this.internalDifficultySignal.set('nightmare');
+      } else if (mood === 'angry') {
         const escalated = current === 'normal' ? 'hard' : 'nightmare';
         this.internalDifficultySignal.set(escalated);
       } else {
-        const aiPct = totalForests > 0 ? aiForests / totalForests : 0;
         if (aiPct >= 0.7) {
           this.internalDifficultySignal.set(baseline);
         }
+      }
+      const passive = mood === 'rage' ? 3 : mood === 'angry' ? 1 : 0;
+      if (passive > 0) {
+        this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + passive }));
       }
     } catch {}
     await new Promise(r => setTimeout(r, 100));
