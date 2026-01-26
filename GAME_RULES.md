@@ -9,11 +9,12 @@ This document serves as the primary reference for game mechanics, AI priorities,
 
 *(Verbatim from Project Rulebook)*
 
-*   **Movement**: Units move 1 tile per action. Diagonals are blocked if adjacent tiles are occupied by walls/units.
+*   **Movement**: Units have Movement AP per action: T1=1 AP, T2=2 AP, T3=3 AP. Diagonals are blocked if adjacent tiles are occupied by walls/units.
 *   **Merging**: Two units of the same Tier combine into one unit of Tier+1. Max Tier: 4.
 *   **Resources**: 1 Forest = 2 Wood/turn (production begins on the 3rd consecutive turn of occupation; any movement resets occupation). 20 Wood = 1 Reserve.
 *   **Military**: Destroy enemy base (100 HP).
 *   **Economic**: Hold 100% of forests for 10 consecutive turns.
+*   **Victory Modes**: Win by Base Destruction or by Forest Monopoly.
 
 *(Turn Execution Rules)*
 
@@ -58,6 +59,11 @@ This document serves as the primary reference for game mechanics, AI priorities,
 
 Units are defined by **Points**, which determine their **Tier** and **Level**.
 
+### Stealth & Mood
+- Angry Mode: +1 Reserve to AI on even-numbered turns only.
+- Rage Mode: +1 Reserve to AI every turn.
+- Exit Condition: Modes deactivate immediately when PlayerForests <= AiForests; modes also revert when AI controls ≥70% of forests.
+
 ### Tier Thresholds
 | Tier | Point Range | Level Steps |
 |------|-------------|-------------|
@@ -81,6 +87,7 @@ Combat has a 20% chance for critical success or failure.
 
 This project includes a visual, interactive rules guide accessible in the app (Rules panel). It presents:
 - Unit Encyclopedia for Tiers 1–4 with point ranges and roles.
+- Movement AP: T1 = 1 AP, T2 = 2 AP, T3 = 3 AP.
 - How To Play cards:
   - Forest Activation (3-turn sequence with seedling → tree icons).
   - Wall Building (wall segment placed between unit and adjacent enemy).
@@ -88,6 +95,7 @@ This project includes a visual, interactive rules guide accessible in the app (R
 - Victory Conditions:
   - Domination (base health overlay).
   - Monopoly (forest capture progress for Player vs AI).
+  - Base Destruction as alternative victory.
 - Combat & Luck:
   - Shield bonus for staying still 3+ turns.
   - Crit/Miss samples to illustrate 20% luck mechanics.
@@ -98,8 +106,10 @@ This project includes a visual, interactive rules guide accessible in the app (R
 - Silver/Gray: Neutral strategic walls (non-buildable; take full damage per hit).
 
 ### AI Defense & Hunter Roles
-- AI Defense: Якщо база під загрозою на відстані ≤3 клітин, ШІ агресивно спавнить сильні блокери біля бази (ефект “Wall of Flesh”) та пріоритизує оборону.
-- T3+ Hunter: Юніти Tier 3 і вище пріоритизують полювання та тиск на базу/ворога над заготівлею дерева; захоплення лісів дозволено лише за сприятливих умов (відсутність близьких ворогів і брак низьких тиранів поруч).
+- AI Defense: If the base is threatened at a distance of ≤3 cells, the AI ​​will aggressively spawn strong blockers near the base (“Wall of Flesh” effect) and prioritize defense.
+- T3+ Hunter: Tier 3 and above units prioritize hunting and base/enemy pressure over logging; capturing forests is only allowed under favorable conditions (no nearby enemies and no lowly tyrants nearby).
+- Tactical Mobility: Even while saving reserves for spawns, existing units continue missions; units not on forests prioritize recapturing the nearest Player-owned or Neutral forest.
+- Role Transition: If a Hunter is downgraded below Tier 3 after combat but survives, it immediately switches to Gatherer: occupy the fought-for forest and dig in with defensive walls.
 
 ## 3. AI Strategic Cycle
 
