@@ -102,6 +102,10 @@
   100% { opacity: 0; transform: translateX(-50%) scale(0.8); }
 }
 
+.mood-none {
+  box-shadow: 0 0 0 1px rgba(77, 255, 202, 0.9), 0 0 28px rgba(77, 255, 202, 0.5);
+}
+
 .mood-angry {
   box-shadow: 0 0 0 1px rgba(255, 237, 77, 0.9), 0 0 28px rgba(255, 237, 77, 0.5);
 }

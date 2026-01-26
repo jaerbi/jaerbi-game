@@ -156,7 +156,7 @@ export class AiStrategyService {
       const inSession = isOnForest && (unit.forestOccupationTurns ?? 0) > 0 && !(unit.productionActive ?? false);
       const lowTierNearby = engine.unitsSignal().some((u2: Unit) =>
         u2.owner === 'ai' && u2.id !== unit.id && u2.tier <= 2 &&
-        Math.max(Math.abs(u2.position.x - unit.position.x), Math.abs(u2.position.y - unit.position.y)) <= 1
+        Math.max(Math.abs(u2.position.x - unit.position.x), Math.abs(u2.position.y - unit.position.y)) <= 2
       );
       if (inSession && !baseProximity && unit.tier < 3) {
         this.goals.set(unit.id, { x: unit.position.x, y: unit.position.y });
@@ -426,7 +426,7 @@ export class AiStrategyService {
             if (unit.tier >= 3) {
               const lowTierWithin3 = engine.unitsSignal().some((u2: Unit) =>
                 u2.owner === 'ai' && u2.tier <= 2 &&
-                Math.max(Math.abs(u2.position.x - move.x), Math.abs(u2.position.y - move.y)) <= 1
+                Math.max(Math.abs(u2.position.x - move.x), Math.abs(u2.position.y - move.y)) <= 2
               );
               const enemiesVisibleNear = playerUnits.some((p: Unit) =>
                 Math.max(Math.abs(p.position.x - unit.position.x), Math.abs(p.position.y - unit.position.y)) <= 2 &&
@@ -541,8 +541,11 @@ export class AiStrategyService {
             const targetThreateningBase = distTargetBase <= 3;
             const targetCanReachBaseNextTurn = distTargetBase <= 2;
             if (targetThreateningBase) {
-              const baseScore = targetCanReachBaseNextTurn ? 2000000 : 1500000;
+              const baseScore = targetCanReachBaseNextTurn ? 2200000 : 1700000;
               score = baseScore;
+              if (unit.tier >= 3 && targetUnit.tier >= 2) {
+                score += 400000;
+              }
               reason = targetCanReachBaseNextTurn ? 'Panic Defense: Attack Base Threat' : 'Defense: Attack Base Threat';
             } else {
               const myPower = this.combat.calculateTotalPoints(unit);

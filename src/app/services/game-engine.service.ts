@@ -46,6 +46,7 @@ export class GameEngineService {
   private unitStutterBanSignal = signal<Map<string, { tiles: Set<string>; until: number }>>(new Map());
   private lastAiMovedUnitIdSignal = signal<string | null>(null);
   private aiConsecMovesSignal = signal<number>(0);
+  private forestReplacementSignal = signal<Map<string, { unitId: string | null }>>(new Map());
   private buildModeSignal = signal<boolean>(false);
   private fogDebugDisabledSignal = signal<boolean>(false);
   private wallBuiltThisTurnSignal = signal<boolean>(false);
@@ -105,6 +106,7 @@ export class GameEngineService {
   readonly lastArrivedUnitId = this.lastArrivedUnitIdSignal.asReadonly();
   readonly pulseUnitId = this.pulseUnitIdSignal.asReadonly();
   readonly aiUnitTimeNearBase = this.aiUnitTimeNearBaseSignal.asReadonly();
+  readonly forestReplacement = this.forestReplacementSignal.asReadonly();
   aggressionMode(): boolean {
     return this.aggressionModeSignal();
   }
@@ -1014,6 +1016,23 @@ export class GameEngineService {
     const unoccupied = forestsAll.filter(f => !this.getUnitAt(f.x, f.y));
     const visibleFree = unoccupied.filter(f => this.isVisibleToAi(f.x, f.y));
     const aiUnitsList = this.unitsSignal().filter(u => u.owner === 'ai');
+    const t3OnForests = aiUnitsList.filter(u => u.tier >= 3 && this.isForest(u.position.x, u.position.y));
+    for (const u of t3OnForests) {
+      const nearLow = this.unitsSignal().some(a => a.owner === 'ai' && a.tier <= 2 && Math.max(Math.abs(a.position.x - u.position.x), Math.abs(a.position.y - u.position.y)) <= 2);
+      const key = `${u.position.x},${u.position.y}`;
+      if (!nearLow && this.aiWoodSignal() >= 20 && !this.forestReplacementSignal().has(key)) {
+        this.aiConvertWoodToReserve();
+        const before = new Set(this.unitsSignal().map(x => x.id));
+        this.aiSpawnTier(1, 1, new Set<string>());
+        const created = this.unitsSignal().find(x => x.owner === 'ai' && x.tier === 1 && !before.has(x.id));
+        if (created) {
+          this.aiStrategy.setGoal(created.id, { x: u.position.x, y: u.position.y });
+          const map = new Map(this.forestReplacementSignal());
+          map.set(key, { unitId: created.id });
+          this.forestReplacementSignal.set(map);
+        }
+      }
+    }
     if (this.turnSignal() <= 15) {
       const queued = this.aiQueuedUnitIdSignal();
       const queuedUnit = queued ? aiUnitsList.find(u => u.id === queued) : null;
