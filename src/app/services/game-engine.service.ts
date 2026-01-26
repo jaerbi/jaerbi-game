@@ -322,6 +322,8 @@ export class GameEngineService {
           }
         }
         if (targetUnit.owner === movingUnit.owner) {
+          this.shakenUnitIdSignal.set(movingUnit.id);
+          setTimeout(() => this.shakenUnitIdSignal.set(null), 180);
           // Merge Logic (Point-based Sum & Remainder) with 4-level tiers
           if (targetUnit.tier === movingUnit.tier) {
             const tier = targetUnit.tier;
@@ -460,6 +462,9 @@ export class GameEngineService {
              // Update the unit in the array
              const idx = updatedUnits.findIndex(u => u.id === movingUnit.id);
              if (idx !== -1) updatedUnits[idx] = movingUnit;
+             if (movingUnit.owner === 'ai' && movingUnit.tier < 3 && this.isForest(target.x, target.y)) {
+               this.aiStrategy.setGoal(movingUnit.id, { x: target.x, y: target.y });
+             }
              const next = new Set(this.movedThisTurnSignal());
              next.add(movingUnit.id);
              this.movedThisTurnSignal.set(next);

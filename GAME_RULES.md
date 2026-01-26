@@ -87,6 +87,7 @@ Combat has a 20% chance for critical success or failure.
 
 This project includes a visual, interactive rules guide accessible in the app (Rules panel). It presents:
 - Unit Encyclopedia for Tiers 1–4 with point ranges and roles.
+- Movement AP: T1 = 1 AP, T2 = 2 AP, T3 = 3 AP.
 - How To Play cards:
   - Forest Activation (3-turn sequence with seedling → tree icons).
   - Wall Building (wall segment placed between unit and adjacent enemy).
@@ -94,6 +95,7 @@ This project includes a visual, interactive rules guide accessible in the app (R
 - Victory Conditions:
   - Domination (base health overlay).
   - Monopoly (forest capture progress for Player vs AI).
+  - Base Destruction as alternative victory.
 - Combat & Luck:
   - Shield bonus for staying still 3+ turns.
   - Crit/Miss samples to illustrate 20% luck mechanics.
@@ -106,6 +108,8 @@ This project includes a visual, interactive rules guide accessible in the app (R
 ### AI Defense & Hunter Roles
 - AI Defense: If the base is threatened at a distance of ≤3 cells, the AI ​​will aggressively spawn strong blockers near the base (“Wall of Flesh” effect) and prioritize defense.
 - T3+ Hunter: Tier 3 and above units prioritize hunting and base/enemy pressure over logging; capturing forests is only allowed under favorable conditions (no nearby enemies and no lowly tyrants nearby).
+- Tactical Mobility: Even while saving reserves for spawns, existing units continue missions; units not on forests prioritize recapturing the nearest Player-owned or Neutral forest.
+- Role Transition: If a Hunter is downgraded below Tier 3 after combat but survives, it immediately switches to Gatherer: occupy the fought-for forest and dig in with defensive walls.
 
 ## 3. AI Strategic Cycle
 

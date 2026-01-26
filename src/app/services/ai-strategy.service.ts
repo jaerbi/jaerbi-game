@@ -7,6 +7,9 @@ import { SettingsService } from './settings.service';
 export class AiStrategyService {
   constructor(private combat: CombatService, private settings: SettingsService) {}
   private goals = new Map<string, Position>();
+  setGoal(unitId: string, pos: Position) {
+    this.goals.set(unitId, pos);
+  }
 
   pickBestMove(engine: any): { unit: Unit; target: Position; reason: string } | null {
     const d = this.chooseBestEndingAction(engine);
@@ -76,39 +79,72 @@ export class AiStrategyService {
       })() : false;
       const needNewGoal = (!hasGoal || goalOccupiedByStrongerAlly) && (!engine.isForest(unit.position.x, unit.position.y) || baseProximity || unit.tier >= 3);
       if (needNewGoal) {
-        const enemyOnForest = playerUnits.filter(p => engine.isForest(p.position.x, p.position.y));
-        if (aggression && enemyOnForest.length > 0) {
-          const nearestEF = enemyOnForest.reduce((acc, e) => {
-            const d = Math.abs(unit.position.x - e.position.x) + Math.abs(unit.position.y - e.position.y);
-            const da = Math.abs(unit.position.x - acc.position.x) + Math.abs(unit.position.y - acc.position.y);
-            return d < da ? e : acc;
-          }, enemyOnForest[0]);
-          goal = { x: nearestEF.position.x, y: nearestEF.position.y };
-        } else {
-          const nearestEnemy = (() => {
-            if (playerUnits.length === 0) return null;
-            const sorted = [...playerUnits].sort((a, b) => {
-              const da = Math.abs(unit.position.x - a.position.x) + Math.abs(unit.position.y - a.position.y);
-              const db = Math.abs(unit.position.x - b.position.x) + Math.abs(unit.position.y - b.position.y);
-              return da - db;
-            });
-            return sorted[0];
-          })();
-          if (nearestEnemy) {
-            goal = { x: nearestEnemy.position.x, y: nearestEnemy.position.y };
+        if (!engine.isForest(unit.position.x, unit.position.y)) {
+          const playerForests = playerUnits.filter(p => engine.isForest(p.position.x, p.position.y)).map(p => ({ x: p.position.x, y: p.position.y }));
+          if (playerForests.length > 0) {
+            const nearestPF = playerForests.reduce((acc, f) => {
+              const d = Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y);
+              const da = Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y);
+              return d < da ? f : acc;
+            }, playerForests[0]);
+            goal = nearestPF;
           } else if (visibleFree.length > 0) {
-          goal = visibleFree.reduce((acc, f) => {
-            const d = Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y);
-            return d < (Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y)) ? f : acc;
-          }, visibleFree[0]);
+            goal = visibleFree.reduce((acc, f) => {
+              const d = Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y);
+              return d < (Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y)) ? f : acc;
+            }, visibleFree[0]);
           } else if (fogForests.length > 0) {
-          goal = fogForests.reduce((acc, f) => {
-            const d = Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y);
-            return d < (Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y)) ? f : acc;
-          }, fogForests[0]);
+            goal = fogForests.reduce((acc, f) => {
+              const d = Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y);
+              return d < (Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y)) ? f : acc;
+            }, fogForests[0]);
           } else {
-          goal = { x: 0, y: 0 };
-        }
+            const nearestEnemy = (() => {
+              if (playerUnits.length === 0) return null;
+              const sorted = [...playerUnits].sort((a, b) => {
+                const da = Math.abs(unit.position.x - a.position.x) + Math.abs(unit.position.y - a.position.y);
+                const db = Math.abs(unit.position.x - b.position.x) + Math.abs(unit.position.y - b.position.y);
+                return da - db;
+              });
+              return sorted[0];
+            })();
+            goal = nearestEnemy ? { x: nearestEnemy.position.x, y: nearestEnemy.position.y } : { x: 0, y: 0 };
+          }
+        } else {
+          const enemyOnForest = playerUnits.filter(p => engine.isForest(p.position.x, p.position.y));
+          if (aggression && enemyOnForest.length > 0) {
+            const nearestEF = enemyOnForest.reduce((acc, e) => {
+              const d = Math.abs(unit.position.x - e.position.x) + Math.abs(unit.position.y - e.position.y);
+              const da = Math.abs(unit.position.x - acc.position.x) + Math.abs(unit.position.y - acc.position.y);
+              return d < da ? e : acc;
+            }, enemyOnForest[0]);
+            goal = { x: nearestEF.position.x, y: nearestEF.position.y };
+          } else {
+            const nearestEnemy = (() => {
+              if (playerUnits.length === 0) return null;
+              const sorted = [...playerUnits].sort((a, b) => {
+                const da = Math.abs(unit.position.x - a.position.x) + Math.abs(unit.position.y - a.position.y);
+                const db = Math.abs(unit.position.x - b.position.x) + Math.abs(unit.position.y - b.position.y);
+                return da - db;
+              });
+              return sorted[0];
+            })();
+            if (nearestEnemy) {
+              goal = { x: nearestEnemy.position.x, y: nearestEnemy.position.y };
+            } else if (visibleFree.length > 0) {
+              goal = visibleFree.reduce((acc, f) => {
+                const d = Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y);
+                return d < (Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y)) ? f : acc;
+              }, visibleFree[0]);
+            } else if (fogForests.length > 0) {
+              goal = fogForests.reduce((acc, f) => {
+                const d = Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y);
+                return d < (Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y)) ? f : acc;
+              }, fogForests[0]);
+            } else {
+              goal = { x: 0, y: 0 };
+            }
+          }
         }
         this.goals.set(unit.id, goal!);
       }

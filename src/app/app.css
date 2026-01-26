@@ -10,3 +10,94 @@
   50% { opacity: 1; }
   100% { opacity: 0.5; }
 }
+
+.shake {
+  animation: tremble 180ms ease-in-out 0s 1 normal forwards;
+}
+@keyframes tremble {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-1px, 0.5px) rotate(-0.5deg); }
+  40% { transform: translate(1px, -0.5px) rotate(0.6deg); }
+  60% { transform: translate(-1px, 0.5px) rotate(-0.6deg); }
+  80% { transform: translate(1px, -0.5px) rotate(0.4deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+.hit-flash {
+  animation: hitFlash 300ms ease-out 1;
+}
+@keyframes hitFlash {
+  0% { filter: brightness(1); }
+  30% { filter: brightness(1.8); }
+  100% { filter: brightness(1); }
+}
+
+.hp-drain {
+  animation: hpDrain 1200ms ease-in-out infinite alternate;
+}
+@keyframes hpDrain {
+  0% { width: 90%; }
+  50% { width: 60%; }
+  100% { width: 30%; }
+}
+
+.merge-loop {
+  position: relative;
+  width: 160px;
+  height: 80px;
+}
+.merge-loop .unit {
+  position: absolute;
+  top: 20px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-weight: 700;
+}
+.merge-loop .u1 {
+  left: 10px;
+  background: #3b82f6;
+  color: white;
+  animation: u1ToCenter 1600ms ease-in-out infinite alternate;
+}
+.merge-loop .u2 {
+  right: 10px;
+  background: #3b82f6;
+  color: white;
+  animation: u2ToCenter 1600ms ease-in-out infinite alternate;
+}
+@keyframes u1ToCenter {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(44px); }
+  100% { transform: translateX(0); }
+}
+@keyframes u2ToCenter {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(-44px); }
+  100% { transform: translateX(0); }
+}
+.merge-loop .result {
+  position: absolute;
+  left: 50%;
+  top: 18px;
+  transform: translateX(-50%);
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: #60a5fa;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  opacity: 0;
+  animation: resultAppear 1600ms ease-in-out infinite alternate;
+}
+@keyframes resultAppear {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.8); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.8); }
+}

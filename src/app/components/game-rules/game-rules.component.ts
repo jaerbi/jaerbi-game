@@ -23,6 +23,7 @@ import { SettingsService } from '../../services/settings.service';
         <div class="grid grid-cols-1 gap-6 overflow-y-auto max-h-[70vh] pr-2">
           <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
             <div class="text-lg font-semibold mb-3">Unit Evolution</div>
+            <div class="text-sm text-gray-300 mb-2">Movement AP: T1 = 1 AP, T2 = 2 AP, T3 = 3 AP.</div>
             <div class="flex items-center gap-6">
               <div class="flex flex-col items-center gap-2">
                 <div class="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">1</div>
@@ -41,6 +42,11 @@ import { SettingsService } from '../../services/settings.service';
                 <div class="text-xs text-gray-300">125–500</div>
               </div>
             </div>
+          </div>
+
+          <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
+            <div class="text-lg font-semibold mb-3">Victory Conditions</div>
+            <div class="text-sm text-gray-300">Win by Forest Monopoly (control all forests for 10 turns) or by destroying the enemy Base.</div>
           </div>
 
           <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
@@ -82,12 +88,12 @@ import { SettingsService } from '../../services/settings.service';
           </div>
 
           <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
-            <div class="text-lg font-semibold mb-3">Combat</div>
+            <div class="text-lg font-semibold mb-3">Combat (Animated)</div>
             <div class="flex items-center gap-8">
               <div class="relative w-32 h-20 bg-gray-900/40 rounded-lg border border-gray-700 flex items-center justify-center">
-                <div class="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">5</div>
+                <div class="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold hit-flash">5</div>
                 <div class="absolute right-2 top-2 h-3 w-20 bg-red-900 rounded">
-                  <div class="h-3 bg-red-500 rounded" [style.width.%]="70"></div>
+                  <div class="h-3 bg-red-500 rounded hp-drain" style="width: 70%"></div>
                 </div>
               </div>
               <div class="text-2xl">⚔</div>
@@ -99,6 +105,16 @@ import { SettingsService } from '../../services/settings.service';
               </div>
             </div>
             <div class="text-[11px] text-gray-400 mt-2">Attack walls and bases to reduce health bars.</div>
+          </div>
+
+          <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
+            <div class="text-lg font-semibold mb-3">Merging (Animated)</div>
+            <div class="merge-loop mx-auto">
+              <div class="unit u1">1</div>
+              <div class="unit u2">1</div>
+              <div class="result">2</div>
+            </div>
+            <div class="text-[11px] text-gray-400 mt-2">Two T1 units combine into a stronger unit.</div>
           </div>
         </div>
       </div>
