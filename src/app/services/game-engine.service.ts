@@ -28,7 +28,7 @@ export class GameEngineService {
     private unitsSignal = signal<Unit[]>([]);
     private turnSignal = signal<number>(1);
     private selectedUnitIdSignal = signal<string | null>(null);
-    private gameStatusSignal = signal<'playing' | 'player wins' | 'ai wins'>('playing');
+    private gameStatusSignal = signal<'playing' | 'player wins' | 'jaerbi wins'>('playing');
     private lastMergedUnitIdSignal = signal<string | null>(null);
     private lastRemainderUnitIdSignal = signal<string | null>(null);
     private resourcesSignal = signal<{ wood: number }>({ wood: 0 });
@@ -69,7 +69,7 @@ export class GameEngineService {
     private autoDeployEnabledSignal = signal<boolean>(false);
     private highScoresOpenSignal = signal<boolean>(false);
     private supportOpenSignal = signal<boolean>(false);
-    private highScoresSignal = signal<Record<string, { wins: { turns: number; date: number }[]; losses: { turns: number; date: number }[] }>>({});
+    private highScoresSignal = signal<Record<string, { wins: { turns: number; date: number; condition: string }[]; losses: { turns: number; date: number, condition: string }[] }>>({});
     private playerConvertedThisTurnSignal = signal<boolean>(false);
     private unitQuadrantBiasSignal = signal<Map<string, { quadrant: number; until: number }>>(new Map());
     private aiUnitTimeNearBaseSignal = signal<Map<string, number>>(new Map());
@@ -78,7 +78,7 @@ export class GameEngineService {
     private aggressionModeSignal = signal<boolean>(false);
     private wallCooldownSignal = signal<Map<string, number>>(new Map());
     private aiQueuedUnitIdSignal = signal<string | null>(null);
-    private internalDifficultySignal = signal<'normal' | 'hard' | 'nightmare'>('normal');
+    private internalDifficultySignal = signal<'baby' | 'normal' | 'hard' | 'nightmare'>('normal');
     private aiMoodSignal = signal<'none' | 'angry' | 'rage'>('none');
     private rageCaptureCounterSignal = signal<number>(0);
     private anchoredGatherersSignal = signal<Set<string>>(new Set<string>());
@@ -127,7 +127,7 @@ export class GameEngineService {
     queuedUnitId(): string | null {
         return this.aiQueuedUnitIdSignal();
     }
-    internalDifficulty(): 'normal' | 'hard' | 'nightmare' {
+    internalDifficulty(): 'baby' | 'normal' | 'hard' | 'nightmare' {
         return this.internalDifficultySignal();
     }
     isAggressiveInternal(): boolean {
@@ -174,15 +174,15 @@ export class GameEngineService {
     }
     get wallThicknessPx(): number {
         const gs = this.gridSize;
-        if (gs <= 10) return 10;
-        if (gs <= 20) return 8;
-        return 6;
+        if (gs <= 10) return 8;
+        if (gs <= 20) return 6;
+        return 4;
     }
     get iconSizePx(): number {
         const gs = this.gridSize;
-        if (gs <= 10) return 12;
-        if (gs <= 20) return 10;
-        return 10;
+        if (gs <= 10) return 14;
+        if (gs <= 20) return 8;
+        return 6;
     }
     get tileUnitSizePx(): number {
         return Math.round(this.tileSizePx * 0.75);
@@ -196,11 +196,11 @@ export class GameEngineService {
 
     constructor(private combat: CombatService, private build: BuildService, private log: LogService, private settings: SettingsService, private map: MapService, private economy: EconomyService, private aiStrategy: AiStrategyService) {
         this.loadHighScores();
-        this.internalDifficultySignal.set(this.settings.difficulty());
         this.resetGame();
     }
 
     resetGame() {
+        this.internalDifficultySignal.set(this.settings.difficulty());
         this.unitsSignal.set([]);
         this.turnSignal.set(1);
         this.activeSideSignal.set('ai');
@@ -625,9 +625,9 @@ export class GameEngineService {
             }, 1000);
             const aiBase = this.getBasePosition('ai');
             this.queueCombatText('💥', aiBase);
-            this.recordHighScore('player wins');
+            this.recordHighScore('player wins', 'destroy');
         } else if (hp.player <= 0) {
-            this.gameStatusSignal.set('ai wins');
+            this.gameStatusSignal.set('jaerbi wins');
             this.screenShakeSignal.set(true);
             setTimeout(() => {
                 this.screenShakeSignal.set(false);
@@ -635,7 +635,7 @@ export class GameEngineService {
             }, 1000);
             const playerBase = this.getBasePosition('player');
             this.queueCombatText('💥', playerBase);
-            this.recordHighScore('ai wins');
+            this.recordHighScore('jaerbi wins', 'destroy');
         }
     }
 
@@ -693,7 +693,7 @@ export class GameEngineService {
             if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(url);
             }
-        } catch {}
+        } catch { }
     }
     getHighScoresForCurrentCombo(): { wins: { turns: number; date: number }[]; losses: { turns: number; date: number }[] } {
         const key = `${this.settings.difficulty()}|${this.settings.mapSize()}`;
@@ -782,15 +782,16 @@ export class GameEngineService {
         } catch { }
     }
     private persistHighScores() {
+        console.log('persistHighScores: ');
         if (typeof window === 'undefined') return;
         try {
             localStorage.setItem('highScores', JSON.stringify(this.highScoresSignal()));
         } catch { }
     }
-    private recordHighScore(result: 'player wins' | 'ai wins') {
+    private recordHighScore(result: 'player wins' | 'jaerbi wins', condition: 'monopoly' | 'destroy') {
         const key = `${this.settings.difficulty()}|${this.settings.mapSize()}`;
         const current = { ...this.highScoresSignal() };
-        const entry = { turns: this.turnSignal(), date: Date.now() };
+        const entry = { turns: this.turnSignal(), date: Date.now(), condition };
         const bucket = current[key] ?? { wins: [], losses: [] };
         if (result === 'player wins') {
             bucket.wins = [...bucket.wins, entry].sort((a, b) => a.turns - b.turns).slice(0, 3);
@@ -972,6 +973,7 @@ export class GameEngineService {
                     this.screenShakeSignal.set(false);
                     this.endOverlaySignal.set(true);
                 }, 1000);
+                this.recordHighScore('player wins', 'monopoly');
             }
         } else if (aiMajority) {
             const next = { ...this.forestMonopolySignal() };
@@ -979,13 +981,14 @@ export class GameEngineService {
             next.player = 0;
             this.forestMonopolySignal.set(next);
             if (next.ai >= 10) {
-                this.gameStatusSignal.set('ai wins');
+                this.gameStatusSignal.set('jaerbi wins');
                 this.screenShakeSignal.set(true);
                 this.endReasonSignal.set('ECONOMIC DOMINATION! Forest majority held for 10 turns.');
                 setTimeout(() => {
                     this.screenShakeSignal.set(false);
                     this.endOverlaySignal.set(true);
                 }, 1000);
+                this.recordHighScore('jaerbi wins', 'monopoly');
             }
         } else {
             this.forestMonopolySignal.set({ player: 0, ai: 0 });
@@ -1012,7 +1015,6 @@ export class GameEngineService {
             const playerForests = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
             const baseline = this.settings.difficulty();
             const current = this.internalDifficultySignal();
-            const aiPct = totalForests > 0 ? aiForests / totalForests : 0;
             const playerPct = totalForests > 0 ? playerForests / totalForests : 0;
             let mood: 'none' | 'angry' | 'rage' = 'none';
             if (playerForests <= aiForests) {
@@ -1026,17 +1028,18 @@ export class GameEngineService {
             if (mood === 'rage') {
                 this.internalDifficultySignal.set('nightmare');
             } else if (mood === 'angry') {
-                const escalated = current === 'normal' ? 'hard' : 'nightmare';
+                const escalated = current === 'normal' || current === 'baby' ? 'hard' : 'nightmare';
                 this.internalDifficultySignal.set(escalated);
             } else {
                 this.internalDifficultySignal.set(baseline);
             }
             const isEvenTurn = this.turnSignal() % 2 === 0;
             if (mood === 'rage') {
-                const reserveHelp = isEvenTurn ? 2 : 1;
+                const reserveHelp = baseline === 'baby' ? 0 : isEvenTurn ? 2 : 1;
                 this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + reserveHelp }));
             } else if (mood === 'angry' && isEvenTurn) {
-                this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + 1 }));
+                const reserveHelp = baseline === 'baby' ? 0 : 1;
+                this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + reserveHelp }));
             }
         } catch { }
         await new Promise(r => setTimeout(r, 100));
@@ -1124,40 +1127,40 @@ export class GameEngineService {
                 this.aiSpawnTier(2, 1, blocked);
             } else {
                 const playerUnits = this.unitsSignal().filter(u => u.owner === 'player');
-            const threatEnemies = playerUnits.filter(p => {
-                const nearBase = Math.max(Math.abs(p.position.x - aiBase.x), Math.abs(p.position.y - aiBase.y)) <= 3;
-                const nearForest = forestsAll.some(f => Math.max(Math.abs(p.position.x - f.x), Math.abs(p.position.y - f.y)) <= 3);
-                return nearBase || nearForest;
-            });
-            const antiHoarding = aiForestCount === 0 || aggression;
-            if (antiHoarding) {
-                const t4Cost = this.getPointsForTierLevel(4, 1);
-                const t3Cost = this.getPointsForTierLevel(3, 1);
-                if (reserves >= t4Cost) {
-                    this.aiSpawnTier(4, 1, blocked);
-                } else if (reserves >= t3Cost) {
-                    this.aiSpawnTier(3, 1, blocked);
-                }
-            } else if (threatEnemies.length > 0) {
-                const maxTier = Math.max(...threatEnemies.map(e => e.tier));
-                const desiredTier = Math.min(4, maxTier + 1);
-                const requiredCost = this.getPointsForTierLevel(desiredTier, 1);
-                while (this.aiWoodSignal() >= 20 && this.reservePointsSignal().ai < requiredCost) {
-                    this.aiConvertWoodToReserve();
-                }
-                if (this.reservePointsSignal().ai >= requiredCost) {
-                    this.aiSpawnTier(desiredTier, 1, blocked);
-                }
-            } else {
-                const t4Cost = this.getPointsForTierLevel(4, 1);
-                const t3Cost = this.getPointsForTierLevel(3, 1);
-                if (reserves >= t4Cost) {
-                    this.aiSpawnTier(4, 1, blocked);
-                } else if (reserves >= t3Cost) {
-                    this.aiSpawnTier(3, 1, blocked);
+                const threatEnemies = playerUnits.filter(p => {
+                    const nearBase = Math.max(Math.abs(p.position.x - aiBase.x), Math.abs(p.position.y - aiBase.y)) <= 3;
+                    const nearForest = forestsAll.some(f => Math.max(Math.abs(p.position.x - f.x), Math.abs(p.position.y - f.y)) <= 3);
+                    return nearBase || nearForest;
+                });
+                const antiHoarding = aiForestCount === 0 || aggression;
+                if (antiHoarding) {
+                    const t4Cost = this.getPointsForTierLevel(4, 1);
+                    const t3Cost = this.getPointsForTierLevel(3, 1);
+                    if (reserves >= t4Cost) {
+                        this.aiSpawnTier(4, 1, blocked);
+                    } else if (reserves >= t3Cost) {
+                        this.aiSpawnTier(3, 1, blocked);
+                    }
+                } else if (threatEnemies.length > 0) {
+                    const maxTier = Math.max(...threatEnemies.map(e => e.tier));
+                    const desiredTier = Math.min(4, maxTier + 1);
+                    const requiredCost = this.getPointsForTierLevel(desiredTier, 1);
+                    while (this.aiWoodSignal() >= 20 && this.reservePointsSignal().ai < requiredCost) {
+                        this.aiConvertWoodToReserve();
+                    }
+                    if (this.reservePointsSignal().ai >= requiredCost) {
+                        this.aiSpawnTier(desiredTier, 1, blocked);
+                    }
+                } else {
+                    const t4Cost = this.getPointsForTierLevel(4, 1);
+                    const t3Cost = this.getPointsForTierLevel(3, 1);
+                    if (reserves >= t4Cost) {
+                        this.aiSpawnTier(4, 1, blocked);
+                    } else if (reserves >= t3Cost) {
+                        this.aiSpawnTier(3, 1, blocked);
+                    }
                 }
             }
-        }
         }
         if (decision) {
             const movedSet = new Set(this.movedThisTurnSignal());

@@ -5,6 +5,12 @@
       <h2 class="text-sm text-gray-400">Turn-Based Strategy</h2>
     </div>
     <div class="flex items-center justify-center gap-[4px]">
+        <button
+          (click)="gameEngine.resetGame()"
+          class="flex items-center gap-1 px-2 py-2 rounded-full hover:bg-gray-700 text-sm cursor-pointer"
+        >
+         <span class="w-5 h-5 flex items-center justify-center rounded-full text-white text-lg">🔄</span>
+        </button>
       <button
         class="flex items-center gap-1 px-2 py-2 rounded-full hover:bg-gray-700 text-sm cursor-pointer"
         (click)="gameEngine.toggleRules()"
@@ -125,7 +131,7 @@
         <h2
           class="text-4xl font-bold mb-4"
           [class.text-blue-400]="gameEngine.gameStatus() === 'player wins'"
-          [class.text-red-500]="gameEngine.gameStatus() === 'ai wins'"
+          [class.text-red-500]="gameEngine.gameStatus() === 'jaerbi wins'"
         >
           {{ gameEngine.gameStatus() | titlecase }}!
         </h2>
@@ -142,7 +148,7 @@
     </div>
   }
   <button
-    class="fixed bottom-4 right-4 z-50 px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-500 text-white shadow-xl cursor-pointer flex items-center gap-2"
+    class="fixed bottom-4 right-4 z-50 px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-500 text-white shadow-xl cursor-pointer flex items-center gap-2 support-pulse"
     (click)="gameEngine.toggleSupport()"
     aria-label="Support the Project"
   >
@@ -398,7 +404,7 @@
                 @if (gameEngine.getWallBetween(x, y, x + 1, y); as vWall) {
                   @if (gameEngine.shouldRenderWall({ x: x, y: y }, { x: x + 1, y: y }, vWall.owner)) {
                     <div
-                      class="absolute right-0 top-0 h-full flex items-center justify-center"
+                      class="absolute rounded-xs right-0 top-0 h-full flex items-center justify-center"
                       [style.right.px]="-gameEngine.wallThicknessPx"
                       [style.width.px]="gameEngine.wallThicknessPx"
                       [style.height.%]="vWall.health"
@@ -411,7 +417,7 @@
                     >
                       @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x + 1, y: y })) {
                         <button
-                          class="rounded-full shadow-lg flex items-center justify-center text-white"
+                          class="cursor-pointer shadow-lg flex items-center justify-center text-white"
                           [style.width.px]="gameEngine.iconSizePx"
                           [style.height.px]="gameEngine.iconSizePx"
                           [style.z-index]="45"
@@ -431,7 +437,7 @@
                   }
                 } @else {
                   <div
-                    class="absolute right-0 top-0 h-full flex items-center justify-center"
+                    class="absolute rounded-xs right-0 top-0 h-full flex items-center justify-center"
                     [style.right.px]="-gameEngine.wallThicknessPx"
                     [style.width.px]="gameEngine.wallThicknessPx"
                     [style.height.%]="100"
@@ -446,7 +452,7 @@
                   >
                     @if (gameEngine.canShowBuildIcon({ x: x, y: y }, { x: x + 1, y: y })) {
                       <button
-                        class="bg-green-500 text-white rounded-full shadow-lg flex items-center justify-center"
+                        class="bg-green-500 cursor-pointer text-white rounded-full shadow-lg flex items-center justify-center"
                         [style.fontSize.px]="gameEngine.iconSizePx"
                         [style.width.px]="gameEngine.iconSizePx"
                         [style.height.px]="gameEngine.iconSizePx"
@@ -472,7 +478,7 @@
                 @if (gameEngine.getWallBetween(x, y, x, y + 1); as hWall) {
                   @if (gameEngine.shouldRenderWall({ x: x, y: y }, { x: x, y: y + 1 }, hWall.owner)) {
                     <div
-                      class="absolute left-0 bottom-0 w-full flex items-center justify-center"
+                      class="absolute rounded-xs left-0 bottom-0 w-full flex items-center justify-center"
                       [style.bottom.px]="-gameEngine.wallThicknessPx"
                       [style.height.px]="gameEngine.wallThicknessPx"
                       [style.width.%]="hWall.health"
@@ -485,7 +491,7 @@
                     >
                       @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
                         <button
-                          class="rounded-full shadow-lg flex items-center justify-center text-white"
+                          class="rounded-full cursor-pointer shadow-lg flex items-center justify-center text-white"
                           [style.width.px]="gameEngine.iconSizePx"
                           [style.height.px]="gameEngine.iconSizePx"
                           [style.z-index]="45"
@@ -505,7 +511,7 @@
                   }
                 } @else {
                   <div
-                    class="absolute left-0 bottom-0 w-full flex items-center justify-center"
+                    class="absolute rounded-xs left-0 bottom-0 w-full flex items-center justify-center"
                     [style.bottom.px]="-gameEngine.wallThicknessPx"
                     [style.height.px]="gameEngine.wallThicknessPx"
                     [style.width.%]="100"
@@ -520,7 +526,7 @@
                   >
                     @if (gameEngine.canShowBuildIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
                       <button
-                        class="bg-green-500 text-white rounded-full shadow-lg flex items-center justify-center"
+                        class="bg-green-500 cursor-pointer text-white rounded-full shadow-lg flex items-center justify-center"
                         [style.fontSize.px]="gameEngine.iconSizePx"
                         [style.width.px]="gameEngine.iconSizePx"
                         [style.height.px]="gameEngine.iconSizePx"
@@ -655,12 +661,38 @@
         }
       </div>
     </div>
+
+    <!-- Difficulty -->
+    <div class="mt-4 flex min-w-40 flex-col gap-[0] absolute top-0 right-[-186px]">
+      <span class="text-stone-300 font-bold text-2lg">Difficulty:</span>
+      <span
+        class="font-semibold text-lg capitalize"
+        [class.text-lime-300]="'baby' === settings.difficulty()"
+        [class.text-emerald-300]="'normal' === settings.difficulty()"
+        [class.text-orange-500]="'hard' === settings.difficulty()"
+        [class.text-red-500]="'nightmare' === settings.difficulty()"
+      >
+        {{ settings.difficulty() }}
+        <span>
+          {{
+            'baby' === settings.difficulty()
+              ? '👶'
+              : 'normal' === settings.difficulty()
+                ? '🤠'
+                : 'hard' === settings.difficulty()
+                  ? '😈'
+                  : '☠️'
+          }}
+        </span>
+      </span>
+    </div>
+    <!-- Difficulty END -->
     <!-- Actions -->
     <div class="mt-4 flex flex-col items-center gap-3 absolute top-0 left-[-170px]">
       <div class="flex gap-3 flex-col">
         <button
           (click)="gameEngine.toggleBuildMode()"
-          class="px-4 py-2 rounded-xl text-sm cursor-pointer bg-gradient-to-b from-blue-600 to-blue-800 text-white shadow-inner hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0.5 transition transform flex items-center gap-1"
+          class="px-4 py-2 rounded-xl text-sm cursor-pointer bg-gradient-to-b from-blue-500 to-blue-700 text-white shadow-inner hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0.5 transition transform flex items-center gap-1"
           [class.opacity-50]="gameEngine.wallBuiltThisTurn() || !gameEngine.canBuildThisTurn()"
           [disabled]="gameEngine.wallBuiltThisTurn() || !gameEngine.canBuildThisTurn()"
         >
@@ -701,7 +733,7 @@
         </button>
         <button
           (click)="gameEngine.convertWoodToReserve()"
-          class="px-4 py-2 rounded-xl text-sm cursor-pointer bg-gradient-to-b from-blue-600 to-blue-800 text-white shadow-inner hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0.5 transition transform flex items-center gap-2"
+          class="px-4 py-2 rounded-xl text-sm cursor-pointer bg-gradient-to-b from-blue-500 to-blue-700 text-white shadow-inner hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0.5 transition transform flex items-center gap-2"
         >
           <span class="inline-flex items-center gap-[4px]">
             <span>
@@ -720,7 +752,7 @@
         </button>
         <button
           (click)="gameEngine.maxConvertWoodToReserve()"
-          class="px-4 py-2 rounded-xl text-sm cursor-pointer bg-gradient-to-b from-blue-600 to-blue-800 text-white shadow-inner hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0.5 transition transform flex items-center gap-2"
+          class="px-4 py-2 rounded-xl text-sm cursor-pointer bg-gradient-to-b from-blue-500 to-blue-700 text-white shadow-inner hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0.5 transition transform flex items-center gap-2"
         >
           <span>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -787,7 +819,15 @@
       <h3 class="text-lg font-bold mb-2">Settings</h3>
       <div class="mb-3">
         <label class="text-sm mb-1 block">Difficulty</label>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
+          <button
+            class="px-3 py-1 rounded text-sm cursor-pointer"
+            [class.bg-blue-600]="settings.difficulty() === 'baby'"
+            [class.bg-gray-700]="settings.difficulty() !== 'baby'"
+            (click)="settings.setDifficulty('baby')"
+          >
+            Baby
+          </button>
           <button
             class="px-3 py-1 rounded text-sm cursor-pointer"
             [class.bg-blue-600]="settings.difficulty() === 'normal'"
