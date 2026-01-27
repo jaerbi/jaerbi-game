@@ -29,7 +29,7 @@ import { SettingsService } from '../../services/settings.service';
               <div>
                 <div class="text-sm font-semibold mb-2">Successful Attack</div>
                 <div class="combat-stage">
-                  <div class="attacker triangle">2</div>
+                  <div class="attacker triangle">1</div>
                   <div class="defender circle hit-flash defender-fade">1</div>
                 </div>
                 <div class="text-[11px] text-gray-400 mt-2">Attacker tier ≥ defender; defender downgraded or destroyed.</div>
@@ -37,8 +37,8 @@ import { SettingsService } from '../../services/settings.service';
               <div>
                 <div class="text-sm font-semibold mb-2">Critical Hit</div>
                 <div class="combat-stage">
-                  <div class="attacker triangle">2</div>
-                  <div class="defender circle hit-flash defender-fade">1</div>
+                  <div class="attacker triangle">4</div>
+                  <div class="defender square hit-flash defender-fade">1</div>
                   <span class="crit-pop">CRIT!</span>
                 </div>
                 <div class="text-[11px] text-gray-400 mt-2">Chance-based bonus (tier-scaled)</div>

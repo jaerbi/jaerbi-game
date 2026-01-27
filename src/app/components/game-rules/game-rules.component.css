@@ -83,7 +83,7 @@
 .combat-stage {
   position: relative;
   width: 192px;
-  height: 112px;
+  height: 100px;
   background: rgba(17, 24, 39, 0.6);
   border: 1px solid #374151;
   border-radius: 8px;
@@ -98,13 +98,20 @@
   justify-content: center;
   font-weight: 700;
 }
+.square {
+    aspect-ratio: 1 / 1;
+    right: 12px;
+    top: 36px;
+    background: #3b82f6;
+    color: white;
+}
 .triangle {
   background: #ef4444;
   color: white;
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
   left: 12px;
   top: 36px;
-  animation: attackMove 1200ms ease-in-out infinite alternate;
+  animation: attackMove 900ms ease-in-out infinite alternate;
 }
 .circle {
   background: #3b82f6;
@@ -117,7 +124,7 @@
   0% { transform: translateX(0); }
   100% { transform: translateX(100px); }
 }
-.defender-fade { animation: defenderFade 1600ms ease-in-out infinite; }
+.defender-fade { animation: defenderFade 1800ms ease-in-out infinite; }
 @keyframes defenderFade {
   0% { opacity: 1; }
   60% { opacity: 1; }
@@ -125,12 +132,12 @@
 }
 .crit-pop {
   position: absolute;
-  right: 8px;
-  top: 8px;
+  right: 16px;
+  top: 16px;
   font-size: 12px;
   font-weight: 800;
   color: #fde047;
-  animation: critFloat 1200ms ease-in-out infinite;
+  animation: critFloat 1800ms ease-in-out infinite;
 }
 @keyframes critFloat {
   0% { transform: translateY(0); opacity: 0; }
@@ -139,12 +146,12 @@
 }
 .miss-pop {
   position: absolute;
-  left: 8px;
-  top: 8px;
+  right: 20px;
+  top: 16px;
   font-size: 12px;
   font-weight: 800;
   color: #93c5fd;
-  animation: missFloat 1200ms ease-in-out infinite;
+  animation: missFloat 1800ms ease-in-out infinite;
 }
 @keyframes missFloat {
   0% { transform: translateY(0); opacity: 0; }
