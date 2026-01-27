@@ -721,6 +721,17 @@ export class GameEngineService {
     monopolyCounter() {
         return this.forestMonopolySignal();
     }
+    monopolyTurnsLeft(): number {
+        const total = this.forestsSignal().length;
+        if (total === 0) return 0;
+        const playerHeld = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
+        const aiHeld = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
+        const playerMajority = playerHeld / total > 0.5;
+        const aiMajority = aiHeld / total > 0.5;
+        if (playerMajority) return Math.max(0, 10 - this.forestMonopolySignal().player);
+        if (aiMajority) return Math.max(0, 10 - this.forestMonopolySignal().ai);
+        return 0;
+    }
     private getLuckDeltaForTier(tier: number): number {
         const values: Record<number, number> = { 1: 1, 2: 2, 3: 4, 4: 8 };
         return values[tier] ?? 0;
@@ -946,31 +957,31 @@ export class GameEngineService {
         }
         const playerHeld = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
         const aiHeld = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
-        if (playerHeld === total) {
+        const playerMajority = playerHeld / total > 0.5;
+        const aiMajority = aiHeld / total > 0.5;
+        if (playerMajority) {
             const next = { ...this.forestMonopolySignal() };
             next.player = next.player + 1;
             next.ai = 0;
             this.forestMonopolySignal.set(next);
-            // removed non-combat log
             if (next.player >= 10) {
                 this.gameStatusSignal.set('player wins');
                 this.screenShakeSignal.set(true);
-                this.endReasonSignal.set('ECONOMIC DOMINATION! All forests held for 10 turns.');
+                this.endReasonSignal.set('ECONOMIC DOMINATION! Forest majority held for 10 turns.');
                 setTimeout(() => {
                     this.screenShakeSignal.set(false);
                     this.endOverlaySignal.set(true);
                 }, 1000);
             }
-        } else if (aiHeld === total) {
+        } else if (aiMajority) {
             const next = { ...this.forestMonopolySignal() };
             next.ai = next.ai + 1;
             next.player = 0;
             this.forestMonopolySignal.set(next);
-            // removed non-combat log
             if (next.ai >= 10) {
                 this.gameStatusSignal.set('ai wins');
                 this.screenShakeSignal.set(true);
-                this.endReasonSignal.set('ECONOMIC DOMINATION! All forests held for 10 turns.');
+                this.endReasonSignal.set('ECONOMIC DOMINATION! Forest majority held for 10 turns.');
                 setTimeout(() => {
                     this.screenShakeSignal.set(false);
                     this.endOverlaySignal.set(true);

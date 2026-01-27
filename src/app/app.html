@@ -70,6 +70,11 @@
     <div class="text-sm inline-flex gap-[8px]">
       <span class="text-gray-300">Turn:</span>
       <span class="font-bold text-yellow-400">{{ gameEngine.turn() }}</span>
+      @if (gameEngine.monopolyTurnsLeft() > 0) {
+        <span class="ml-2 px-2 py-0.5 rounded bg-emerald-800/40 border border-emerald-600/50 text-emerald-300" [class.victory-pulse]="gameEngine.monopolyTurnsLeft() <= 3">
+          Forest Victory in: {{ gameEngine.monopolyTurnsLeft() }} turns
+        </span>
+      }
       @if (gameEngine.gameStatus() !== 'playing') {
         <span class="ml-2 text-xs font-bold text-red-400">{{ gameEngine.gameStatus() | titlecase }}</span>
       }
