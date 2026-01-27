@@ -726,8 +726,8 @@ export class GameEngineService {
         if (total === 0) return 0;
         const playerHeld = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
         const aiHeld = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
-        const playerMajority = playerHeld / total > 0.5;
-        const aiMajority = aiHeld / total > 0.5;
+        const playerMajority = playerHeld / total === 1;
+        const aiMajority = aiHeld / total === 1;
         if (playerMajority) return Math.max(0, 10 - this.forestMonopolySignal().player);
         if (aiMajority) return Math.max(0, 10 - this.forestMonopolySignal().ai);
         return 0;
@@ -957,8 +957,8 @@ export class GameEngineService {
         }
         const playerHeld = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
         const aiHeld = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
-        const playerMajority = playerHeld / total > 0.5;
-        const aiMajority = aiHeld / total > 0.5;
+        const playerMajority = playerHeld / total === 1;
+        const aiMajority = aiHeld / total === 1;
         if (playerMajority) {
             const next = { ...this.forestMonopolySignal() };
             next.player = next.player + 1;
@@ -1115,7 +1115,15 @@ export class GameEngineService {
         if (shouldSpawnT1) {
             this.aiSpawnTier(1, 1, blocked);
         } else {
-            const playerUnits = this.unitsSignal().filter(u => u.owner === 'player');
+            // Desperation Spawn: Force T2 if low on units but can afford T2 (Economy Override)
+            const t2Cost = this.getPointsForTierLevel(2, 1);
+            const t3Cost = this.getPointsForTierLevel(3, 1);
+            const reservesNow = this.reservePointsSignal().ai;
+            if (aiUnitsList.length < 3 && reservesNow >= t2Cost && reservesNow < t3Cost) {
+                console.log('[AI Spawn] Desperation: Force spawning T2 (Low Unit Count Override).');
+                this.aiSpawnTier(2, 1, blocked);
+            } else {
+                const playerUnits = this.unitsSignal().filter(u => u.owner === 'player');
             const threatEnemies = playerUnits.filter(p => {
                 const nearBase = Math.max(Math.abs(p.position.x - aiBase.x), Math.abs(p.position.y - aiBase.y)) <= 3;
                 const nearForest = forestsAll.some(f => Math.max(Math.abs(p.position.x - f.x), Math.abs(p.position.y - f.y)) <= 3);
@@ -1149,6 +1157,7 @@ export class GameEngineService {
                     this.aiSpawnTier(3, 1, blocked);
                 }
             }
+        }
         }
         if (decision) {
             const movedSet = new Set(this.movedThisTurnSignal());

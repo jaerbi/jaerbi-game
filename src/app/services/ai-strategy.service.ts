@@ -374,6 +374,58 @@ export class AiStrategyService {
           }
         }
       }
+      // Wall Breaker: Path to Goal blocked
+      if (goal) {
+        const dx = goal.x - unit.position.x;
+        const dy = goal.y - unit.position.y;
+        
+        // 1. Cardinal Obstruction
+        if ((dx !== 0 && dy === 0) || (dx === 0 && dy !== 0)) {
+           const stepX = Math.sign(dx);
+           const stepY = Math.sign(dy);
+           const nTile = { x: unit.position.x + stepX, y: unit.position.y + stepY };
+           if (engine.inBounds(nTile.x, nTile.y)) {
+               const w = engine.getWallBetween(unit.position.x, unit.position.y, nTile.x, nTile.y);
+               if (w) {
+                   const score = 1500000 + aggressiveBonus;
+                   const reason = 'Wall Breaker: Unblock Path';
+                   if (best === null || score > best.score) {
+                        best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: { from: { ...unit.position }, to: nTile } };
+                   }
+               }
+           }
+        }
+
+        // 2. Diagonal Obstruction
+        if (Math.abs(dx) >= 1 && Math.abs(dy) >= 1) {
+             const stepX = Math.sign(dx);
+             const stepY = Math.sign(dy);
+             const diagTile = { x: unit.position.x + stepX, y: unit.position.y + stepY };
+             
+             if (engine.inBounds(diagTile.x, diagTile.y)) {
+                 const blocked = this.combat.isDiagonalBlocked(unit.position, diagTile, (x1, y1, x2, y2) => engine.getWallBetween(x1, y1, x2, y2));
+                 
+                 if (blocked) {
+                     const n1 = { x: unit.position.x + stepX, y: unit.position.y };
+                     const n2 = { x: unit.position.x, y: unit.position.y + stepY };
+                     const w1 = engine.getWallBetween(unit.position.x, unit.position.y, n1.x, n1.y);
+                     const w2 = engine.getWallBetween(unit.position.x, unit.position.y, n2.x, n2.y);
+                     
+                     let targetEdge = null;
+                     if (w1) targetEdge = { from: { ...unit.position }, to: n1 };
+                     else if (w2) targetEdge = { from: { ...unit.position }, to: n2 };
+                     
+                     if (targetEdge) {
+                         const score = 1500000 + aggressiveBonus;
+                         const reason = 'Wall Breaker: Unblock Diagonal Path';
+                         if (best === null || score > best.score) {
+                              best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: targetEdge };
+                         }
+                     }
+                 }
+             }
+        }
+      }
       // Anti-stagnation: break out from neutral walls near base or with no clear forest path
       const noClearForestPath = visibleFree.length === 0 && fogForests.length === 0 && !breachTarget;
       if (stagnantTurns >= 2 && noClearForestPath) {
