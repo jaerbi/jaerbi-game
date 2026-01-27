@@ -11,12 +11,12 @@
 .merge-loop .unit {
   position: absolute;
   top: 20px;
-  width: 36px;
-  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9999px;
+  width: 40px;
+  height: 40px;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
   font-weight: 700;
 }
 .merge-loop .u1 {
@@ -43,7 +43,7 @@
 }
 .merge-loop .result {
   position: absolute;
-  left: 50%;
+  left: 36%;
   top: 18px;
   transform: translateX(-50%);
   width: 42px;
@@ -211,12 +211,20 @@
   color: white;
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
 }
-.t1-path { animation: t1Path 1600ms ease-in-out infinite alternate; }
+.t1-path {
+    left: 0;
+    top: 0;
+    animation: t1Path 1600ms ease-in-out infinite alternate; 
+}
 @keyframes t1Path {
   0% { transform: translate(calc(var(--start-x) * var(--step) + var(--center-offset)), calc(var(--start-y) * var(--step) + var(--center-offset))); }
   100% { transform: translate(calc((var(--start-x) + 1) * var(--step) + var(--center-offset)), calc(var(--start-y) * var(--step) + var(--center-offset))); }
 }
-.t3-path { animation: t3Path 2200ms ease-in-out infinite; }
+.t3-path {
+    left: -2px;
+    top: 0;
+    animation: t3Path 3200ms ease-in-out infinite;
+}
 @keyframes t3Path {
   0% { transform: translate(calc(var(--start-x) * var(--step) + var(--center-offset)), calc(var(--start-y) * var(--step) + var(--center-offset))); }
   33% { transform: translate(calc((var(--start-x) + 1) * var(--step) + var(--center-offset)), calc(var(--start-y) * var(--step) + var(--center-offset))); }
