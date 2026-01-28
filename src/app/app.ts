@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild } from '@angular/core';
+import { Component, ElementRef, ViewChild, isDevMode } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GameRulesComponent } from './components/game-rules/game-rules.component';
 import { GameEngineService } from './services/game-engine.service';
@@ -16,6 +16,10 @@ import { LeaderboardModalComponent } from './components/leaderboard-modal/leader
 export class App {
   @ViewChild('boardContainer') boardContainer?: ElementRef<HTMLDivElement>;
   constructor(public gameEngine: GameEngineService, public settings: SettingsService) {}
+
+  get isProduction() {
+    return !isDevMode();
+  }
   
   ngAfterViewInit() {
     setTimeout(() => {

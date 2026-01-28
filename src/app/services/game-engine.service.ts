@@ -207,6 +207,7 @@ export class GameEngineService {
     resetGame() {
         this.internalDifficultySignal.set(this.settings.difficulty());
         this.unitsSignal.set([]);
+        this.wallCooldownSignal.set(new Map());
         this.turnSignal.set(1);
         this.activeSideSignal.set('ai');
         this.selectedUnitIdSignal.set(null);
@@ -822,12 +823,38 @@ export class GameEngineService {
         } catch { }
     }
     private persistHighScores() {
-        console.log('persistHighScores: ');
         if (typeof window === 'undefined') return;
         try {
             localStorage.setItem('highScores', JSON.stringify(this.highScoresSignal()));
         } catch { }
     }
+    debugInstantWin() {
+        this.turnSignal.set(Math.floor(Math.random() * 10) + 5);
+        this.gameStatusSignal.set('player wins');
+        this.recordHighScore('player wins', 'destroy');
+    }
+
+    debugCycleSettings() {
+        const diffs: Difficulty[] = ['baby', 'normal', 'hard', 'nightmare'];
+        const sizes: MapSize[] = [10, 20, 30];
+
+        let dIdx = diffs.indexOf(this.settings.difficulty());
+        let sIdx = sizes.indexOf(this.settings.mapSize() as MapSize);
+
+        dIdx++;
+        if (dIdx >= diffs.length) {
+            dIdx = 0;
+            sIdx++;
+            if (sIdx >= sizes.length) {
+                sIdx = 0;
+            }
+        }
+
+        this.settings.setDifficulty(diffs[dIdx]);
+        this.settings.setMapSize(sizes[sIdx]);
+        this.resetGame();
+    }
+
     private recordHighScore(result: 'player wins' | 'jaerbi wins', condition: 'monopoly' | 'destroy') {
         const key = `${this.settings.difficulty()}|${this.settings.mapSize()}`;
         const current = { ...this.highScoresSignal() };

@@ -5,12 +5,12 @@
       <h2 class="text-sm text-gray-400">Turn-Based Strategy</h2>
     </div>
     <div class="flex items-center justify-center gap-[4px]">
-        <button
-          (click)="gameEngine.resetGame()"
-          class="flex items-center gap-1 px-2 py-2 rounded-full hover:bg-gray-700 text-sm cursor-pointer"
-        >
-         <span class="w-5 h-5 flex items-center justify-center rounded-full text-white text-lg">🔄</span>
-        </button>
+      <button
+        (click)="gameEngine.resetGame()"
+        class="flex items-center gap-1 px-2 py-2 rounded-full hover:bg-gray-700 text-sm cursor-pointer"
+      >
+        <span class="w-5 h-5 flex items-center justify-center rounded-full text-white text-lg">🔄</span>
+      </button>
       <button
         class="flex items-center gap-1 px-2 py-2 rounded-full hover:bg-gray-700 text-sm cursor-pointer"
         (click)="gameEngine.toggleRules()"
@@ -170,12 +170,12 @@
           Play Again
         </button>
       </div>
-        <button
-          (click)="gameEngine.toggleLeaderboard()"
-          class="ml-3 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded text-white font-bold text-lg cursor-pointer"
-        >
-          View Leaderboard
-        </button>
+      <button
+        (click)="gameEngine.toggleLeaderboard()"
+        class="ml-3 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded text-white font-bold text-lg cursor-pointer"
+      >
+        View Leaderboard
+      </button>
     </div>
   }
   <button
@@ -961,6 +961,31 @@
           </div>
         </div>
         <div class="mt-4 text-xs text-gray-400">Change Difficulty or Map Size in Settings to view other boards.</div>
+      </div>
+    </div>
+  }
+
+  @if (!isProduction) {
+    <div
+      class="fixed bottom-10 left-4 z-[9999] flex flex-col gap-2 bg-black/80 p-2 rounded border border-red-500 shadow-lg backdrop-blur-sm"
+    >
+      <div class="text-red-500 font-bold text-xs uppercase text-center mb-1 border-b border-red-900/50 pb-1">
+        Debug Mode
+      </div>
+      <button
+        (click)="gameEngine.debugInstantWin()"
+        class="bg-red-900/40 hover:bg-red-800/60 text-red-100 text-xs px-3 py-1.5 rounded border border-red-800 transition-colors cursor-pointer"
+      >
+        ⚡ Instant Win
+      </button>
+      <button
+        (click)="gameEngine.debugCycleSettings()"
+        class="bg-blue-900/40 hover:bg-blue-800/60 text-blue-100 text-xs px-3 py-1.5 rounded border border-blue-800 transition-colors cursor-pointer"
+      >
+        🔄 Cycle Settings
+      </button>
+      <div class="text-[10px] text-gray-400 text-center font-mono mt-1">
+        {{ settings.difficultyLabel() }} | {{ settings.mapSizeLabel() }}
       </div>
     </div>
   }
