@@ -1,4 +1,14 @@
 <div class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-start p-4">
+  <!-- SVG Defs for Soft Shapes -->
+  <svg width="0" height="0" class="absolute pointer-events-none">
+    <defs>
+      <clipPath id="soft-triangle" clipPathUnits="objectBoundingBox">
+        <path
+          d="M0.5 0.05 Q0.5 0 0.56 0.12 L0.92 0.85 Q0.98 0.98 0.85 0.98 L0.15 0.98 Q0.02 0.98 0.08 0.85 L0.44 0.12 Q0.5 0 0.5 0.05"
+        />
+      </clipPath>
+    </defs>
+  </svg>
   <div class="flex gap-[6px] items-baseline fixed top-4 left-4">
     <h1 class="text-3xl font-bold">Shape Tactics</h1>
     <h2 class="text-sm text-gray-400">Turn-Based Strategy</h2>
@@ -388,7 +398,7 @@
               [class.ring-blue-300]="x === 0 && y === 0 && gameEngine.baseDeployActive()"
               [class.ring-red-300]="x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1"
               [class.spawn-zone-highlight]="gameEngine.baseDeployActive() && x <= 2 && y <= 2 && (x !== 0 || y !== 0)"
-              [style.backgroundColor]="gameEngine.isForest(x, y) ? '#795548' : null"
+              [class.wall-obsidian]="gameEngine.isForest(x, y)"
               [class.bg-amber-900]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
               [class.border-amber-500]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
               [class.bg-gray-950]="!gameEngine.isVisibleToPlayer(x, y)"
@@ -430,7 +440,7 @@
                   class="absolute inset-0 bg-red-800/20 border-2 border-red-500/40 border-dashed pointer-events-none"
                 ></div>
               }
-              @if (gameEngine.isForest(x, y) && gameEngine.isVisibleToPlayer(x, y)) {
+              <!-- @if (gameEngine.isForest(x, y) && gameEngine.isVisibleToPlayer(x, y)) {
                 <span
                   class="absolute text-[10px] text-amber-300 font-bold pointer-events-none"
                   [style.left.px]="1"
@@ -438,7 +448,7 @@
                 >
                   W
                 </span>
-              }
+              } -->
               @if (gameEngine.isForest(x, y) && gameEngine.getUnitAt(x, y) && gameEngine.isVisibleToPlayer(x, y)) {
                 <div
                   class="absolute top-0 left-0 right-0 bg-green-400/70 pointer-events-none"
@@ -626,6 +636,8 @@
                     <div
                       class="pointer-events-none"
                       [style.transition]="'transform 150ms ease-out'"
+                      [class.unit-container-player-unit-tier-2]="unit.owner === 'player' && unit.tier === 2"
+                      [class.unit-container-ai-unit-tier-2]="unit.owner === 'ai' && unit.tier === 2"
                       [style.transform]="
                         gameEngine.getNudgeFor(unit.id)
                           ? 'translate(' +
@@ -637,24 +649,24 @@
                       "
                       [class.shake]="gameEngine.isUnitShaking(unit.id)"
                     >
+                      <!-- [style.clip-path]="unit.tier === 2 ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : ''" -->
+                      <!-- [style.padding-top]="unit.tier === 2 ? '0.25rem' : ''" -->
+                      <!-- [class.border-blue-300]="unit.owner === 'player' && unit.tier !== 2" -->
+                      <!-- [class.border-red-300]="unit.owner === 'ai' && unit.tier !== 2" -->
                       <div
-                        class="flex items-center justify-center font-bold transition-all duration-300 shadow-lg"
+                        class="flex items-center justify-center font-bold unit-base unit-base"
                         [style.width.px]="gameEngine.tileUnitSizePx"
                         [style.height.px]="gameEngine.tileUnitSizePx"
                         [style.aspectRatio]="'1 / 1'"
                         [attr.title]="gameEngine.formatHoverInfo(unit.id)"
-                        [class.bg-blue-500]="unit.owner === 'player'"
-                        [class.bg-red-500]="unit.owner === 'ai'"
+                        [class.unit-player]="unit.owner === 'player'"
+                        [class.unit-ai]="unit.owner === 'ai'"
                         [class.text-white]="true"
-                        [class.rounded-full]="unit.tier === 1"
-                        [class.border-2]="unit.tier !== 2"
-                        [class.border-blue-300]="unit.owner === 'player' && unit.tier !== 2"
-                        [class.border-red-300]="unit.owner === 'ai' && unit.tier !== 2"
-                        [class.rounded-none]="unit.tier === 3"
-                        [class.rotate-45]="unit.tier === 4"
+                        [class.unit-tier-1]="unit.tier === 1"
+                        [class.unit-tier-2]="unit.tier === 2"
+                        [class.unit-tier-3]="unit.tier === 3"
+                        [class.unit-tier-4]="unit.tier === 4"
                         [class.scale-75]="unit.tier === 4"
-                        [style.clip-path]="unit.tier === 2 ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : ''"
-                        [style.padding-top]="unit.tier === 2 ? '0.25rem' : ''"
                         [class.ring-4]="gameEngine.selectedUnitId() === unit.id"
                         [class.ring-yellow-400]="gameEngine.selectedUnitId() === unit.id"
                         [class.ring-offset-2]="gameEngine.selectedUnitId() === unit.id"

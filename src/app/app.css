@@ -141,3 +141,105 @@
   50% { transform: scale(1.03); filter: brightness(1.15); }
   100% { transform: scale(1); filter: brightness(1); }
 }
+
+/* --- Premium Unit Styles --- */
+.unit-container-player-unit-tier-2 {
+  display: flex;
+  align-items: center;
+  filter: drop-shadow(0 0 10px rgba(166, 197, 247, 0.5));
+}
+.unit-container-ai-unit-tier-2 {
+  display: flex;
+  align-items: center;
+  filter: drop-shadow(0 0 10px rgba(222, 175, 175, 0.5));
+}
+.unit-base {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.6);
+}
+
+.unit-base:hover {
+  transform: scale(1.1);
+  filter: brightness(1.2) contrast(1.1);
+  z-index: 50;
+}
+
+.unit-player {
+  background: radial-gradient(circle at 30% 30%, #60a5fa, #1e40af);
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.7));
+}
+
+.unit-player:hover {
+  filter: drop-shadow(0 0 10px rgba(59, 130, 246, 1)) brightness(1.2);
+}
+
+.unit-ai {
+  background: radial-gradient(circle at 30% 30%, #f87171, #991b1b);
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.7));
+}
+
+.unit-ai:hover {
+  filter: drop-shadow(0 0 10px rgba(239, 68, 68, 1)) brightness(1.2);
+}
+
+/* Shapes */
+
+.unit-tier-1 {
+  border-radius: 9999px;
+}
+
+/* Tier 2: Soft Triangle */
+/* We use clip-path with a path for rounded corners */
+.unit-tier-2 {
+  clip-path: url(#soft-triangle);
+  position: relative;
+  overflow: hidden;
+}
+
+.unit-tier-2::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* Біле напівпрозоре сяйво зверху для імітації обідка (rim light) */
+  background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Додаємо темнішу основу знизу для глибини */
+.unit-tier-2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 20%;
+  background: linear-gradient(to top, rgba(0,0,0,0.2), transparent);
+  pointer-events: none;
+}
+
+/* Tier 3: Soft Square */
+.unit-tier-3 {
+  border-radius: 20%; /* Soft corners */
+}
+
+/* Tier 4: Soft Diamond */
+.unit-tier-4 {
+  border-radius: 20%;
+  transform: rotate(45deg) scale(0.85); /* Rotate and scale down to fit */
+}
+
+/* --- Wall Styles Not use Now --- */
+.wall-obsidian {
+  /* Semi-transparent dark background with gradient */
+  background: linear-gradient(135deg, rgba(40, 40, 50, 0.8), rgba(10, 10, 15, 0.9)) !important;
+  /* Subtle white border */
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* Backdrop blur for glass/obsidian feel */
+  backdrop-filter: blur(2px);
+  /* Remove old background colors if present via specific overrides */
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
