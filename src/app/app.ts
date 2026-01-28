@@ -1,14 +1,14 @@
-import { Component, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GameRulesComponent } from './components/game-rules/game-rules.component';
 import { GameEngineService } from './services/game-engine.service';
 import { SettingsService } from './services/settings.service';
-import { Unit } from './models/unit.model';
+import { SupportCommunityComponent } from './components/support-community/support-community.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, GameRulesComponent],
+  imports: [CommonModule, GameRulesComponent, SupportCommunityComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

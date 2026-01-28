@@ -94,12 +94,34 @@
   justify-content: center;
   font-weight: 700;
   opacity: 0;
-  animation: resultAppear 1600ms ease-in-out infinite alternate;
+  animation: resultAppear 1600ms ease-in-out infinite alternate, tremble 180ms ease-in-out 700ms infinite;
 }
 @keyframes resultAppear {
   0% { opacity: 0; transform: translateX(-50%) scale(0.8); }
   50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
   100% { opacity: 0; transform: translateX(-50%) scale(0.8); }
+}
+.support-pulse {
+    animation: supportGlowCycle 10s infinite;
+}
+
+@keyframes supportGlowCycle {
+    0%, 80% {
+      box-shadow: 0 4px 15px rgba(219, 39, 119, 0.4);
+    }
+    83% {
+      box-shadow: 0 0 0 10px rgba(219, 39, 119, 0.8);
+    }
+    97% {
+      box-shadow: 0 0 0 25px rgba(219, 39, 119, 0);
+    }
+    100% {
+      box-shadow: 0 4px 15px rgba(219, 39, 119, 0.4);
+    }
+}
+
+.mood-none {
+  box-shadow: 0 0 0 1px rgba(77, 255, 202, 0.9), 0 0 28px rgba(77, 255, 202, 0.5);
 }
 
 .mood-angry {
@@ -110,3 +132,12 @@
   box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.9), 0 0 28px rgba(239, 68, 68, 0.5);
 }
 
+/* Victory counter pulse when nearing completion */
+.victory-pulse {
+  animation: victoryPulse 1.2s ease-in-out infinite;
+}
+@keyframes victoryPulse {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.03); filter: brightness(1.15); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
