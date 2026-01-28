@@ -183,13 +183,9 @@
 }
 
 /* Shapes */
-
 .unit-tier-1 {
   border-radius: 9999px;
 }
-
-/* Tier 2: Soft Triangle */
-/* We use clip-path with a path for rounded corners */
 .unit-tier-2 {
   clip-path: url(#soft-triangle);
   position: relative;
@@ -203,12 +199,9 @@
   left: 0;
   width: 100%;
   height: 100%;
-  /* Біле напівпрозоре сяйво зверху для імітації обідка (rim light) */
   background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, transparent 50%);
   pointer-events: none;
 }
-
-/* Додаємо темнішу основу знизу для глибини */
 .unit-tier-2::after {
   content: '';
   position: absolute;
@@ -222,24 +215,95 @@
 
 /* Tier 3: Soft Square */
 .unit-tier-3 {
-  border-radius: 20%; /* Soft corners */
+  border-radius: 20%;
 }
 
-/* Tier 4: Soft Diamond */
 .unit-tier-4 {
   border-radius: 20%;
-  transform: rotate(45deg) scale(0.85); /* Rotate and scale down to fit */
+  transform: rotate(45deg) scale(0.85);
 }
 
 /* --- Wall Styles Not use Now --- */
 .wall-obsidian {
-  /* Semi-transparent dark background with gradient */
   background: linear-gradient(135deg, rgba(40, 40, 50, 0.8), rgba(10, 10, 15, 0.9)) !important;
-  /* Subtle white border */
   border: 1px solid rgba(255, 255, 255, 0.15);
-  /* Backdrop blur for glass/obsidian feel */
   backdrop-filter: blur(2px);
-  /* Remove old background colors if present via specific overrides */
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+/* --- Floating Giants Background --- */
+.floating-shape {
+  position: absolute;
+  opacity: 0.3;
+  filter: blur(60px);
+  z-index: -1;
+}
+
+.shape-giant-1 {
+  top: 10%;
+  left: 10%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #3b82f6, transparent); /* Blue-ish */
+  clip-path: url(#soft-triangle);
+  animation: floatGiant1 35s infinite alternate ease-in-out;
+}
+
+.shape-giant-2 {
+  bottom: 20%;
+  right: 15%;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ef4444, transparent); /* Red-ish */
+  animation: floatGiant2 36s infinite alternate-reverse ease-in-out;
+}
+
+.shape-giant-3 {
+  top: 40%;
+  left: 70%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, #a855f7, transparent); /* Purple-ish */
+  clip-path: url(#soft-triangle);
+  animation: floatGiant3 45s infinite alternate ease-in-out;
+  animation-delay: -10s;
+}
+
+.shape-giant-4 {
+  bottom: 10%;
+  left: 20%;
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #10b981, transparent); /* Green-ish */
+  animation: floatGiant2 38s infinite alternate ease-in-out;
+  animation-delay: -5s;
+}
+
+.shape-giant-5 {
+  bottom: 5%;
+  left: 43%;
+  width: 340px;
+  height: 340px;
+  clip-path: url(#soft-triangle);
+  background: radial-gradient(circle, #ece80d, transparent); /* yellow-ish */
+  animation: floatGiant2 41s infinite alternate ease-in-out;
+  animation-delay: -3s;
+}
+
+@keyframes floatGiant1 {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  100% { transform: translate(150px, 80px) rotate(15deg) scale(1.1); }
+}
+
+@keyframes floatGiant2 {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(-100px, -50px) scale(1.2); }
+}
+
+@keyframes floatGiant3 {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  100% { transform: translate(-80px, 120px) rotate(-10deg) scale(0.9); }
 }
 
