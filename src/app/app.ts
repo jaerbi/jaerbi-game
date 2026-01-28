@@ -4,11 +4,12 @@ import { GameRulesComponent } from './components/game-rules/game-rules.component
 import { GameEngineService } from './services/game-engine.service';
 import { SettingsService } from './services/settings.service';
 import { SupportCommunityComponent } from './components/support-community/support-community.component';
+import { LeaderboardModalComponent } from './components/leaderboard-modal/leaderboard-modal.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, GameRulesComponent, SupportCommunityComponent],
+  imports: [CommonModule, GameRulesComponent, SupportCommunityComponent, LeaderboardModalComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

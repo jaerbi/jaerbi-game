@@ -45,3 +45,5 @@ Thumbs.db
 
 # firebase
 environment.firebase.ts
+
+.firebase/

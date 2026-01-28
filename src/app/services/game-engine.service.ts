@@ -3,11 +3,12 @@ import { Unit, Position, Owner } from '../models/unit.model';
 import { CombatService } from './combat.service';
 import { BuildService } from './build.service';
 import { LogService } from './log.service';
-import { SettingsService } from './settings.service';
+import { SettingsService, Difficulty, MapSize } from './settings.service';
 import { MapService } from './map.service';
 import { EconomyService } from './economy.service';
 import { AiStrategyService } from './ai-strategy.service';
 import { FirebaseService, ScoreEntry } from './firebase.service';
+import { PlayerNameService } from './player-name.service';
 
 interface Wall {
     id: string;
@@ -69,6 +70,9 @@ export class GameEngineService {
     private hoveredUnitIdSignal = signal<string | null>(null);
     private autoDeployEnabledSignal = signal<boolean>(false);
     private highScoresOpenSignal = signal<boolean>(false);
+    private leaderboardOpenSignal = signal<boolean>(false);
+    private namePromptOpenSignal = signal<boolean>(false);
+    private pendingScoreSignal = signal<ScoreEntry | null>(null);
     private supportOpenSignal = signal<boolean>(false);
     private highScoresSignal = signal<Record<string, { wins: { turns: number; date: number; condition: string }[]; losses: { turns: number; date: number, condition: string }[] }>>({});
     private playerConvertedThisTurnSignal = signal<boolean>(false);
@@ -195,7 +199,7 @@ export class GameEngineService {
         return { total, player, ai };
     }
 
-    constructor(private combat: CombatService, private build: BuildService, private log: LogService, private settings: SettingsService, private map: MapService, private economy: EconomyService, private aiStrategy: AiStrategyService, private firebase: FirebaseService) {
+    constructor(private combat: CombatService, private build: BuildService, private log: LogService, private settings: SettingsService, private map: MapService, private economy: EconomyService, private aiStrategy: AiStrategyService, private firebase: FirebaseService, private playerName: PlayerNameService) {
         this.loadHighScores();
         this.resetGame();
     }
@@ -683,6 +687,12 @@ export class GameEngineService {
     closeHighScores() {
         this.highScoresOpenSignal.set(false);
     }
+    toggleLeaderboard() {
+        this.leaderboardOpenSignal.update(v => !v);
+    }
+    closeLeaderboard() {
+        this.leaderboardOpenSignal.set(false);
+    }
     toggleSupport() {
         this.supportOpenSignal.update(v => !v);
     }
@@ -696,7 +706,7 @@ export class GameEngineService {
             }
         } catch { }
     }
-    getHighScoresForCurrentCombo(): { wins: { turns: number; date: number }[]; losses: { turns: number; date: number }[] } {
+    getHighScoresForCurrentCombo(): { wins: { turns: number; date: number; condition: string }[]; losses: { turns: number; date: number; condition: string }[] } {
         const key = `${this.settings.difficulty()}|${this.settings.mapSize()}`;
         const store = this.highScoresSignal();
         return store[key] ?? { wins: [], losses: [] };
@@ -712,6 +722,25 @@ export class GameEngineService {
     }
     combatOnly(): boolean {
         return this.combatOnlySignal();
+    }
+    leaderboardOpen(): boolean {
+        return this.leaderboardOpenSignal();
+    }
+    isNamePromptOpen(): boolean {
+        return this.namePromptOpenSignal();
+    }
+    getPlayerName(): string {
+        return this.playerName.name();
+    }
+    confirmAndSaveScore(name: string) {
+        this.playerName.setName(name);
+        const pending = this.pendingScoreSignal();
+        if (pending) {
+            const payload: ScoreEntry = { ...pending, playerName: this.playerName.name() };
+            this.firebase.saveHighScore(payload);
+            this.pendingScoreSignal.set(null);
+            this.namePromptOpenSignal.set(false);
+        }
     }
     logsFiltered() {
         return this.log.logs().filter(e => !this.combatOnlySignal() || e.type === 'combat');
@@ -815,15 +844,22 @@ export class GameEngineService {
         const ctrl = this.getForestControl();
         const forestsCaptured = result === 'player wins' ? ctrl.player : ctrl.ai;
         const victoryType: ScoreEntry['victoryType'] = condition === 'monopoly' ? 'Monopoly' : 'Annihilation';
-        const playerName = result === 'player wins' ? 'Player' : 'Jaerbi';
-        const payload: ScoreEntry = {
-            playerName,
+        const basePayload: ScoreEntry = {
+            playerName: result === 'player wins' ? this.playerName.name() : 'Jaerbi',
             turnsPlayed: this.turnSignal(),
             forestsCaptured,
             victoryType,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            difficulty: this.settings.difficulty(),
+            mapSize: this.settings.mapSize() as MapSize,
+            victory: result === 'player wins'
         };
-        this.firebase.saveHighScore(payload);
+        if (result === 'player wins') {
+            this.pendingScoreSignal.set(basePayload);
+            this.namePromptOpenSignal.set(true);
+        } else {
+            this.firebase.saveHighScore(basePayload);
+        }
     }
 
     private getAttackLuckModifier(unit: Unit): { delta: number; tag?: string; isCrit?: boolean } {
