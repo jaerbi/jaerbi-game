@@ -721,6 +721,16 @@ export class GameEngineService {
     monopolyCounter() {
         return this.forestMonopolySignal();
     }
+    /**
+     * Returns remaining turns in the 10-turn Forest Monopoly countdown for the current controller.
+     * Logic:
+     * - Computes total forests and per-owner occupation counts.
+     * - If an owner holds all forests at once, returns 10 minus that owner's consecutive control counter.
+     * - Otherwise, returns 0 (no active countdown).
+     * Note:
+     * - Countdown increments in updateForestMonopoly() at end of player phase.
+     * - UI should pulse when this value ≤ 3 to warn of imminent victory.
+     */
     monopolyTurnsLeft(): number {
         const total = this.forestsSignal().length;
         if (total === 0) return 0;

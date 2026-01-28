@@ -19,6 +19,8 @@ export class AiStrategyService {
   }
 
   chooseBestEndingAction(engine: any): { type: 'move' | 'attack' | 'merge' | 'wall_attack'; unit: Unit; target: Position; reason: string; edge?: { from: Position; to: Position } } | null {
+    // CRITICAL LOGIC: Pathfinding + Wall Breaker decisions drive AI aggression and anti-paralysis.
+    // Do not remove or weaken these branches; they ensure hunters breach walls and forests remain contestable.
     const alreadyMoved: Set<string> = new Set(engine.movedThisTurnSignal?.() ?? []);
     let aiUnits = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && !alreadyMoved.has(u.id));
     aiUnits = aiUnits.filter((u: Unit) => !(u.tier <= 2 && engine.isForest(u.position.x, u.position.y) && engine.isAnchoredGatherer(u.id)));
@@ -294,6 +296,7 @@ export class AiStrategyService {
         { x: 0, y: 1 },
         { x: 0, y: -1 }
       ];
+      // CRITICAL LOGIC: Forest access via wall breach (neutral/player). Preserves expansion pressure.
       for (const dxy of adjDirs) {
         const fTile = { x: unit.position.x + dxy.x, y: unit.position.y + dxy.y };
         if (!engine.inBounds(fTile.x, fTile.y)) continue;
@@ -336,6 +339,7 @@ export class AiStrategyService {
         }
       }
       // Base adjacency breach for hunters
+      // CRITICAL LOGIC: Base siege breach. Enables high-tier units to attack the base directly.
       for (const dxy of adjDirs) {
         const bTile = { x: unit.position.x + dxy.x, y: unit.position.y + dxy.y };
         if (bTile.x === playerBase.x && bTile.y === playerBase.y) {
@@ -375,6 +379,7 @@ export class AiStrategyService {
         }
       }
       // Wall Breaker: Path to Goal blocked
+      // CRITICAL LOGIC: Wall Breaker — target blocking edges to prevent idle hunters.
       if (goal) {
         const dx = goal.x - unit.position.x;
         const dy = goal.y - unit.position.y;
@@ -428,6 +433,7 @@ export class AiStrategyService {
       }
       // Anti-stagnation: break out from neutral walls near base or with no clear forest path
       const noClearForestPath = visibleFree.length === 0 && fogForests.length === 0 && !breachTarget;
+      // CRITICAL LOGIC: Anti-stagnation near base — break neutral cages to regain mobility.
       if (stagnantTurns >= 2 && noClearForestPath) {
         for (const dxy of adjDirs) {
           const nTile = { x: unit.position.x + dxy.x, y: unit.position.y + dxy.y };
@@ -676,6 +682,7 @@ export class AiStrategyService {
     if (!best) return null;
     const goal = this.goals.get(best.unit.id);
     const goalText = goal ? `Goal: Forest at ${goal.x},${goal.y}` : 'Goal: None';
+    // CRITICAL LOGIC: Final decision logging aids telemetry and debugging of AI pathing.
     console.log(`[AI Decision] Unit ${best.unit.id} moving to (${best.target.x},${best.target.y}) targeting ${goalText}.`);
     return { type: best.type, unit: best.unit, target: best.target, reason: best.reason, edge: (best as any).edge };
   }
