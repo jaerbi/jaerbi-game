@@ -23,3 +23,7 @@
 - Always open external links with target=_blank and “noopener,noreferrer”.
 - Use the provided openExternalLink helper which enforces these attributes.
 
+## Loading States
+- Use a small spinner or progress indicator on actions that fetch remote data.
+- For High Scores, show a spinner on the button or overlay while awaiting Firebase responses.
+- Avoid blocking the entire UI; prefer localized indicators near the initiating control.

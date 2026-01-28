@@ -34,3 +34,9 @@
   - Countdown is 10 turns once an owner holds all forests at once.
   - The display shows turns remaining for the current controller; resets when control breaks.
 
+## High Scores & Leaderboard Logic
+- Data Structure:
+  - ScoreEntry: playerName, turnsPlayed, forestsCaptured, victoryType (Monopoly/Annihilation), timestamp.
+- Ranking Criteria:
+  - Rank by Victory type first (Monopoly outranks Annihilation), then by minimum turnsPlayed.
+  - Ties break by earlier timestamp.

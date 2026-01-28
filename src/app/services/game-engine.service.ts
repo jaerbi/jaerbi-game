@@ -7,6 +7,7 @@ import { SettingsService } from './settings.service';
 import { MapService } from './map.service';
 import { EconomyService } from './economy.service';
 import { AiStrategyService } from './ai-strategy.service';
+import { FirebaseService, ScoreEntry } from './firebase.service';
 
 interface Wall {
     id: string;
@@ -194,7 +195,7 @@ export class GameEngineService {
         return { total, player, ai };
     }
 
-    constructor(private combat: CombatService, private build: BuildService, private log: LogService, private settings: SettingsService, private map: MapService, private economy: EconomyService, private aiStrategy: AiStrategyService) {
+    constructor(private combat: CombatService, private build: BuildService, private log: LogService, private settings: SettingsService, private map: MapService, private economy: EconomyService, private aiStrategy: AiStrategyService, private firebase: FirebaseService) {
         this.loadHighScores();
         this.resetGame();
     }
@@ -811,6 +812,18 @@ export class GameEngineService {
         current[key] = bucket;
         this.highScoresSignal.set(current);
         this.persistHighScores();
+        const ctrl = this.getForestControl();
+        const forestsCaptured = result === 'player wins' ? ctrl.player : ctrl.ai;
+        const victoryType: ScoreEntry['victoryType'] = condition === 'monopoly' ? 'Monopoly' : 'Annihilation';
+        const playerName = result === 'player wins' ? 'Player' : 'Jaerbi';
+        const payload: ScoreEntry = {
+            playerName,
+            turnsPlayed: this.turnSignal(),
+            forestsCaptured,
+            victoryType,
+            timestamp: Date.now()
+        };
+        this.firebase.saveHighScore(payload);
     }
 
     private getAttackLuckModifier(unit: Unit): { delta: number; tag?: string; isCrit?: boolean } {
