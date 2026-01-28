@@ -223,7 +223,11 @@
   transform: rotate(45deg) scale(0.85);
 }
 
-/* --- Wall Styles Not use Now --- */
+.forest-area {
+  box-shadow: 0 0 0 1px rgba(45, 87, 66, 0.9), inset 0 0 40px rgba(45, 87, 66, 0.8);
+  border-color: rgb(52, 106, 79);
+}
+
 .wall-obsidian {
   background: linear-gradient(135deg, rgba(40, 40, 50, 0.8), rgba(10, 10, 15, 0.9)) !important;
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -307,3 +311,7 @@
   100% { transform: translate(-80px, 120px) rotate(-10deg) scale(0.9); }
 }
 
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}

@@ -158,10 +158,6 @@
   30% { transform: translateY(-6px); opacity: 1; }
   100% { transform: translateY(-12px); opacity: 0; }
 }
-.forest-shield {
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.6), inset 0 0 12px rgba(16, 185, 129, 0.4);
-  border-color: rgba(16, 185, 129, 0.6);
-}
 
 /* Movement animations */
 .path-grid {

@@ -221,13 +221,13 @@ export class GameEngineService {
         this.resourcesSignal.set({ wood: 0 });
         this.baseHealthSignal.set({ player: 100, ai: 100 });
         if (difficulty === 'baby') {
-            this.reservePointsSignal.set({ player: 20, ai: 5 });
+            this.reservePointsSignal.set({ player: 40, ai: 5 });
         } else if (difficulty === 'normal') {
-            this.reservePointsSignal.set({ player: 15, ai: 10 });
+            this.reservePointsSignal.set({ player: 20, ai: 20 });
         } else if (difficulty === 'hard') {
-            this.reservePointsSignal.set({ player: 10, ai: 15 });
+            this.reservePointsSignal.set({ player: 20, ai: 35 });
         } else {
-            this.reservePointsSignal.set({ player: 5, ai: 20 });
+            this.reservePointsSignal.set({ player: 15, ai: 40 });
         }
         this.deployTargetsSignal.set([]);
         this.forestsSignal.set(this.map.generateForests(this.gridSize, this.getBasePosition('player'), this.getBasePosition('ai')));
@@ -1786,6 +1786,10 @@ export class GameEngineService {
         if (!this.canActThisTurn()) return false;
         if (this.wallBuiltThisTurnSignal()) return false;
         return this.resourcesSignal().wood >= 10;
+    }
+
+    canAddReserveTurn(): boolean {
+        return this.resourcesSignal().wood >= 20;
     }
 
     private canActThisTurn(): boolean {
