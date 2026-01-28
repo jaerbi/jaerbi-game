@@ -3,11 +3,12 @@ import { Unit, Position, Owner } from '../models/unit.model';
 import { CombatService } from './combat.service';
 import { BuildService } from './build.service';
 import { LogService } from './log.service';
-import { SettingsService } from './settings.service';
+import { SettingsService, Difficulty, MapSize } from './settings.service';
 import { MapService } from './map.service';
 import { EconomyService } from './economy.service';
 import { AiStrategyService } from './ai-strategy.service';
 import { FirebaseService, ScoreEntry } from './firebase.service';
+import { PlayerNameService } from './player-name.service';
 
 interface Wall {
     id: string;
@@ -69,6 +70,9 @@ export class GameEngineService {
     private hoveredUnitIdSignal = signal<string | null>(null);
     private autoDeployEnabledSignal = signal<boolean>(false);
     private highScoresOpenSignal = signal<boolean>(false);
+    private leaderboardOpenSignal = signal<boolean>(false);
+    private namePromptOpenSignal = signal<boolean>(false);
+    private pendingScoreSignal = signal<ScoreEntry | null>(null);
     private supportOpenSignal = signal<boolean>(false);
     private highScoresSignal = signal<Record<string, { wins: { turns: number; date: number; condition: string }[]; losses: { turns: number; date: number, condition: string }[] }>>({});
     private playerConvertedThisTurnSignal = signal<boolean>(false);
@@ -195,14 +199,16 @@ export class GameEngineService {
         return { total, player, ai };
     }
 
-    constructor(private combat: CombatService, private build: BuildService, private log: LogService, private settings: SettingsService, private map: MapService, private economy: EconomyService, private aiStrategy: AiStrategyService, private firebase: FirebaseService) {
+    constructor(private combat: CombatService, private build: BuildService, private log: LogService, private settings: SettingsService, private map: MapService, private economy: EconomyService, private aiStrategy: AiStrategyService, private firebase: FirebaseService, private playerName: PlayerNameService) {
         this.loadHighScores();
         this.resetGame();
     }
 
     resetGame() {
-        this.internalDifficultySignal.set(this.settings.difficulty());
+        const difficulty = this.settings.difficulty();
+        this.internalDifficultySignal.set(difficulty);
         this.unitsSignal.set([]);
+        this.wallCooldownSignal.set(new Map());
         this.turnSignal.set(1);
         this.activeSideSignal.set('ai');
         this.selectedUnitIdSignal.set(null);
@@ -214,7 +220,15 @@ export class GameEngineService {
         this.lastRemainderUnitIdSignal.set(null);
         this.resourcesSignal.set({ wood: 0 });
         this.baseHealthSignal.set({ player: 100, ai: 100 });
-        this.reservePointsSignal.set({ player: 5, ai: 5 });
+        if (difficulty === 'baby') {
+            this.reservePointsSignal.set({ player: 20, ai: 5 });
+        } else if (difficulty === 'normal') {
+            this.reservePointsSignal.set({ player: 15, ai: 10 });
+        } else if (difficulty === 'hard') {
+            this.reservePointsSignal.set({ player: 10, ai: 15 });
+        } else {
+            this.reservePointsSignal.set({ player: 5, ai: 20 });
+        }
         this.deployTargetsSignal.set([]);
         this.forestsSignal.set(this.map.generateForests(this.gridSize, this.getBasePosition('player'), this.getBasePosition('ai')));
         const forestKeys = new Set(this.forestsSignal().map(p => `${p.x},${p.y}`));
@@ -683,6 +697,12 @@ export class GameEngineService {
     closeHighScores() {
         this.highScoresOpenSignal.set(false);
     }
+    toggleLeaderboard() {
+        this.leaderboardOpenSignal.update(v => !v);
+    }
+    closeLeaderboard() {
+        this.leaderboardOpenSignal.set(false);
+    }
     toggleSupport() {
         this.supportOpenSignal.update(v => !v);
     }
@@ -696,7 +716,7 @@ export class GameEngineService {
             }
         } catch { }
     }
-    getHighScoresForCurrentCombo(): { wins: { turns: number; date: number }[]; losses: { turns: number; date: number }[] } {
+    getHighScoresForCurrentCombo(): { wins: { turns: number; date: number; condition: string }[]; losses: { turns: number; date: number; condition: string }[] } {
         const key = `${this.settings.difficulty()}|${this.settings.mapSize()}`;
         const store = this.highScoresSignal();
         return store[key] ?? { wins: [], losses: [] };
@@ -712,6 +732,35 @@ export class GameEngineService {
     }
     combatOnly(): boolean {
         return this.combatOnlySignal();
+    }
+    leaderboardOpen(): boolean {
+        return this.leaderboardOpenSignal();
+    }
+    isNamePromptOpen(): boolean {
+        return this.namePromptOpenSignal();
+    }
+    getPlayerName(): string {
+        const user = this.firebase.user$();
+        if (user?.displayName) {
+            return user.displayName;
+        }
+        return this.playerName.name();
+    }
+    confirmAndSaveScore(name: string) {
+        this.playerName.setName(name);
+        const pending = this.pendingScoreSignal();
+        if (pending) {
+            const user = this.firebase.user$();
+            const payload: ScoreEntry = {
+                ...pending,
+                playerName: this.playerName.name(),
+                userId: user?.uid,
+                userPhoto: user?.photoURL ?? undefined
+            };
+            this.firebase.saveHighScore(payload);
+            this.pendingScoreSignal.set(null);
+            this.namePromptOpenSignal.set(false);
+        }
     }
     logsFiltered() {
         return this.log.logs().filter(e => !this.combatOnlySignal() || e.type === 'combat');
@@ -793,12 +842,38 @@ export class GameEngineService {
         } catch { }
     }
     private persistHighScores() {
-        console.log('persistHighScores: ');
         if (typeof window === 'undefined') return;
         try {
             localStorage.setItem('highScores', JSON.stringify(this.highScoresSignal()));
         } catch { }
     }
+    debugInstantWin() {
+        this.turnSignal.set(Math.floor(Math.random() * 10) + 5);
+        this.gameStatusSignal.set('player wins');
+        this.recordHighScore('player wins', 'destroy');
+    }
+
+    debugCycleSettings() {
+        const diffs: Difficulty[] = ['baby', 'normal', 'hard', 'nightmare'];
+        const sizes: MapSize[] = [10, 20, 30];
+
+        let dIdx = diffs.indexOf(this.settings.difficulty());
+        let sIdx = sizes.indexOf(this.settings.mapSize() as MapSize);
+
+        dIdx++;
+        if (dIdx >= diffs.length) {
+            dIdx = 0;
+            sIdx++;
+            if (sIdx >= sizes.length) {
+                sIdx = 0;
+            }
+        }
+
+        this.settings.setDifficulty(diffs[dIdx]);
+        this.settings.setMapSize(sizes[sIdx]);
+        this.resetGame();
+    }
+
     private recordHighScore(result: 'player wins' | 'jaerbi wins', condition: 'monopoly' | 'destroy') {
         const key = `${this.settings.difficulty()}|${this.settings.mapSize()}`;
         const current = { ...this.highScoresSignal() };
@@ -815,15 +890,22 @@ export class GameEngineService {
         const ctrl = this.getForestControl();
         const forestsCaptured = result === 'player wins' ? ctrl.player : ctrl.ai;
         const victoryType: ScoreEntry['victoryType'] = condition === 'monopoly' ? 'Monopoly' : 'Annihilation';
-        const playerName = result === 'player wins' ? 'Player' : 'Jaerbi';
-        const payload: ScoreEntry = {
-            playerName,
+        const basePayload: ScoreEntry = {
+            playerName: result === 'player wins' ? this.playerName.name() : 'Jaerbi',
             turnsPlayed: this.turnSignal(),
             forestsCaptured,
             victoryType,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            difficulty: this.settings.difficulty(),
+            mapSize: this.settings.mapSize() as MapSize,
+            victory: result === 'player wins'
         };
-        this.firebase.saveHighScore(payload);
+        if (result === 'player wins') {
+            this.pendingScoreSignal.set(basePayload);
+            this.namePromptOpenSignal.set(true);
+        } else {
+            this.firebase.saveHighScore(basePayload);
+        }
     }
 
     private getAttackLuckModifier(unit: Unit): { delta: number; tag?: string; isCrit?: boolean } {
@@ -960,7 +1042,7 @@ export class GameEngineService {
         const nextSide: Owner = ownerJustActed === 'player' ? 'ai' : 'player';
         if (ownerJustActed === 'player') {
             this.turnSignal.update(t => t + 1);
-            const aiBonus = this.settings.getAiReserveBonus();
+            const aiBonus = this.settings.getAiReserveBonus(this.turnSignal());
             this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai + aiBonus }));
         } else {
             if (this.autoDeployEnabledSignal() && this.playerConvertedThisTurnSignal() && this.reservePointsSignal().player > 0) {
@@ -1044,24 +1126,28 @@ export class GameEngineService {
                 mood = 'none';
             } else if (playerPct >= 0.9 || playerForests >= 9) {
                 mood = 'rage';
-            } else if (playerForests >= aiForests + 2) {
+            } else if (playerForests >= aiForests + (current === 'baby' ? 3 : 2)) {
                 mood = 'angry';
             }
             this.aiMoodSignal.set(mood);
             if (mood === 'rage') {
                 this.internalDifficultySignal.set('nightmare');
             } else if (mood === 'angry') {
-                const escalated = current === 'normal' || current === 'baby' ? 'hard' : 'nightmare';
+                const escalated = current === 'baby' ? 'normal' : current === 'normal' ? 'hard' : 'nightmare';
                 this.internalDifficultySignal.set(escalated);
             } else {
                 this.internalDifficultySignal.set(baseline);
             }
             const isEvenTurn = this.turnSignal() % 2 === 0;
+            const isFifthTurn = this.turnSignal() % 5 === 0;
             if (mood === 'rage') {
                 const reserveHelp = baseline === 'baby' ? 0 : isEvenTurn ? 2 : 1;
                 this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + reserveHelp }));
             } else if (mood === 'angry' && isEvenTurn) {
                 const reserveHelp = baseline === 'baby' ? 0 : 1;
+                this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + reserveHelp }));
+            } else if (mood === 'angry' && baseline === 'baby' && isFifthTurn) {
+                const reserveHelp = 1;
                 this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + reserveHelp }));
             }
         } catch { }

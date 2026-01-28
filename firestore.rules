@@ -2,7 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /highscores/{docId} {
-      allow read, write;
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if false;
     }
   }
 }

@@ -1,40 +1,85 @@
 <div class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-start p-4">
+  <div class="flex gap-[6px] items-baseline fixed top-4 left-4">
+    <h1 class="text-3xl font-bold">Shape Tactics</h1>
+    <h2 class="text-sm text-gray-400">Turn-Based Strategy</h2>
+  </div>
   <div class="w-full max-w-4xl flex items-center justify-between mb-4">
-    <div class="flex gap-[6px] items-baseline">
-      <h1 class="text-3xl font-bold">Shape Tactics</h1>
-      <h2 class="text-sm text-gray-400">Turn-Based Strategy</h2>
-    </div>
     <div class="flex items-center justify-center gap-[4px]">
-        <button
-          (click)="gameEngine.resetGame()"
-          class="flex items-center gap-1 px-2 py-2 rounded-full hover:bg-gray-700 text-sm cursor-pointer"
-        >
-         <span class="w-5 h-5 flex items-center justify-center rounded-full text-white text-lg">🔄</span>
-        </button>
       <button
-        class="flex items-center gap-1 px-2 py-2 rounded-full hover:bg-gray-700 text-sm cursor-pointer"
+        (click)="gameEngine.resetGame()"
+        class="flex items-center gap-1 px-3 py-2 rounded-full hover:bg-gray-700 text-sm cursor-pointer"
+      >
+        <span class="text-base">Reload</span>
+        <span class="text-base">🔄</span>
+      </button>
+      <button
+        class="flex items-center gap-1 px-3 py-2 rounded-full hover:bg-gray-700 text-sm cursor-pointer"
         (click)="gameEngine.toggleRules()"
       >
-        <span class="w-5 h-5 flex items-center justify-center rounded-full bg-blue-500 text-white text-sm">?</span>
+        <span class="text-base">Rules</span>
+        <span class="text-base">❔</span>
       </button>
       <button
-        class="flex items-center gap-1 px-2 py-2 rounded-full hover:bg-gray-700 text-sm cursor-pointer"
+        class="flex items-center gap-1 px-3 py-2 rounded-full hover:bg-gray-700 text-sm cursor-pointer"
         (click)="gameEngine.toggleHighScores()"
       >
-        <span class="w-5 h-5 flex items-center justify-center rounded-full bg-yellow-500 text-white text-sm">🏆</span>
+        <span class="text-base">High Score</span>
+        <span class="text-base">🏆</span>
       </button>
       <button
-        class="flex items-center gap-1 px-2 py-2 rounded-full hover:bg-gray-700 text-sm cursor-pointer"
-        (click)="gameEngine.toggleSettings()"
+        class="flex items-center gap-1 px-3 py-2 rounded-full hover:bg-gray-700 text-sm cursor-pointer"
+        (click)="gameEngine.toggleLeaderboard()"
       >
-        <span class="w-5 h-5 flex items-center justify-center rounded-full bg-gray-500 text-white text-lg">⚙️</span>
+        <span class="text-base">Leaderboard</span>
+        <span class="text-base">👑</span>
       </button>
       <button
         class="flex items-center gap-1 px-2 py-2 rounded-full hover:bg-gray-700 text-sm cursor-pointer"
         (click)="gameEngine.toggleLog()"
       >
-        <span class="w-5 h-5 flex items-center justify-center text-white text-lg">ℹ</span>
+        <span class="text-base">Log</span>
+        <span class="text-base">❗</span>
       </button>
+    </div>
+
+    <div class="flex items-center justify-center gap-[0px]">
+      <button
+        class="flex items-center gap-1 px-2 py-2 rounded-full hover:bg-gray-700 text-sm cursor-pointer"
+        (click)="gameEngine.toggleSettings()"
+      >
+        <span class="w-5 h-5 flex items-center justify-center rounded-full text-white text-lg">⚙️</span>
+      </button>
+      <!-- Auth Section -->
+      @if (firebase.user$(); as user) {
+        <div class="flex items-center gap-2 ml-2 pl-4 border-l border-gray-700">
+          @if (user.photoURL) {
+            <img
+              [src]="user.photoURL"
+              class="w-8 h-8 rounded-full border border-gray-500"
+              referrerpolicy="no-referrer"
+              [title]="user.displayName"
+            />
+          } @else {
+            <div
+              class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold border border-gray-400"
+              [title]="user.displayName"
+            >
+              {{ user.displayName?.charAt(0) ?? 'U' }}
+            </div>
+          }
+          <button (click)="firebase.logout()" class="text-xs text-gray-400 hover:text-white underline cursor-pointer">
+            Logout
+          </button>
+        </div>
+      } @else {
+        <button
+          (click)="firebase.loginWithGoogle()"
+          class="ml-2 flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-semibold transition-colors cursor-pointer"
+        >
+          <span class="text-blue-400">G</span>
+          <span>Login</span>
+        </button>
+      }
     </div>
   </div>
   <div
@@ -138,6 +183,24 @@
         @if (gameEngine.endReason()) {
           <div class="text-sm text-gray-300 mb-4">{{ gameEngine.endReason() }}</div>
         }
+        @if (gameEngine.gameStatus() === 'player wins' && gameEngine.isNamePromptOpen()) {
+          <div class="mb-4 flex flex-col items-center gap-2">
+            <div class="text-sm text-gray-300">Confirm Player Name</div>
+            <input
+              #nameInput
+              [value]="gameEngine.getPlayerName()"
+              class="w-64 px-3 py-2 rounded bg-gray-700 border border-gray-600 text-white"
+              placeholder="Enter your name"
+              autocomplete="off"
+            />
+            <button
+              (click)="gameEngine.confirmAndSaveScore(nameInput.value)"
+              class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded text-white font-semibold text-sm cursor-pointer"
+            >
+              Save Score
+            </button>
+          </div>
+        }
         <button
           (click)="gameEngine.resetGame()"
           class="px-6 py-3 bg-green-600 hover:bg-green-500 rounded text-white font-bold text-lg cursor-pointer"
@@ -145,6 +208,12 @@
           Play Again
         </button>
       </div>
+      <button
+        (click)="gameEngine.toggleLeaderboard()"
+        class="ml-3 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded text-white font-bold text-lg cursor-pointer"
+      >
+        View Leaderboard
+      </button>
     </div>
   }
   <button
@@ -157,6 +226,9 @@
   </button>
   @if (gameEngine.supportOpen()) {
     <app-support-community />
+  }
+  @if (gameEngine.leaderboardOpen()) {
+    <app-leaderboard-modal />
   }
 
   <style>
@@ -790,7 +862,9 @@
     />
     <span>Auto-Deploy</span>
   </label> -->
-  <div class="fixed bottom-4 left-4 text-[12px] text-gray-500">version: 0.3.2 | Created by jaerbi and just</div>
+
+  <!-- -------------------------------------------- Version -------------------------------------------- -->
+  <div class="fixed bottom-4 left-4 text-[12px] text-gray-500">version: 0.3.3 | ©︎ Created by jaerbi and just</div>
 
   @if (gameEngine.rulesOpen()) {
     <app-game-rules />
@@ -824,7 +898,7 @@
             class="px-3 py-1 rounded text-sm cursor-pointer"
             [class.bg-blue-600]="settings.difficulty() === 'baby'"
             [class.bg-gray-700]="settings.difficulty() !== 'baby'"
-            (click)="settings.setDifficulty('baby')"
+            (click)="onDifficultyChange('baby')"
           >
             Baby
           </button>
@@ -832,7 +906,7 @@
             class="px-3 py-1 rounded text-sm cursor-pointer"
             [class.bg-blue-600]="settings.difficulty() === 'normal'"
             [class.bg-gray-700]="settings.difficulty() !== 'normal'"
-            (click)="settings.setDifficulty('normal')"
+            (click)="onDifficultyChange('normal')"
           >
             Normal
           </button>
@@ -840,7 +914,7 @@
             class="px-3 py-1 rounded text-sm cursor-pointer"
             [class.bg-blue-600]="settings.difficulty() === 'hard'"
             [class.bg-gray-700]="settings.difficulty() !== 'hard'"
-            (click)="settings.setDifficulty('hard')"
+            (click)="onDifficultyChange('hard')"
           >
             Hard
           </button>
@@ -848,7 +922,7 @@
             class="px-3 py-1 rounded text-sm cursor-pointer"
             [class.bg-blue-600]="settings.difficulty() === 'nightmare'"
             [class.bg-gray-700]="settings.difficulty() !== 'nightmare'"
-            (click)="settings.setDifficulty('nightmare')"
+            (click)="onDifficultyChange('nightmare')"
           >
             Nightmare
           </button>
@@ -906,6 +980,7 @@
             @for (s of gameEngine.getHighScoresForCurrentCombo().wins; track s.date) {
               <div class="flex justify-between text-sm">
                 <span>{{ s.date | date: 'yyyy-MM-dd HH:mm' }}</span>
+                <span class="font-mono">{{ s.condition }}</span>
                 <span class="font-mono text-yellow-300">{{ s.turns }} turns</span>
               </div>
             } @empty {
@@ -917,6 +992,7 @@
             @for (s of gameEngine.getHighScoresForCurrentCombo().losses; track s.date) {
               <div class="flex justify-between text-sm">
                 <span>{{ s.date | date: 'yyyy-MM-dd HH:mm' }}</span>
+                <span class="font-mono">{{ s.condition }}</span>
                 <span class="font-mono text-yellow-300">{{ s.turns }} turns</span>
               </div>
             } @empty {
@@ -925,6 +1001,31 @@
           </div>
         </div>
         <div class="mt-4 text-xs text-gray-400">Change Difficulty or Map Size in Settings to view other boards.</div>
+      </div>
+    </div>
+  }
+
+  @if (!isProduction) {
+    <div
+      class="fixed bottom-10 left-4 z-[9999] flex flex-col gap-2 bg-black/80 p-2 rounded border border-red-500 shadow-lg backdrop-blur-sm"
+    >
+      <div class="text-red-500 font-bold text-xs uppercase text-center mb-1 border-b border-red-900/50 pb-1">
+        Debug Mode
+      </div>
+      <button
+        (click)="gameEngine.debugInstantWin()"
+        class="bg-red-900/40 hover:bg-red-800/60 text-red-100 text-xs px-3 py-1.5 rounded border border-red-800 transition-colors cursor-pointer"
+      >
+        ⚡ Instant Win
+      </button>
+      <button
+        (click)="gameEngine.debugCycleSettings()"
+        class="bg-blue-900/40 hover:bg-blue-800/60 text-blue-100 text-xs px-3 py-1.5 rounded border border-blue-800 transition-colors cursor-pointer"
+      >
+        🔄 Cycle Settings
+      </button>
+      <div class="text-[10px] text-gray-400 text-center font-mono mt-1">
+        {{ settings.difficultyLabel() }} | {{ settings.mapSizeLabel() }}
       </div>
     </div>
   }
