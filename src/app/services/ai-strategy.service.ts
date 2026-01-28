@@ -29,7 +29,7 @@ export class AiStrategyService {
       aiUnits = aiUnits.filter((u: Unit) => u.id === queued);
     }
     const mood = typeof engine.currentMood === 'function' ? engine.currentMood() : 'none';
-    const aggressiveBonus = this.settings.difficulty() === 'baby' ? 0 : mood === 'rage' ? 50000 : (mood === 'angry' ? 10000 : 0);
+    const aggressiveBonus = this.settings.difficulty() === 'baby' ? -1000 : mood === 'rage' ? 50000 : (mood === 'angry' ? 10000 : 0);
     if (aiUnits.length === 0) return null;
     const aiBase: Position = engine.getBasePosition('ai');
     const playerBase: Position = engine.getBasePosition('player');

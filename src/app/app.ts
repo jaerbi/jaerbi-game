@@ -2,7 +2,8 @@ import { Component, ElementRef, ViewChild, isDevMode } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GameRulesComponent } from './components/game-rules/game-rules.component';
 import { GameEngineService } from './services/game-engine.service';
-import { SettingsService } from './services/settings.service';
+import { Difficulty, SettingsService } from './services/settings.service';
+import { FirebaseService } from './services/firebase.service';
 import { SupportCommunityComponent } from './components/support-community/support-community.component';
 import { LeaderboardModalComponent } from './components/leaderboard-modal/leaderboard-modal.component';
 
@@ -15,7 +16,11 @@ import { LeaderboardModalComponent } from './components/leaderboard-modal/leader
 })
 export class App {
   @ViewChild('boardContainer') boardContainer?: ElementRef<HTMLDivElement>;
-  constructor(public gameEngine: GameEngineService, public settings: SettingsService) {}
+  constructor(
+    public gameEngine: GameEngineService, 
+    public settings: SettingsService,
+    public firebase: FirebaseService
+  ) {}
 
   get isProduction() {
     return !isDevMode();
@@ -29,16 +34,21 @@ export class App {
       }
     }, 0);
   }
-  
+
+  onDifficultyChange(diff: Difficulty) {
+    this.settings.setDifficulty(diff);
+    this.gameEngine.resetGame();
+  }
+
   onMapSizeChange(size: number) {
     this.settings.setMapSize(size as any);
-    this.gameEngine.resetGame();
     setTimeout(() => {
       const el: any = this.boardContainer?.nativeElement;
       if (typeof window !== 'undefined' && el && typeof el.scrollTo === 'function') {
         el.scrollTo({ left: 0, top: 0 });
       }
     }, 0);
+    this.gameEngine.resetGame();
   }
 
   onTileClick(x: number, y: number) {

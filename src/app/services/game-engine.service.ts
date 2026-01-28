@@ -205,7 +205,8 @@ export class GameEngineService {
     }
 
     resetGame() {
-        this.internalDifficultySignal.set(this.settings.difficulty());
+        const difficulty = this.settings.difficulty();
+        this.internalDifficultySignal.set(difficulty);
         this.unitsSignal.set([]);
         this.wallCooldownSignal.set(new Map());
         this.turnSignal.set(1);
@@ -219,7 +220,15 @@ export class GameEngineService {
         this.lastRemainderUnitIdSignal.set(null);
         this.resourcesSignal.set({ wood: 0 });
         this.baseHealthSignal.set({ player: 100, ai: 100 });
-        this.reservePointsSignal.set({ player: 5, ai: 5 });
+        if (difficulty === 'baby') {
+            this.reservePointsSignal.set({ player: 20, ai: 5 });
+        } else if (difficulty === 'normal') {
+            this.reservePointsSignal.set({ player: 15, ai: 10 });
+        } else if (difficulty === 'hard') {
+            this.reservePointsSignal.set({ player: 10, ai: 15 });
+        } else {
+            this.reservePointsSignal.set({ player: 5, ai: 20 });
+        }
         this.deployTargetsSignal.set([]);
         this.forestsSignal.set(this.map.generateForests(this.gridSize, this.getBasePosition('player'), this.getBasePosition('ai')));
         const forestKeys = new Set(this.forestsSignal().map(p => `${p.x},${p.y}`));
@@ -731,13 +740,23 @@ export class GameEngineService {
         return this.namePromptOpenSignal();
     }
     getPlayerName(): string {
+        const user = this.firebase.user$();
+        if (user?.displayName) {
+            return user.displayName;
+        }
         return this.playerName.name();
     }
     confirmAndSaveScore(name: string) {
         this.playerName.setName(name);
         const pending = this.pendingScoreSignal();
         if (pending) {
-            const payload: ScoreEntry = { ...pending, playerName: this.playerName.name() };
+            const user = this.firebase.user$();
+            const payload: ScoreEntry = {
+                ...pending,
+                playerName: this.playerName.name(),
+                userId: user?.uid,
+                userPhoto: user?.photoURL ?? undefined
+            };
             this.firebase.saveHighScore(payload);
             this.pendingScoreSignal.set(null);
             this.namePromptOpenSignal.set(false);
@@ -1023,7 +1042,7 @@ export class GameEngineService {
         const nextSide: Owner = ownerJustActed === 'player' ? 'ai' : 'player';
         if (ownerJustActed === 'player') {
             this.turnSignal.update(t => t + 1);
-            const aiBonus = this.settings.getAiReserveBonus();
+            const aiBonus = this.settings.getAiReserveBonus(this.turnSignal());
             this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai + aiBonus }));
         } else {
             if (this.autoDeployEnabledSignal() && this.playerConvertedThisTurnSignal() && this.reservePointsSignal().player > 0) {
@@ -1107,24 +1126,28 @@ export class GameEngineService {
                 mood = 'none';
             } else if (playerPct >= 0.9 || playerForests >= 9) {
                 mood = 'rage';
-            } else if (playerForests >= aiForests + 2) {
+            } else if (playerForests >= aiForests + (current === 'baby' ? 3 : 2)) {
                 mood = 'angry';
             }
             this.aiMoodSignal.set(mood);
             if (mood === 'rage') {
                 this.internalDifficultySignal.set('nightmare');
             } else if (mood === 'angry') {
-                const escalated = current === 'normal' || current === 'baby' ? 'hard' : 'nightmare';
+                const escalated = current === 'baby' ? 'normal' : current === 'normal' ? 'hard' : 'nightmare';
                 this.internalDifficultySignal.set(escalated);
             } else {
                 this.internalDifficultySignal.set(baseline);
             }
             const isEvenTurn = this.turnSignal() % 2 === 0;
+            const isFifthTurn = this.turnSignal() % 5 === 0;
             if (mood === 'rage') {
                 const reserveHelp = baseline === 'baby' ? 0 : isEvenTurn ? 2 : 1;
                 this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + reserveHelp }));
             } else if (mood === 'angry' && isEvenTurn) {
                 const reserveHelp = baseline === 'baby' ? 0 : 1;
+                this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + reserveHelp }));
+            } else if (mood === 'angry' && baseline === 'baby' && isFifthTurn) {
+                const reserveHelp = 1;
                 this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + reserveHelp }));
             }
         } catch { }
