@@ -294,6 +294,7 @@
   background: radial-gradient(circle, #ece80d, transparent); /* yellow-ish */
   animation: floatGiant2 41s infinite alternate ease-in-out;
   animation-delay: -3s;
+  color: #0800ff;
 }
 
 @keyframes floatGiant1 {

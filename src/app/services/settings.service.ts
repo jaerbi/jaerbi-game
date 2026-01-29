@@ -7,6 +7,7 @@ export type MapSize = 10 | 20 | 30;
 export class SettingsService {
     private difficultySignal = signal<Difficulty>('normal');
     private mapSizeSignal = signal<MapSize>(10);
+    public version = 'version: 0.3.3';
 
     difficulty(): Difficulty {
         return this.difficultySignal();

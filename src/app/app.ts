@@ -37,7 +37,7 @@ export class App {
         }, 0);
     }
 
-    onDifficultyChange(diff: Difficulty) {
+    onDifficultyChange(diff: any) {
         this.settings.setDifficulty(diff);
         this.gameEngine.resetGame();
     }
