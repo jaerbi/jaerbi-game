@@ -771,7 +771,7 @@
                     >
                       @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x + 1, y: y })) {
                         <button
-                          class="cursor-pointer shadow-lg flex items-center justify-center text-white"
+                          class="absolute cursor-pointer shadow-2xl flex items-center justify-center text-white rounded-full border border-white/20 hover:scale-110 active:scale-95 transition-all z-[45]"
                           [style.width.px]="gameEngine.iconSizePx"
                           [style.height.px]="gameEngine.iconSizePx"
                           [style.z-index]="45"
@@ -784,7 +784,26 @@
                               : onAttackIconClick($event, x, y, x + 1, y)
                           "
                         >
-                          {{ vWall.owner === 'player' ? '✖' : '⚔' }}
+                          @if (vWall.owner === 'player') {
+                            <svg class="w-1/2 h-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="3"
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          } @else {
+                            <svg class="w-1/2 h-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M13 10V3L4 14h7v7l9-11h-7z"
+                              />
+                            </svg>
+                          }
+                          <!-- {{ vWall.owner === 'player' ? '✖' : '⚔' }} -->
                         </button>
                       }
                     </div>
@@ -806,7 +825,7 @@
                   >
                     @if (gameEngine.canShowBuildIcon({ x: x, y: y }, { x: x + 1, y: y })) {
                       <button
-                        class="bg-green-500 cursor-pointer text-white rounded-full shadow-lg flex items-center justify-center"
+                        class="bg-green-500 cursor-pointer text-white rounded-full shadow-lg flex items-center justify-center p-1"
                         [style.fontSize.px]="gameEngine.iconSizePx"
                         [style.width.px]="gameEngine.iconSizePx"
                         [style.height.px]="gameEngine.iconSizePx"
@@ -845,7 +864,7 @@
                     >
                       @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
                         <button
-                          class="rounded-full cursor-pointer shadow-lg flex items-center justify-center text-white"
+                          class="absolute cursor-pointer shadow-2xl flex items-center justify-center text-white rounded-full border border-white/20  hover:scale-110 active:scale-95 transition-all z-[45]"
                           [style.width.px]="gameEngine.iconSizePx"
                           [style.height.px]="gameEngine.iconSizePx"
                           [style.z-index]="45"
@@ -858,7 +877,26 @@
                               : onAttackIconClick($event, x, y, x, y + 1)
                           "
                         >
-                          {{ hWall.owner === 'player' ? '✖' : '⚔' }}
+                          @if (hWall.owner === 'player') {
+                            <svg class="w-1/2 h-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="3"
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          } @else {
+                            <svg class="w-1/2 h-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M13 10V3L4 14h7v7l9-11h-7z"
+                              />
+                            </svg>
+                          }
+                          <!-- {{ hWall.owner === 'player' ? '✖' : '⚔' }} -->
                         </button>
                       }
                     </div>
