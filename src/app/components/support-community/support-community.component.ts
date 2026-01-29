@@ -30,6 +30,7 @@ import { GameEngineService } from '../../services/game-engine.service';
                   src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://send.monobank.ua/jar/7188MxTvAg" 
                   alt="QR Code"
                   class="w-full h-full"
+                  referrerpolicy="no-referrer"
                 />
               </div>
               

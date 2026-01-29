@@ -83,7 +83,7 @@ import { MapSize, SettingsService, Difficulty } from '../../services/settings.se
                 >
                   <td class="py-2 px-2 border-b border-gray-800">{{ i + 1 }}</td>
                   <td class="py-2 px-2 border-b border-gray-800 flex items-center gap-2">
-                    <img *ngIf="s.userPhoto; else noPhoto" [src]="s.userPhoto" class="w-6 h-6 rounded-full border border-gray-600">
+                    <img *ngIf="s.userPhoto; else noPhoto" referrerpolicy="no-referrer" [src]="s.userPhoto" class="w-6 h-6 rounded-full border border-gray-600">
                     <ng-template #noPhoto>
                       <div class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-xs text-gray-400 border border-gray-600">👤</div>
                     </ng-template>

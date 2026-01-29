@@ -4,6 +4,7 @@ export interface Position {
 }
 
 export type Owner = 'player' | 'ai';
+export type AggressionAiMode = 'none' | 'angry' | 'rage';
 
 export interface Unit {
   id: string;
