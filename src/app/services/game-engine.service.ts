@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { Unit, Position, Owner } from '../models/unit.model';
+import { Unit, Position, Owner, AggressionAiMode } from '../models/unit.model';
 import { CombatService } from './combat.service';
 import { BuildService } from './build.service';
 import { LogService } from './log.service';
@@ -83,8 +83,7 @@ export class GameEngineService {
     private aggressionModeSignal = signal<boolean>(false);
     private wallCooldownSignal = signal<Map<string, number>>(new Map());
     private aiQueuedUnitIdSignal = signal<string | null>(null);
-    private internalDifficultySignal = signal<'baby' | 'normal' | 'hard' | 'nightmare'>('normal');
-    private aiMoodSignal = signal<'none' | 'angry' | 'rage'>('none');
+    private aiMoodSignal = signal<AggressionAiMode>('none');
     private rageCaptureCounterSignal = signal<number>(0);
     private anchoredGatherersSignal = signal<Set<string>>(new Set<string>());
 
@@ -132,13 +131,7 @@ export class GameEngineService {
     queuedUnitId(): string | null {
         return this.aiQueuedUnitIdSignal();
     }
-    internalDifficulty(): 'baby' | 'normal' | 'hard' | 'nightmare' {
-        return this.internalDifficultySignal();
-    }
-    isAggressiveInternal(): boolean {
-        return this.internalDifficultySignal() !== this.settings.difficulty();
-    }
-    currentMood(): 'none' | 'angry' | 'rage' {
+    currentMood(): AggressionAiMode {
         return this.aiMoodSignal();
     }
     isAngry(): boolean {
@@ -206,7 +199,6 @@ export class GameEngineService {
 
     resetGame() {
         const difficulty = this.settings.difficulty();
-        this.internalDifficultySignal.set(difficulty);
         this.unitsSignal.set([]);
         this.wallCooldownSignal.set(new Map());
         this.turnSignal.set(1);
@@ -220,15 +212,18 @@ export class GameEngineService {
         this.lastRemainderUnitIdSignal.set(null);
         this.resourcesSignal.set({ wood: 0 });
         this.baseHealthSignal.set({ player: 100, ai: 100 });
+
+        // START RESERVE
         if (difficulty === 'baby') {
-            this.reservePointsSignal.set({ player: 40, ai: 5 });
+            this.reservePointsSignal.set({ player: 45, ai: 15 });
         } else if (difficulty === 'normal') {
-            this.reservePointsSignal.set({ player: 20, ai: 20 });
+            this.reservePointsSignal.set({ player: 35, ai: 25 });
         } else if (difficulty === 'hard') {
-            this.reservePointsSignal.set({ player: 20, ai: 35 });
+            this.reservePointsSignal.set({ player: 25, ai: 35 });
         } else {
-            this.reservePointsSignal.set({ player: 15, ai: 40 });
+            this.reservePointsSignal.set({ player: 15, ai: 45 });
         }
+
         this.deployTargetsSignal.set([]);
         this.forestsSignal.set(this.map.generateForests(this.gridSize, this.getBasePosition('player'), this.getBasePosition('ai')));
         const forestKeys = new Set(this.forestsSignal().map(p => `${p.x},${p.y}`));
@@ -1106,10 +1101,10 @@ export class GameEngineService {
         if (this.activeSideSignal() !== 'ai' || this.gameStatus() !== 'playing') return;
         if (this.isAiThinking) return;
         this.isAiThinking = true;
-        console.trace('AI TURN START TRACE');
+        // console.trace('AI TURN START TRACE');
         this.aiBatchingActions = true;
         const aiBase = this.getBasePosition('ai');
-        console.log('[AI] Phase: Economy');
+        // console.log('[AI] Phase: Economy');
         while (this.aiWoodSignal() > 30) {
             this.aiConvertWoodToReserve();
         }
@@ -1118,37 +1113,48 @@ export class GameEngineService {
             const totalForests = this.forestsSignal().length;
             const aiForests = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
             const playerForests = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y)).length;
-            const baseline = this.settings.difficulty();
-            const current = this.internalDifficultySignal();
+            const baseDifficulty = this.settings.difficulty();
             const playerPct = totalForests > 0 ? playerForests / totalForests : 0;
-            let mood: 'none' | 'angry' | 'rage' = 'none';
+
+            // Check AI mode 
+            let mood: AggressionAiMode = 'none';
             if (playerForests <= aiForests) {
                 mood = 'none';
             } else if (playerPct >= 0.9 || playerForests >= 9) {
                 mood = 'rage';
-            } else if (playerForests >= aiForests + (current === 'baby' ? 3 : 2)) {
+            } else if (playerForests >= aiForests + ((baseDifficulty === 'baby') ? 4 : (baseDifficulty === 'normal') ? 3 : (baseDifficulty === 'hard') ? 2 : 1)) {
                 mood = 'angry';
+            } else {
+                mood = 'none';
             }
             this.aiMoodSignal.set(mood);
-            if (mood === 'rage') {
-                this.internalDifficultySignal.set('nightmare');
-            } else if (mood === 'angry') {
-                const escalated = current === 'baby' ? 'normal' : current === 'normal' ? 'hard' : 'nightmare';
-                this.internalDifficultySignal.set(escalated);
-            } else {
-                this.internalDifficultySignal.set(baseline);
-            }
+
+            // Adding a bonus based on the situation
             const isEvenTurn = this.turnSignal() % 2 === 0;
             const isFifthTurn = this.turnSignal() % 5 === 0;
             if (mood === 'rage') {
-                const reserveHelp = baseline === 'baby' ? 0 : isEvenTurn ? 2 : 1;
+                const reserveHelp: number = (baseDifficulty === 'baby')
+                    ? (isEvenTurn ? 1 : 0)
+                    : (baseDifficulty === 'normal')
+                        ? (isEvenTurn ? 2 : 1)
+                        : (baseDifficulty === 'hard')
+                            ? (isEvenTurn ? 3 : 2) : 3;
                 this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + reserveHelp }));
-            } else if (mood === 'angry' && isEvenTurn) {
-                const reserveHelp = baseline === 'baby' ? 0 : 1;
-                this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + reserveHelp }));
-            } else if (mood === 'angry' && baseline === 'baby' && isFifthTurn) {
-                const reserveHelp = 1;
-                this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + reserveHelp }));
+            } else if (mood === 'angry') {
+                if (baseDifficulty === 'baby') {
+                    if (isFifthTurn) {
+                        const reserveHelp = 1;
+                        this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + reserveHelp }));
+                    }
+                } else {
+                    if (isEvenTurn) {
+                        const reserveHelp = (baseDifficulty === 'normal')
+                            ? (isEvenTurn ? 1 : 0)
+                            : (baseDifficulty === 'hard')
+                                ? (isFifthTurn ? 2 : 1) : 2;
+                        this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + reserveHelp }));
+                    }
+                }
             }
         } catch { }
         await new Promise(r => setTimeout(r, 100));
@@ -1168,7 +1174,7 @@ export class GameEngineService {
         const aiIncome = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y) && (u.productionActive ?? false)).length * 2;
         const aggression = playerIncome >= aiIncome;
         this.aggressionModeSignal.set(aggression);
-        console.log(`[AI Economy] Player Income: ${playerIncome}, AI Income: ${aiIncome}. AGGRESSION MODE: ${aggression}`);
+        // console.log(`[AI Economy] Player Income: ${playerIncome}, AI Income: ${aiIncome}. AGGRESSION MODE: ${aggression}`);
         const forestsAll = this.forestsSignal();
         const unoccupied = forestsAll.filter(f => !this.getUnitAt(f.x, f.y));
         const visibleFree = unoccupied.filter(f => this.isVisibleToAi(f.x, f.y));
@@ -1210,22 +1216,22 @@ export class GameEngineService {
         }
 
         // PHASE 1: Free Actions (Loop until no beneficial free actions remain)
-        console.log('[AI] Phase 1: Free Actions (Spawning/Walls/Conversion)');
+        // console.log('[AI] Phase 1: Free Actions (Spawning/Walls/Conversion)');
         let freeActionsTaken = 0;
         const MAX_FREE_ACTIONS = 10; // Safety cap
         while (freeActionsTaken < MAX_FREE_ACTIONS) {
-             const performed = this.executeOneFreeAction();
-             if (!performed) break;
-             freeActionsTaken++;
-             await new Promise(r => setTimeout(r, 100)); // Small delay for visualization
+            const performed = this.executeOneFreeAction();
+            if (!performed) break;
+            freeActionsTaken++;
+            await new Promise(r => setTimeout(r, 100)); // Small delay for visualization
         }
 
         // PHASE 2 & 3: Re-evaluation & Single Terminal Action
-        console.log('[AI] Phase 2/3: Terminal Action (Move/Attack/Merge)');
-        
+        // console.log('[AI] Phase 2/3: Terminal Action (Move/Attack/Merge)');
+
         // Re-fetch decision ONE LAST TIME to account for all free actions
         const decision = this.aiStrategy.chooseBestEndingAction(this);
-        
+
         if (decision) {
             const blocked = new Set<string>();
             if (Math.max(Math.abs(decision.target.x - aiBase.x), Math.abs(decision.target.y - aiBase.y)) <= 2) {
@@ -1234,7 +1240,7 @@ export class GameEngineService {
 
             const tag = decision.reason;
             const kind = decision.type === 'wall_attack' ? 'Attack Wall' : (decision.reason.includes('Attack') ? 'Move/Attack' : (decision.reason.includes('Merge') ? 'Merge' : 'Move'));
-            console.log(`[AI TERMINAL ACTION] ${kind} (${tag})`);
+            // console.log(`[AI TERMINAL ACTION] ${kind} (${tag})`);
 
             if (decision.type === 'wall_attack' && decision.edge) {
                 this.attackOrDestroyWallBetween(decision.edge.from, decision.edge.to, false);
@@ -1242,12 +1248,12 @@ export class GameEngineService {
                 this.executeMove(decision.unit, decision.target);
             }
         } else {
-            console.log('[AI] No beneficial terminal action found. Ending turn.');
+            // console.log('[AI] No beneficial terminal action found. Ending turn.');
         }
 
-        console.log('>>> SWITCHING TO PLAYER SIDE NOW <<<');
+        // console.log('>>> SWITCHING TO PLAYER SIDE NOW <<<');
         this.endTurn();
-        console.log('--- AI TURN FINISHED, WAITING FOR PLAYER ---');
+        // console.log('--- AI TURN FINISHED, WAITING FOR PLAYER ---');
         this.isAiThinking = false;
         this.aiBatchingActions = false;
         return;
@@ -1258,30 +1264,30 @@ export class GameEngineService {
         // 1. Critical Defense Spawning (Meat Shields)
         const aiBase = this.getBasePosition('ai');
         const threatsBase = this.unitsSignal().filter(u => u.owner === 'player' && Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3 && u.tier >= 2);
-        
+
         if (threatsBase.length > 0) {
             // Find the biggest threat
             const highest = threatsBase.reduce((acc, e) => this.calculateTotalPoints(e) > this.calculateTotalPoints(acc) ? e : acc, threatsBase[0]);
-            
+
             // If we have resources, try to spawn a blocker
             const reserves = this.reservePointsSignal().ai;
             if (reserves >= 1) { // Min cost for T1
-                 const didSpawn = this.aiDefenseSpawn(highest);
-                 if (didSpawn) return true;
+                const didSpawn = this.aiDefenseSpawn(highest);
+                if (didSpawn) return true;
             }
         }
 
         // 2. Resource Management
         if (this.aiWoodSignal() >= 30) {
-             this.aiConvertWoodToReserve();
-             return true;
+            this.aiConvertWoodToReserve();
+            return true;
         }
 
         // 3. Expansion Spawning (Only if not threatened)
         if (threatsBase.length === 0) {
-             // Logic from original code, but single step
-             // T3 Hunter logic
-             try {
+            // Logic from original code, but single step
+            // T3 Hunter logic
+            try {
                 const t3Cost = this.getPointsForTierLevel(3, 1);
                 const totalForests = this.forestsSignal().length;
                 const aiControlCount = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
@@ -1291,7 +1297,7 @@ export class GameEngineService {
                     const count = this.aiSpawnTier(3, 1, new Set<string>());
                     if (count > 0) return true;
                 }
-             } catch {}
+            } catch { }
         }
 
         return false;
@@ -1329,7 +1335,7 @@ export class GameEngineService {
                 return null;
             })();
         if (!critical) return false;
-        
+
         // Auto-convert if desperate
         while (this.aiWoodSignal() >= 20) {
             this.aiConvertWoodToReserve();
@@ -1355,7 +1361,7 @@ export class GameEngineService {
         ]);
         this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai - cost }));
         this.recomputeVisibility();
-        console.log('[AI Defense] Spawned single strongest blocker at', critical, 'cost', cost);
+        // console.log('[AI Defense] Spawned single strongest blocker at', critical, 'cost', cost);
         return true;
     }
     // --- Spawning ---
@@ -1411,7 +1417,7 @@ export class GameEngineService {
             this.unitsSignal.update(units => [...units, ...placed]);
             this.reservePointsSignal.update(r => ({ player: r.player, ai: reserves }));
             this.recomputeVisibility();
-            console.log(`[AI Spawn] Created ${placed.length} unit(s) of T${tier}.`);
+            // console.log(`[AI Spawn] Created ${placed.length} unit(s) of T${tier}.`);
         }
         return created;
     }
@@ -1554,6 +1560,9 @@ export class GameEngineService {
     }
     logs() {
         return this.log.logs();
+    }
+    clearLogs() {
+        return this.log.clear();
     }
     private appendLog(entry: string, color?: 'text-green-400' | 'text-red-400' | 'text-yellow-300' | 'text-gray-200') {
         this.log.add(entry, color);

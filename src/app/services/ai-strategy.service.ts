@@ -29,7 +29,7 @@ export class AiStrategyService {
       aiUnits = aiUnits.filter((u: Unit) => u.id === queued);
     }
     const mood = typeof engine.currentMood === 'function' ? engine.currentMood() : 'none';
-    const aggressiveBonus = this.settings.difficulty() === 'baby' ? -1000 : mood === 'rage' ? 50000 : (mood === 'angry' ? 10000 : 0);
+    const aggressiveBonus: number = this.settings.difficulty() === 'baby' ? -10000 : mood === 'rage' ? 50000 : (mood === 'angry' ? 10000 : 0);
     if (aiUnits.length === 0) return null;
     const aiBase: Position = engine.getBasePosition('ai');
     const playerBase: Position = engine.getBasePosition('player');
@@ -163,7 +163,7 @@ export class AiStrategyService {
       );
       if (inSession && !baseProximity && unit.tier < 3) {
         this.goals.set(unit.id, { x: unit.position.x, y: unit.position.y });
-        console.log(`[AI Block] Unit ${unit.id} is blocked in the forest at (${unit.position.x},${unit.position.y}). Progress: ${(unit.forestOccupationTurns ?? 0)}/3.`);
+        // console.log(`[AI Block] Unit ${unit.id} is blocked in the forest at (${unit.position.x},${unit.position.y}). Progress: ${(unit.forestOccupationTurns ?? 0)}/3.`);
         continue;
       }
       if (unit.tier >= 3) {
@@ -734,7 +734,7 @@ export class AiStrategyService {
     const goal = this.goals.get(best.unit.id);
     const goalText = goal ? `Goal: Forest at ${goal.x},${goal.y}` : 'Goal: None';
     // CRITICAL LOGIC: Final decision logging aids telemetry and debugging of AI pathing.
-    console.log(`[AI Decision] Unit ${best.unit.id} moving to (${best.target.x},${best.target.y}) targeting ${goalText}.`);
+    // console.log(`[AI Decision] Unit ${best.unit.id} moving to (${best.target.x},${best.target.y}) targeting ${goalText}.`);
     return { type: best.type, unit: best.unit, target: best.target, reason: best.reason, edge: (best as any).edge };
   }
 

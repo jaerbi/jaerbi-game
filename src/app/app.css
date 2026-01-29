@@ -250,7 +250,7 @@
   height: 400px;
   background: radial-gradient(circle, #3b82f6, transparent); /* Blue-ish */
   clip-path: url(#soft-triangle);
-  animation: floatGiant1 35s infinite alternate ease-in-out;
+  /* animation: floatGiant1 35s infinite alternate ease-in-out; */
 }
 
 .shape-giant-2 {
@@ -260,7 +260,7 @@
   height: 500px;
   border-radius: 50%;
   background: radial-gradient(circle, #ef4444, transparent); /* Red-ish */
-  animation: floatGiant2 36s infinite alternate-reverse ease-in-out;
+  /* animation: floatGiant2 36s infinite alternate-reverse ease-in-out; */
 }
 
 .shape-giant-3 {
@@ -270,8 +270,8 @@
   height: 300px;
   background: radial-gradient(circle, #a855f7, transparent); /* Purple-ish */
   clip-path: url(#soft-triangle);
-  animation: floatGiant3 45s infinite alternate ease-in-out;
-  animation-delay: -10s;
+  /* animation: floatGiant3 45s infinite alternate ease-in-out;
+  animation-delay: -10s; */
 }
 
 .shape-giant-4 {
@@ -281,8 +281,8 @@
   height: 350px;
   border-radius: 50%;
   background: radial-gradient(circle, #10b981, transparent); /* Green-ish */
-  animation: floatGiant2 38s infinite alternate ease-in-out;
-  animation-delay: -5s;
+  /* animation: floatGiant2 38s infinite alternate ease-in-out;
+  animation-delay: -5s; */
 }
 
 .shape-giant-5 {
@@ -292,8 +292,8 @@
   height: 340px;
   clip-path: url(#soft-triangle);
   background: radial-gradient(circle, #ece80d, transparent); /* yellow-ish */
-  animation: floatGiant2 41s infinite alternate ease-in-out;
-  animation-delay: -3s;
+  /* animation: floatGiant2 41s infinite alternate ease-in-out;
+  animation-delay: -3s; */
   color: #0800ff;
 }
 
