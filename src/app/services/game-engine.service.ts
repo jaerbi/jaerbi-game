@@ -1248,7 +1248,57 @@ export class GameEngineService {
                 this.executeMove(decision.unit, decision.target);
             }
         } else {
-            // console.log('[AI] No beneficial terminal action found. Ending turn.');
+            const moved = this.movedThisTurnSignal();
+            const aiUnits = this.unitsSignal().filter(u => u.owner === 'ai' && !moved.has(u.id));
+            const unit = aiUnits[0] ?? this.unitsSignal().find(u => u.owner === 'ai');
+            if (unit) {
+                const forests = this.forestsSignal();
+                const aiOwnedForestKeys = new Set(this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).map(u => `${u.position.x},${u.position.y}`));
+                const playerBase = this.getBasePosition('player');
+                const candidateForests = forests.filter(f => !aiOwnedForestKeys.has(`${f.x},${f.y}`));
+                const goals = candidateForests.length > 0 ? candidateForests : [playerBase];
+                const nearest = goals.reduce((acc, g) => {
+                    const da = Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y);
+                    const dg = Math.abs(unit.position.x - g.x) + Math.abs(unit.position.y - g.y);
+                    return dg < da ? g : acc;
+                });
+                const dirs = [
+                    { x: -1, y: -1 }, { x: 0, y: -1 }, { x: 1, y: -1 },
+                    { x: -1, y: 0 },                    { x: 1, y: 0 },
+                    { x: -1, y: 1 },  { x: 0, y: 1 },  { x: 1, y: 1 },
+                ];
+                const candidates = dirs
+                    .map(d => ({ x: unit.position.x + d.x, y: unit.position.y + d.y }))
+                    .filter(p => this.inBounds(p.x, p.y))
+                    .sort((a, b) => {
+                        const da = Math.abs(a.x - nearest.x) + Math.abs(a.y - nearest.y);
+                        const db = Math.abs(b.x - nearest.x) + Math.abs(b.y - nearest.y);
+                        return da - db;
+                    });
+                let target: Position | null = null;
+                for (const p of candidates) {
+                    const occ = this.getUnitAt(p.x, p.y);
+                    if (!occ) { target = p; break; }
+                    if (occ.owner === 'player') { target = p; break; }
+                    if (occ.owner === 'ai' && occ.tier === unit.tier) { target = p; break; }
+                }
+                if (!target) {
+                    const sx = Math.sign(nearest.x - unit.position.x);
+                    const sy = Math.sign(nearest.y - unit.position.y);
+                    const nx = unit.position.x + (sx !== 0 ? sx : 0);
+                    const ny = unit.position.y + (sy !== 0 ? sy : 0);
+                    if (this.inBounds(nx, ny)) {
+                        const w = this.getWallBetween(unit.position.x, unit.position.y, nx, ny);
+                        if (w) {
+                            this.attackOrDestroyWallBetween({ x: unit.position.x, y: unit.position.y }, { x: nx, y: ny }, false);
+                        } else {
+                            this.executeMove(unit, { x: nx, y: ny });
+                        }
+                    }
+                } else {
+                    this.executeMove(unit, target);
+                }
+            }
         }
 
         // console.log('>>> SWITCHING TO PLAYER SIDE NOW <<<');
@@ -1277,6 +1327,16 @@ export class GameEngineService {
             }
         }
 
+        const aiUnitsCount = this.unitsSignal().filter(u => u.owner === 'ai').length;
+        if (aiUnitsCount < 6) {
+            const reservesNow = this.reservePointsSignal().ai;
+            const t2Cost = this.getPointsForTierLevel(2, 1);
+            if (reservesNow >= t2Cost) {
+                const created = this.aiSpawnTier(2, 1, new Set<string>());
+                if (created > 0) return true;
+            }
+        }
+
         // 2. Resource Management
         if (this.aiWoodSignal() >= 30) {
             this.aiConvertWoodToReserve();
@@ -1293,7 +1353,7 @@ export class GameEngineService {
                 const aiControlCount = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
                 const aiControlPct = totalForests > 0 ? aiControlCount / totalForests : 0;
                 const reservesNow = this.reservePointsSignal().ai;
-                if (reservesNow >= t3Cost && aiControlPct <= 0.6) {
+                if (aiUnitsCount >= 6 && reservesNow >= t3Cost && aiControlPct <= 0.6) {
                     const count = this.aiSpawnTier(3, 1, new Set<string>());
                     if (count > 0) return true;
                 }

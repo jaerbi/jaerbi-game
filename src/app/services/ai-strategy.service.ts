@@ -40,12 +40,21 @@ export class AiStrategyService {
         const aiForestCount = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && engine.isForest(u.position.x, u.position.y)).length;
         const playerUnits: Unit[] = engine.unitsSignal().filter((u: Unit) => u.owner === 'player');
         const enemyNearBase = playerUnits.some((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3);
-        const baseThreatEnemies = playerUnits.filter((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3);
+        const baseThreatEnemies = playerUnits.filter((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 4);
         const baseThreat = baseThreatEnemies.length > 0;
         const immediateThreatEnemies = baseThreatEnemies.filter((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 2);
         const immediateThreat = immediateThreatEnemies.length > 0;
         const baseProximity = playerUnits.some((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 5);
         const aggression = typeof engine.aggressionMode === 'function' ? !!engine.aggressionMode() : (playerUnits.filter((p: Unit) => engine.isForest(p.position.x, p.position.y)).length * 2) >= (aiUnits.filter((a: Unit) => engine.isForest(a.position.x, a.position.y)).length * 2);
+        const forestsSecured = forests.length > 0 ? forests.every(f => {
+            const u = engine.getUnitAt(f.x, f.y);
+            return !!u && u.owner === 'ai';
+        }) : true;
+        const forestsAllOccupied = forests.length > 0 ? forests.every(f => !!engine.getUnitAt(f.x, f.y)) : false;
+        const playerOwnedForests = forests.filter(f => {
+            const u = engine.getUnitAt(f.x, f.y);
+            return !!u && u.owner === 'player';
+        });
         let best: { unit: Unit; target: Position; score: number; type: 'move' | 'attack' | 'merge' | 'wall_attack'; reason: string; edge?: { from: Position; to: Position } } | null = null;
         const clusterCount = aiUnits.filter((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3).length;
         const center = { x: Math.floor(engine.gridSize / 2), y: Math.floor(engine.gridSize / 2) };
@@ -310,7 +319,7 @@ export class AiStrategyService {
                     if (best === null || score > best.score) {
                         best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: { from: { ...unit.position }, to: fTile } };
                     }
-                } else if (wall && wall.owner === 'player') {
+                        } else if (wall && wall.owner === 'player') {
                     const neighbors: Position[] = [
                         { x: fTile.x + 1, y: fTile.y },
                         { x: fTile.x - 1, y: fTile.y },
@@ -329,8 +338,8 @@ export class AiStrategyService {
                             return Math.min(acc, d);
                         }, Infinity)
                         : Infinity;
-                    if (dAlt - dDirect > 4) {
-                        const score = (unit.tier >= 3 ? 7000000 : ((unit.tier === 3 && unit.level === 1) ? 1050000 : 850000)) + aggressiveBonus;
+                            if (dAlt - dDirect > 4) {
+                                const score = (unit.tier >= 3 ? 8000000 : ((unit.tier === 3 && unit.level === 1) ? 1050000 : 850000)) + aggressiveBonus;
                         const reason = 'Attack Player Wall to Forest';
                         if (best === null || score > best.score) {
                             best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: { from: { ...unit.position }, to: fTile } };
@@ -345,7 +354,7 @@ export class AiStrategyService {
                 if (bTile.x === playerBase.x && bTile.y === playerBase.y) {
                     const w = engine.getWallBetween(unit.position.x, unit.position.y, bTile.x, bTile.y);
                     if (w && (w.owner === 'neutral' || w.owner === 'player') && unit.tier >= 3) {
-                        const score = 7000000 + aggressiveBonus;
+                        const score = 8000000 + aggressiveBonus;
                         const reason = 'Breach Wall to Base';
                         if (best === null || score > best.score) {
                             best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: { from: { ...unit.position }, to: bTile } };
@@ -392,7 +401,7 @@ export class AiStrategyService {
                     if (engine.inBounds(nTile.x, nTile.y)) {
                         const w = engine.getWallBetween(unit.position.x, unit.position.y, nTile.x, nTile.y);
                         if (w) {
-                            const score = (unit.tier >= 3 ? 7000000 : 1500000) + aggressiveBonus;
+                            const score = (unit.tier >= 3 ? 8000000 : 1500000) + aggressiveBonus;
                             const reason = 'Wall Breaker: Unblock Path';
                             if (best === null || score > best.score) {
                                 best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: { from: { ...unit.position }, to: nTile } };
@@ -421,7 +430,7 @@ export class AiStrategyService {
                             else if (w2) targetEdge = { from: { ...unit.position }, to: n2 };
 
                             if (targetEdge) {
-                                const score = (unit.tier >= 3 ? 7000000 : 1500000) + aggressiveBonus;
+                                const score = (unit.tier >= 3 ? 8000000 : 1500000) + aggressiveBonus;
                                 const reason = 'Wall Breaker: Unblock Diagonal Path';
                                 if (best === null || score > best.score) {
                                     best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: targetEdge };
@@ -434,14 +443,14 @@ export class AiStrategyService {
             // Anti-stagnation: break out from neutral walls near base or with no clear forest path
             const noClearForestPath = visibleFree.length === 0 && fogForests.length === 0 && !breachTarget;
             // CRITICAL LOGIC: Anti-stagnation near base — break neutral cages to regain mobility.
-            if (stagnantTurns >= 2 && noClearForestPath) {
+            if (stagnantTurns >= 2 && (noClearForestPath || playerUnits.length > 0)) {
                 for (const dxy of adjDirs) {
                     const nTile = { x: unit.position.x + dxy.x, y: unit.position.y + dxy.y };
                     if (!engine.inBounds(nTile.x, nTile.y)) continue;
                     const w = engine.getWallBetween(unit.position.x, unit.position.y, nTile.x, nTile.y);
-                    if (w && w.owner === 'neutral') {
-                        const score = 800000;
-                        const reason = 'Anti-Stagnation: Break Out';
+                    if (w && (w.owner === 'neutral' || w.owner === 'player')) {
+                        const score = (unit.tier >= 3 ? 8000000 : 1200000);
+                        const reason = 'Anti-Stagnation: Break Obstacle';
                         if (best === null || score > best.score) {
                             best = { unit, target: { x: unit.position.x, y: unit.position.y }, score, type: 'wall_attack', reason, edge: { from: { ...unit.position }, to: nTile } };
                         }
@@ -466,6 +475,18 @@ export class AiStrategyService {
                 const prevPrevTile = hist.length >= 3 ? hist[hist.length - 3] : null;
                 const returning = prevTile && move.x === prevTile.x && move.y === prevTile.y;
                 const leavingForest = isOnForest && !(engine.isForest(move.x, move.y));
+                if (unit.tier >= 3 && leavingForest) {
+                    const canReachBaseSoon = (Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y)) <= 2;
+                    const nearEnemySoon = playerUnits.some((p: Unit) => (Math.abs(move.x - p.position.x) + Math.abs(move.y - p.position.y)) <= 2);
+                    const replacementReady = engine.unitsSignal().some((u2: Unit) =>
+                        u2.owner === 'ai' && u2.id !== unit.id &&
+                        Math.max(Math.abs(u2.position.x - unit.position.x), Math.abs(u2.position.y - unit.position.y)) <= 1
+                    );
+                    if (!forestsSecured && !(canReachBaseSoon || nearEnemySoon) && !replacementReady) {
+                        score -= 2000000;
+                        reason = 'Penalty: Leaving forest without replacement';
+                    }
+                }
                 const banInfo = stutterBan.get(unit.id);
                 const bannedNow = banInfo && banInfo.until > engine.turnSignal() && banInfo.tiles.has(`${move.x},${move.y}`);
                 const loopLastTwo = unit.tier === 1 && ((prevTile && move.x === prevTile.x && move.y === prevTile.y) || (prevPrevTile && move.x === prevPrevTile.x && move.y === prevPrevTile.y));
@@ -492,6 +513,14 @@ export class AiStrategyService {
                     }
                 }
                 if (!targetUnit) {
+                    if (isOnForest && move.x === unit.position.x && move.y === unit.position.y) {
+                        const strongerAdj = adjacentEnemies.some(e => this.combat.calculateTotalPoints(e) > this.combat.calculateTotalPoints(unit));
+                        const allowHunt = forestsSecured && unit.tier >= 3;
+                        if (!strongerAdj && !allowHunt) {
+                            score = Math.max(score, 10000000);
+                            reason = 'Hold: Stay on forest';
+                        }
+                    }
                     if (engine.isForest(move.x, move.y) && !engine.getUnitAt(move.x, move.y)) {
                         if (unit.tier >= 3) {
                             score = 5000000;
@@ -520,9 +549,14 @@ export class AiStrategyService {
                         if (towardGoalWall && move.x === unit.position.x && move.y === unit.position.y) {
                             const w = engine.getWallBetween(unit.position.x, unit.position.y, unit.position.x + Math.sign(goal.x - unit.position.x), unit.position.y + Math.sign(goal.y - unit.position.y));
                             const owner = w?.owner;
-                            const base = owner === 'ai' ? 700000 : 800000;
-                            score += base + aggressiveBonus;
-                            reason = owner === 'ai' ? 'Sabotage: Own Wall Blocks Path' : 'Siege: Breakthrough';
+                            if (unit.tier >= 3) {
+                                score = Math.max(score, 8000000 + aggressiveBonus);
+                                reason = 'Breach: Wall blocks high-priority path';
+                            } else {
+                                const base = owner === 'ai' ? 700000 : 800000;
+                                score += base + aggressiveBonus;
+                                reason = owner === 'ai' ? 'Sabotage: Own Wall Blocks Path' : 'Siege: Breakthrough';
+                            }
                         }
                     }
                     if (breachTarget) {
@@ -555,7 +589,7 @@ export class AiStrategyService {
                             reason = 'DEFENSE: T3 Move to Intercept Threat';
                         }
                         else if (isBlocking) {
-                            const baseScore = threatNextTurn ? 2000000 : 1200000;
+                            const baseScore = threatNextTurn ? 2500000 : 1500000;
                             if (score < baseScore) {
                                 score = baseScore;
                             }
@@ -576,8 +610,6 @@ export class AiStrategyService {
                         }
                     }
                     if (unit.tier >= 3) {
-                        const playerForests = playerUnits.filter(p => engine.isForest(p.position.x, p.position.y)).map(p => ({ x: p.position.x, y: p.position.y }));
-                        const forestsSecured = aiForestCount === playerForests;
                         const bCurr = Math.abs(unit.position.x - playerBase.x) + Math.abs(unit.position.y - playerBase.y);
                         const bMove = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
                         if (bMove < bCurr) {
@@ -618,6 +650,17 @@ export class AiStrategyService {
                         if (unit.tier >= 3 && engine.isForest(targetUnit.position.x, targetUnit.position.y)) {
                             score = 10000000;
                             reason = 'Aggression: Liberate forest';
+                        }
+                        if (!isOnForest && forestsAllOccupied && playerOwnedForests.length > 0 && engine.isForest(targetUnit.position.x, targetUnit.position.y)) {
+                            score = 12000000;
+                            reason = 'LIBERATE: Attack player forest';
+                        }
+                        // 0. Intercept within 4 tiles (assist)
+                        if (distTargetBase <= 4) {
+                            if (unit.tier >= 3 || canKill) {
+                                score = 15000000;
+                                reason = 'INTERCEPT: Base Siege';
+                            }
                         }
                         // 1. Base Defense (Top Priority)
                         if (targetThreateningBase) {
@@ -691,6 +734,8 @@ export class AiStrategyService {
                 if (targetUnit && targetUnit.owner === 'ai' && targetUnit.tier === unit.tier) type = 'merge';
                 if (returning) {
                     score = Math.floor(score * 0.1);
+                    score -= 300000;
+                    reason = 'Penalty: Inertia';
                 }
                 const histLoop3 = (() => {
                     const last6 = hist.slice(-6);
