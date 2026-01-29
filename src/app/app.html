@@ -864,7 +864,7 @@
                     >
                       @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
                         <button
-                          class="absolute cursor-pointer shadow-2xl flex items-center justify-center text-white rounded-full border border-white/20  hover:scale-110 active:scale-95 transition-all z-[45]"
+                          class="absolute cursor-pointer shadow-2xl flex items-center justify-center text-white rounded-full border border-white/20 hover:scale-110 active:scale-95 transition-all z-[45]"
                           [style.width.px]="gameEngine.iconSizePx"
                           [style.height.px]="gameEngine.iconSizePx"
                           [style.z-index]="45"
@@ -1229,11 +1229,20 @@
     {{ settings.version }} | ©︎ Created by jaerbi and just
   </div>
 
+  <!-- Game Rules Modal -->
   @if (gameEngine.rulesOpen()) {
     <app-game-rules />
   }
+  <!-- Game Rules Modal END -->
+  <!-- Log Modal -->
   @if (gameEngine.logOpen()) {
     <div class="fixed inset-y-0 right-0 w-80 bg-gray-900/90 border-l border-gray-700 p-4 z-40">
+      <button
+        class="w-8 h-8 absolute top-0 -right-10 rounded-full bg-gray-700 hover:bg-gray-600 text-lg cursor-pointer"
+        (click)="gameEngine.toggleLog()"
+      >
+        ✖
+      </button>
       <h3 class="text-lg font-bold mb-2">Action Log</h3>
       <label class="flex items-center gap-2 text-xs text-gray-300 mb-2 cursor-pointer">
         <input
@@ -1251,13 +1260,21 @@
       </div>
     </div>
   }
+  <!-- Log Modal END -->
+  <!-- Settings Modal -->
   @if (gameEngine.settingsOpen()) {
     <div
-      class="fixed inset-y-0 left-0 w-72 bg-black/60 backdrop-blur-xl border-r border-white/10 p-6 z-40 shadow-[10px_0_30px_rgba(0,0,0,0.5)] flex flex-col gap-8 transition-all animate-in slide-in-from-left duration-300"
+      class="fixed inset-y-0 left-0 w-72 bg-black/60 backdrop-blur-xl border-r border-white/10 p-6 z-40 shadow-[10px_0_30px_rgba(0,0,0,0.5)] flex flex-col gap-[24px] transition-all animate-in slide-in-from-left duration-300"
     >
-      <div class="flex items-center gap-3 border-b border-white/5 pb-4">
+      <div class="relative flex items-center gap-3 border-b border-white/5 pb-4">
         <div class="w-2 h-6 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
         <h3 class="text-xl font-black uppercase tracking-widest text-white/90">System Settings</h3>
+        <button
+          class="w-8 h-8 absolute top-0 -right-10 rounded-full bg-gray-700 hover:bg-gray-600 text-lg cursor-pointer"
+          (click)="gameEngine.toggleSettings()"
+        >
+          ✖
+        </button>
       </div>
 
       <div class="flex flex-col gap-4">
@@ -1319,6 +1336,8 @@
       </div>
     </div>
   }
+  <!-- Settings Modal End -->
+  <!-- High Scores Modal -->
   @if (gameEngine.highScoresOpen()) {
     <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div class="bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-600 w-[680px] max-w-[95vw]">
@@ -1364,6 +1383,7 @@
       </div>
     </div>
   }
+  <!-- High Scores modal End -->
 
   @if (!isProduction) {
     <div

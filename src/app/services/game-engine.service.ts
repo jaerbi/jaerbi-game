@@ -1208,88 +1208,43 @@ export class GameEngineService {
         if (!this.wallBuiltThisTurnSignal()) {
             this.tryDefensiveWallsNearForests();
         }
-        console.log('[AI] Phase: Expansion');
+
+        // PHASE 1: Free Actions (Loop until no beneficial free actions remain)
+        console.log('[AI] Phase 1: Free Actions (Spawning/Walls/Conversion)');
+        let freeActionsTaken = 0;
+        const MAX_FREE_ACTIONS = 10; // Safety cap
+        while (freeActionsTaken < MAX_FREE_ACTIONS) {
+             const performed = this.executeOneFreeAction();
+             if (!performed) break;
+             freeActionsTaken++;
+             await new Promise(r => setTimeout(r, 100)); // Small delay for visualization
+        }
+
+        // PHASE 2 & 3: Re-evaluation & Single Terminal Action
+        console.log('[AI] Phase 2/3: Terminal Action (Move/Attack/Merge)');
+        
+        // Re-fetch decision ONE LAST TIME to account for all free actions
         const decision = this.aiStrategy.chooseBestEndingAction(this);
-        const aiForestCount = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
-        const enemyNearBase = this.unitsSignal().some(u => u.owner === 'player' && Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3);
-        const reserves = this.reservePointsSignal().ai;
-        const blocked = new Set<string>();
-        if (decision && Math.max(Math.abs(decision.target.x - aiBase.x), Math.abs(decision.target.y - aiBase.y)) <= 2) {
-            blocked.add(`${decision.target.x},${decision.target.y}`);
-        }
-        const openingTurns = this.turnSignal() <= 15;
-        const queuedId = this.aiQueuedUnitIdSignal();
-        const canAnyReachVisible = openingTurns && visibleFree.length > 0 && aiUnitsList.some(u => {
-            const moves = this.calculateValidMoves(u);
-            return moves.some(m => visibleFree.some(f => f.x === m.x && f.y === m.y));
-        });
-        const shouldSpawnT1 = openingTurns && visibleFree.length > 0 && !queuedId && !canAnyReachVisible;
-        if (shouldSpawnT1) {
-            this.aiSpawnTier(1, 1, blocked);
-        } else {
-            // Desperation Spawn: Force T2 if low on units but can afford T2 (Economy Override)
-            const t2Cost = this.getPointsForTierLevel(2, 1);
-            const t3Cost = this.getPointsForTierLevel(3, 1);
-            const reservesNow = this.reservePointsSignal().ai;
-            if (aiUnitsList.length < 3 && reservesNow >= t2Cost && reservesNow < t3Cost) {
-                console.log('[AI Spawn] Desperation: Force spawning T2 (Low Unit Count Override).');
-                this.aiSpawnTier(2, 1, blocked);
-            } else {
-                const playerUnits = this.unitsSignal().filter(u => u.owner === 'player');
-                const threatEnemies = playerUnits.filter(p => {
-                    const nearBase = Math.max(Math.abs(p.position.x - aiBase.x), Math.abs(p.position.y - aiBase.y)) <= 3;
-                    const nearForest = forestsAll.some(f => Math.max(Math.abs(p.position.x - f.x), Math.abs(p.position.y - f.y)) <= 3);
-                    return nearBase || nearForest;
-                });
-                const antiHoarding = aiForestCount === 0 || aggression;
-                if (antiHoarding) {
-                    const t4Cost = this.getPointsForTierLevel(4, 1);
-                    const t3Cost = this.getPointsForTierLevel(3, 1);
-                    if (reserves >= t4Cost) {
-                        this.aiSpawnTier(4, 1, blocked);
-                    } else if (reserves >= t3Cost) {
-                        this.aiSpawnTier(3, 1, blocked);
-                    }
-                } else if (threatEnemies.length > 0) {
-                    const maxTier = Math.max(...threatEnemies.map(e => e.tier));
-                    const desiredTier = Math.min(4, maxTier + 1);
-                    const requiredCost = this.getPointsForTierLevel(desiredTier, 1);
-                    while (this.aiWoodSignal() >= 20 && this.reservePointsSignal().ai < requiredCost) {
-                        this.aiConvertWoodToReserve();
-                    }
-                    if (this.reservePointsSignal().ai >= requiredCost) {
-                        this.aiSpawnTier(desiredTier, 1, blocked);
-                    }
-                } else {
-                    const t4Cost = this.getPointsForTierLevel(4, 1);
-                    const t3Cost = this.getPointsForTierLevel(3, 1);
-                    if (reserves >= t4Cost) {
-                        this.aiSpawnTier(4, 1, blocked);
-                    } else if (reserves >= t3Cost) {
-                        this.aiSpawnTier(3, 1, blocked);
-                    }
-                }
-            }
-        }
+        
         if (decision) {
-            const movedSet = new Set(this.movedThisTurnSignal());
-            if (movedSet.has(decision.unit.id)) {
-                console.log('[AI] Decision rejected: unit already moved this turn');
-                this.endTurn();
-                console.log('--- AI TURN FINISHED, WAITING FOR PLAYER ---');
-                this.isAiThinking = false;
-                this.aiBatchingActions = false;
-                return;
+            const blocked = new Set<string>();
+            if (Math.max(Math.abs(decision.target.x - aiBase.x), Math.abs(decision.target.y - aiBase.y)) <= 2) {
+                blocked.add(`${decision.target.x},${decision.target.y}`);
             }
+
             const tag = decision.reason;
             const kind = decision.type === 'wall_attack' ? 'Attack Wall' : (decision.reason.includes('Attack') ? 'Move/Attack' : (decision.reason.includes('Merge') ? 'Merge' : 'Move'));
-            console.log(`[AI] Phase: ${kind} (${tag})`);
+            console.log(`[AI TERMINAL ACTION] ${kind} (${tag})`);
+
             if (decision.type === 'wall_attack' && decision.edge) {
                 this.attackOrDestroyWallBetween(decision.edge.from, decision.edge.to, false);
             } else {
                 this.executeMove(decision.unit, decision.target);
             }
+        } else {
+            console.log('[AI] No beneficial terminal action found. Ending turn.');
         }
+
         console.log('>>> SWITCHING TO PLAYER SIDE NOW <<<');
         this.endTurn();
         console.log('--- AI TURN FINISHED, WAITING FOR PLAYER ---');
@@ -1297,7 +1252,52 @@ export class GameEngineService {
         this.aiBatchingActions = false;
         return;
     }
-    private aiDefenseSpawn(threat: Unit) {
+
+    // Helper for Phase 1: Executes ONE free action and returns true if something happened
+    private executeOneFreeAction(): boolean {
+        // 1. Critical Defense Spawning (Meat Shields)
+        const aiBase = this.getBasePosition('ai');
+        const threatsBase = this.unitsSignal().filter(u => u.owner === 'player' && Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3 && u.tier >= 2);
+        
+        if (threatsBase.length > 0) {
+            // Find the biggest threat
+            const highest = threatsBase.reduce((acc, e) => this.calculateTotalPoints(e) > this.calculateTotalPoints(acc) ? e : acc, threatsBase[0]);
+            
+            // If we have resources, try to spawn a blocker
+            const reserves = this.reservePointsSignal().ai;
+            if (reserves >= 1) { // Min cost for T1
+                 const didSpawn = this.aiDefenseSpawn(highest);
+                 if (didSpawn) return true;
+            }
+        }
+
+        // 2. Resource Management
+        if (this.aiWoodSignal() >= 30) {
+             this.aiConvertWoodToReserve();
+             return true;
+        }
+
+        // 3. Expansion Spawning (Only if not threatened)
+        if (threatsBase.length === 0) {
+             // Logic from original code, but single step
+             // T3 Hunter logic
+             try {
+                const t3Cost = this.getPointsForTierLevel(3, 1);
+                const totalForests = this.forestsSignal().length;
+                const aiControlCount = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
+                const aiControlPct = totalForests > 0 ? aiControlCount / totalForests : 0;
+                const reservesNow = this.reservePointsSignal().ai;
+                if (reservesNow >= t3Cost && aiControlPct <= 0.6) {
+                    const count = this.aiSpawnTier(3, 1, new Set<string>());
+                    if (count > 0) return true;
+                }
+             } catch {}
+        }
+
+        return false;
+    }
+
+    private aiDefenseSpawn(threat: Unit): boolean {
         const aiBase = this.getBasePosition('ai');
         // Compute path tiles between threat and base (blocking corridor)
         const path: Position[] = [];
@@ -1328,13 +1328,16 @@ export class GameEngineService {
                 }
                 return null;
             })();
-        if (!critical) return;
+        if (!critical) return false;
+        
+        // Auto-convert if desperate
         while (this.aiWoodSignal() >= 20) {
             this.aiConvertWoodToReserve();
         }
+
         const reserves = this.reservePointsSignal().ai;
         const cost = this.economy.getHighestAffordableCost(reserves);
-        if (cost <= 0) return;
+        if (cost <= 0) return false;
         const tl = this.calculateTierAndLevel(cost);
         this.unitsSignal.update(units => [
             ...units,
@@ -1353,8 +1356,8 @@ export class GameEngineService {
         this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai - cost }));
         this.recomputeVisibility();
         console.log('[AI Defense] Spawned single strongest blocker at', critical, 'cost', cost);
+        return true;
     }
-
     // --- Spawning ---
 
     private aiSpawnTier(tier: number, maxCount: number, blocked: Set<string>) {

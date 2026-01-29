@@ -203,8 +203,8 @@ export class AiStrategyService {
       const canAttackBaseNow = moves.some(m => m.x === playerBase.x && m.y === playerBase.y);
       if (canAttackBaseNow) {
         const siegeBonus = ((unit.tier === 3 && unit.level >= 2) || unit.tier >= 4) ? 300000 : 0;
-        const score = 2500000 + aggressiveBonus + siegeBonus;
-        const reason = 'Siege: Attack Base';
+        const score = 50000000 + aggressiveBonus + siegeBonus; // WIN GAME PRIORITY
+        const reason = 'Siege: Attack Base (WIN)';
         if (best === null || score > best.score) {
           best = { unit, target: { x: playerBase.x, y: playerBase.y }, score, type: 'attack', reason };
         }
@@ -565,7 +565,13 @@ export class AiStrategyService {
             const threatDistToBase = Math.max(Math.abs(primaryThreat.position.x - aiBase.x), Math.abs(primaryThreat.position.y - aiBase.y));
             const threatNextTurn = threatDistToBase <= 2;
             const staying = move.x === unit.position.x && move.y === unit.position.y;
-            if (isBlocking) {
+            
+            // T3 Intercept Logic
+            if (unit.tier >= 3 && primaryThreat.tier >= 3 && distMoveThreat === 1) {
+                score = 40000000; // High priority to get adjacent (prepare to attack next turn or block)
+                reason = 'DEFENSE: T3 Move to Intercept Threat';
+            }
+            else if (isBlocking) {
               const baseScore = threatNextTurn ? 2000000 : 1200000;
               if (score < baseScore) {
                 score = baseScore;
@@ -613,26 +619,71 @@ export class AiStrategyService {
             const distTargetBase = Math.max(Math.abs(targetUnit.position.x - aiBase.x), Math.abs(targetUnit.position.y - aiBase.y));
             const targetThreateningBase = distTargetBase <= 3;
             const targetCanReachBaseNextTurn = distTargetBase <= 2;
+            
+            const myPoints = this.combat.calculateTotalPoints(unit);
+            const enemyPoints = this.combat.calculateTotalPoints(targetUnit);
+            const canKill = myPoints > enemyPoints;
+            const isHighValue = targetUnit.tier >= 3;
+            const isMyHighValue = unit.tier >= 3;
+
+            // 1. Base Defense (Top Priority)
             if (targetThreateningBase) {
-              const baseScore = targetCanReachBaseNextTurn ? 2200000 : 1700000;
-              score = baseScore;
-              if (unit.tier >= 3 && targetUnit.tier >= 2) {
-                score += 400000;
-              }
-              reason = targetCanReachBaseNextTurn ? 'Panic Defense: Attack Base Threat' : 'Defense: Attack Base Threat';
-            } else {
-              const myPower = this.combat.calculateTotalPoints(unit);
-              const enemyPower = this.combat.calculateTotalPoints(targetUnit);
-              const alliesNearTarget = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && u.id !== unit.id && Math.max(Math.abs(u.position.x - move.x), Math.abs(u.position.y - move.y)) === 1).length;
-              if (myPower >= enemyPower || (aggression && unit.tier >= targetUnit.tier) || (myPower < enemyPower && alliesNearTarget >= 2)) {
-                score = 200000;
-                reason = (aggression && unit.tier >= targetUnit.tier) ? `Attack (Wood War / Equal Tier)` : (myPower < enemyPower ? 'Attack (Swarm)' : 'Attack Enemy');
-                if (enemyNearBase) score += 5000;
-                if (((unit.tier === 3 && unit.level >= 2) || unit.tier >= 4) && targetUnit.tier >= 3) {
-                  score += 300000;
-                }
-              }
+               // SPECIAL RULE: T3 vs T3 (Highest Priority)
+               if (isMyHighValue && isHighValue) {
+                   score = 50000000; 
+                   reason = 'CRITICAL DEFENSE: T3 Intercepts Threat';
+               } 
+               else {
+                   // T1/T2 or T3 vs Weaker Threat
+                   if (canKill) {
+                       score = 20000000;
+                       reason = 'CRITICAL DEFENSE: Eliminate Base Threat';
+                       if (targetCanReachBaseNextTurn) score += 5000000;
+                   } else {
+                       // Suicide check
+                       if (isHighValue && unit.tier <= 2) {
+                           // User Rule: "T1 Units: Do NOT waste the turn attacking a full-health T3"
+                           score = 0; 
+                           reason = 'Ignore: T1 Suicide vs T3 useless';
+                       } else {
+                           // Desperation attack if it's the only option?
+                           score = 1000; 
+                           reason = 'DEFENSE: Desperation Attack';
+                       }
+                   }
+               }
+            } 
+            // 2. Kill Potential & High Value Targets
+            else {
+               if (canKill) {
+                  if (isHighValue) {
+                     score = 8000000; // Killing a T3 is HUGE
+                     reason = 'COMBAT: Kill High Value Target (T3+)';
+                  } else {
+                     score = 4000000; // Killing T1/T2
+                     reason = 'COMBAT: Kill Enemy';
+                  }
+                  
+                  // Trade Efficiency Bonus
+                  if (unit.tier < targetUnit.tier) {
+                     score += 2000000; // T1 kills T2 = Amazing
+                     reason += ' (Efficient Trade)';
+                  }
+               } else {
+                  // Suicide / Weaken
+                  if (isHighValue && unit.tier <= 2) {
+                     // User said: "T1s should only block." so NO suicide attacks.
+                     score = 0; 
+                     reason = 'Ignore: Suicide vs High Value';
+                  } else {
+                     score = 100000; // Low priority suicide
+                     reason = 'COMBAT: Chip Damage';
+                  }
+               }
             }
+
+            if (aggression) score += 500000;
+            if (enemyNearBase) score += 1000000;
           } else {
             if (targetUnit.tier === unit.tier && baseDistMove > baseDistCurr) {
               const mergedPoints = this.combat.calculateTotalPoints(unit) + this.combat.calculateTotalPoints(targetUnit);
