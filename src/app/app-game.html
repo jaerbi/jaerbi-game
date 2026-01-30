@@ -21,36 +21,47 @@
     </defs>
   </svg>
   <!-- Title -->
-  <div class="fixed top-6 left-6 flex flex-col items-start gap-0 group">
-    <div
-      class="h-[2px] w-12 bg-blue-500 mb-2 shadow-[0_0_10px_rgba(59,130,246,0.8)] transition-all group-hover:w-full duration-500"
-    ></div>
+  <div class="fixed top-8 left-8 flex items-start gap-4 group select-none">
+    <div class="relative w-12 h-12 flex items-center justify-center">
+      <div
+        class="absolute inset-0 border-2 border-blue-500/30 rotate-45 group-hover:rotate-90 transition-all duration-700"
+      ></div>
+      <div
+        class="absolute inset-1 border border-blue-400/20 -rotate-45 group-hover:rotate-0 transition-all duration-1000"
+      ></div>
+
+      <svg viewBox="0 0 24 24" class="w-6 h-6 text-white drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]">
+        <path fill="currentColor" d="M12 2L2 22h20L12 2zm0 4.5L18.5 20h-13L12 6.5z" />
+        <rect x="11" y="12" width="2" height="5" fill="white" class="animate-pulse" />
+      </svg>
+
+      <div class="absolute -top-1 -left-1 w-2 h-2 border-t-2 border-l-2 border-blue-400"></div>
+      <div class="absolute -bottom-1 -right-1 w-2 h-2 border-b-2 border-r-2 border-blue-400"></div>
+    </div>
 
     <div class="flex flex-col">
-      <h1 class="text-4xl font-black italic tracking-tighter uppercase leading-none">
-        <span
-          class="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-blue-400 drop-shadow-[0_2px_10px_rgba(59,130,246,0.3)]"
-        >
-          Shape
-        </span>
-        <span
-          class="bg-clip-text text-transparent bg-gradient-to-b from-blue-400 to-blue-700 drop-shadow-[0_2px_10px_rgba(59,130,246,0.5)] ml-1"
-        >
-          Tactics
-        </span>
-      </h1>
-
-      <div class="flex items-center gap-2 mt-1">
-        <div class="h-[1px] flex-1 bg-gradient-to-r from-blue-500/50 to-transparent"></div>
-        <h2 class="text-[10px] font-black uppercase tracking-[0.4em] text-blue-300/70">Turn-Based Strategy</h2>
+      <div class="flex items-baseline gap-1">
+        <h1 class="text-3xl font-black tracking-tight uppercase leading-none flex flex-col">
+          <span class="text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]">Shape</span>
+          <span
+            class="text-blue-500 text-xl mt-[-4px] tracking-[0.15em] opacity-90 group-hover:text-blue-400 transition-colors"
+          >
+            Tactics
+          </span>
+        </h1>
+        <div class="flex gap-1 mb-1">
+          <div class="w-1 h-3 bg-blue-600/40"></div>
+          <div class="w-1 h-3 bg-blue-600/20"></div>
+        </div>
+      </div>
+      <div class="flex items-center ml-1">
+        <span class="text-[10px] font-mono text-blue-300 font-bold leading-none">{{ settings.version }}</span>
       </div>
     </div>
 
-    <div class="mt-2 flex gap-1 opacity-50">
-      <div class="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div>
-      <div class="w-8 h-[1px] bg-blue-500/30 self-center"></div>
-      <span class="text-[8px] font-mono text-blue-400/60 uppercase">{{ settings.version }}</span>
-    </div>
+    <div
+      class="absolute -inset-4 bg-blue-600/5 opacity-0 group-hover:opacity-50 transition-opacity blur-2xl -z-10"
+    ></div>
   </div>
   <!-- Title END -->
   <!-- Navigation -->
@@ -1149,7 +1160,7 @@
       </div>
     </div>
     <!-- Difficulty END -->
-    <!-- Actions -->
+    <!-- Player Actions -->
     <div
       class="mt-4 flex flex-col items-start gap-2 absolute top-0 left-[-208px] p-4 rounded-2xl bg-gray-900/40 backdrop-blur-md border border-white/10 shadow-2xl"
     >
