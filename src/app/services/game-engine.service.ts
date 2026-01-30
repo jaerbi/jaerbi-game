@@ -1264,9 +1264,14 @@ export class GameEngineService {
                 });
                 const dirs = [
                     { x: -1, y: -1 }, { x: 0, y: -1 }, { x: 1, y: -1 },
-                    { x: -1, y: 0 },                    { x: 1, y: 0 },
-                    { x: -1, y: 1 },  { x: 0, y: 1 },  { x: 1, y: 1 },
+                    { x: -1, y: 0 }, { x: 1, y: 0 },
+                    { x: -1, y: 1 }, { x: 0, y: 1 }, { x: 1, y: 1 },
                 ];
+                // const dirs = [
+                //     { x: -1, y: -1 }, { x: 0, y: -1 }, { x: 1, y: -1 },
+                //     { x: -1, y: 0 },                    { x: 1, y: 0 },
+                //     { x: -1, y: 1 },  { x: 0, y: 1 },  { x: 1, y: 1 },
+                // ];
                 const candidates = dirs
                     .map(d => ({ x: unit.position.x + d.x, y: unit.position.y + d.y }))
                     .filter(p => this.inBounds(p.x, p.y))
@@ -1864,6 +1869,10 @@ export class GameEngineService {
         return this.resourcesSignal().wood >= 20;
     }
 
+    isPlayerTurn(): boolean {
+        if (this.gameStatusSignal() !== 'playing') return false;
+        return this.activeSideSignal() === 'player';
+    }
     private canActThisTurn(): boolean {
         if (this.gameStatusSignal() !== 'playing') return false;
         return this.activeSideSignal() === 'player';
