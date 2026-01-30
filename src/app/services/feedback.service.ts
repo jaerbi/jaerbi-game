@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, Firestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, Firestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp, startAfter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
 import { environmentFirebase } from '../../environments/environment.firebase';
 
@@ -44,6 +44,19 @@ export class FeedbackService {
     return snapshot.docs.map(d => d.data() as Feedback);
   }
 
+  async getFeedbackPage(count: number, cursor?: QueryDocumentSnapshot<DocumentData> | null): Promise<{ items: Feedback[]; lastDoc: QueryDocumentSnapshot<DocumentData> | null }> {
+    const base = [
+      orderBy('timestamp', 'desc'),
+      limit(count)
+    ] as any[];
+    const q = cursor
+      ? query(collection(this.db, 'feedbacks'), orderBy('timestamp', 'desc'), startAfter(cursor), limit(count))
+      : query(collection(this.db, 'feedbacks'), orderBy('timestamp', 'desc'), limit(count));
+    const snapshot = await getDocs(q);
+    const items = snapshot.docs.map(d => d.data() as Feedback);
+    const lastDoc = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
+    return { items, lastDoc };
+  }
   async canUserPostToday(userId: string): Promise<{ allowed: boolean; remaining: number }> {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const q = query(

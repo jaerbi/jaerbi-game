@@ -1,6 +1,6 @@
 import { Component, ElementRef, ViewChild, isDevMode } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { GameRulesComponent } from './components/game-rules/game-rules.component';
 import { GameEngineService } from './services/game-engine.service';
 import { SettingsService } from './services/settings.service';
@@ -11,7 +11,7 @@ import { LeaderboardModalComponent } from './components/leaderboard-modal/leader
 @Component({
     selector: 'app-game',
     standalone: true,
-    imports: [CommonModule, RouterLink, GameRulesComponent, SupportCommunityComponent, LeaderboardModalComponent],
+    imports: [CommonModule, GameRulesComponent, SupportCommunityComponent, LeaderboardModalComponent],
     templateUrl: './app-game.html',
     styleUrl: './app.css'
 })
@@ -21,12 +21,24 @@ export class AppGame {
     constructor(
         public gameEngine: GameEngineService,
         public settings: SettingsService,
-        public firebase: FirebaseService
+        public firebase: FirebaseService,
+        private router: Router
     ) {
     }
 
     get isProduction() {
         return !isDevMode();
+    }
+
+    navigateToFeedback() {
+        const user = this.firebase.user$();
+        if (user) {
+            this.router.navigate(['/feedback']);
+            return;
+        }
+        try {
+            this.firebase.loginWithGoogle();
+        } catch {}
     }
 
     ngAfterViewInit() {

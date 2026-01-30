@@ -1,4 +1,6 @@
-<div class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-start p-4 relative overflow-hidden no-select">
+<div
+  class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-start p-4 relative overflow-hidden no-select"
+>
   <!-- Floating Giants Background -->
   <div class="fixed inset-0 overflow-hidden pointer-events-none select-none z-0">
     <div class="floating-shape shape-giant-1"></div>
@@ -165,8 +167,8 @@
         </svg>
         <span class="text-[10px] font-bold uppercase tracking-tighter">System Log</span>
       </button>
-      <a
-        routerLink="/feedback"
+      <button
+        (click)="navigateToFeedback()"
         class="cursor-pointer flex items-center gap-2 px-4 py-1.5 rounded-full hover:bg-white/5 text-stone-400 hover:text-indigo-300 transition-all group"
       >
         <svg
@@ -183,7 +185,7 @@
           ></path>
         </svg>
         <span class="text-[10px] font-bold uppercase tracking-tighter">Feedback</span>
-      </a>
+      </button>
     </div>
 
     <div class="flex items-center gap-3">

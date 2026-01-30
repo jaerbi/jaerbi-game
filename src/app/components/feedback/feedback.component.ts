@@ -4,6 +4,7 @@ import { ReactiveFormsModule, FormBuilder, Validators, FormGroup, FormControl } 
 import { Router, RouterLink } from '@angular/router';
 import { FeedbackService, Feedback } from '../../services/feedback.service';
 import { FirebaseService } from '../../services/firebase.service';
+import { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
 @Component({
   selector: 'app-feedback',
@@ -14,8 +15,14 @@ import { FirebaseService } from '../../services/firebase.service';
 })
 export class FeedbackComponent {
   recent = signal<Feedback[]>([]);
+  pageItems = signal<Feedback[]>([]);
+  pageStack: (QueryDocumentSnapshot<DocumentData> | null)[] = [null];
+  pageIndex = signal<number>(0);
+  lastDoc: QueryDocumentSnapshot<DocumentData> | null = null;
   disabledUntil = signal<number>(0);
   message = signal<string | null>(null);
+
+  isAllShow = false;
 
   form!: FormGroup<{ text: FormControl<string>, rating: FormControl<number> }>;
 
@@ -36,6 +43,7 @@ export class FeedbackComponent {
       const until = Number(localStorage.getItem(key) || 0);
       this.disabledUntil.set(until);
     }
+    this.loadPage(0);
   }
 
   async loadRecent() {
@@ -43,6 +51,47 @@ export class FeedbackComponent {
       const items = await this.feedback.getRecentFeedbacks(30);
       this.recent.set(items);
     } catch { }
+  }
+  async loadPage(indexDelta: number = 0) {
+    try {
+      const nextIndex = Math.max(0, this.pageIndex() + indexDelta);
+      const cursor = this.pageStack[nextIndex] ?? null;
+      const res = await this.feedback.getFeedbackPage(10, cursor);
+      this.pageItems.set(res.items);
+      this.lastDoc = res.lastDoc;
+      if (indexDelta >= 0) {
+        const newIndex = nextIndex + 1;
+        this.pageStack[newIndex] = this.lastDoc;
+        this.pageIndex.set(nextIndex + 1);
+      } else {
+        this.pageIndex.set(nextIndex);
+      }
+    } catch { }
+  }
+  async nextPage() {
+    await this.loadPage(0);
+    if (this.lastDoc) {
+      await this.loadPage(0);
+    }
+  }
+  async prevPage() {
+    const current = this.pageIndex();
+    const prevIndex = Math.max(0, current - 2);
+    const cursor = this.pageStack[prevIndex] ?? null;
+    const res = await this.feedback.getFeedbackPage(10, cursor);
+    this.pageItems.set(res.items);
+    this.lastDoc = res.lastDoc;
+    this.pageIndex.set(prevIndex + 1);
+  }
+  formatDate(ts: any): string {
+    try {
+      if (!ts) return '';
+      const ms = ts.seconds ? ts.seconds * 1000 : (typeof ts === 'number' ? ts : Date.now());
+      const d = new Date(ms);
+      return d.toLocaleString();
+    } catch {
+      return '';
+    }
   }
 
   get canSubmit(): boolean {
@@ -79,6 +128,7 @@ export class FeedbackComponent {
     localStorage.setItem(key, String(until));
     this.disabledUntil.set(until);
     await this.loadRecent();
+    await this.loadPage(0);
   }
 
   setRating(r: number) {

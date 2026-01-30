@@ -82,33 +82,109 @@
             </div>
 
             <!-- SUBMIT -->
-            <button type="submit" [disabled]="!canSubmit"  class="hud-action-btn"
-            [class.cursor-pointer]="canSubmit"
-            [class.cursor-not-allowed]="!canSubmit">TRANSMIT REPORT</button>
+            <button
+              type="submit"
+              [disabled]="!canSubmit"
+              class="hud-action-btn"
+              [class.cursor-pointer]="canSubmit"
+              [class.cursor-not-allowed]="!canSubmit"
+            >
+              TRANSMIT REPORT
+            </button>
           </form>
         }
       </div>
 
       <!-- RIGHT PANEL: FEEDBACK LIST -->
       <div class="hud-panel p-6">
-        <div class="panel-title red">INCOMING SIGNALS</div>
+        <div class="flex justify-between items-center">
+          @if (!isAllShow) {
+            <div class="panel-title red mb-0">INCOMING SIGNALS</div>
+          }
+          @if (isAllShow) {
+            <div class="panel-title mb-0">COMMUNITY SIGNALS TABLE</div>
+          }
+          <button
+            (click)="isAllShow = !isAllShow"
+            class="cursor-pointer text-[8px] font-bold text-blue-400 hover:text-white transition-colors tracking-widest uppercase pr-2"
+          >
+            {{ isAllShow ? 'Back' : 'View Full Archive' }}
+          </button>
+        </div>
 
         <div class="max-h-[420px] overflow-auto space-y-4 pr-2 hud-scroll">
-          @for (item of recent(); track item.timestamp) {
-            <div class="signal-card">
-              <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-3">
-                  <img [src]="item.userPhoto" class="w-9 h-9 rounded-md border border-white/20" />
-                  <div class="text-sm font-semibold text-white">{{ item.userName }}</div>
-                </div>
-                <div class="rating-view">
-                  @for (s of [1, 2, 3, 4, 5]; track s) {
-                    <span [class.active]="item.rating >= s">★</span>
+          @if (isAllShow) {
+            <div class="rounded-md border border-white/10 bg-white/5">
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="text-white/80 text-[11px]">
+                    <th class="px-3 py-2 border-b border-white/10">Operator</th>
+                    <th class="px-3 py-2 border-b border-white/10">Rating</th>
+                    <th class="px-3 py-2 border-b border-white/10">Message</th>
+                    <th class="px-3 py-2 border-b border-white/10">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of pageItems(); track row.timestamp) {
+                    <tr class="text-white/90 text-[12px]">
+                      <td class="px-3 py-2 flex items-center gap-2">
+                        <img [src]="row.userPhoto" class="w-6 h-6 rounded-md border border-white/20" />
+                        <span>{{ row.userName }}</span>
+                      </td>
+                      <td class="px-3 py-2">
+                        <div class="rating-view">
+                          @for (s of [1, 2, 3, 4, 5]; track s) {
+                            <span [class.active]="row.rating >= s">★</span>
+                          }
+                        </div>
+                      </td>
+                      <td class="px-3 py-2">
+                        <span class="text-white">{{ row.text }}</span>
+                      </td>
+                      <td class="px-3 py-2">
+                        <span class="text-white/80">{{ formatDate(row.timestamp) }}</span>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td class="px-3 py-4 text-center text-white/70" colspan="4">No signals</td>
+                    </tr>
                   }
-                </div>
-              </div>
-              <div class="signal-text">{{ item.text }}</div>
+                </tbody>
+              </table>
             </div>
+            <div class="flex items-center justify-end gap-3 mt-3">
+              <button
+                (click)="prevPage()"
+                class="px-3 py-1.5 rounded-md border border-white/20 text-white hover:border-indigo-400 hover:text-indigo-300 transition"
+              >
+                Previous
+              </button>
+              <button
+                (click)="nextPage()"
+                class="px-3 py-1.5 rounded-md border border-white/20 text-white hover:border-indigo-400 hover:text-indigo-300 transition"
+              >
+                Next
+              </button>
+            </div>
+          }
+          @if (!isAllShow) {
+            @for (item of recent(); track item.timestamp) {
+              <div class="signal-card">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-3">
+                    <img [src]="item.userPhoto" class="w-9 h-9 rounded-md border border-white/20" />
+                    <div class="text-sm font-semibold text-white">{{ item.userName }}</div>
+                  </div>
+                  <div class="rating-view">
+                    @for (s of [1, 2, 3, 4, 5]; track s) {
+                      <span [class.active]="item.rating >= s">★</span>
+                    }
+                  </div>
+                </div>
+                <div class="signal-text">{{ item.text }}</div>
+              </div>
+            }
           }
         </div>
       </div>
@@ -265,4 +341,3 @@
     color: rgba(255, 255, 255, 0.75);
   }
 </style>
-
