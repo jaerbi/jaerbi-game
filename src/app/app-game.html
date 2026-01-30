@@ -1274,19 +1274,28 @@
         </div>
         <span class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Map Hack</span>
       </label>
+
+      <!-- <label
+        class="flex items-center gap-3 w-full px-2 py-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5"
+      >
+        <div class="relative flex items-center">
+          <input
+            type="checkbox"
+            class="peer h-4 w-4 opacity-0 absolute"
+            [checked]="gameEngine.autoDeployEnabled()"
+            (change)="gameEngine.toggleAutoDeploy()"
+          />
+          <div
+            class="h-4 w-4 border-2 border-gray-500 rounded flex items-center justify-center peer-checked:bg-blue-500 peer-checked:border-blue-500 transition-all"
+          >
+            <div class="h-2 w-2 bg-white rounded-full opacity-0 peer-checked:opacity-100"></div>
+          </div>
+        </div>
+        <span class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Auto-Deploy</span>
+      </label> -->
     </div>
     <!-- Actions END -->
   </div>
-
-  <!-- <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-    <input
-      type="checkbox"
-      class="h-4 w-4 rounded border-gray-500 bg-gray-800 cursor-pointer"
-      [checked]="gameEngine.autoDeployEnabled()"
-      (change)="gameEngine.toggleAutoDeploy()"
-    />
-    <span>Auto-Deploy</span>
-  </label> -->
 
   <!-- -------------------------------------------- Version -------------------------------------------- -->
   <div class="fixed bottom-4 left-4 text-[12px] text-gray-500">

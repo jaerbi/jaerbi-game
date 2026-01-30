@@ -1020,14 +1020,28 @@ export class GameEngineService {
         );
         this.movedThisTurnSignal.set(new Set<string>());
         this.wallBuiltThisTurnSignal.set(false);
+        const getWoodsResources = (difficulty: Difficulty) => {
+            let woodResources: number = 0;
+            if (difficulty === 'baby') {
+                woodResources = 10;
+            } else if (difficulty === 'normal') {
+                woodResources = 8;
+            } else if (difficulty === 'hard') {
+                woodResources = 5;
+            } else {
+                woodResources = 3;
+            }
 
+            return woodResources;
+        }
         if (this.gameStatus() === 'playing') {
             const countOnForest = this.unitsSignal().filter(u => u.owner === ownerJustActed && this.isForest(u.position.x, u.position.y) && (u.productionActive ?? false)).length;
             if (countOnForest > 0) {
                 if (ownerJustActed === 'player') {
-                    this.resourcesSignal.update(r => ({ wood: r.wood + countOnForest * 2 }));
+                    // ADD Wood Resources
+                    this.resourcesSignal.update(r => ({ wood: r.wood + countOnForest * getWoodsResources(this.settings.difficulty()) }));
                 } else {
-                    this.aiWoodSignal.update(w => w + countOnForest * 2);
+                    this.aiWoodSignal.update(w => w + countOnForest * getWoodsResources(this.settings.difficulty()));
                 }
             }
         }
@@ -1140,7 +1154,7 @@ export class GameEngineService {
             const prevTW = this.totalWarModeSignal();
             const nextTW = aiPct >= 0.65;
             if (!prevTW && nextTW) {
-                try { console.log('[AI MODE] TOTAL_WAR_MODE engaged'); } catch {}
+                try { console.log('[AI MODE] TOTAL_WAR_MODE engaged'); } catch { }
             }
             this.totalWarModeSignal.set(nextTW);
             if (mood === 'rage') {
