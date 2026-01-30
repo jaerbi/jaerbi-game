@@ -86,6 +86,7 @@ export class GameEngineService {
     private aiMoodSignal = signal<AggressionAiMode>('none');
     private rageCaptureCounterSignal = signal<number>(0);
     private anchoredGatherersSignal = signal<Set<string>>(new Set<string>());
+    private totalWarModeSignal = signal<boolean>(false);
 
     // Computed signals
     readonly units = this.unitsSignal.asReadonly();
@@ -114,6 +115,9 @@ export class GameEngineService {
     readonly aiUnitTimeNearBase = this.aiUnitTimeNearBaseSignal.asReadonly();
     aggressionMode(): boolean {
         return this.aggressionModeSignal();
+    }
+    totalWarMode(): boolean {
+        return this.totalWarModeSignal();
     }
     isAnchoredGatherer(id: string): boolean {
         return this.anchoredGatherersSignal().has(id);
@@ -1132,6 +1136,13 @@ export class GameEngineService {
             // Adding a bonus based on the situation
             const isEvenTurn = this.turnSignal() % 2 === 0;
             const isFifthTurn = this.turnSignal() % 5 === 0;
+            const aiPct = totalForests > 0 ? aiForests / totalForests : 0;
+            const prevTW = this.totalWarModeSignal();
+            const nextTW = aiPct >= 0.65;
+            if (!prevTW && nextTW) {
+                try { console.log('[AI MODE] TOTAL_WAR_MODE engaged'); } catch {}
+            }
+            this.totalWarModeSignal.set(nextTW);
             if (mood === 'rage') {
                 const reserveHelp: number = (baseDifficulty === 'baby')
                     ? (isEvenTurn ? 1 : 0)
@@ -1170,6 +1181,12 @@ export class GameEngineService {
             else timeMap.set(unit.id, 0);
         }
         this.aiUnitTimeNearBaseSignal.set(timeMap);
+        for (const unit of currentAiUnits) {
+            const onForest = this.isForest(unit.position.x, unit.position.y);
+            if (unit.owner === 'ai' && onForest && unit.tier <= 2) {
+                this.anchorGatherer(unit.id);
+            }
+        }
         const playerIncome = this.unitsSignal().filter(u => u.owner === 'player' && this.isForest(u.position.x, u.position.y) && (u.productionActive ?? false)).length * 2;
         const aiIncome = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y) && (u.productionActive ?? false)).length * 2;
         const aggression = playerIncome >= aiIncome;
@@ -1212,7 +1229,15 @@ export class GameEngineService {
             this.aiDefenseSpawn(highest);
         }
         if (!this.wallBuiltThisTurnSignal()) {
-            this.tryDefensiveWallsNearForests();
+            if (this.totalWarModeSignal()) {
+                const actions = this.aiStrategy.getWallBuildActions(this);
+                for (const act of actions) {
+                    if (this.wallBuiltThisTurnSignal()) break;
+                    this.aiBuildWallBetween(act.from, act.to);
+                }
+            } else {
+                this.tryDefensiveWallsNearForests();
+            }
         }
 
         // PHASE 1: Free Actions (Loop until no beneficial free actions remain)
@@ -1346,6 +1371,15 @@ export class GameEngineService {
         if (this.aiWoodSignal() >= 30) {
             this.aiConvertWoodToReserve();
             return true;
+        }
+
+        // Emergency Spawn when reserves are high
+        {
+            const reservesNow = this.reservePointsSignal().ai;
+            if (reservesNow >= 40) {
+                const created = this.aiSpawnTier(2, 1, new Set<string>());
+                if (created > 0) return true;
+            }
         }
 
         // 3. Expansion Spawning (Only if not threatened)

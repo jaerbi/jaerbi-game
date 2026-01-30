@@ -148,7 +148,7 @@ export class AppGame {
     }
 
     private async executeAutoMove() {
-        await new Promise(res => setTimeout(res, 300));
+        await new Promise(res => setTimeout(res, 2000));
         if (!this.isAutoBattleActive()) return;
         if (this.gameEngine.gameStatus() !== 'playing') return;
         if (!this.gameEngine.isPlayerTurn()) return;
