@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { translate, TranslationKey, LangCode } from '../i18n/translations';
 
 export type Difficulty = 'baby' | 'normal' | 'hard' | 'nightmare';
 export type MapSize = 10 | 20 | 30;
@@ -7,7 +8,9 @@ export type MapSize = 10 | 20 | 30;
 export class SettingsService {
     private difficultySignal = signal<Difficulty>('normal');
     private mapSizeSignal = signal<MapSize>(10);
-    public version = 'version: 0.4.0';
+    private langSignal = signal<LangCode>('uk');
+    public version = 'v.0.5.2';
+    public diffArr: Difficulty[] = ['baby', 'normal', 'hard', 'nightmare'];
 
     difficulty(): Difficulty {
         return this.difficultySignal();
@@ -15,12 +18,15 @@ export class SettingsService {
     setDifficulty(level: Difficulty) {
         this.difficultySignal.set(level);
     }
-    difficultyLabel(): string {
+    difficultyLabel(): TranslationKey {
         const d = this.difficultySignal();
-        if (d === 'baby') return 'Baby';
-        if (d === 'normal') return 'Normal';
-        if (d === 'hard') return 'Hard';
-        return 'Nightmare';
+        return this.getDifficultyLabel(d);
+    }
+    getDifficultyLabel(diff: Difficulty): TranslationKey {
+        if (diff === 'baby') return 'BABY';
+        if (diff === 'normal') return 'NORMAL';
+        if (diff === 'hard') return 'HARD';
+        return 'NIGHTMARE';
     }
     getAiReserveBonus(turn: number): number {
         const d = this.difficultySignal();
@@ -42,5 +48,15 @@ export class SettingsService {
     }
     mapSizeLabel(): string {
         return `${this.mapSizeSignal()}x${this.mapSizeSignal()}`;
+    }
+
+    currentLang(): LangCode {
+        return this.langSignal();
+    }
+    setLang(lang: LangCode) {
+        this.langSignal.set(lang);
+    }
+    t(key: TranslationKey): string {
+        return translate(key, this.langSignal());
     }
 }

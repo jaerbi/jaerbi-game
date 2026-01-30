@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { FeedbackService, Feedback } from '../../services/feedback.service';
 import { FirebaseService } from '../../services/firebase.service';
 import { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { SettingsService } from '../../services/settings.service';
 
 @Component({
   selector: 'app-feedback',
@@ -31,6 +32,7 @@ export class FeedbackComponent {
     private router: Router,
     private feedback: FeedbackService,
     public firebase: FirebaseService,
+    public settings: SettingsService,
   ) {
     this.form = new FormGroup({
       text: new FormControl<string>('', { nonNullable: true, validators: [Validators.required, Validators.minLength(10), Validators.maxLength(500)] }),
@@ -109,7 +111,7 @@ export class FeedbackComponent {
     if (!user) return;
     const { allowed, remaining } = await this.feedback.canUserPostToday(user.uid);
     if (!allowed) {
-      this.message.set('Daily limit reached: 3 feedbacks per 24 hours.');
+      this.message.set(this.settings.t('FEEDBACK_LIMIT_REACHED'));
       return;
     }
     const val = this.form.value;
@@ -121,7 +123,7 @@ export class FeedbackComponent {
       rating: Number(val.rating) || 5
     };
     await this.feedback.addFeedback(data);
-    this.message.set('Thanks! Your feedback was submitted.');
+    this.message.set(this.settings.t('FEEDBACK_SUBMITTED'));
     this.form.reset({ text: '', rating: 5 });
     const key = `feedback_throttle_${user.uid}`;
     const until = Date.now() + 5 * 60 * 1000;

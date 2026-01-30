@@ -49,6 +49,9 @@ export class AppGame {
             this.firebase.loginWithGoogle();
         } catch {}
     }
+    navigateToRoadmap() {
+        this.router.navigate(['/roadmap']);
+    }
 
     ngAfterViewInit() {
         setTimeout(() => {
@@ -218,7 +221,7 @@ export class AppGame {
             this.gameEngine.selectUnit(bestUnitId);
             if (willAttack) {
                 try {
-                    console.log('[AUTO_ENGAGE] Target acquired. Executing strike...');
+                    console.log('[AUTO_ENGAGE][АВТОПІЛОТ] Ціль захоплена. Починаю атаку...');
                 } catch {}
             }
             this.gameEngine.moveSelectedUnit(bestMove);

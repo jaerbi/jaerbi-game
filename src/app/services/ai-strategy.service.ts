@@ -90,8 +90,11 @@ export class AiStrategyService {
                 return !!(gUnit && gUnit.owner === 'ai' && this.combat.calculateTotalPoints(gUnit) >= this.combat.calculateTotalPoints(unit));
             })() : false;
             const needNewGoal = (!hasGoal || goalOccupiedByStrongerAlly) && (!engine.isForest(unit.position.x, unit.position.y) || baseProximity || unit.tier >= 3);
+            const totalWar = typeof engine.totalWarMode === 'function' ? engine.totalWarMode() : false;
             if (needNewGoal) {
-                if (!engine.isForest(unit.position.x, unit.position.y)) {
+                if (totalWar) {
+                    goal = { x: playerBase.x, y: playerBase.y };
+                } else if (!engine.isForest(unit.position.x, unit.position.y)) {
                     const playerForests = playerUnits.filter(p => engine.isForest(p.position.x, p.position.y)).map(p => ({ x: p.position.x, y: p.position.y }));
                     if (playerForests.length > 0) {
                         const nearestPF = playerForests.reduce((acc, f) => {
@@ -522,7 +525,10 @@ export class AiStrategyService {
                         }
                     }
                     if (engine.isForest(move.x, move.y) && !engine.getUnitAt(move.x, move.y)) {
-                        if (unit.tier >= 3) {
+                        if (totalWar) {
+                            score = -1000;
+                            reason = 'Ignore Forest (Total War)';
+                        } else if (unit.tier >= 3) {
                             score = 5000000;
                             reason = 'Priority: T3 capture empty forest';
                         } else {
@@ -779,6 +785,7 @@ export class AiStrategyService {
         const aiUnits = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai');
         const playerUnits = engine.unitsSignal().filter((u: Unit) => u.owner === 'player');
         const walls = engine.wallsSignal();
+        const totalWar = typeof engine.totalWarMode === 'function' ? engine.totalWarMode() : false;
 
         // Helper to check if wall exists
         const hasWall = (p1: Position, p2: Position) => walls.some((w: any) =>
@@ -794,19 +801,27 @@ export class AiStrategyService {
             // Rule 6: Level 3+ prohibited from building walls
             if (unit.tier >= 3) continue;
 
-            // Check for nearby enemies (within 2 cells)
-            const nearbyEnemies = playerUnits.filter((p: Unit) => maxDist(unit.position, p.position) <= 2);
-            if (nearbyEnemies.length === 0) continue;
-
-            const closestEnemy = nearbyEnemies.sort((a: Unit, b: Unit) => dist(unit.position, a.position) - dist(unit.position, b.position))[0];
-
-            // Directions
             const neighbors = [
                 { x: unit.position.x + 1, y: unit.position.y },
                 { x: unit.position.x - 1, y: unit.position.y },
                 { x: unit.position.x, y: unit.position.y + 1 },
                 { x: unit.position.x, y: unit.position.y - 1 }
             ].filter(p => engine.inBounds(p.x, p.y));
+
+            if (totalWar && engine.isForest(unit.position.x, unit.position.y)) {
+                for (const n of neighbors) {
+                    if (!hasWall(unit.position, n) && engine.canBuildWallBetween(unit.position, n)) {
+                        actions.push({ from: unit.position, to: n });
+                    }
+                }
+                continue;
+            }
+
+            // Check for nearby enemies (within 2 cells)
+            const nearbyEnemies = playerUnits.filter((p: Unit) => maxDist(unit.position, p.position) <= 2);
+            if (nearbyEnemies.length === 0) continue;
+
+            const closestEnemy = nearbyEnemies.sort((a: Unit, b: Unit) => dist(unit.position, a.position) - dist(unit.position, b.position))[0];
 
             // Determine "attacker's side" by sorting neighbors by distance to enemy
             const sortedNeighbors = neighbors.sort((a, b) => dist(a, closestEnemy.position) - dist(b, closestEnemy.position));

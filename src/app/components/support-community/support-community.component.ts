@@ -27,7 +27,7 @@ import { GameEngineService } from '../../services/game-engine.service';
             <div class="flex items-start gap-4">
               <div class="w-32 h-32 bg-white rounded-lg p-2 border border-gray-300 flex items-center justify-center shrink-0">
                 <img 
-                  src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://send.monobank.ua/jar/7188MxTvAg" 
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://send.monobank.ua/jar/2fqGoPhV7G" 
                   alt="QR Code"
                   class="w-full h-full"
                   referrerpolicy="no-referrer"
@@ -35,17 +35,17 @@ import { GameEngineService } from '../../services/game-engine.service';
               </div>
               
               <div class="flex-1">
-                <div class="text-[10px] text-gray-400 mb-2 break-all font-mono">send.monobank.ua/jar/7188MxTvAg</div>
+                <div class="text-[10px] text-gray-400 mb-2 break-all font-mono">send.monobank.ua/jar/2fqGoPhV7G</div>
                 <div class="flex flex-col gap-2">
                   <button
                     class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold cursor-pointer transition-colors"
-                    (click)="openExternalLink('https://send.monobank.ua/jar/7188MxTvAg')"
+                    (click)="openExternalLink('https://send.monobank.ua/jar/2fqGoPhV7G')"
                   >
                     Open Link 📜
                   </button>
                   <button
                     class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm cursor-pointer transition-colors"
-                    (click)="gameEngine.copySupportLink('https://send.monobank.ua/jar/7188MxTvAg')"
+                    (click)="gameEngine.copySupportLink('https://send.monobank.ua/jar/2fqGoPhV7G')"
                   >
                     Copy Link 📋
                   </button>
