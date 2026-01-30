@@ -13,7 +13,10 @@ import { SettingsService } from '../../services/settings.service';
     <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
       <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 w-[960px] max-w-[95vw] mx-4 shadow-xl">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl font-bold">Game Guide</h2>
+            <div class="flex items-center gap-2">
+                <h2 class="text-2xl font-bold">Game Guide</h2>
+                <h3 class="text-xs mt-2 font-bold text-gray-300">Turn-Based Strategy</h3>
+            </div>
           <button
             class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 text-lg cursor-pointer"
             (click)="engine.closeRules()"
@@ -159,7 +162,7 @@ import { SettingsService } from '../../services/settings.service';
                 <div class="flex items-center text-gray-500">→</div>
                 <div class="flex flex-col items-center">
                   <div class="text-2xl">🌳</div>
-                  <div class="text-[11px] text-emerald-400">+2 Wood/turn</div>
+                  <div class="text-[11px] text-emerald-400">+8 Wood/turn</div>
                 </div>
               </div>
             </div>
