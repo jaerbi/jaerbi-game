@@ -9,7 +9,7 @@ export class SettingsService {
     private difficultySignal = signal<Difficulty>('normal');
     private mapSizeSignal = signal<MapSize>(10);
     private langSignal = signal<LangCode>('uk');
-    public version = 'v.0.5.1';
+    public version = 'v.0.5.2';
     public diffArr: Difficulty[] = ['baby', 'normal', 'hard', 'nightmare'];
 
     difficulty(): Difficulty {
