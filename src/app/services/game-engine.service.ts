@@ -176,15 +176,15 @@ export class GameEngineService {
     }
     get wallThicknessPx(): number {
         const gs = this.gridSize;
-        if (gs <= 10) return 8;
-        if (gs <= 20) return 6;
-        return 4;
+        if (gs <= 10) return 6;
+        if (gs <= 20) return 4;
+        return 2;
     }
     get iconSizePx(): number {
         const gs = this.gridSize;
-        if (gs <= 10) return 14;
-        if (gs <= 20) return 8;
-        return 6;
+        if (gs <= 10) return 16;
+        if (gs <= 20) return 12;
+        return 8;
     }
     get tileUnitSizePx(): number {
         return Math.round(this.tileSizePx * 0.75);

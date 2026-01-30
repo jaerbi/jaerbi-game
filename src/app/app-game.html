@@ -625,7 +625,7 @@
           gameEngine.tileSizePx +
           'px))'
         "
-        [style.gap.px]="gameEngine.wallThicknessPx"
+        [style.gap.px]="gameEngine.wallThicknessPx + 2"
       >
         <!-- Base Indicators -->
         <div
@@ -801,7 +801,7 @@
                   @if (gameEngine.shouldRenderWall({ x: x, y: y }, { x: x + 1, y: y }, vWall.owner)) {
                     <div
                       class="absolute rounded-xs right-0 top-0 h-full flex items-center justify-center"
-                      [style.right.px]="-gameEngine.wallThicknessPx"
+                      [style.right.px]="-gameEngine.wallThicknessPx - 2"
                       [style.width.px]="gameEngine.wallThicknessPx"
                       [style.height.%]="vWall.health"
                       [style.z-index]="40"
@@ -853,7 +853,7 @@
                 } @else {
                   <div
                     class="absolute rounded-xs right-0 top-0 h-full flex items-center justify-center"
-                    [style.right.px]="-gameEngine.wallThicknessPx"
+                    [style.right.px]="-gameEngine.wallThicknessPx - 2"
                     [style.width.px]="gameEngine.wallThicknessPx"
                     [style.height.%]="100"
                     [style.z-index]="40"
@@ -894,7 +894,7 @@
                   @if (gameEngine.shouldRenderWall({ x: x, y: y }, { x: x, y: y + 1 }, hWall.owner)) {
                     <div
                       class="absolute rounded-xs left-0 bottom-0 w-full flex items-center justify-center"
-                      [style.bottom.px]="-gameEngine.wallThicknessPx"
+                      [style.bottom.px]="-gameEngine.wallThicknessPx - 2"
                       [style.height.px]="gameEngine.wallThicknessPx"
                       [style.width.%]="hWall.health"
                       [style.z-index]="40"
@@ -946,7 +946,7 @@
                 } @else {
                   <div
                     class="absolute rounded-xs left-0 bottom-0 w-full flex items-center justify-center"
-                    [style.bottom.px]="-gameEngine.wallThicknessPx"
+                    [style.bottom.px]="-gameEngine.wallThicknessPx - 2"
                     [style.height.px]="gameEngine.wallThicknessPx"
                     [style.width.%]="100"
                     [style.z-index]="40"
