@@ -1,0 +1,343 @@
+<!-- FEEDBACK PAGE — SHAPE TACTICS TACTICAL HUD STYLE -->
+<div class="min-h-screen tactical-bg text-white flex items-center justify-center p-6">
+  <div class="fixed inset-0 overflow-hidden pointer-events-none select-none z-0">
+    <div class="floating-shape shape-giant-1"></div>
+    <div class="floating-shape shape-giant-2"></div>
+    <div class="floating-shape shape-giant-3"></div>
+    <div class="floating-shape shape-giant-4"></div>
+    <div class="floating-shape shape-giant-5"></div>
+  </div>
+  <svg width="0" height="0" class="absolute pointer-events-none">
+    <defs>
+      <clipPath id="soft-triangle" clipPathUnits="objectBoundingBox">
+        <path
+          d="M0.5 0.05 Q0.5 0 0.56 0.12 L0.92 0.85 Q0.98 0.98 0.85 0.98 L0.15 0.98 Q0.02 0.98 0.08 0.85 L0.44 0.12 Q0.5 0 0.5 0.05"
+        />
+      </clipPath>
+    </defs>
+  </svg>
+  <!-- MAIN FRAME -->
+  <div class="w-full max-w-6xl tactical-frame rounded-lg overflow-hidden z-1">
+    <!-- HEADER BAR (HUD STYLE) -->
+    <div class="hud-header flex items-center justify-between px-6 py-4">
+      <div class="flex flex-col">
+        <span class="hud-title">FEEDBACK MODULE</span>
+        <span class="hud-subtitle">COMMUNITY SIGNALS</span>
+      </div>
+      <a routerLink="/" class="hud-btn">RETURN TO MAP</a>
+    </div>
+
+    <!-- BODY GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-2">
+      <!-- LEFT PANEL: DEPLOY FEEDBACK -->
+      <div class="hud-panel border-r border-white/10 p-6">
+        <div class="panel-title">DEPLOY REPORT</div>
+
+        @if (firebase.user$(); as user) {
+          <div class="flex items-center gap-4 mb-6">
+            <div class="avatar-frame">
+              <img [src]="user.photoURL" class="w-12 h-12 rounded-md bg-black" referrerpolicy="no-referrer" />
+            </div>
+            <div class="text-sm">
+              <div class="font-bold text-white">{{ user.displayName }}</div>
+              <div class="text-xs text-blue-400/60">OPERATOR ONLINE</div>
+            </div>
+          </div>
+
+          <form (ngSubmit)="submit()" [formGroup]="form" class="space-y-5">
+            <!-- RATING -->
+            <div>
+              <div class="label">EFFICIENCY RATING</div>
+              <div class="flex gap-2 mt-2">
+                @for (star of [1, 2, 3, 4, 5]; track star) {
+                  <button
+                    type="button"
+                    (click)="setRating(star)"
+                    class="rating-cell"
+                    [class.active]="form.value.rating! >= star"
+                  >
+                    ★
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- MESSAGE -->
+            <div>
+              <div class="label">TACTICAL NOTE</div>
+              <textarea
+                formControlName="text"
+                rows="4"
+                class="hud-textarea"
+                placeholder="Transmit tactical analysis..."
+              ></textarea>
+
+              @if (form.controls.text.errors) {
+                <div class="text-[10px] text-red-300">Text must be between 10 and 500 characters.</div>
+              }
+
+              @if (message(); as msg) {
+                <div class="text-[10px] text-yellow-300">{{ msg }}</div>
+              }
+            </div>
+
+            <!-- SUBMIT -->
+            <button
+              type="submit"
+              [disabled]="!canSubmit"
+              class="hud-action-btn"
+              [class.cursor-pointer]="canSubmit"
+              [class.cursor-not-allowed]="!canSubmit"
+            >
+              TRANSMIT REPORT
+            </button>
+          </form>
+        }
+      </div>
+
+      <!-- RIGHT PANEL: FEEDBACK LIST -->
+      <div class="hud-panel p-6">
+        <div class="flex justify-between items-center">
+          @if (!isAllShow) {
+            <div class="panel-title red mb-0">INCOMING SIGNALS</div>
+          }
+          @if (isAllShow) {
+            <div class="panel-title mb-0">COMMUNITY SIGNALS TABLE</div>
+          }
+          <button
+            (click)="isAllShow = !isAllShow"
+            class="cursor-pointer text-[8px] font-bold text-blue-400 hover:text-white transition-colors tracking-widest uppercase pr-2"
+          >
+            {{ isAllShow ? 'Back' : 'View Full Archive' }}
+          </button>
+        </div>
+
+        <div class="max-h-[420px] overflow-auto space-y-4 pr-2 hud-scroll">
+          @if (isAllShow) {
+            <div class="rounded-md border border-white/10 bg-white/5">
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="text-white/80 text-[11px]">
+                    <th class="px-3 py-2 border-b border-white/10">Operator</th>
+                    <th class="px-3 py-2 border-b border-white/10">Rating</th>
+                    <th class="px-3 py-2 border-b border-white/10">Message</th>
+                    <th class="px-3 py-2 border-b border-white/10">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of pageItems(); track row.timestamp) {
+                    <tr class="text-white/90 text-[12px]">
+                      <td class="px-3 py-2 flex items-center gap-2">
+                        <img [src]="row.userPhoto" class="w-6 h-6 rounded-md border border-white/20" />
+                        <span>{{ row.userName }}</span>
+                      </td>
+                      <td class="px-3 py-2">
+                        <div class="rating-view">
+                          @for (s of [1, 2, 3, 4, 5]; track s) {
+                            <span [class.active]="row.rating >= s">★</span>
+                          }
+                        </div>
+                      </td>
+                      <td class="px-3 py-2">
+                        <span class="text-white">{{ row.text }}</span>
+                      </td>
+                      <td class="px-3 py-2">
+                        <span class="text-white/80">{{ formatDate(row.timestamp) }}</span>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td class="px-3 py-4 text-center text-white/70" colspan="4">No signals</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="flex items-center justify-end gap-3 mt-3">
+              <button
+                (click)="prevPage()"
+                class="px-3 py-1.5 rounded-md border border-white/20 text-white hover:border-indigo-400 hover:text-indigo-300 transition"
+              >
+                Previous
+              </button>
+              <button
+                (click)="nextPage()"
+                class="px-3 py-1.5 rounded-md border border-white/20 text-white hover:border-indigo-400 hover:text-indigo-300 transition"
+              >
+                Next
+              </button>
+            </div>
+          }
+          @if (!isAllShow) {
+            @for (item of recent(); track item.timestamp) {
+              <div class="signal-card">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-3">
+                    <img [src]="item.userPhoto" class="w-9 h-9 rounded-md border border-white/20" />
+                    <div class="text-sm font-semibold text-white">{{ item.userName }}</div>
+                  </div>
+                  <div class="rating-view">
+                    @for (s of [1, 2, 3, 4, 5]; track s) {
+                      <span [class.active]="item.rating >= s">★</span>
+                    }
+                  </div>
+                </div>
+                <div class="signal-text">{{ item.text }}</div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* BACKGROUND LIKE MAP UI */
+  .tactical-bg {
+    background:
+      radial-gradient(1200px 600px at 20% 20%, rgba(0, 120, 255, 0.06), transparent 60%),
+      radial-gradient(800px 500px at 80% 80%, rgba(255, 0, 80, 0.05), transparent 60%), #0b1220;
+  }
+
+  /* MAIN FRAME */
+  .tactical-frame {
+    background: rgba(15, 25, 45, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 40px rgba(0, 120, 255, 0.12);
+  }
+
+  /* HEADER */
+  .hud-header {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .hud-title {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #7dd3fc;
+  }
+
+  .hud-subtitle {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 0.2em;
+  }
+
+  .hud-btn {
+    padding: 6px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: #93c5fd;
+    transition: 0.2s;
+  }
+  .hud-btn:hover {
+    background: rgba(0, 120, 255, 0.12);
+    border-color: rgba(0, 120, 255, 0.4);
+  }
+
+  /* PANELS */
+  .hud-panel {
+    background: rgba(0, 0, 0, 0.15);
+  }
+  .panel-title {
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    font-weight: 700;
+    color: #7dd3fc;
+    margin-bottom: 16px;
+  }
+  .panel-title.red {
+    color: #f87171;
+  }
+
+  /* AVATAR FRAME */
+  .avatar-frame {
+    padding: 2px;
+    border: 1px solid rgba(0, 120, 255, 0.5);
+    border-radius: 6px;
+  }
+
+  /* LABELS */
+  .label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  /* RATING */
+  .rating-cell {
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.2);
+    color: rgba(255, 255, 255, 0.2);
+    font-size: 16px;
+    transition: 0.15s;
+  }
+  .rating-cell.active {
+    color: #facc15;
+    border-color: rgba(250, 204, 21, 0.6);
+    background: rgba(250, 204, 21, 0.08);
+  }
+
+  /* TEXTAREA */
+  .hud-textarea {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 12px;
+    font-size: 13px;
+    color: white;
+    outline: none;
+    transition: 0.2s;
+  }
+  .hud-textarea:focus {
+    border-color: rgba(0, 120, 255, 0.5);
+  }
+
+  /* ACTION BUTTON */
+  .hud-action-btn {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid rgba(0, 120, 255, 0.5);
+    background: rgba(0, 120, 255, 0.12);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: #7dd3fc;
+    transition: 0.2s;
+  }
+  .hud-action-btn:hover {
+    background: rgba(0, 120, 255, 0.22);
+  }
+  .hud-action-btn:disabled {
+    opacity: 0.4;
+  }
+
+  /* SIGNAL CARDS */
+  .signal-card {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 14px;
+    transition: 0.2s;
+  }
+  .signal-card:hover {
+    border-color: rgba(0, 120, 255, 0.4);
+  }
+
+  .rating-view span {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.2);
+  }
+  .rating-view span.active {
+    color: #facc15;
+  }
+
+  .signal-text {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.75);
+  }
+</style>
