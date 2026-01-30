@@ -15,7 +15,7 @@ import { SettingsService } from '../../services/settings.service';
         <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
                 <h2 class="text-2xl font-bold">Game Guide</h2>
-                <h3 class="text-xs mt-2 font-bold text-gray-300">Turn-Based Strategy</h3>
+                <h3 class="text-xs mt-2 font-bold text-gray-300">{{ settings.t('TURN_BASED_STRATEGY') }}</h3>
             </div>
           <button
             class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 text-lg cursor-pointer"

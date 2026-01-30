@@ -1086,7 +1086,7 @@ export class GameEngineService {
             if (next.player >= 10) {
                 this.gameStatusSignal.set('player wins');
                 this.screenShakeSignal.set(true);
-                this.endReasonSignal.set('ECONOMIC DOMINATION! Forest majority held for 10 turns.');
+                this.endReasonSignal.set(this.settings.t('ECONOMIC_DOMINATION_GREETING'));
                 setTimeout(() => {
                     this.screenShakeSignal.set(false);
                     this.endOverlaySignal.set(true);
@@ -1101,7 +1101,7 @@ export class GameEngineService {
             if (next.ai >= 10) {
                 this.gameStatusSignal.set('jaerbi wins');
                 this.screenShakeSignal.set(true);
-                this.endReasonSignal.set('ECONOMIC DOMINATION! Forest majority held for 10 turns.');
+                this.endReasonSignal.set(this.settings.t('ECONOMIC_DOMINATION_GREETING'));
                 setTimeout(() => {
                     this.screenShakeSignal.set(false);
                     this.endOverlaySignal.set(true);
