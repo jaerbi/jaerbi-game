@@ -3,6 +3,7 @@ export type TranslationKey =
   | 'SHAPE_TACTICS'
   | 'TURN_BASED_STRATEGY'
   | 'FEEDBACK_MODULE'
+  | 'STRATEGIC_PLAN'
   | 'AUTO_ENGAGE'
   | 'SYSTEM_LOG'
   | 'RANKING'
@@ -47,9 +48,14 @@ export type TranslationKey =
   | 'TOP_3_LOSES_PLAYER'
   | 'TURNS'
   | 'NO_RECORDS_YET'
+  | 'CHANGE_RECORDS_INFO'
   | 'INFO';
 
   export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    CHANGE_RECORDS_INFO: {
+      en: 'Change Difficulty or Map Size in Settings to view other boards.',
+      uk: `Змініть складність або розмір карти в налаштуваннях, щоб переглянути інші дошки.`,
+    },
     NO_RECORDS_YET: {
       en: 'No records yet',
       uk: `Поки що немає записів`,
@@ -233,6 +239,10 @@ export type TranslationKey =
   FEEDBACK_MODULE: {
     en: 'Feedbacks',
     uk: "Відгуки",
+  },
+  STRATEGIC_PLAN: {
+    en: 'Roadmap',
+    uk: 'Стратегічний План',
   },
   AUTO_ENGAGE: {
     en: 'Auto Engage',

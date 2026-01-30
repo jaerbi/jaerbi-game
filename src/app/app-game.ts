@@ -49,6 +49,9 @@ export class AppGame {
             this.firebase.loginWithGoogle();
         } catch {}
     }
+    navigateToRoadmap() {
+        this.router.navigate(['/roadmap']);
+    }
 
     ngAfterViewInit() {
         setTimeout(() => {

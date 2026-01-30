@@ -515,6 +515,34 @@
     </div>
   }
   <button
+    (click)="navigateToRoadmap()"
+    class="fixed bottom-24 right-6 z-50 flex items-center group cursor-pointer outline-none translate-x-2 hover:translate-x-0 transition-transform duration-300"
+  >
+    <div
+      class="h-10 px-4 bg-blue-600/20 border-y border-l border-blue-500/50 backdrop-blur-md flex items-center gap-3 group-hover:bg-blue-600/40 transition-all"
+    >
+      <div class="w-1.5 h-1.5 bg-blue-400 rotate-45 animate-pulse"></div>
+      <span
+        class="text-[11px] font-black uppercase tracking-[0.3em] text-blue-100 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"
+      >
+        {{ settings.t('STRATEGIC_PLAN') }}
+      </span>
+    </div>
+
+    <div
+      class="h-10 w-10 bg-blue-600/30 border border-blue-500/50 flex items-center justify-center group-hover:bg-blue-600 transition-all shadow-[0_0_15px_rgba(37,99,235,0.2)]"
+    >
+      <svg
+        class="w-4 h-4 text-white group-hover:scale-125 transition-transform"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+      </svg>
+    </div>
+  </button>
+  <button
     class="fixed bottom-4 right-4 z-50 px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-500 text-white shadow-xl cursor-pointer flex items-center gap-2 support-pulse"
     (click)="gameEngine.toggleSupport()"
     aria-label="Support the Project"
@@ -1378,7 +1406,9 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <span class="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">{{ settings.t('COMBAT_ONLY') }}</span>
+          <span class="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
+            {{ settings.t('COMBAT_ONLY') }}
+          </span>
         </label>
       </div>
 
@@ -1428,7 +1458,9 @@
 
       <div class="flex flex-col gap-4">
         <div class="flex items-center justify-between">
-          <label class="text-[10px] font-black uppercase tracking-widest text-stone-400">{{ settings.t('TACTICAL_DIFF') }}</label>
+          <label class="text-[10px] font-black uppercase tracking-widest text-stone-400">
+            {{ settings.t('TACTICAL_DIFF') }}
+          </label>
           <span class="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-stone-300 italic">
             {{ settings.t('LEVEL_SELECTION') }}
           </span>
@@ -1547,7 +1579,7 @@
             }
           </div>
         </div>
-        <div class="mt-4 text-xs text-gray-400">Change Difficulty or Map Size in Settings to view other boards.</div>
+        <div class="mt-4 text-xs text-gray-400">{{ settings.t('CHANGE_RECORDS_INFO')}}</div>
       </div>
     </div>
   }
