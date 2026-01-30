@@ -6,6 +6,51 @@ export type TranslationKey =
   | 'STRATEGIC_PLAN'
   | 'AUTO_ENGAGE'
   | 'SYSTEM_LOG'
+  | 'COMMUNITY_SIGNALS'
+  | 'RETURN_TO_MAP'
+  | 'DEPLOY_REPORT'
+  | 'OPERATOR_ONLINE'
+  | 'EFFICIENCY_RATING'
+  | 'TACTICAL_NOTE'
+  | 'TRANSMIT_REPORT'
+  | 'FEEDBACK_VALIDATION_RANGE'
+  | 'FEEDBACK_LIMIT_REACHED'
+  | 'FEEDBACK_SUBMITTED'
+  | 'COMMUNITY_SIGNALS_TABLE'
+  | 'TOGGLE_BACK'
+  | 'VIEW_FULL_ARCHIVE'
+  | 'TABLE_OPERATOR'
+  | 'TABLE_RATING'
+  | 'TABLE_MESSAGE'
+  | 'TABLE_DATE'
+  | 'NO_SIGNALS'
+  | 'PREVIOUS'
+  | 'NEXT'
+  | 'GAME_GUIDE'
+  | 'VICTORY_CONDITIONS'
+  | 'MONOPOLY_LABEL'
+  | 'MONOPOLY_DESC'
+  | 'ANNIHILATION'
+  | 'ANNIHILATION_DESC'
+  | 'UNIT_EVOLUTION'
+  | 'EVOLUTION'
+  | 'EVOLUTION_DESC'
+  | 'COMBAT_DEEP_DIVE'
+  | 'SUCCESSFUL_ATTACK'
+  | 'SUCCESSFUL_ATTACK_DESC'
+  | 'CRITICAL_HIT'
+  | 'CRITICAL_HIT_DESC'
+  | 'MISS'
+  | 'MISS_DESC'
+  | 'MOVEMENT'
+  | 'T1_1_TILE'
+  | 'T3_3_TILES'
+  | 'FOREST_CYCLE'
+  | 'TURN_1'
+  | 'TURN_2'
+  | 'PLUS_8_WOOD_PER_TURN'
+  | 'WALL_LEGEND'
+  | 'AI_FACTION'
   | 'RANKING'
   | 'RECORDS'
   | 'RELOAD'
@@ -251,6 +296,186 @@ export type TranslationKey =
   SYSTEM_LOG: {
     en: 'Logbook',
     uk: 'Реєстри',
+  },
+  COMMUNITY_SIGNALS: {
+    en: 'Community Signals',
+    uk: 'Сигнали Спільноти',
+  },
+  RETURN_TO_MAP: {
+    en: 'Return to Map',
+    uk: 'Повернутись до Мапи',
+  },
+  DEPLOY_REPORT: {
+    en: 'Deploy Report',
+    uk: 'Надіслати Звіт',
+  },
+  OPERATOR_ONLINE: {
+    en: 'OPERATOR ONLINE',
+    uk: 'ОПЕРАТОР НА ЗВ’ЯЗКУ',
+  },
+  EFFICIENCY_RATING: {
+    en: 'Efficiency Rating',
+    uk: 'Коефіцієнт Ефективності',
+  },
+  TACTICAL_NOTE: {
+    en: 'Tactical Note',
+    uk: 'Тактична Примітка',
+  },
+  TRANSMIT_REPORT: {
+    en: 'Transmit Report',
+    uk: 'Передати Дані',
+  },
+  FEEDBACK_VALIDATION_RANGE: {
+    en: 'Text must be between 10 and 500 characters.',
+    uk: 'Текст має містити від 10 до 500 символів.',
+  },
+  FEEDBACK_LIMIT_REACHED: {
+    en: 'Daily limit reached: 3 feedbacks per 24 hours.',
+    uk: 'Досягнуто денний ліміт: 3 відгуки за 24 години.',
+  },
+  FEEDBACK_SUBMITTED: {
+    en: 'Thanks! Your feedback was submitted.',
+    uk: 'Дякуємо! Ваш відгук надіслано.',
+  },
+  COMMUNITY_SIGNALS_TABLE: {
+    en: 'Community Signals Table',
+    uk: 'Таблиця Сигналів Спільноти',
+  },
+  TOGGLE_BACK: {
+    en: 'Back',
+    uk: 'Назад',
+  },
+  VIEW_FULL_ARCHIVE: {
+    en: 'View Full Archive',
+    uk: 'Повний Архів',
+  },
+  TABLE_OPERATOR: {
+    en: 'Operator',
+    uk: 'Оператор',
+  },
+  TABLE_RATING: {
+    en: 'Rating',
+    uk: 'Оцінка',
+  },
+  TABLE_MESSAGE: {
+    en: 'Message',
+    uk: 'Повідомлення',
+  },
+  TABLE_DATE: {
+    en: 'Date',
+    uk: 'Дата',
+  },
+  NO_SIGNALS: {
+    en: 'No signals',
+    uk: 'Немає сигналів',
+  },
+  PREVIOUS: {
+    en: 'Previous',
+    uk: 'Попередня',
+  },
+  NEXT: {
+    en: 'Next',
+    uk: 'Наступна',
+  },
+  GAME_GUIDE: {
+    en: 'Game Guide',
+    uk: 'Польовий Довідник',
+  },
+  VICTORY_CONDITIONS: {
+    en: 'Victory Conditions',
+    uk: 'Умови Перемоги',
+  },
+  MONOPOLY_LABEL: {
+    en: 'Monopoly',
+    uk: 'Монополія',
+  },
+  MONOPOLY_DESC: {
+    en: 'Hold forest majority for 10 turns.',
+    uk: 'Утримуйте більшість лісів протягом 10 ходів.',
+  },
+  ANNIHILATION: {
+    en: 'Annihilation',
+    uk: 'Знищення',
+  },
+  ANNIHILATION_DESC: {
+    en: 'Reduce enemy Base HP to 0.',
+    uk: 'Зменште HP бази противника до 0.',
+  },
+  UNIT_EVOLUTION: {
+    en: 'Unit Evolution',
+    uk: 'Еволюція Юнітів',
+  },
+  EVOLUTION: {
+    en: 'Evolution',
+    uk: 'Еволюція',
+  },
+  EVOLUTION_DESC: {
+    en: 'Two T2 merge into a T3.',
+    uk: 'Дві T2 зливаються у T3.',
+  },
+  COMBAT_DEEP_DIVE: {
+    en: 'Combat Deep-Dive',
+    uk: 'Бойовий Аналіз',
+  },
+  SUCCESSFUL_ATTACK: {
+    en: 'Successful Attack',
+    uk: 'Успішна Атака',
+  },
+  SUCCESSFUL_ATTACK_DESC: {
+    en: 'Attacker tier ≥ defender; defender downgraded or destroyed.',
+    uk: 'Ранг атакуючого ≥ захисника; захисник понижується або знищується.',
+  },
+  CRITICAL_HIT: {
+    en: 'Critical Hit',
+    uk: 'Критичний Удар',
+  },
+  CRITICAL_HIT_DESC: {
+    en: 'Chance-based bonus (tier-scaled)',
+    uk: 'Ймовірнісний бонус (залежить від рангу)',
+  },
+  MISS: {
+    en: 'Miss',
+    uk: 'Промах',
+  },
+  MISS_DESC: {
+    en: 'Attack can MISS; lower effective impact.',
+    uk: 'Атака може ПРОМАХНУТИСЯ; знижений ефект.',
+  },
+  MOVEMENT: {
+    en: 'Movement',
+    uk: 'Маневрування',
+  },
+  T1_1_TILE: {
+    en: 'T1: 1 tile',
+    uk: 'T1: 1 клітинка',
+  },
+  T3_3_TILES: {
+    en: 'T3: 3 tiles',
+    uk: 'T3: 3 клітинки',
+  },
+  FOREST_CYCLE: {
+    en: 'Forest Cycle',
+    uk: 'Цикл Лісу',
+  },
+  TURN_1: {
+    en: 'Turn 1',
+    uk: 'Хід 1',
+  },
+  TURN_2: {
+    en: 'Turn 2',
+    uk: 'Хід 2',
+  },
+  PLUS_8_WOOD_PER_TURN: {
+    en: '+8 Wood/turn',
+    uk: '+8 дерева/хід',
+  },
+  WALL_LEGEND: {
+    en: 'Wall Legend',
+    uk: 'Легенда Стін',
+  },
+  AI_FACTION: {
+    en: 'AI',
+    uk: 'AI',
   },
 };
 
