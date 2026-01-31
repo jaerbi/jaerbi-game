@@ -87,6 +87,8 @@ export class GameEngineService {
     private rageCaptureCounterSignal = signal<number>(0);
     private anchoredGatherersSignal = signal<Set<string>>(new Set<string>());
     private totalWarModeSignal = signal<boolean>(false);
+    private aiInvalidActionCountSignal = signal<number>(0);
+    private aiLastRejectedActionKeySignal = signal<string | null>(null);
 
     // Computed signals
     readonly units = this.unitsSignal.asReadonly();
@@ -219,13 +221,13 @@ export class GameEngineService {
 
         // START RESERVE
         if (difficulty === 'baby') {
-            this.reservePointsSignal.set({ player: 45, ai: 15 });
+            this.reservePointsSignal.set({ player: 60, ai: 20 });
         } else if (difficulty === 'normal') {
-            this.reservePointsSignal.set({ player: 35, ai: 25 });
+            this.reservePointsSignal.set({ player: 40, ai: 40 });
         } else if (difficulty === 'hard') {
-            this.reservePointsSignal.set({ player: 25, ai: 35 });
+            this.reservePointsSignal.set({ player: 40, ai: 80 });
         } else {
-            this.reservePointsSignal.set({ player: 15, ai: 45 });
+            this.reservePointsSignal.set({ player: 40, ai: 100 });
         }
 
         this.deployTargetsSignal.set([]);
@@ -1123,8 +1125,17 @@ export class GameEngineService {
         this.aiBatchingActions = true;
         const aiBase = this.getBasePosition('ai');
         // console.log('[AI] Phase: Economy');
-        while (this.aiWoodSignal() > 30) {
-            this.aiConvertWoodToReserve();
+        {
+            let iter = 0;
+            const maxIter = 50;
+            while (this.aiWoodSignal() > 30) {
+                iter++;
+                if (iter > maxIter) {
+                    try { console.warn('[AI] Economy convert safety break'); } catch {}
+                    break;
+                }
+                this.aiConvertWoodToReserve();
+            }
         }
         // Adaptive internal difficulty (stealth)
         try {
@@ -1282,7 +1293,46 @@ export class GameEngineService {
             // console.log(`[AI TERMINAL ACTION] ${kind} (${tag})`);
 
             if (decision.type === 'wall_attack' && decision.edge) {
-                this.attackOrDestroyWallBetween(decision.edge.from, decision.edge.to, false);
+                const w = this.getWallBetween(decision.edge.from.x, decision.edge.from.y, decision.edge.to.x, decision.edge.to.y);
+                const protectedEdge = w && this.isBaseProtectionEdge(decision.edge.from, decision.edge.to) && (w.owner === 'neutral' || w.owner === 'ai');
+                const invalid = protectedEdge || !w;
+                if (invalid) {
+                    const key = `${decision.edge.from.x},${decision.edge.from.y}|${decision.edge.to.x},${decision.edge.to.y}`;
+                    const last = this.aiLastRejectedActionKeySignal();
+                    if (last === key) {
+                        this.aiInvalidActionCountSignal.update(c => c + 1);
+                    } else {
+                        this.aiLastRejectedActionKeySignal.set(key);
+                        this.aiInvalidActionCountSignal.set(1);
+                    }
+                    const count = this.aiInvalidActionCountSignal();
+                    if (count >= 2) {
+                        const dirs = [
+                            { x: -1, y: -1 }, { x: 0, y: -1 }, { x: 1, y: -1 },
+                            { x: -1, y: 0 }, { x: 1, y: 0 },
+                            { x: -1, y: 1 }, { x: 0, y: 1 }, { x: 1, y: 1 },
+                        ];
+                        const candidates = dirs
+                            .map(d => ({ x: decision.unit.position.x + d.x, y: decision.unit.position.y + d.y }))
+                            .filter(p => this.inBounds(p.x, p.y) && !this.getUnitAt(p.x, p.y));
+                        const target = candidates[0] ?? null;
+                        if (target) {
+                            try { console.warn('[AI] Forced benign move due to repeated invalid terminal action'); } catch {}
+                            this.executeMove(decision.unit, target);
+                        } else {
+                            try { console.warn('[AI] Skipped terminal action due to repeated invalid selection'); } catch {}
+                        }
+                        this.aiInvalidActionCountSignal.set(0);
+                        this.aiLastRejectedActionKeySignal.set(null);
+                    } else {
+                        this.appendLog(`[Turn ${this.turnSignal()}] [AI Base Protection] Skipped wall attack near base due to protection rule.`);
+                        try { console.warn('[AI] Skipped protected or invalid wall attack near base'); } catch {}
+                    }
+                } else {
+                    this.aiInvalidActionCountSignal.set(0);
+                    this.aiLastRejectedActionKeySignal.set(null);
+                    this.attackOrDestroyWallBetween(decision.edge.from, decision.edge.to, false);
+                }
             } else {
                 this.executeMove(decision.unit, decision.target);
             }
@@ -1334,7 +1384,14 @@ export class GameEngineService {
                     if (this.inBounds(nx, ny)) {
                         const w = this.getWallBetween(unit.position.x, unit.position.y, nx, ny);
                         if (w) {
-                            this.attackOrDestroyWallBetween({ x: unit.position.x, y: unit.position.y }, { x: nx, y: ny }, false);
+                            const from = { x: unit.position.x, y: unit.position.y };
+                            const to = { x: nx, y: ny };
+                            if (this.isBaseProtectionEdge(from, to) && (w.owner === 'neutral' || w.owner === 'ai')) {
+                                this.appendLog(`[Turn ${this.turnSignal()}] [AI Base Protection] Skipped wall attack near base due to protection rule.`);
+                                try { console.warn('[AI] Skipped protected wall attack near base (fallback)'); } catch {}
+                            } else {
+                                this.attackOrDestroyWallBetween(from, to, false);
+                            }
                         } else {
                             this.executeMove(unit, { x: nx, y: ny });
                         }
@@ -1424,12 +1481,21 @@ export class GameEngineService {
         let cy = threat.position.y;
         const stepX = Math.sign(aiBase.x - cx);
         const stepY = Math.sign(aiBase.y - cy);
-        while (cx !== aiBase.x || cy !== aiBase.y) {
-            cx += stepX;
-            cy += stepY;
-            if (!this.inBounds(cx, cy)) break;
-            if (cx === aiBase.x && cy === aiBase.y) break;
-            path.push({ x: cx, y: cy });
+        {
+            let iter = 0;
+            const maxIter = Math.max(10, this.gridSize * 2);
+            while (cx !== aiBase.x || cy !== aiBase.y) {
+                iter++;
+                if (iter > maxIter) {
+                    try { console.warn('[AI] Defense path safety break near base'); } catch {}
+                    break;
+                }
+                cx += stepX;
+                cy += stepY;
+                if (!this.inBounds(cx, cy)) break;
+                if (cx === aiBase.x && cy === aiBase.y) break;
+                path.push({ x: cx, y: cy });
+            }
         }
         // Pick the most critical empty tile: closest to base along the path
         const critical =
@@ -1450,8 +1516,17 @@ export class GameEngineService {
         if (!critical) return false;
 
         // Auto-convert if desperate
-        while (this.aiWoodSignal() >= 20) {
-            this.aiConvertWoodToReserve();
+        {
+            let iter = 0;
+            const maxIter = 50;
+            while (this.aiWoodSignal() >= 20) {
+                iter++;
+                if (iter > maxIter) {
+                    try { console.warn('[AI] Defense convert safety break'); } catch {}
+                    break;
+                }
+                this.aiConvertWoodToReserve();
+            }
         }
 
         const reserves = this.reservePointsSignal().ai;
@@ -1536,7 +1611,7 @@ export class GameEngineService {
     }
     private aiConvertWoodToReserve() {
         const w = this.aiWoodSignal();
-        if (w < 20) return;
+        if (w < 30) return;
         this.aiWoodSignal.update(x => x - 20);
         this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + 1 }));
     }
@@ -1831,6 +1906,18 @@ export class GameEngineService {
         if (!wall) return;
 
         const actor: Owner = this.activeSideSignal();
+        if (actor === 'ai' && this.isBaseProtectionEdge(tile1, tile2)) {
+            if (wall.owner === 'neutral') {
+                this.appendLog(`[Turn ${this.turnSignal()}] [AI Base Protection] Blocked destruction of neutral wall adjacent to base.`);
+                try { console.warn('[AI] Blocked neutral wall destruction adjacent to base'); } catch {}
+                return;
+            }
+            if (wall.owner === 'ai') {
+                this.appendLog(`[Turn ${this.turnSignal()}] [AI Base Protection] Blocked destruction of own wall adjacent to base.`);
+                try { console.warn('[AI] Blocked own wall destruction adjacent to base'); } catch {}
+                return;
+            }
+        }
         if (wall.owner === 'player' && actor === 'player') {
             this.destroyOwnWallBetween(tile1, tile2);
             return;

@@ -19,6 +19,7 @@ export class AppGame {
     @ViewChild('boardContainer') boardContainer?: ElementRef<HTMLDivElement>;
 
     isAutoBattleActive = signal(false);
+    isMobileMenuOpen = signal(false);
 
     constructor(
         public gameEngine: GameEngineService,
@@ -30,6 +31,13 @@ export class AppGame {
 
     get isProduction() {
         return !isDevMode();
+    }
+
+    toggleMobileMenu() {
+        this.isMobileMenuOpen.update(v => !v);
+    }
+    closeMobileMenu() {
+        this.isMobileMenuOpen.set(false);
     }
 
     toggleAutoBattle() {

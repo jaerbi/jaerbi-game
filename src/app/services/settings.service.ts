@@ -4,19 +4,31 @@ import { translate, TranslationKey, LangCode } from '../i18n/translations';
 export type Difficulty = 'baby' | 'normal' | 'hard' | 'nightmare';
 export type MapSize = 10 | 20 | 30;
 
+export interface GameSettings {
+    gridSize: number;
+    difficulty: Difficulty;
+    language: LangCode;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
     private difficultySignal = signal<Difficulty>('normal');
     private mapSizeSignal = signal<MapSize>(10);
     private langSignal = signal<LangCode>('uk');
-    public version = 'v.0.5.2';
+    public version = 'v.0.5.3';
     public diffArr: Difficulty[] = ['baby', 'normal', 'hard', 'nightmare'];
+    private storageKey = 'shape_tactics_settings';
+
+    constructor() {
+        this.loadSettings();
+    }
 
     difficulty(): Difficulty {
         return this.difficultySignal();
     }
     setDifficulty(level: Difficulty) {
         this.difficultySignal.set(level);
+        this.persistSettings();
     }
     difficultyLabel(): TranslationKey {
         const d = this.difficultySignal();
@@ -45,6 +57,7 @@ export class SettingsService {
     }
     setMapSize(size: MapSize) {
         this.mapSizeSignal.set(size);
+        this.persistSettings();
     }
     mapSizeLabel(): string {
         return `${this.mapSizeSignal()}x${this.mapSizeSignal()}`;
@@ -55,8 +68,40 @@ export class SettingsService {
     }
     setLang(lang: LangCode) {
         this.langSignal.set(lang);
+        this.persistSettings();
     }
     t(key: TranslationKey): string {
         return translate(key, this.langSignal());
+    }
+
+    private loadSettings() {
+        if (typeof window === 'undefined') return;
+        try {
+            const raw = localStorage.getItem(this.storageKey);
+            if (!raw) return;
+            const parsed = JSON.parse(raw) as Partial<GameSettings> | null;
+            if (!parsed || typeof parsed !== 'object') return;
+            const diffs: Difficulty[] = ['baby', 'normal', 'hard', 'nightmare'];
+            const sizes: MapSize[] = [10, 20, 30];
+            const langs: LangCode[] = ['en', 'uk'];
+            const diff = parsed.difficulty && diffs.includes(parsed.difficulty as Difficulty) ? parsed.difficulty as Difficulty : this.difficultySignal();
+            const size = parsed.gridSize && sizes.includes(parsed.gridSize as MapSize) ? parsed.gridSize as MapSize : this.mapSizeSignal();
+            const lang = parsed.language && langs.includes(parsed.language as LangCode) ? parsed.language as LangCode : this.langSignal();
+            this.difficultySignal.set(diff);
+            this.mapSizeSignal.set(size as MapSize);
+            this.langSignal.set(lang);
+        } catch {}
+    }
+
+    private persistSettings() {
+        if (typeof window === 'undefined') return;
+        try {
+            const payload: GameSettings = {
+                gridSize: this.mapSizeSignal(),
+                difficulty: this.difficultySignal(),
+                language: this.langSignal()
+            };
+            localStorage.setItem(this.storageKey, JSON.stringify(payload));
+        } catch {}
     }
 }

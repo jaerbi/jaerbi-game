@@ -146,12 +146,12 @@
 .unit-container-player-unit-tier-2 {
   display: flex;
   align-items: center;
-  filter: drop-shadow(0 0 10px rgba(166, 197, 247, 0.5));
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.7));
 }
 .unit-container-ai-unit-tier-2 {
   display: flex;
   align-items: center;
-  filter: drop-shadow(0 0 10px rgba(222, 175, 175, 0.5));
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.7));
 }
 .unit-base {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -202,7 +202,7 @@
   background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, transparent 50%);
   pointer-events: none;
 }
-.unit-tier-2::after {
+/* .unit-tier-2::after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -211,7 +211,7 @@
   height: 20%;
   background: linear-gradient(to top, rgba(0,0,0,0.2), transparent);
   pointer-events: none;
-}
+} */
 
 /* Tier 3: Soft Square */
 .unit-tier-3 {
@@ -315,4 +315,60 @@
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
+}
+.mobile-hud-header, .actions-bar {
+    display: none;
+}
+@media (max-width: 1024px) {
+  .nav-bar { display: none; }
+  .status-bar { display: none; }
+  .mobile-hud-header { display: flex; margin-bottom: 0; }
+  .mobile-hud-header .hud-item { min-width: 0; }
+  .mobile-hud-header .hud-value { white-space: nowrap; }
+  .burger-btn { min-width: 34px; min-height: 34px; }
+  .actions-bar { display: flex; position: sticky; top: 42px; z-index: 900; }
+  .action-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .board {
+    max-width: 100vw;
+    max-height: calc(100vh - 140px);
+  }
+  .end-overlay .end-dialog {
+    width: 90vw;
+    max-width: 560px;
+  }
+  .mobile-menu-overlay .mobile-menu-panel .menu-link {
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #e5e7eb;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+  }
+
+  .mobile-actions-hide-text,
+  .mobile-hide-logo  {
+    display: none;
+  }
+  .mobile-actions-compact {
+    right: 0;
+    bottom: 6px;
+    opacity: 0.8;
+    scale: 0.8;
+  }
+  .mobile-actions-compact-plan {
+    bottom: 50px;
+     right: 6px;
+  }
 }
