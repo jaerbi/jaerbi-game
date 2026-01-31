@@ -94,9 +94,14 @@ export type TranslationKey =
   | 'TURNS'
   | 'NO_RECORDS_YET'
   | 'CHANGE_RECORDS_INFO'
+  | 'SETTINGS'
   | 'INFO';
 
   export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    SETTINGS: {
+      en: 'Settings',
+      uk: `Налаштування`,
+    },
     CHANGE_RECORDS_INFO: {
       en: 'Change Difficulty or Map Size in Settings to view other boards.',
       uk: `Змініть складність або розмір карти в налаштуваннях, щоб переглянути інші дошки.`,
