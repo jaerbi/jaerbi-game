@@ -7,6 +7,8 @@ import { SettingsService } from './settings.service';
 export class AiStrategyService {
     constructor(private combat: CombatService, private settings: SettingsService) { }
     private goals = new Map<string, Position>();
+    private lastPhase: 'expansion' | 'defense' | 'full_rush' | 'none' = 'none';
+    private interceptUntil = new Map<string, number>();
     setGoal(unitId: string, pos: Position) {
         this.goals.set(unitId, pos);
     }
@@ -21,8 +23,7 @@ export class AiStrategyService {
     chooseBestEndingAction(engine: any): { type: 'move' | 'attack' | 'merge' | 'wall_attack'; unit: Unit; target: Position; reason: string; edge?: { from: Position; to: Position } } | null {
         // CRITICAL LOGIC: Pathfinding + Wall Breaker decisions drive AI aggression and anti-paralysis.
         // Do not remove or weaken these branches; they ensure hunters breach walls and forests remain contestable.
-        const alreadyMoved: Set<string> = new Set(engine.movedThisTurnSignal?.() ?? []);
-        let aiUnits = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && !alreadyMoved.has(u.id));
+        let aiUnits = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && !u.hasActed);
         aiUnits = aiUnits.filter((u: Unit) => !(u.tier <= 2 && engine.isForest(u.position.x, u.position.y) && engine.isAnchoredGatherer(u.id)));
         const queued = typeof engine.queuedUnitId === 'function' ? engine.queuedUnitId() : null;
         if (queued) {
@@ -38,6 +39,10 @@ export class AiStrategyService {
         const visibleFree = unoccupied.filter(f => engine.isVisibleToAi(f.x, f.y));
         const fogForests = forests.filter(f => !engine.isVisibleToAi(f.x, f.y));
         const aiForestCount = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && engine.isForest(u.position.x, u.position.y)).length;
+        const aiTotalUnits = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai').length;
+        const capReachedAny = [1, 2, 3].some(t =>
+            engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && u.tier === t && !engine.isForest(u.position.x, u.position.y)).length >= 5
+        );
         const playerUnits: Unit[] = engine.unitsSignal().filter((u: Unit) => u.owner === 'player');
         const enemyNearBase = playerUnits.some((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3);
         const baseThreatEnemies = playerUnits.filter((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 4);
@@ -45,6 +50,32 @@ export class AiStrategyService {
         const immediateThreatEnemies = baseThreatEnemies.filter((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 2);
         const immediateThreat = immediateThreatEnemies.length > 0;
         const baseProximity = playerUnits.some((u: Unit) => Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 5);
+        const isEarlyGame = typeof engine.turnSignal === 'function' ? engine.turnSignal() <= 40 : false;
+        // Full Rush Logic
+        const allAiUnits = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai');
+        const t3NonForest = allAiUnits.filter((u: Unit) => u.tier === 3 && !engine.isForest(u.position.x, u.position.y)).length;
+        const t4NonForest = allAiUnits.filter((u: Unit) => u.tier === 4 && !engine.isForest(u.position.x, u.position.y)).length;
+        // "TotalUnits(non-forest) >= (5 Squares T3) and T4" -> We interpret as T3 >= 5 or (T3 + T4) >= 5, ignoring lower tiers
+        const fullRushActive = (t3NonForest + t4NonForest) >= 5;
+
+        const phase: 'expansion' | 'defense' | 'full_rush' | 'none' = fullRushActive ? 'full_rush' : (baseThreat ? 'defense' : (isEarlyGame ? 'expansion' : 'none'));
+        if (phase !== this.lastPhase) {
+            try { 
+                if (phase === 'full_rush') console.log('AI Phase: FULL RUSH ACTIVATED - Initiating All-Out Assault');
+                else console.log(phase === 'defense' ? 'AI Phase: Base Defense Activated' : (phase === 'expansion' ? 'AI Phase: Expansion' : 'AI Phase: Normal')); 
+            } catch {}
+            this.lastPhase = phase;
+        }
+
+        if (fullRushActive) {
+              // Wave Motion: Sort units by distance to player base so closest act first
+              aiUnits.sort((a: Unit, b: Unit) => {
+                  const da = Math.abs(a.position.x - playerBase.x) + Math.abs(a.position.y - playerBase.y);
+                  const db = Math.abs(b.position.x - playerBase.x) + Math.abs(b.position.y - playerBase.y);
+                  return da - db;
+              });
+         }
+
         const aggression = typeof engine.aggressionMode === 'function' ? !!engine.aggressionMode() : (playerUnits.filter((p: Unit) => engine.isForest(p.position.x, p.position.y)).length * 2) >= (aiUnits.filter((a: Unit) => engine.isForest(a.position.x, a.position.y)).length * 2);
         const forestsSecured = forests.length > 0 ? forests.every(f => {
             const u = engine.getUnitAt(f.x, f.y);
@@ -63,6 +94,7 @@ export class AiStrategyService {
             const da = Math.max(Math.abs(acc.position.x - aiBase.x), Math.abs(acc.position.y - aiBase.y));
             return d < da ? e : acc;
         }, baseThreatEnemies[0]) : null;
+        const strongestAi = aiUnits.length > 0 ? aiUnits.reduce((acc: Unit, u: Unit) => (this.combat.calculateTotalPoints(u) > this.combat.calculateTotalPoints(acc) ? u : acc), aiUnits[0]) : null;
         const blockingTiles: Position[] = [];
         if (primaryThreat) {
             let cx = primaryThreat.position.x;
@@ -84,8 +116,21 @@ export class AiStrategyService {
                 blockingTiles.push({ x: cx, y: cy });
             }
         }
+        if (baseThreat && strongestAi && primaryThreat) {
+            this.goals.set(strongestAi.id, { x: primaryThreat.position.x, y: primaryThreat.position.y });
+            if (typeof engine.turnSignal === 'function') {
+                this.interceptUntil.set(strongestAi.id, engine.turnSignal() + 3);
+            }
+        }
         const timeMap: Map<string, number> = new Map(engine.aiUnitTimeNearBase());
         const stutterBan: Map<string, { tiles: Set<string>; until: number }> = new Map(engine.unitStutterBanSignal?.() ?? new Map());
+        const goalCounts: Map<string, number> = new Map();
+        for (const [uid, pos] of this.goals.entries()) {
+            if (pos && engine.isForest(pos.x, pos.y)) {
+                const key = `${pos.x},${pos.y}`;
+                goalCounts.set(key, (goalCounts.get(key) || 0) + 1);
+            }
+        }
         for (const unit of aiUnits) {
             const moves: Position[] = engine.calculateValidMoves(unit);
             const nearBase = Math.max(Math.abs(unit.position.x - aiBase.x), Math.abs(unit.position.y - aiBase.y)) <= 3;
@@ -111,15 +156,19 @@ export class AiStrategyService {
                         }, playerForests[0]);
                         goal = nearestPF;
                     } else if (visibleFree.length > 0) {
-                        goal = visibleFree.reduce((acc, f) => {
+                        const minAssigned = Math.min(...visibleFree.map(f => goalCounts.get(`${f.x},${f.y}`) || 0));
+                        const fair = visibleFree.filter(f => (goalCounts.get(`${f.x},${f.y}`) || 0) === minAssigned);
+                        goal = fair.reduce((acc, f) => {
                             const d = Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y);
                             return d < (Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y)) ? f : acc;
-                        }, visibleFree[0]);
+                        }, fair[0]);
                     } else if (fogForests.length > 0) {
-                        goal = fogForests.reduce((acc, f) => {
+                        const minAssignedFog = Math.min(...fogForests.map(f => goalCounts.get(`${f.x},${f.y}`) || 0));
+                        const fairFog = fogForests.filter(f => (goalCounts.get(`${f.x},${f.y}`) || 0) === minAssignedFog);
+                        goal = fairFog.reduce((acc, f) => {
                             const d = Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y);
                             return d < (Math.abs(unit.position.x - acc.x) + Math.abs(unit.position.y - acc.y)) ? f : acc;
-                        }, fogForests[0]);
+                        }, fairFog[0]);
                     } else {
                         const nearestEnemy = (() => {
                             if (playerUnits.length === 0) return null;
@@ -474,10 +523,23 @@ export class AiStrategyService {
                 let score = 0;
                 let reason = 'Action';
                 const targetUnit = engine.getUnitAt(move.x, move.y);
+                const emptyAdjacentsAt = (p: Position) => {
+                    const adj = [
+                        { x: p.x + 1, y: p.y }, { x: p.x - 1, y: p.y },
+                        { x: p.x, y: p.y + 1 }, { x: p.x, y: p.y - 1 }
+                    ].filter(pp => engine.inBounds(pp.x, pp.y));
+                    return adj.filter(a => !engine.getUnitAt(a.x, a.y)).length;
+                };
                 const baseDistCurr = Math.max(Math.abs(unit.position.x - aiBase.x), Math.abs(unit.position.y - aiBase.y));
                 const baseDistMove = Math.max(Math.abs(move.x - aiBase.x), Math.abs(move.y - aiBase.y));
                 const nearestForestCurrent = forests.length ? Math.min(...forests.map(f => Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y))) : Infinity;
                 const nearestForestMove = forests.length ? Math.min(...forests.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y))) : Infinity;
+                const playerOwnedForests = forests.filter(f => {
+                    const u = engine.getUnitAt(f.x, f.y);
+                    return !!u && u.owner === 'player';
+                });
+                const nearestPlayerForestCurrent = playerOwnedForests.length ? Math.min(...playerOwnedForests.map(f => Math.abs(unit.position.x - f.x) + Math.abs(unit.position.y - f.y))) : Infinity;
+                const nearestPlayerForestMove = playerOwnedForests.length ? Math.min(...playerOwnedForests.map(f => Math.abs(move.x - f.x) + Math.abs(move.y - f.y))) : Infinity;
                 const histMap = new Map(engine.unitMoveHistorySignal());
                 const histRaw = histMap.get(unit.id);
                 const hist: Position[] = Array.isArray(histRaw) ? (histRaw as Position[]) : [];
@@ -485,16 +547,51 @@ export class AiStrategyService {
                 const prevPrevTile = hist.length >= 3 ? hist[hist.length - 3] : null;
                 const returning = prevTile && move.x === prevTile.x && move.y === prevTile.y;
                 const leavingForest = isOnForest && !(engine.isForest(move.x, move.y));
-                if (unit.tier >= 3 && leavingForest) {
-                    const canReachBaseSoon = (Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y)) <= 2;
-                    const nearEnemySoon = playerUnits.some((p: Unit) => (Math.abs(move.x - p.position.x) + Math.abs(move.y - p.position.y)) <= 2);
-                    const replacementReady = engine.unitsSignal().some((u2: Unit) =>
-                        u2.owner === 'ai' && u2.id !== unit.id &&
-                        Math.max(Math.abs(u2.position.x - unit.position.x), Math.abs(u2.position.y - unit.position.y)) <= 1
-                    );
-                    if (!forestsSecured && !(canReachBaseSoon || nearEnemySoon) && !replacementReady) {
-                        score -= 2000000;
-                        reason = 'Penalty: Leaving forest without replacement';
+                if (fullRushActive) {
+                    const dBaseCurr = Math.abs(unit.position.x - playerBase.x) + Math.abs(unit.position.y - playerBase.y);
+                    const dBaseMove = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
+                    
+                    // Dominant factor: Distance to Player Base
+                    if (dBaseMove < dBaseCurr) {
+                        score += 50000000; // Massive boost for moving closer
+                        reason = 'FULL RUSH: Charge Base';
+                    } else if (dBaseMove === dBaseCurr) {
+                        // Neutral move is okay if it positions better, but prefer forward
+                        score += 100000; 
+                    } else {
+                        score -= 5000000; // Penalize moving away
+                    }
+                    
+                    // Attack units blocking path to base
+                    if (targetUnit && targetUnit.owner === 'player') {
+                        // Check if this enemy is roughly in direction of base
+                        const enemyDistBase = Math.abs(targetUnit.position.x - playerBase.x) + Math.abs(targetUnit.position.y - playerBase.y);
+                        if (enemyDistBase < dBaseCurr) {
+                            score += 20000000;
+                            reason = 'FULL RUSH: Clear Path to Base';
+                        }
+                    }
+
+                    // Less inclined to stay in forests unless low income
+                    if (isOnForest && move.x === unit.position.x && move.y === unit.position.y) {
+                         // If we have plenty of forests, don't just camp
+                         if (aiForestCount >= 3) {
+                             score = -5000000; // Force move out
+                             reason = 'FULL RUSH: Abandon Forest for Assault';
+                         }
+                    }
+                } else {
+                    if (unit.tier >= 3 && leavingForest) {
+                        const canReachBaseSoon = (Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y)) <= 2;
+                        const nearEnemySoon = playerUnits.some((p: Unit) => (Math.abs(move.x - p.position.x) + Math.abs(move.y - p.position.y)) <= 2);
+                        const replacementReady = engine.unitsSignal().some((u2: Unit) =>
+                            u2.owner === 'ai' && u2.id !== unit.id &&
+                            Math.max(Math.abs(u2.position.x - unit.position.x), Math.abs(u2.position.y - unit.position.y)) <= 1
+                        );
+                        if (!forestsSecured && !(canReachBaseSoon || nearEnemySoon) && !replacementReady) {
+                            score -= 2000000;
+                            reason = 'Penalty: Leaving forest without replacement';
+                        }
                     }
                 }
                 const banInfo = stutterBan.get(unit.id);
@@ -522,7 +619,15 @@ export class AiStrategyService {
                         reason = 'Hold Forest';
                     }
                 }
-                if (!targetUnit) {
+                if (fullRushActive) {
+                    if (isOnForest && move.x === unit.position.x && move.y === unit.position.y) {
+                         // If we have plenty of forests, don't just camp
+                         if (aiForestCount >= 3) {
+                             score = -5000000; // Force move out
+                             reason = 'FULL RUSH: Abandon Forest for Assault';
+                         }
+                    }
+                } else if (!targetUnit) {
                     if (isOnForest && move.x === unit.position.x && move.y === unit.position.y) {
                         const strongerAdj = adjacentEnemies.some(e => this.combat.calculateTotalPoints(e) > this.combat.calculateTotalPoints(unit));
                         const allowHunt = forestsSecured && unit.tier >= 3;
@@ -531,16 +636,27 @@ export class AiStrategyService {
                             reason = 'Hold: Stay on forest';
                         }
                     }
+                }
+                if (!targetUnit && !fullRushActive) { // Only do normal forest capture logic if not rushing
                     if (engine.isForest(move.x, move.y) && !engine.getUnitAt(move.x, move.y)) {
                         if (totalWar) {
                             score = -1000;
                             reason = 'Ignore Forest (Total War)';
                         } else if (unit.tier >= 3) {
-                            score = 5000000;
+                            const mult = (isEarlyGame && !baseThreat) ? 3 : 1;
+                            score = 5000000 * mult;
                             reason = 'Priority: T3 capture empty forest';
                         } else {
-                            score = 1000000;
+                            const mult = (isEarlyGame && !baseThreat) ? 3 : 1;
+                            score = 1000000 * mult;
                             reason = aiForestCount < 3 ? `Priority 0: Capture Forest ${move.x},${move.y}` : `Priority 1: Capture Forest ${move.x},${move.y}`;
+                            if (isEarlyGame && !baseThreat) {
+                                const stepDist = Math.abs(unit.position.x - move.x) + Math.abs(unit.position.y - move.y);
+                                if (stepDist === 1) {
+                                    score = Math.max(score, 12000000);
+                                    reason = `Early Capture: Forest ${move.x},${move.y}`;
+                                }
+                            }
                         }
                     }
                     if (goal) {
@@ -549,6 +665,24 @@ export class AiStrategyService {
                         if (dMove < dCurr) {
                             score += 50000 * (dCurr - dMove);
                             reason = visibleFree.length > 0 ? `Priority 1: Toward Forest ${goal.x},${goal.y}` : (fogForests.length > 0 ? `Priority 7: Toward Fog Forest ${goal.x},${goal.y}` : `Toward Goal ${goal.x},${goal.y}`);
+                        }
+                        // Anti-stall aggression and unblocking when crowded or caps reached
+                        if (aiTotalUnits > 10 || capReachedAny) {
+                            const dBaseCurr = Math.abs(unit.position.x - playerBase.x) + Math.abs(unit.position.y - playerBase.y);
+                            const dBaseMove = Math.abs(move.x - playerBase.x) + Math.abs(move.y - playerBase.y);
+                            if (dBaseMove < dBaseCurr) {
+                                score += 150000 * (dBaseCurr - dBaseMove);
+                                reason = 'Aggress: Toward Player Base';
+                            }
+                            if (nearestPlayerForestMove < nearestPlayerForestCurrent) {
+                                score += 120000 * (nearestPlayerForestCurrent - nearestPlayerForestMove);
+                                reason = 'Aggress: Toward Player Forest';
+                            }
+                            const outernessGain = emptyAdjacentsAt(move) - emptyAdjacentsAt(unit.position);
+                            if (outernessGain > 0) {
+                                score += 50000 * outernessGain;
+                                reason = 'Unblock: Clear path';
+                            }
                         }
                         const towardGoalWall = (() => {
                             const sx = Math.sign(goal.x - unit.position.x);
@@ -609,9 +743,10 @@ export class AiStrategyService {
                             score += threatNextTurn ? 20000 : 5000;
                             reason = threatNextTurn ? 'Panic Defense: Block Path To Base' : 'Defense: Block Path To Base';
                         } else if (distMoveThreat < distCurrThreat) {
-                            score += 5000 * (distCurrThreat - distMoveThreat);
+                            const bonus = (unit.id === (strongestAi?.id ?? '')) ? 1000000 : 5000;
+                            score += bonus * (distCurrThreat - distMoveThreat);
                             if (unit.tier >= 3) score += 4000;
-                            reason = 'Defense: Move Toward Base Threat';
+                            reason = unit.id === (strongestAi?.id ?? '') ? 'DEFENSE: Strongest Intercept' : 'Defense: Move Toward Base Threat';
                         }
                         if (staying && canReachBlockingTile) {
                             score -= threatNextTurn ? 50000 : 10000;
@@ -745,6 +880,21 @@ export class AiStrategyService {
                 let type: 'move' | 'attack' | 'merge' = 'move';
                 if (targetUnit && targetUnit.owner === 'player') type = 'attack';
                 if (targetUnit && targetUnit.owner === 'ai' && targetUnit.tier === unit.tier) type = 'merge';
+                if ((aiTotalUnits > 10 || capReachedAny) && type === 'merge') {
+                    score += 5000000;
+                    reason = 'Anti-Stall: Merge first';
+                }
+                const lockUntil = this.interceptUntil.get(unit.id) || 0;
+                if (unit.id === (strongestAi?.id ?? '') && lockUntil > (typeof engine.turnSignal === 'function' ? engine.turnSignal() : 0)) {
+                    if (primaryThreat) {
+                        const distCurrThreat = Math.abs(unit.position.x - primaryThreat.position.x) + Math.abs(unit.position.y - primaryThreat.position.y);
+                        const distMoveThreat = Math.abs(move.x - primaryThreat.position.x) + Math.abs(move.y - primaryThreat.position.y);
+                        if (distMoveThreat < distCurrThreat) {
+                            score += 500000 * (distCurrThreat - distMoveThreat);
+                            reason = 'DEFENSE: Intercept Lock';
+                        }
+                    }
+                }
                 if (returning) {
                     score = Math.floor(score * 0.1);
                     score -= 300000;

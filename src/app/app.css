@@ -316,6 +316,9 @@
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
+.monopoly-top {
+    top: 46px;
+}
 .mobile-hud-header, .actions-bar {
     display: none;
 }
@@ -326,7 +329,7 @@
   .mobile-hud-header .hud-item { min-width: 0; }
   .mobile-hud-header .hud-value { white-space: nowrap; }
   .burger-btn { min-width: 34px; min-height: 34px; }
-  .actions-bar { display: flex; position: sticky; top: 42px; z-index: 900; }
+  .actions-bar { display: flex; position: sticky; top: 42px; z-index: 1; }
   .action-btn {
     width: 34px;
     height: 34px;

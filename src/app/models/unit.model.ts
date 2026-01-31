@@ -16,4 +16,5 @@ export interface Unit {
   turnsStationary: number;
   forestOccupationTurns?: number;
   productionActive?: boolean;
+  hasActed: boolean;
 }
