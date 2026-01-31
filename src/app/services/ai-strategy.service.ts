@@ -69,7 +69,14 @@ export class AiStrategyService {
             let cy = primaryThreat.position.y;
             const stepX = Math.sign(aiBase.x - cx);
             const stepY = Math.sign(aiBase.y - cy);
+            let iter = 0;
+            const maxIter = Math.max(10, engine.gridSize * 2);
             while (cx !== aiBase.x || cy !== aiBase.y) {
+                iter++;
+                if (iter > maxIter) {
+                    try { console.warn('[AI] Path build safety break near base'); } catch {}
+                    break;
+                }
                 cx += stepX;
                 cy += stepY;
                 if (!engine.inBounds(cx, cy)) break;
