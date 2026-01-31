@@ -1170,11 +1170,11 @@ export class GameEngineService {
             this.totalWarModeSignal.set(nextTW);
             if (mood === 'rage') {
                 const reserveHelp: number = (baseDifficulty === 'baby')
-                    ? (isEvenTurn ? 1 : 0)
+                    ? (isEvenTurn ? 1 : 2)
                     : (baseDifficulty === 'normal')
-                        ? (isEvenTurn ? 2 : 1)
+                        ? (isEvenTurn ? 3 : 2)
                         : (baseDifficulty === 'hard')
-                            ? (isEvenTurn ? 3 : 2) : 3;
+                            ? (isEvenTurn ? 4 : 3) : 4;
                 this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + reserveHelp }));
             } else if (mood === 'angry') {
                 if (baseDifficulty === 'baby') {
