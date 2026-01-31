@@ -221,13 +221,13 @@ export class GameEngineService {
 
         // START RESERVE
         if (difficulty === 'baby') {
-            this.reservePointsSignal.set({ player: 45, ai: 15 });
+            this.reservePointsSignal.set({ player: 60, ai: 20 });
         } else if (difficulty === 'normal') {
-            this.reservePointsSignal.set({ player: 35, ai: 25 });
+            this.reservePointsSignal.set({ player: 40, ai: 40 });
         } else if (difficulty === 'hard') {
-            this.reservePointsSignal.set({ player: 25, ai: 35 });
+            this.reservePointsSignal.set({ player: 40, ai: 80 });
         } else {
-            this.reservePointsSignal.set({ player: 15, ai: 45 });
+            this.reservePointsSignal.set({ player: 40, ai: 100 });
         }
 
         this.deployTargetsSignal.set([]);

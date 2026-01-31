@@ -11,7 +11,7 @@
   </div>
 
   <!-- SVG Defs for Soft Shapes -->
-  <svg width="0" height="0" class="absolute pointer-events-none">
+  <!-- <svg width="0" height="0" class="absolute pointer-events-none">
     <defs>
       <clipPath id="soft-triangle" clipPathUnits="objectBoundingBox">
         <path
@@ -19,7 +19,21 @@
         />
       </clipPath>
     </defs>
-  </svg>
+  </svg> -->
+
+  <svg width="0" height="0" class="absolute pointer-events-none">
+  <defs>
+    <clipPath id="soft-triangle" clipPathUnits="objectBoundingBox">
+      <path d="M0.5 0.05 Q0.5 0 0.56 0.12 L0.92 0.85 Q0.98 0.98 0.85 0.98 L0.15 0.98 Q0.02 0.98 0.08 0.85 L0.44 0.12 Q0.5 0 0.5 0.05" />
+    </clipPath>
+
+    <symbol id="triangle-border" viewBox="0 0 1 1" preserveAspectRatio="none">
+      <path d="M0.5 0.05 Q0.5 0 0.56 0.12 L0.92 0.85 Q0.98 0.98 0.85 0.98 L0.15 0.98 Q0.02 0.98 0.08 0.85 L0.44 0.12 Q0.5 0 0.5 0.05" 
+            fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2" vector-effect="non-scaling-stroke" />
+    </symbol>
+  </defs>
+</svg>
+
   <!-- Title -->
   <div class="fixed top-8 left-8 flex items-start gap-4 group select-none mobile-hide-logo">
     <div class="relative w-12 h-12 flex items-center justify-center">
@@ -66,7 +80,7 @@
   <!-- Title END -->
   <!-- Navigation -->
   <div
-    class="nav-bar w-full max-w-5xl flex items-center justify-between mb-6 px-4 py-1 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/5 shadow-2xl"
+    class="nav-bar w-full max-w-5xl flex items-center justify-between mb-2 px-4 py-1 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/5 shadow-2xl"
   >
     <div class="flex items-center gap-1">
       <button
@@ -264,8 +278,10 @@
     </div>
   </div>
   <!-- Navigation END -->
-   <!-- MOBILE Navigation -->
-  <div class="mobile-hud-header w-full max-w-5xl px-3 py-2 flex items-center justify-between gap-3 rounded-xl bg-gray-900/60 border border-white/10 backdrop-blur-md">
+  <!-- MOBILE Navigation -->
+  <div
+    class="mobile-hud-header w-full max-w-5xl px-3 py-2 flex items-center justify-between gap-3 rounded-xl bg-gray-900/60 border border-white/10 backdrop-blur-md"
+  >
     <div class="hud-item flex items-center gap-2">
       <svg width="20" height="20" viewBox="0 0 24 24">
         <rect x="7" y="14" width="13" height="6" rx="3" fill="#8B5E3C" />
@@ -298,7 +314,10 @@
         {{ gameEngine.getForestControl().player }} : {{ gameEngine.getForestControl().ai }}
       </span>
     </div>
-    <button class="burger-btn w-9 h-9 rounded-md bg-white/10 border border-white/20 flex items-center justify-center text-white" (click)="toggleMobileMenu()">
+    <button
+      class="burger-btn w-9 h-9 rounded-md bg-white/10 border border-white/20 flex items-center justify-center text-white"
+      (click)="toggleMobileMenu()"
+    >
       <svg width="18" height="18" viewBox="0 0 24 24">
         <path d="M4 6h16M4 12h16M4 18h16" stroke="#fff" stroke-width="2" />
       </svg>
@@ -313,32 +332,39 @@
     <button class="action-btn" [disabled]="!gameEngine.canAddReserveTurn()" (click)="gameEngine.convertWoodToReserve()">
       +1
     </button>
-    <button class="action-btn" [disabled]="!gameEngine.canAddReserveTurn()" (click)="gameEngine.maxConvertWoodToReserve()">
-      {{settings.t('ALL')}}
+    <button
+      class="action-btn"
+      [disabled]="!gameEngine.canAddReserveTurn()"
+      (click)="gameEngine.maxConvertWoodToReserve()"
+    >
+      {{ settings.t('ALL') }}
     </button>
     <label
-        class="flex items-center gap-1  rounded-lg hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5"
-      >
-        <div class="relative flex items-center">
-          <input
-            type="checkbox"
-            class="peer h-4 w-4 opacity-0 absolute"
-            [checked]="gameEngine.fogDebugDisabled()"
-            (change)="gameEngine.toggleFogDebug()"
-          />
-          <div
-            class="h-4 w-4 border-2 border-gray-500 rounded flex items-center justify-center peer-checked:bg-blue-500 peer-checked:border-blue-500 transition-all"
-          >
-            <div class="h-2 w-2 bg-white rounded-full opacity-0 peer-checked:opacity-100"></div>
-          </div>
+      class="flex items-center gap-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5"
+    >
+      <div class="relative flex items-center">
+        <input
+          type="checkbox"
+          class="peer h-4 w-4 opacity-0 absolute"
+          [checked]="gameEngine.fogDebugDisabled()"
+          (change)="gameEngine.toggleFogDebug()"
+        />
+        <div
+          class="h-4 w-4 border-2 border-gray-500 rounded flex items-center justify-center peer-checked:bg-blue-500 peer-checked:border-blue-500 transition-all"
+        >
+          <div class="h-2 w-2 bg-white rounded-full opacity-0 peer-checked:opacity-100"></div>
         </div>
-        <span class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{{ settings.t('MAP_HACK') }}</span>
-      </label>
+      </div>
+      <span class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{{ settings.t('MAP_HACK') }}</span>
+    </label>
   </div>
   @if (isMobileMenuOpen()) {
     <div class="mobile-menu-overlay fixed inset-0 bg-black/70 z-50 flex items-start justify-end">
       <div class="mobile-menu-panel w-72 h-full bg-gray-800 border-l border-white/10 p-4 flex flex-col gap-3">
-        <button class="w-9 h-9 rounded-md bg-white/10 border border-white/20 flex items-center justify-center text-white self-end" (click)="closeMobileMenu()">
+        <button
+          class="w-9 h-9 rounded-md bg-white/10 border border-white/20 flex items-center justify-center text-white self-end"
+          (click)="closeMobileMenu()"
+        >
           <svg width="18" height="18" viewBox="0 0 24 24">
             <path d="M6 6l12 12M18 6L6 18" stroke="#fff" stroke-width="2" />
           </svg>
@@ -604,7 +630,7 @@
       </button>
     </div>
   }
-   <!-- END MODAL END -->
+  <!-- END MODAL END -->
   <button
     (click)="navigateToRoadmap()"
     class="mobile-actions-compact mobile-actions-compact-plan fixed bottom-20 right-6 z-50 flex items-center group cursor-pointer outline-none translate-x-2 hover:translate-x-0 transition-transform duration-300"
@@ -1147,7 +1173,7 @@
                         [class.unit-tier-2]="unit.tier === 2"
                         [class.unit-tier-3]="unit.tier === 3"
                         [class.unit-tier-4]="unit.tier === 4"
-                        [class.scale-75]="unit.tier === 4"
+                        [class.scale-85]="unit.tier === 4"
                         [class.ring-4]="gameEngine.selectedUnitId() === unit.id"
                         [class.ring-yellow-400]="gameEngine.selectedUnitId() === unit.id"
                         [class.ring-offset-2]="gameEngine.selectedUnitId() === unit.id"
@@ -1164,6 +1190,11 @@
                         [class.arrival-pop]="gameEngine.lastArrivedUnitId() === unit.id"
                         [class.pulse-glow]="gameEngine.pulseUnitId() === unit.id"
                       >
+                        @if (unit.tier === 2) {
+                          <svg class="absolute top-0 left-0 w-full h-full pointer-events-none" style="z-index: 10">
+                            <use href="#triangle-border" x="0" y="0" width="100%" height="100%" />
+                          </svg>
+                        }
                         <span [class.-rotate-45]="unit.tier === 4">{{ unit.level }}</span>
                       </div>
                       @if (gameEngine.hasDefenseBonus(unit)) {
@@ -1670,7 +1701,7 @@
             }
           </div>
         </div>
-        <div class="mt-4 text-xs text-gray-400">{{ settings.t('CHANGE_RECORDS_INFO')}}</div>
+        <div class="mt-4 text-xs text-gray-400">{{ settings.t('CHANGE_RECORDS_INFO') }}</div>
       </div>
     </div>
   }
