@@ -23,8 +23,7 @@ export class AiStrategyService {
     chooseBestEndingAction(engine: any): { type: 'move' | 'attack' | 'merge' | 'wall_attack'; unit: Unit; target: Position; reason: string; edge?: { from: Position; to: Position } } | null {
         // CRITICAL LOGIC: Pathfinding + Wall Breaker decisions drive AI aggression and anti-paralysis.
         // Do not remove or weaken these branches; they ensure hunters breach walls and forests remain contestable.
-        const alreadyMoved: Set<string> = new Set(engine.movedThisTurnSignal?.() ?? []);
-        let aiUnits = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && !alreadyMoved.has(u.id));
+        let aiUnits = engine.unitsSignal().filter((u: Unit) => u.owner === 'ai' && !u.hasActed);
         aiUnits = aiUnits.filter((u: Unit) => !(u.tier <= 2 && engine.isForest(u.position.x, u.position.y) && engine.isAnchoredGatherer(u.id)));
         const queued = typeof engine.queuedUnitId === 'function' ? engine.queuedUnitId() : null;
         if (queued) {
