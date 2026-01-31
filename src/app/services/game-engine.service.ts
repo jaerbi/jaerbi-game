@@ -1536,7 +1536,7 @@ export class GameEngineService {
     }
     private aiConvertWoodToReserve() {
         const w = this.aiWoodSignal();
-        if (w < 20) return;
+        if (w < 30) return;
         this.aiWoodSignal.update(x => x - 20);
         this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + 1 }));
     }
@@ -1831,6 +1831,16 @@ export class GameEngineService {
         if (!wall) return;
 
         const actor: Owner = this.activeSideSignal();
+        if (actor === 'ai' && this.isBaseProtectionEdge(tile1, tile2)) {
+            if (wall.owner === 'neutral') {
+                this.appendLog(`[Turn ${this.turnSignal()}] [AI Base Protection] Blocked destruction of neutral wall adjacent to base.`);
+                return;
+            }
+            if (wall.owner === 'ai') {
+                this.appendLog(`[Turn ${this.turnSignal()}] [AI Base Protection] Blocked destruction of own wall adjacent to base.`);
+                return;
+            }
+        }
         if (wall.owner === 'player' && actor === 'player') {
             this.destroyOwnWallBetween(tile1, tile2);
             return;
