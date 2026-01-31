@@ -585,6 +585,7 @@ export class GameEngineService {
         if (sel && !this.unitsSignal().some(u => u.id === sel)) {
             this.selectedUnitIdSignal.set(null);
         }
+        this.recomputeVisibility();
     }
 
     // --- Helper Methods ---
@@ -1291,12 +1292,26 @@ export class GameEngineService {
             await new Promise(r => setTimeout(r, 100)); // Small delay for visualization
         }
 
+        // Clear any queued single-unit focus for multi-action phase
+        this.aiQueuedUnitIdSignal.set(null);
         // PHASE 2 & 3: Sequential Actions for all AI units
+        let actionsTaken = 0;
+        const MAX_ACTIONS = Math.max(20, this.gridSize * 4);
         while (true) {
             const remaining = this.unitsSignal().filter(u => u.owner === 'ai' && !u.hasActed);
             if (remaining.length === 0) break;
             const decision = this.aiStrategy.chooseBestEndingAction(this);
-            if (!decision) break;
+            if (!decision) {
+                // PASS: If on forest and best is to stay, mark acted to avoid loop
+                const passUnit = remaining.find(u => this.isForest(u.position.x, u.position.y));
+                if (passUnit) {
+                    this.unitsSignal.update(units => units.map(u => (u.id === passUnit.id ? { ...u, hasActed: true } : u)));
+                    await new Promise(r => setTimeout(r, 30));
+                    actionsTaken++;
+                    continue;
+                }
+                break;
+            }
             if (decision.type === 'wall_attack' && decision.edge) {
                 const w = this.getWallBetween(decision.edge.from.x, decision.edge.from.y, decision.edge.to.x, decision.edge.to.y);
                 const protectedEdge = w && this.isBaseProtectionEdge(decision.edge.from, decision.edge.to) && (w.owner === 'neutral' || w.owner === 'ai');
@@ -1310,6 +1325,11 @@ export class GameEngineService {
                 this.executeMove(decision.unit, decision.target);
             }
             await new Promise(r => setTimeout(r, 60));
+            actionsTaken++;
+            if (actionsTaken >= MAX_ACTIONS) {
+                try { console.warn('[AI] Safety break: max actions reached'); } catch {}
+                break;
+            }
         }
 
         // console.log('>>> SWITCHING TO PLAYER SIDE NOW <<<');
@@ -1919,6 +1939,12 @@ export class GameEngineService {
     isPlayerTurn(): boolean {
         if (this.gameStatusSignal() !== 'playing') return false;
         return this.activeSideSignal() === 'player';
+    }
+    remainingActions(): number {
+        return this.unitsSignal().filter(u => u.owner === 'player' && !u.hasActed).length;
+    }
+    totalPlayerUnits(): number {
+        return this.unitsSignal().filter(u => u.owner === 'player').length;
     }
     private canActThisTurn(): boolean {
         if (this.gameStatusSignal() !== 'playing') return false;

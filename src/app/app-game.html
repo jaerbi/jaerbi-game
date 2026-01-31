@@ -365,6 +365,38 @@
       </div>
       <span class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{{ settings.t('MAP_HACK') }}</span>
     </label>
+    <div class="mt-1 text-[10px] uppercase tracking-widest font-bold text-gray-300">
+      {{ gameEngine.remainingActions() }}/{{ gameEngine.totalPlayerUnits() }}
+    </div>
+    <button (click)="gameEngine.endPlayerTurn()" class="action-btn">
+      <!-- Reload svg -->
+      <!-- <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path>
+      <polyline points="21 3 21 8 16 8"></polyline>
+    </svg> -->
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M5 12h14"></path>
+        <path d="m12 5 7 7-7 7"></path>
+      </svg>
+    </button>
   </div>
   <!-- GAME Mobile actions EnD-->
   @if (isMobileMenuOpen()) {
@@ -1188,6 +1220,8 @@
                         [class.ring-yellow-400]="gameEngine.selectedUnitId() === unit.id"
                         [class.ring-offset-2]="gameEngine.selectedUnitId() === unit.id"
                         [class.ring-offset-gray-800]="gameEngine.selectedUnitId() === unit.id"
+                        [class.opacity-50]="unit.hasActed"
+                        [class.grayscale]="unit.hasActed"
                         [class.scale-110]="
                           gameEngine.selectedUnitId() === unit.id && unit.tier !== 4 && !gameEngine.buildMode()
                         "
@@ -1428,15 +1462,6 @@
             <span class="text-lg">👥++</span>
           </div>
         </button>
-        <button
-          (click)="gameEngine.endPlayerTurn()"
-          class="cursor-pointer group relative px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 border border-amber-400/30 bg-gradient-to-br from-amber-600/20 to-amber-800/40 hover:from-amber-500/40 hover:to-amber-700/60 shadow-[0_0_15px_rgba(245,158,11,0.1)] active:scale-95 disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed"
-        >
-          <div class="flex items-center justify-between w-full gap-0 z-10 text-amber-200">
-            <span class="text-xs uppercase tracking-tighter">{{ settings.t('NEXT_TURN') }}</span>
-
-          </div>
-        </button>
       </div>
 
       <label
@@ -1476,6 +1501,18 @@
         </div>
         <span class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Auto-Deploy</span>
       </label> -->
+      <button
+        (click)="gameEngine.endPlayerTurn()"
+        class="cursor-pointer group relative px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 border border-amber-400/30 bg-gradient-to-br from-amber-600/20 to-amber-800/40 hover:from-amber-500/40 hover:to-amber-700/60 shadow-[0_0_15px_rgba(245,158,11,0.1)] active:scale-95 disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed"
+      >
+        <div class="flex items-center justify-between w-full gap-0 z-10 text-amber-200">
+          <span class="text-xs uppercase tracking-tighter">{{ settings.t('NEXT_TURN') }}</span>
+        </div>
+      </button>
+      <div class="mt-1 text-[10px] uppercase tracking-widest font-bold text-gray-300">
+        {{ settings.currentLang() === 'uk' ? 'Залишилось дій' : 'Remaining actions' }}:
+        {{ gameEngine.remainingActions() }}/{{ gameEngine.totalPlayerUnits() }}
+      </div>
     </div>
     <!-- Actions END -->
   </div>
