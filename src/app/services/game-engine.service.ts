@@ -1533,6 +1533,13 @@ export class GameEngineService {
         const cost = this.economy.getHighestAffordableCost(reserves);
         if (cost <= 0) return false;
         const tl = this.calculateTierAndLevel(cost);
+        // Respect unit cap per type (excluding forest occupants)
+        {
+            const count = this.unitsSignal().filter(u => u.owner === 'ai' && u.tier === tl.tier && !this.isForest(u.position.x, u.position.y)).length;
+            if (count >= 5) {
+                return false;
+            }
+        }
         this.unitsSignal.update(units => [
             ...units,
             {
@@ -1574,28 +1581,17 @@ export class GameEngineService {
         const cost = this.getPointsForTierLevel(tier, 1);
         let created = 0;
         const placed: Unit[] = [];
-        if (tier === 3) {
-            const huntersExisting = this.unitsSignal().filter(u => u.owner === 'ai' && u.tier === 3 && u.level === 1).length;
-            const cap = Math.floor(this.gridSize / 2);
-            if (huntersExisting >= cap) {
-                return 0;
-            }
-        }
-        if (tier === 1) {
-            const t1CountExisting = this.unitsSignal().filter(u => u.owner === 'ai' && u.tier === 1).length;
-            const baseThreat = this.unitsSignal().some(u => u.owner === 'player' && Math.max(Math.abs(u.position.x - base.x), Math.abs(u.position.y - base.y)) <= 3);
-            if (!baseThreat && t1CountExisting >= 5) {
-                return 0;
-            }
+        // Strict unit cap per type (excluding units currently occupying a forest)
+        const countExclForests = (t: number) =>
+            this.unitsSignal().filter(u => u.owner === 'ai' && u.tier === t && !this.isForest(u.position.x, u.position.y)).length;
+        const typeCapReached = countExclForests(tier) >= 5;
+        if (typeCapReached) {
+            return 0;
         }
         for (const pos of candidates) {
             if (created >= maxCount) break;
             if (reserves < cost) break;
-            if (tier === 3) {
-                const huntersExisting = this.unitsSignal().filter(u => u.owner === 'ai' && u.tier === 3 && u.level === 1).length;
-                const cap = Math.floor(this.gridSize / 2);
-                if (huntersExisting >= cap) break;
-            }
+            if (countExclForests(tier) >= 5) break;
             const tl = this.calculateTierAndLevel(cost);
             placed.push({ id: crypto.randomUUID(), position: { ...pos }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0, forestOccupationTurns: 0, productionActive: false });
             reserves -= cost;

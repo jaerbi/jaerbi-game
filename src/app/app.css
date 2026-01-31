@@ -316,6 +316,9 @@
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
+.monopoly-top {
+    top: 46px;
+}
 .mobile-hud-header, .actions-bar {
     display: none;
 }
