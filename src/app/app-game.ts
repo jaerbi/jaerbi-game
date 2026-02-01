@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, isDevMode, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, isDevMode, signal, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { GameRulesComponent } from './components/game-rules/game-rules.component';
@@ -70,6 +70,53 @@ export class AppGame {
         }, 0);
     }
 
+    private centerOnSelectedUnit() {
+        const el = this.boardContainer?.nativeElement;
+        if (!el) return;
+        const unit = this.gameEngine.selectedUnit();
+        if (!unit) return;
+        const tile = this.gameEngine.tileSizePx;
+        const gap = this.gameEngine.wallThicknessPx + 2;
+        const step = tile + gap;
+        const centerX = unit.position.x * step + tile / 2;
+        const centerY = unit.position.y * step + tile / 2;
+        const targetLeft = Math.max(0, Math.min(centerX - el.clientWidth / 2, el.scrollWidth - el.clientWidth));
+        const targetTop = Math.max(0, Math.min(centerY - el.clientHeight / 2, el.scrollHeight - el.clientHeight));
+        el.scrollTo({ left: targetLeft, top: targetTop, behavior: 'smooth' });
+    }
+
+    @HostListener('window:keydown', ['$event'])
+    onKeyDown(event: KeyboardEvent) {
+        if (this.gameEngine.gameStatus() !== 'playing') return;
+        const key = event.key;
+        if (key === 'Tab' || key === ' ' || event.code === 'Space') {
+            event.preventDefault();
+            if (this.gameEngine.isPlayerTurn()) {
+                this.gameEngine.selectNextAvailableUnit();
+                this.centerOnSelectedUnit();
+            }
+            return;
+        }
+        if (key === 'Enter') {
+            event.preventDefault();
+            this.gameEngine.endPlayerTurn();
+            return;
+        }
+        const unit = this.gameEngine.selectedUnit();
+        if (!unit || unit.hasActed) return;
+        let dx = 0, dy = 0;
+        if (key === 'ArrowUp') dy = -1;
+        else if (key === 'ArrowDown') dy = 1;
+        else if (key === 'ArrowLeft') dx = -1;
+        else if (key === 'ArrowRight') dx = 1;
+        else return;
+        event.preventDefault();
+        const tx = unit.position.x + dx;
+        const ty = unit.position.y + dy;
+        if (this.gameEngine.isValidMove(tx, ty)) {
+            this.gameEngine.moveSelectedUnit({ x: tx, y: ty });
+        }
+    }
     onDifficultyChange(diff: any) {
         this.settings.setDifficulty(diff);
         this.gameEngine.resetGame();

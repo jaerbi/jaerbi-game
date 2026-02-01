@@ -597,7 +597,7 @@ export class GameEngineService {
         }
     }
 
-    private selectNextAvailableUnit() {
+    selectNextAvailableUnit() {
         const units = this.unitsSignal();
         const candidates = units.filter(u => u.owner === 'player' && !u.hasActed);
 
@@ -1384,6 +1384,9 @@ export class GameEngineService {
         this.unitsSignal.update(units =>
             units.map(u => (u.owner === owner ? { ...u, hasActed: false } : u))
         );
+        if (owner === 'player') {
+            this.selectNextAvailableUnit();
+        }
     }
     private updateForestMonopoly() {
         const total = this.forestsSignal().length;
