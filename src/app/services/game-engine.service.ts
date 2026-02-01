@@ -18,6 +18,11 @@ interface Wall {
     owner: 'player' | 'ai' | 'neutral';
 }
 
+interface TurnContext {
+    claimedTargets: Set<string>;
+    priorityTargets: Unit[];
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -596,6 +601,109 @@ export class GameEngineService {
 
     private calculateTierAndLevel(points: number): { tier: number, level: number } {
         return this.combat.calculateTierAndLevel(points);
+    }
+
+    // --- NEW AI HELPERS ---
+
+    private isUnitInDanger(unit: Unit): boolean {
+        const neighbors = this.getNeighbors(unit.position);
+        for (const nb of neighbors) {
+            const enemy = this.getUnitAt(nb.x, nb.y);
+            if (enemy && enemy.owner !== unit.owner) {
+                if (this.calculateTotalPoints(enemy) > this.calculateTotalPoints(unit)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private findSafeMove(unit: Unit, validMoves: Position[]): Position | null {
+        const aiBase = this.getBasePosition('ai');
+        if (validMoves.length === 0) return null;
+        return validMoves.reduce((best, m) => {
+            const d = Math.abs(m.x - aiBase.x) + Math.abs(m.y - aiBase.y);
+            const dBest = Math.abs(best.x - aiBase.x) + Math.abs(best.y - aiBase.y);
+            return d < dBest ? m : best;
+        }, validMoves[0]);
+    }
+
+    private findResourceTarget(unit: Unit, context: TurnContext): Position | null {
+        const forests = this.forestsSignal();
+        const unclaimed = forests.filter(f => {
+            const key = `${f.x},${f.y}`;
+            if (context.claimedTargets.has(key)) return false;
+            
+            const u = this.getUnitAt(f.x, f.y);
+            if (u && u.owner === 'ai' && u.id !== unit.id) return false;
+            if (u && u.owner === 'ai' && u.id === unit.id) return false; // Already on it, maybe look for another? Or stay?
+            // If on it, and not gathering (handled elsewhere?), we might want to stay.
+            // But if we are looking for a *target* to move to, and we are already there, we return null (no move needed).
+            
+            return true;
+        });
+
+        if (unclaimed.length === 0) return null;
+
+        unclaimed.sort((a, b) => {
+            const da = Math.abs(a.x - unit.position.x) + Math.abs(a.y - unit.position.y);
+            const db = Math.abs(b.x - unit.position.x) + Math.abs(b.y - unit.position.y);
+            return da - db;
+        });
+
+        return unclaimed[0];
+    }
+
+    private getNextStepTowards(unit: Unit, target: Position, validMoves: Position[]): Position | null {
+        if (validMoves.length === 0) return null;
+        let best = null;
+        let minDist = Infinity;
+
+        for (const m of validMoves) {
+            const d = Math.abs(m.x - target.x) + Math.abs(m.y - target.y);
+            if (d < minDist) {
+                minDist = d;
+                best = m;
+            }
+        }
+        return best;
+    }
+
+    private findCombatTarget(unit: Unit, context: TurnContext, validMoves: Position[]): Position | null {
+        const reachableThreats = context.priorityTargets.filter(t => 
+            validMoves.some(m => m.x === t.position.x && m.y === t.position.y)
+        );
+
+        if (reachableThreats.length > 0) {
+            // Prefer weakest enemy? Or strongest that I can kill?
+            // Simple: just attack the first one found.
+            return reachableThreats[0].position;
+        }
+
+        const attackMoves = validMoves.filter(m => {
+            const u = this.getUnitAt(m.x, m.y);
+            return u && u.owner !== unit.owner;
+        });
+
+        if (attackMoves.length > 0) {
+            return attackMoves[0];
+        }
+
+        return null;
+    }
+
+    private findFallbackMove(unit: Unit, validMoves: Position[], targetBase: Position): Position | null {
+        if (validMoves.length === 0) return null;
+        return this.getNextStepTowards(unit, targetBase, validMoves);
+    }
+    
+    private getNeighbors(pos: Position): Position[] {
+        return [
+            { x: pos.x + 1, y: pos.y },
+            { x: pos.x - 1, y: pos.y },
+            { x: pos.x, y: pos.y + 1 },
+            { x: pos.x, y: pos.y - 1 }
+        ].filter(p => this.inBounds(p.x, p.y));
     }
 
     private getPointsForTierLevel(tier: number, level: number): number {
@@ -1294,42 +1402,84 @@ export class GameEngineService {
 
         // Clear any queued single-unit focus for multi-action phase
         this.aiQueuedUnitIdSignal.set(null);
-        // PHASE 2 & 3: Sequential Actions for all AI units
-        let actionsTaken = 0;
-        const MAX_ACTIONS = Math.max(20, this.gridSize * 4);
-        while (true) {
-            const remaining = this.unitsSignal().filter(u => u.owner === 'ai' && !u.hasActed);
-            if (remaining.length === 0) break;
-            const decision = this.aiStrategy.chooseBestEndingAction(this);
-            if (!decision) {
-                // PASS: If on forest and best is to stay, mark acted to avoid loop
-                const passUnit = remaining.find(u => this.isForest(u.position.x, u.position.y));
-                if (passUnit) {
-                    this.unitsSignal.update(units => units.map(u => (u.id === passUnit.id ? { ...u, hasActed: true } : u)));
-                    await new Promise(r => setTimeout(r, 30));
-                    actionsTaken++;
-                    continue;
+        
+        // --- NEW MULTI-AGENT ARCHITECTURE ---
+        const playerBase = this.getBasePosition('player');
+        
+        // 1. TurnContext (Blackboard)
+        const priorityTargets = this.unitsSignal().filter(u => 
+            u.owner === 'player' && (
+                this.isForest(u.position.x, u.position.y) || 
+                Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 4
+            )
+        );
+        const turnContext: TurnContext = {
+            claimedTargets: new Set<string>(),
+            priorityTargets
+        };
+
+        // 2. Unit Sorting (Heavy -> Light)
+        const aiUnits = this.unitsSignal().filter(u => u.owner === 'ai' && !u.hasActed);
+        const sortedUnits = aiUnits.sort((a, b) => b.tier - a.tier);
+
+        // 3. Unit Loop (Decision Tree)
+        for (const unit of sortedUnits) {
+            // Refresh unit state
+            const currentUnit = this.unitsSignal().find(u => u.id === unit.id);
+            if (!currentUnit || currentUnit.hasActed) continue;
+
+            let action: { type: 'move' | 'attack' | 'wall_attack'; target: Position; reason: string } | null = null;
+            
+            // Valid moves filtered by claimed targets
+            const rawMoves = this.calculateValidMoves(currentUnit);
+            const validMoves = rawMoves.filter(m => !turnContext.claimedTargets.has(`${m.x},${m.y}`));
+
+            // Step A: Survival Check
+            if (this.isUnitInDanger(currentUnit)) {
+                const safeMove = this.findSafeMove(currentUnit, validMoves);
+                if (safeMove) {
+                    action = { type: 'move', target: safeMove, reason: 'Survival: Evade Threat' };
                 }
-                break;
             }
-            if (decision.type === 'wall_attack' && decision.edge) {
-                const w = this.getWallBetween(decision.edge.from.x, decision.edge.from.y, decision.edge.to.x, decision.edge.to.y);
-                const protectedEdge = w && this.isBaseProtectionEdge(decision.edge.from, decision.edge.to) && (w.owner === 'neutral' || w.owner === 'ai');
-                const invalid = protectedEdge || !w;
-                if (invalid) {
-                    this.appendLog(`[Turn ${this.turnSignal()}] [AI Base Protection] Skipped wall attack near base due to protection rule.`);
-                } else {
-                    this.attackOrDestroyWallBetween(decision.edge.from, decision.edge.to, false);
+
+            // Step B: Global Objective (Resource Capture)
+            if (!action) {
+                const resourceTarget = this.findResourceTarget(currentUnit, turnContext);
+                if (resourceTarget) {
+                    const nextStep = this.getNextStepTowards(currentUnit, resourceTarget, validMoves);
+                    if (nextStep) {
+                        action = { type: 'move', target: nextStep, reason: 'Objective: Capture Resource' };
+                    }
                 }
+            }
+
+            // Step C: Combat & Coordination
+            if (!action) {
+                const combatTarget = this.findCombatTarget(currentUnit, turnContext, validMoves);
+                if (combatTarget) {
+                     action = { type: 'attack', target: combatTarget, reason: 'Combat: Engage Enemy' };
+                }
+            }
+            
+            // Step D: Fallback (Prevent Freezing)
+            if (!action) {
+                const fallback = this.findFallbackMove(currentUnit, validMoves, playerBase);
+                if (fallback) {
+                    action = { type: 'move', target: fallback, reason: 'Fallback: Advance/Patrol' };
+                }
+            }
+
+            // Execute
+            if (action) {
+                this.appendLog(`[AI Unit ${currentUnit.id.substring(0,4)}] Action: ${action.reason} -> Target: (${action.target.x},${action.target.y})`);
+                this.executeMove(currentUnit, action.target);
+                turnContext.claimedTargets.add(`${action.target.x},${action.target.y}`);
             } else {
-                this.executeMove(decision.unit, decision.target);
+                this.appendLog(`[AI Unit ${currentUnit.id.substring(0,4)}] No valid moves. Passing.`);
+                this.unitsSignal.update(units => units.map(u => u.id === currentUnit.id ? { ...u, hasActed: true } : u));
             }
+
             await new Promise(r => setTimeout(r, 60));
-            actionsTaken++;
-            if (actionsTaken >= MAX_ACTIONS) {
-                try { console.warn('[AI] Safety break: max actions reached'); } catch {}
-                break;
-            }
         }
 
         // console.log('>>> SWITCHING TO PLAYER SIDE NOW <<<');
