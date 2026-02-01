@@ -1,5 +1,5 @@
 @import './styles/mobile.css';
-@import './styles/units.css';
+/* @import './styles/units.css'; */
 
 .spawn-zone-highlight {
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
