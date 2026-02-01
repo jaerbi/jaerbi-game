@@ -1212,6 +1212,8 @@
                         [style.height.px]="gameEngine.tileUnitSizePx"
                         [attr.title]="gameEngine.formatHoverInfo(unit.id)"
                         [class.ring-offset-gray-800]="gameEngine.selectedUnitId() === unit.id"
+                        [class.inset-ring]="gameEngine.selectedUnitId() === unit.id"
+                        [class.inset-ring-cyan-500/50]="gameEngine.selectedUnitId() === unit.id"
                         [class.scale-125]="
                           gameEngine.selectedUnitId() === unit.id && unit.tier !== 4 && !gameEngine.buildMode()
                         "

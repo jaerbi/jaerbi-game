@@ -591,6 +591,29 @@ export class GameEngineService {
             this.selectedUnitIdSignal.set(null);
         }
         this.recomputeVisibility();
+         // Auto-Focus Next Unit (UX Hard Fix)
+        if (unit.owner === 'player') {
+            this.selectNextAvailableUnit();
+        }
+    }
+
+    private selectNextAvailableUnit() {
+        const units = this.unitsSignal();
+        const candidates = units.filter(u => u.owner === 'player' && !u.hasActed);
+
+        if (candidates.length === 0) {
+            this.selectUnit(null);
+            return;
+        }
+
+        // Priority Queue: Mobile (not on forest) first, then Forest occupants
+        candidates.sort((a, b) => {
+            const aForest = this.isForest(a.position.x, a.position.y) ? 1 : 0;
+            const bForest = this.isForest(b.position.x, b.position.y) ? 1 : 0;
+            return aForest - bForest; // 0 (Mobile) < 1 (Forest)
+        });
+
+        this.selectUnit(candidates[0].id);
     }
 
     // --- Helper Methods ---
@@ -630,28 +653,70 @@ export class GameEngineService {
 
     private findResourceTarget(unit: Unit, context: TurnContext): Position | null {
         const forests = this.forestsSignal();
-        const unclaimed = forests.filter(f => {
+        
+        // Filter out forests already claimed by other AI agents in this turn
+        // And filter out forests already occupied by other AI units (we don't need to go there)
+        const availableForests = forests.filter(f => {
             const key = `${f.x},${f.y}`;
             if (context.claimedTargets.has(key)) return false;
-            
             const u = this.getUnitAt(f.x, f.y);
-            if (u && u.owner === 'ai' && u.id !== unit.id) return false;
-            if (u && u.owner === 'ai' && u.id === unit.id) return false; // Already on it, maybe look for another? Or stay?
-            // If on it, and not gathering (handled elsewhere?), we might want to stay.
-            // But if we are looking for a *target* to move to, and we are already there, we return null (no move needed).
-            
+            if (u && u.owner === 'ai') return false; // Already held by AI
             return true;
         });
 
-        if (unclaimed.length === 0) return null;
+        // 1. Truly Empty Forests (Priority 1: Expansion)
+        const emptyForests = availableForests.filter(f => !this.getUnitAt(f.x, f.y));
 
-        unclaimed.sort((a, b) => {
-            const da = Math.abs(a.x - unit.position.x) + Math.abs(a.y - unit.position.y);
-            const db = Math.abs(b.x - unit.position.x) + Math.abs(b.y - unit.position.y);
-            return da - db;
+        if (emptyForests.length > 0) {
+            emptyForests.sort((a, b) => {
+                const da = Math.abs(a.x - unit.position.x) + Math.abs(a.y - unit.position.y);
+                const db = Math.abs(b.x - unit.position.x) + Math.abs(b.y - unit.position.y);
+                return da - db;
+            });
+            return emptyForests[0];
+        }
+
+        // 2. Strategic Resource Reclamation (Priority 2: Recapture)
+        // Rule: Only attack player-held forests if AI Unit Tier >= Player Unit Tier
+        const playerForests = availableForests.filter(f => {
+            const u = this.getUnitAt(f.x, f.y);
+            return u && u.owner === 'player';
         });
 
-        return unclaimed[0];
+        const validReclamation = playerForests.filter(f => {
+            const occupier = this.getUnitAt(f.x, f.y);
+            // Safety check, though playerForests filter ensures u exists and is player
+            return occupier && unit.tier >= occupier.tier;
+        });
+
+        if (validReclamation.length > 0) {
+            validReclamation.sort((a, b) => {
+                const da = Math.abs(a.x - unit.position.x) + Math.abs(a.y - unit.position.y);
+                const db = Math.abs(b.x - unit.position.x) + Math.abs(b.y - unit.position.y);
+                return da - db;
+            });
+            return validReclamation[0];
+        }
+
+        // 3. Dynamic Re-Targeting (Idle/Desperation)
+        // If no safe targets, target the player's weakest held forest to force conflict
+        if (playerForests.length > 0) {
+            // Sort primarily by Occupier Tier (Weakest first), then by distance
+            playerForests.sort((a, b) => {
+                const uA = this.getUnitAt(a.x, a.y);
+                const uB = this.getUnitAt(b.x, b.y);
+                const tierA = uA ? uA.tier : 99;
+                const tierB = uB ? uB.tier : 99;
+                if (tierA !== tierB) return tierA - tierB;
+                
+                const da = Math.abs(a.x - unit.position.x) + Math.abs(a.y - unit.position.y);
+                const db = Math.abs(b.x - unit.position.x) + Math.abs(b.y - unit.position.y);
+                return da - db;
+            });
+            return playerForests[0];
+        }
+
+        return null;
     }
 
     private findDefensiveWallTarget(unit: Unit): Position | null {
@@ -749,7 +814,52 @@ export class GameEngineService {
 
     private findFallbackMove(unit: Unit, validMoves: Position[], targetBase: Position): Position | null {
         if (validMoves.length === 0) return null;
-        return this.getNextStepTowards(unit, targetBase, validMoves);
+
+        const currentDist = Math.abs(unit.position.x - targetBase.x) + Math.abs(unit.position.y - targetBase.y);
+        
+        // Aggressive Pathfinding: Filter moves that move FORWARD (decrease distance)
+        // Or Lateral (equal distance) if forward is blocked?
+        // Actually, just sorting by distance works for "Forward Weight", but we must penalize Backward.
+        
+        // Find best move based on distance
+        let best = null;
+        let minDist = Infinity;
+
+        for (const m of validMoves) {
+            const d = Math.abs(m.x - targetBase.x) + Math.abs(m.y - targetBase.y);
+            if (d < minDist) {
+                minDist = d;
+                best = m;
+            }
+        }
+
+        if (!best) return null;
+
+        // Constraint: Only allow Backward (minDist > currentDist) if Critical Threat
+        // Backward means we are moving AWAY from the target (retreating)
+        if (minDist > currentDist) {
+            // Check for Critical Threat (Higher Tier Enemy)
+            // Note: isUnitInDanger checks for ANY stronger enemy adjacent.
+            const inDanger = this.isUnitInDanger(unit);
+            
+            // We need to confirm if the danger is from a Higher Tier enemy (Critical)
+            let isCritical = false;
+            if (inDanger) {
+                const neighbors = this.getNeighbors(unit.position);
+                isCritical = neighbors.some(nb => {
+                    const u = this.getUnitAt(nb.x, nb.y);
+                    return u && u.owner !== unit.owner && u.tier > unit.tier;
+                });
+            }
+
+            if (!isCritical) {
+                // If not in critical danger, do NOT retreat.
+                // This might mean we return null (hold position) if forward/lateral is blocked.
+                return null; 
+            }
+        }
+
+        return best;
     }
     
     private getNeighbors(pos: Position): Position[] {
@@ -1522,7 +1632,40 @@ export class GameEngineService {
             if (!currentUnit || currentUnit.hasActed) continue;
 
             let action: { type: 'move' | 'attack' | 'wall_attack' | 'build_wall'; target: Position; reason: string } | null = null;
+ 
+            // Valid moves filtered by claimed targets
+            const rawMoves = this.calculateValidMoves(currentUnit);
+            const validMoves = rawMoves.filter(m => !turnContext.claimedTargets.has(`${m.x},${m.y}`));
             
+            // Step 0: Base Protection (Absolute Priority)
+            // Override Fortress Mode/Expansion if base is threatened
+            const distToBase = Math.max(Math.abs(currentUnit.position.x - aiBase.x), Math.abs(currentUnit.position.y - aiBase.y));
+            const baseThreats = this.unitsSignal().filter(u => 
+                u.owner === 'player' && 
+                Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 3
+            );
+            
+            if (baseThreats.length > 0 && !this.isForest(currentUnit.position.x, currentUnit.position.y) && distToBase <= 6) {
+                // Find closest threat
+                const closestThreat = baseThreats.reduce((prev, curr) => {
+                    const dPrev = Math.max(Math.abs(prev.position.x - aiBase.x), Math.abs(prev.position.y - aiBase.y));
+                    const dCurr = Math.max(Math.abs(curr.position.x - aiBase.x), Math.abs(curr.position.y - aiBase.y));
+                    return dCurr < dPrev ? curr : prev;
+                });
+
+                // Can we attack it?
+                const canAttack = validMoves.some(m => m.x === closestThreat.position.x && m.y === closestThreat.position.y);
+                if (canAttack) {
+                    action = { type: 'attack', target: closestThreat.position, reason: 'Base Defense: Eliminate Threat' };
+                } else {
+                    // Move towards it
+                    const intercept = this.getNextStepTowards(currentUnit, closestThreat.position, validMoves);
+                    if (intercept) {
+                         action = { type: 'move', target: intercept, reason: 'Base Defense: Intercept' };
+                    }
+                }
+            }
+           
             // Priority Zero: Hold Position (Forest Occupants)
             if (this.isForest(currentUnit.position.x, currentUnit.position.y)) {
                  const rawMoves = this.calculateValidMoves(currentUnit);
@@ -1533,7 +1676,7 @@ export class GameEngineService {
                  } else {
                      // Step E (Early Check): Defensive Wall Building
                      // If holding forest, check if we should build a wall (cost 10 wood)
-                     if (this.aiWoodSignal() >= 10) {
+                     if (this.aiWoodSignal() >= 50) {
                          const wallTarget = this.findDefensiveWallTarget(currentUnit);
                          if (wallTarget) {
                              action = { type: 'build_wall', target: wallTarget, reason: 'Defense: Fortify Position' };
@@ -1548,10 +1691,6 @@ export class GameEngineService {
                  }
             }
 
-            // Valid moves filtered by claimed targets
-            const rawMoves = this.calculateValidMoves(currentUnit);
-            const validMoves = rawMoves.filter(m => !turnContext.claimedTargets.has(`${m.x},${m.y}`));
-
             // Step A: Survival Check
             if (!action && this.isUnitInDanger(currentUnit)) {
                 const safeMove = this.findSafeMove(currentUnit, validMoves);
@@ -1560,13 +1699,61 @@ export class GameEngineService {
                 }
             }
 
-            // Step B: Global Objective (Resource Capture)
+            // Step B: Global Objective (Resource Capture / Siege Mode)
             if (!action) {
-                const resourceTarget = this.findResourceTarget(currentUnit, turnContext);
+                // SIEGE MODE CHECK
+                // Rule: If Wood > 100, 50% of mobile units switch to Siege Mode
+                // Logic: ID-based deterministic selection for 50% split
+                const siegeModeActive = this.aiWoodSignal() > 100;
+                const isSiegeUnit = siegeModeActive && !this.isForest(currentUnit.position.x, currentUnit.position.y) && (parseInt(currentUnit.id.slice(-1), 16) % 2 === 0);
+
+                if (isSiegeUnit) {
+                    // Siege Mode Action: Move towards Player Base or Closest Player Unit
+                    const playerUnits = this.unitsSignal().filter(u => u.owner === 'player');
+                    let target = playerBase;
+                    
+                    if (playerUnits.length > 0) {
+                         // Find closest player unit
+                         const closest = playerUnits.reduce((prev, curr) => {
+                             const dPrev = Math.max(Math.abs(prev.position.x - currentUnit.position.x), Math.abs(prev.position.y - currentUnit.position.y));
+                             const dCurr = Math.max(Math.abs(curr.position.x - currentUnit.position.x), Math.abs(curr.position.y - currentUnit.position.y));
+                             return dCurr < dPrev ? curr : prev;
+                         });
+                         target = closest.position;
+                    }
+
+                    // Move or Attack towards target
+                    const dist = Math.max(Math.abs(target.x - currentUnit.position.x), Math.abs(target.y - currentUnit.position.y));
+                    if (dist <= 1) {
+                        // Attack if adjacent (should be handled by Step C, but ensure here)
+                         const combatTarget = this.findCombatTarget(currentUnit, turnContext, validMoves);
+                         if (combatTarget) {
+                             action = { type: 'attack', target: combatTarget, reason: 'Siege: Engage Enemy' };
+                         }
+                    } else {
+                        const step = this.getNextStepTowards(currentUnit, target, validMoves);
+                        if (step) {
+                             action = { type: 'move', target: step, reason: 'Siege: Advance' };
+                        } else {
+                             // Try breaching if blocked
+                             const path = this.bfsPath(currentUnit.position, target);
+                             if (path && path.length > 1) {
+                                 const nextStep = path[1];
+                                 const wall = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, nextStep.x, nextStep.y);
+                                 if (wall) {
+                                     action = { type: 'wall_attack', target: nextStep, reason: 'Siege: Breaching' };
+                                 }
+                             }
+                        }
+                    }
+                }
+
+                if (!action) {
+                    const resourceTarget = this.findResourceTarget(currentUnit, turnContext);
                 if (resourceTarget) {
-                    // Fortress Mode: Limit expansion range
-                    const dist = Math.abs(resourceTarget.x - currentUnit.position.x) + Math.abs(resourceTarget.y - currentUnit.position.y);
-                    if (!fortressMode || dist <= 8) {
+                    // Fortress Mode: Limit expansion range - DISABLED for dynamic targeting
+                    // const dist = Math.abs(resourceTarget.x - currentUnit.position.x) + Math.abs(resourceTarget.y - currentUnit.position.y);
+                    // if (!fortressMode || dist <= 8) {
                         // Adaptive Pathfinding: Try respecting walls first, then breaching
                         let path = this.bfsPath(currentUnit.position, resourceTarget); // Respect walls
                         
@@ -1618,12 +1805,13 @@ export class GameEngineService {
                  }
             }
 
-            // Step D: Fallback (Prevent Freezing)
+            // Step D: Fallback (Prevent Freezing / Aggressive Advance)
             if (!action) {
-                const fallbackTarget = fortressMode ? aiBase : playerBase;
+                // Aggressive Pathfinding: Default to Player Base
+                const fallbackTarget = playerBase;
                 const fallback = this.findFallbackMove(currentUnit, validMoves, fallbackTarget);
                 if (fallback) {
-                    action = { type: 'move', target: fallback, reason: fortressMode ? 'Fallback: Patrol Base' : 'Fallback: Advance' };
+                    action = { type: 'move', target: fallback, reason: 'Fallback: Advance on Enemy' };
                 }
             }
 
@@ -1681,7 +1869,9 @@ export class GameEngineService {
         }
 
         // 2. Resource Management
-        if (this.aiWoodSignal() >= 30) {
+const baseHp = this.baseHealthSignal().ai;
+        const reserveThreshold = baseHp < 50 ? 20 : 70;
+        if (this.aiWoodSignal() >= reserveThreshold) {
             this.aiConvertWoodToReserve();
             return true;
         }
@@ -2203,7 +2393,10 @@ export class GameEngineService {
         }
         // Mark the acting unit as having acted
         this.unitsSignal.update(units => units.map(u => (u.id === unit.id ? { ...u, hasActed: true } : u)));
-    }
+        
+        if (actor === 'player') {
+            this.selectNextAvailableUnit();
+        }    }
 
     destroyOwnWallBetween(tile1: Position, tile2: Position) {
         const wall = this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y);
@@ -2332,14 +2525,32 @@ export class GameEngineService {
 
     private aiBuildWallBetween(tile1: Position, tile2: Position) {
         if (this.wallBuiltThisTurnSignal()) return;
-        if (this.aiWoodSignal() < 10) return;
+        if (this.aiWoodSignal() < 50) return;
+
+        // Get the AI actor (builder)
+        const actor = this.getBestAdjacentAiUnit(tile1, tile2);
+        if (!actor || actor.hasActed) return;
+
+        // Threat Proximity Check (Strategic Construction)
+        // Rule: Only build if enemy is within 2 tiles (striking distance) AND enemy is stronger/equal
+        const enemies = this.unitsSignal().filter(u => u.owner === 'player');
+        const isThreatNearby = enemies.some(e => {
+            const d1 = Math.max(Math.abs(e.position.x - tile1.x), Math.abs(e.position.y - tile1.y));
+            const d2 = Math.max(Math.abs(e.position.x - tile2.x), Math.abs(e.position.y - tile2.y));
+            // Check striking distance (<=2) and Tier condition (Enemy >= AI)
+            if (d1 <= 2 || d2 <= 2) {
+                return e.tier >= actor.tier;
+            }
+            return false;
+        });
+        
+        if (!isThreatNearby) return;
         if (!this.areAdjacent(tile1, tile2)) return;
         if (this.isInNoBuildZone(tile1) || this.isInNoBuildZone(tile2)) return;
         if (this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y)) return;
         if (this.isEdgeOnCooldown(tile1, tile2)) return;
         if (this.wouldCageElite(tile1, tile2) && !this.isBaseProtectionEdge(tile1, tile2)) return;
-        const actor = this.getBestAdjacentAiUnit(tile1, tile2);
-        if (!actor || actor.hasActed) return;
+        
         const [a, b] = this.sortEdgeEndpoints(tile1, tile2);
         this.wallsSignal.update(ws => [
             ...ws,
