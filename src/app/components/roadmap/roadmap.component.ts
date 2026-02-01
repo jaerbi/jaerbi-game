@@ -4,10 +4,10 @@ import { SettingsService } from '../../services/settings.service';
 import { RouterLink } from '@angular/router';
 
 @Component({
-  selector: 'app-roadmap',
-  standalone: true,
-  imports: [CommonModule, RouterLink],
-  template: `
+    selector: 'app-roadmap',
+    standalone: true,
+    imports: [CommonModule, RouterLink],
+    template: `
 <div class="min-h-screen w-full bg-[#0a0c10] text-blue-100 font-sans selection:bg-blue-600/30 relative overflow-hidden flex flex-col items-center py-10">
      <div class="fixed inset-0 overflow-hidden pointer-events-none select-none z-0">
     <div class="floating-shape shape-giant-1"></div>
@@ -47,29 +47,41 @@ import { RouterLink } from '@angular/router';
       </div>
 
       <div class="grid md:grid-cols-2 gap-8">
-        
-        <div class="roadmap-card group">
-          <div class="card-header">
-            <span class="text-[11px] font-mono text-blue-200/50 italic">REF: PROJECT_VOLUMETRIC</span>
-            <span class="status-tag status-planned">{{ settings.currentLang() === 'uk' ? 'Заплановано' : 'Planned' }}</span>
-          </div>
-          <div class="flex items-start gap-4 mt-4">
-             <div class="w-12 h-12 flex-shrink-0 bg-purple-600/20 border border-purple-500/40 rotate-45 flex items-center justify-center group-hover:rotate-90 transition-all duration-500">
-                <div class="-rotate-45 group-hover:-rotate-90 transition-all duration-500">📦</div>
-             </div>
-             <div>
-                <h3 class="text-lg font-bold text-white leading-tight mb-2">{{ settings.currentLang() === 'uk' ? 'Еволюція Юнітів (Волюметричне Переосмислення)' : 'Unit Evolution (Volumetric Overhaul)' }}</h3>
-                <p class="text-sm text-blue-100/60 leading-relaxed italic">
-                  {{ settings.currentLang() === 'uk' ? 'Перехід від 2D до 3D-стилізованих волюметричних моделей.' : 'Transitioning from 2D to 3D-styled volumetric tactical models.' }}
+        <div class="roadmap-card group border-emerald-500/30 bg-emerald-500/5 relative overflow-hidden opacity-45">
+            <div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 blur-2xl -mr-8 -mt-8"></div>
+
+            <div class="card-header relative z-10">
+                <span class="text-[11px] font-mono text-emerald-200/50 italic">REF: PROJECT_VOLUMETRIC</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                {{ settings.currentLang() === 'uk' ? 'Виконано' : 'Completed' }}
+                </span>
+            </div>
+
+            <div class="flex items-start gap-4 mt-4 relative z-10">
+                <div class="w-12 h-12 flex-shrink-0 bg-emerald-600/20 border border-emerald-500/60 rotate-45 flex items-center justify-center group-hover:rotate-180 transition-all duration-700 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                <div class="-rotate-45 group-hover:-rotate-180 transition-all duration-700 text-xl">
+                    {{ settings.currentLang() === 'uk' ? '✔️' : '✅' }}
+                </div>
+                </div>
+
+                <div>
+                <h3 class="text-lg font-bold text-emerald-50 leading-tight mb-2 opacity-80 decoration-emerald-500/30 line-through decoration-2">
+                    {{ settings.currentLang() === 'uk' ? 'Еволюція Юнітів (Волюметричне Переосмислення)' : 'Unit Evolution (Volumetric Overhaul)' }}
+                </h3>
+                <p class="text-sm text-emerald-100/40 leading-relaxed italic">
+                    {{ settings.currentLang() === 'uk' ? 'Перехід від 2D до 3D-стилізованих волюметричних моделей.' : 'Transitioning from 2D to 3D-styled volumetric tactical models.' }}
                 </p>
-             </div>
-          </div>
-          <div class="card-footer mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
-             <span class="text-[9px] uppercase tracking-widest text-white/30">Priority_Alpha</span>
-             <div class="flex gap-1">
-                <div class="w-3 h-1 bg-blue-500"></div><div class="w-3 h-1 bg-blue-500"></div><div class="w-3 h-1 bg-blue-500/20"></div>
-             </div>
-          </div>
+                </div>
+            </div>
+
+            <div class="card-footer mt-4 pt-4 border-t border-emerald-500/10 flex justify-between items-center relative z-10">
+                <span class="text-[9px] uppercase tracking-widest text-emerald-500/40 font-bold">System_Verified</span>
+                <div class="flex gap-1">
+                <div class="w-3 h-1 bg-emerald-500 shadow-[0_0_5px_#10b981]"></div>
+                <div class="w-3 h-1 bg-emerald-500 shadow-[0_0_5px_#10b981]"></div>
+                <div class="w-3 h-1 bg-emerald-500 shadow-[0_0_5px_#10b981]"></div>
+                </div>
+            </div>
         </div>
 
         <div class="roadmap-card group">
@@ -125,8 +137,8 @@ import { RouterLink } from '@angular/router';
     </div>
 </div>
   `,
-  styleUrl: '../feedback/feedback.component.css'
+    styleUrl: '../feedback/feedback.component.css'
 })
 export class RoadmapComponent {
-  constructor(public settings: SettingsService) { }
+    constructor(public settings: SettingsService) { }
 }

@@ -224,11 +224,11 @@ export class GameEngineService {
         if (difficulty === 'baby') {
             this.reservePointsSignal.set({ player: 60, ai: 20 });
         } else if (difficulty === 'normal') {
-            this.reservePointsSignal.set({ player: 40, ai: 40 });
+            this.reservePointsSignal.set({ player: 40, ai: 60 });
         } else if (difficulty === 'hard') {
             this.reservePointsSignal.set({ player: 40, ai: 80 });
         } else {
-            this.reservePointsSignal.set({ player: 40, ai: 100 });
+            this.reservePointsSignal.set({ player: 30, ai: 100 });
         }
 
         this.deployTargetsSignal.set([]);

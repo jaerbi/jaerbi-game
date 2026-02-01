@@ -1187,10 +1187,8 @@
                 @if (unit.owner === 'player' || gameEngine.isVisibleToPlayer(x, y)) {
                   @if (!(x === 0 && y === 0) && !(x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1)) {
                     <div
-                      class="pointer-events-none"
-                      [style.transition]="'transform 150ms ease-out'"
-                      [class.unit-container-player-unit-tier-2]="unit.owner === 'player' && unit.tier === 2"
-                      [class.unit-container-ai-unit-tier-2]="unit.owner === 'ai' && unit.tier === 2"
+                      class="pointer-events-none move-anim"
+                      [class.shake]="gameEngine.isUnitShaking(unit.id)"
                       [style.transform]="
                         gameEngine.getNudgeFor(unit.id)
                           ? 'translate(' +
@@ -1200,46 +1198,230 @@
                             'px)'
                           : 'translate(0,0)'
                       "
-                      [class.shake]="gameEngine.isUnitShaking(unit.id)"
                     >
+                      <!-- [class.ring-4]="gameEngine.selectedUnitId() === unit.id"
+                        [class.ring-yellow-400]="gameEngine.selectedUnitId() === unit.id"
+                        [class.ring-offset-2]="gameEngine.selectedUnitId() === unit.id" -->
                       <div
-                        class="flex items-center justify-center font-bold unit-base unit-base"
+                        class="unit-svg-wrapper"
+                        [class.theme-player]="unit.owner === 'player'"
+                        [class.theme-ai]="unit.owner === 'ai'"
+                        [class.fatigued]="unit.hasActed"
+                        [class.merge-anim]="gameEngine.lastMergedUnitId() === unit.id"
                         [style.width.px]="gameEngine.tileUnitSizePx"
                         [style.height.px]="gameEngine.tileUnitSizePx"
-                        [style.aspectRatio]="'1 / 1'"
                         [attr.title]="gameEngine.formatHoverInfo(unit.id)"
-                        [class.unit-player]="unit.owner === 'player'"
-                        [class.unit-ai]="unit.owner === 'ai'"
-                        [class.text-white]="true"
-                        [class.unit-tier-1]="unit.tier === 1"
-                        [class.unit-tier-2]="unit.tier === 2"
-                        [class.unit-tier-3]="unit.tier === 3"
-                        [class.unit-tier-4]="unit.tier === 4"
-                        [class.scale-85]="unit.tier === 4"
-                        [class.ring-4]="gameEngine.selectedUnitId() === unit.id"
-                        [class.ring-yellow-400]="gameEngine.selectedUnitId() === unit.id"
-                        [class.ring-offset-2]="gameEngine.selectedUnitId() === unit.id"
                         [class.ring-offset-gray-800]="gameEngine.selectedUnitId() === unit.id"
-                        [class.opacity-50]="unit.hasActed"
-                        [class.grayscale]="unit.hasActed"
-                        [class.scale-110]="
+                        [class.scale-125]="
                           gameEngine.selectedUnitId() === unit.id && unit.tier !== 4 && !gameEngine.buildMode()
                         "
                         [class.scale-90]="
                           gameEngine.selectedUnitId() === unit.id && unit.tier === 4 && !gameEngine.buildMode()
                         "
-                        [class.scale-125]="gameEngine.lastMergedUnitId() === unit.id"
+                        [class.scale-130]="gameEngine.lastMergedUnitId() === unit.id"
                         [class.scale-50]="gameEngine.buildMode()"
                         [class.animate-bounce]="gameEngine.lastRemainderUnitId() === unit.id"
                         [class.arrival-pop]="gameEngine.lastArrivedUnitId() === unit.id"
                         [class.pulse-glow]="gameEngine.pulseUnitId() === unit.id"
                       >
-                        @if (unit.tier === 2) {
-                          <svg class="absolute top-0 left-0 w-full h-full pointer-events-none" style="z-index: 10">
-                            <use href="#triangle-border" x="0" y="0" width="100%" height="100%" />
-                          </svg>
+                        @switch (unit.tier) {
+                          @case (1) {
+                            <svg viewBox="0 0 100 100" class="w-full h-full">
+                              <g>
+                                <circle cx="50" cy="50" r="20" fill="var(--u-fill)" />
+                              </g>
+                              <g>
+                                <circle cx="50" cy="50" r="4" fill="var(--u-light)" />
+                              </g>
+                              @if (unit.level >= 2) {
+                                <g>
+                                  <circle
+                                    cx="50"
+                                    cy="50"
+                                    r="26"
+                                    fill="none"
+                                    stroke="var(--u-stroke)"
+                                    stroke-width="1.5"
+                                    stroke-dasharray="3 4"
+                                  />
+                                </g>
+                              }
+                              @if (unit.level >= 3) {
+                                <g>
+                                  <line x1="50" y1="50" x2="75" y2="35" stroke="var(--u-light)" stroke-width="2" />
+                                  <circle cx="75" cy="35" r="2.5" fill="var(--u-light)" />
+                                </g>
+                              }
+                              @if (unit.level >= 4) {
+                                <g>
+                                  <circle
+                                    cx="50"
+                                    cy="50"
+                                    r="34"
+                                    fill="none"
+                                    stroke="var(--u-light)"
+                                    stroke-width="1"
+                                    opacity="0.4"
+                                  />
+                                </g>
+                              }
+                            </svg>
+                          }
+                          @case (2) {
+                            <svg viewBox="0 0 100 100" class="w-full h-full scale-70">
+                              <g><polygon points="50,16 86,78 14,78" fill="var(--u-fill)" /></g>
+                              <g><circle cx="50" cy="55" r="6" fill="var(--u-core)" /></g>
+                              @if (unit.level >= 2) {
+                                <g>
+                                  <polygon points="50,5 55,15 45,15" fill="var(--u-stroke)" />
+                                  <polygon points="92,82 82,78 86,70" fill="var(--u-stroke)" />
+                                  <polygon points="8,82 18,78 14,70" fill="var(--u-stroke)" />
+                                </g>
+                              }
+                              @if (unit.level >= 3) {
+                                <g>
+                                  <polygon
+                                    points="50,2 95,85 5,85"
+                                    fill="none"
+                                    stroke="var(--u-core)"
+                                    stroke-width="2"
+                                  />
+                                  <polygon points="50,48 56,52 56,60 50,64 44,60 44,52" fill="var(--u-light)" />
+                                </g>
+                              }
+                              @if (unit.level >= 4) {
+                                <g>
+                                  <polygon
+                                    points="50,0 100,90 0,90"
+                                    fill="none"
+                                    stroke="var(--u-stroke)"
+                                    stroke-width="1.5"
+                                    opacity="0.6"
+                                  />
+                                  <!-- top -->
+                                  <polygon points="50,-5 54,8 46,8" fill="var(--u-light)" />
+
+                                  <!-- bottom right -->
+                                  <polygon points="92,82 88,70 80,78" fill="var(--u-light)" />
+
+                                  <!-- bottom left -->
+                                  <polygon points="8,82 20,78 12,70" fill="var(--u-light)" />
+                                </g>
+                              }
+                            </svg>
+                          }
+                          @case (3) {
+                            <svg viewBox="0 0 100 100" class="w-full h-full scale-110">
+                              <g><rect x="20" y="20" width="60" height="60" rx="6" fill="var(--u-dark)" /></g>
+                              <g><rect x="46" y="46" width="8" height="8" fill="var(--u-core)" /></g>
+                              @if (unit.level >= 2) {
+                                <g>
+                                  <rect
+                                    x="26"
+                                    y="26"
+                                    width="48"
+                                    height="48"
+                                    rx="4"
+                                    fill="none"
+                                    stroke="var(--u-stroke)"
+                                    stroke-width="2"
+                                  />
+                                </g>
+                              }
+                              @if (unit.level >= 3) {
+                                <g>
+                                  <rect
+                                    x="16"
+                                    y="16"
+                                    width="68"
+                                    height="68"
+                                    rx="8"
+                                    fill="none"
+                                    stroke="var(--u-core)"
+                                    stroke-width="2"
+                                  />
+                                  <rect x="42" y="42" width="16" height="16" fill="var(--u-light)" />
+                                </g>
+                              }
+                              @if (unit.level >= 4) {
+                                <g>
+                                  <rect
+                                    x="12"
+                                    y="12"
+                                    width="76"
+                                    height="76"
+                                    rx="10"
+                                    fill="none"
+                                    stroke="var(--u-stroke)"
+                                    stroke-width="1.5"
+                                  />
+                                  <rect x="12" y="12" width="10" height="10" fill="var(--u-light)" />
+                                  <rect x="78" y="12" width="10" height="10" fill="var(--u-light)" />
+                                  <rect x="12" y="78" width="10" height="10" fill="var(--u-light)" />
+                                  <rect x="78" y="78" width="10" height="10" fill="var(--u-light)" />
+                                </g>
+                              }
+                            </svg>
+                          }
+                          @case (4) {
+                            <svg viewBox="0 0 100 100" class="w-full h-full">
+                              <g><polygon points="50,15 80,32 80,68 50,85 20,68 20,32" fill="var(--u-emerald)" /></g>
+                              <g><circle cx="50" cy="50" r="4" fill="var(--u-emerald-stroke)" /></g>
+                              @if (unit.level >= 2) {
+                                <g>
+                                  <line
+                                    x1="50"
+                                    y1="20"
+                                    x2="50"
+                                    y2="40"
+                                    stroke="var(--u-emerald-stroke)"
+                                    stroke-width="2"
+                                  />
+                                  <line
+                                    x1="80"
+                                    y1="50"
+                                    x2="60"
+                                    y2="50"
+                                    stroke="var(--u-emerald-stroke)"
+                                    stroke-width="2"
+                                  />
+                                  <line
+                                    x1="50"
+                                    y1="80"
+                                    x2="50"
+                                    y2="60"
+                                    stroke="var(--u-emerald-stroke)"
+                                    stroke-width="2"
+                                  />
+                                </g>
+                              }
+                              @if (unit.level >= 3) {
+                                <g>
+                                  <polygon
+                                    points="50,28 70,38 70,62 50,72 30,62 30,38"
+                                    fill="none"
+                                    stroke="var(--u-emerald-stroke)"
+                                    stroke-width="2"
+                                  />
+                                  <circle cx="50" cy="20" r="3" fill="var(--u-emerald-stroke)" />
+                                  <circle cx="80" cy="50" r="3" fill="var(--u-emerald-stroke)" />
+                                  <circle cx="50" cy="80" r="3" fill="var(--u-emerald-stroke)" />
+                                </g>
+                              }
+                              @if (unit.level >= 4) {
+                                <g>
+                                  <polygon
+                                    points="50,10 85,30 85,70 50,90 15,70 15,30"
+                                    fill="none"
+                                    stroke="var(--u-emerald-stroke)"
+                                    stroke-width="1.5"
+                                    stroke-dasharray="4 4"
+                                  />
+                                </g>
+                              }
+                            </svg>
+                          }
                         }
-                        <span [class.-rotate-45]="unit.tier === 4">{{ unit.level }}</span>
                       </div>
                       @if (gameEngine.hasDefenseBonus(unit)) {
                         <span
@@ -1505,8 +1687,22 @@
         (click)="gameEngine.endPlayerTurn()"
         class="cursor-pointer group relative px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 border border-amber-400/30 bg-gradient-to-br from-amber-600/20 to-amber-800/40 hover:from-amber-500/40 hover:to-amber-700/60 shadow-[0_0_15px_rgba(245,158,11,0.1)] active:scale-95 disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed"
       >
-        <div class="flex items-center justify-between w-full gap-0 z-10 text-amber-200">
+        <div class="flex items-center justify-between w-full gap-2 z-10 text-amber-200">
           <span class="text-xs uppercase tracking-tighter">{{ settings.t('NEXT_TURN') }}</span>
+
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M5 12h14"></path>
+            <path d="m12 5 7 7-7 7"></path>
+          </svg>
         </div>
       </button>
       <div class="mt-1 text-[10px] uppercase tracking-widest font-bold text-gray-300">

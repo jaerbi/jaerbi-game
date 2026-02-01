@@ -33,6 +33,7 @@ export type TranslationKey =
   | 'ANNIHILATION'
   | 'ANNIHILATION_DESC'
   | 'UNIT_EVOLUTION'
+  | 'NEW_UNIT_EVOLUTION'
   | 'EVOLUTION'
   | 'EVOLUTION_DESC'
   | 'COMBAT_DEEP_DIVE'
@@ -96,9 +97,14 @@ export type TranslationKey =
   | 'CHANGE_RECORDS_INFO'
   | 'NEXT_TURN'
   | 'SETTINGS'
+  | 'NEW_DESIGN_UNIT'
   | 'INFO';
 
   export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    NEW_DESIGN_UNIT: {
+      en: 'New Evolution',
+      uk: `Нова еволюція`,
+    },
     SETTINGS: {
       en: 'Settings',
       uk: `Налаштування`,
@@ -414,6 +420,10 @@ export type TranslationKey =
   UNIT_EVOLUTION: {
     en: 'Unit Evolution',
     uk: 'Еволюція Юнітів',
+  },
+  NEW_UNIT_EVOLUTION: {
+    en: 'New Unit Evolution',
+    uk: 'Нова Еволюція Юнітів',
   },
   EVOLUTION: {
     en: 'Evolution',
