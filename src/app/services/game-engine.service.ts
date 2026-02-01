@@ -654,6 +654,52 @@ export class GameEngineService {
         return unclaimed[0];
     }
 
+    private findDefensiveWallTarget(unit: Unit): Position | null {
+        const neighbors = this.getNeighbors(unit.position);
+        const playerUnits = this.unitsSignal().filter(u => u.owner === 'player');
+        
+        // Find nearby threats (within 5 tiles)
+        const nearbyThreats = playerUnits.filter(u => 
+            Math.abs(u.position.x - unit.position.x) + Math.abs(u.position.y - unit.position.y) <= 5
+        );
+
+        if (nearbyThreats.length === 0) return null;
+
+        // Calculate centroid of threats
+        let avgX = 0, avgY = 0;
+        nearbyThreats.forEach(t => { avgX += t.position.x; avgY += t.position.y; });
+        avgX /= nearbyThreats.length;
+        avgY /= nearbyThreats.length;
+
+        // Score neighbors
+        let bestTarget: Position | null = null;
+        let bestScore = -Infinity;
+
+        for (const nb of neighbors) {
+            // Check if can build wall (no wall exists)
+            if (this.getWallBetween(unit.position.x, unit.position.y, nb.x, nb.y)) continue;
+            // Check build validity (simplified: not safe zone, in bounds)
+            if (this.isInNoBuildZone(unit.position) || this.isInNoBuildZone(nb)) continue;
+            // Also check if edge is on cooldown
+            if (this.isEdgeOnCooldown(unit.position, nb)) continue;
+
+            // Score: Dot product logic (closer to threat centroid is better)
+            const dx = nb.x - unit.position.x;
+            const dy = nb.y - unit.position.y;
+            const tx = avgX - unit.position.x;
+            const ty = avgY - unit.position.y;
+            
+            const dot = dx * tx + dy * ty;
+            
+            if (dot > bestScore) {
+                bestScore = dot;
+                bestTarget = nb;
+            }
+        }
+        
+        return bestScore > 0 ? bestTarget : null;
+    }
+
     private getNextStepTowards(unit: Unit, target: Position, validMoves: Position[]): Position | null {
         if (validMoves.length === 0) return null;
         let best = null;
@@ -670,16 +716,25 @@ export class GameEngineService {
     }
 
     private findCombatTarget(unit: Unit, context: TurnContext, validMoves: Position[]): Position | null {
+        // 1. Priority Targets (High Value Units)
         const reachableThreats = context.priorityTargets.filter(t => 
             validMoves.some(m => m.x === t.position.x && m.y === t.position.y)
         );
+        if (reachableThreats.length > 0) return reachableThreats[0].position;
 
-        if (reachableThreats.length > 0) {
-            // Prefer weakest enemy? Or strongest that I can kill?
-            // Simple: just attack the first one found.
-            return reachableThreats[0].position;
+        // 2. Adjacent Walls (Breacher Logic)
+        // Identify walls that are blocking or hostile
+        const neighbors = this.getNeighbors(unit.position);
+        for (const nb of neighbors) {
+            const wall = this.getWallBetween(unit.position.x, unit.position.y, nb.x, nb.y);
+            if (wall && wall.owner !== 'ai') {
+                // Return the tile across the wall as the target.
+                // executeMove will detect the wall intersection and trigger an attack.
+                return nb;
+            }
         }
 
+        // 3. General Enemies
         const attackMoves = validMoves.filter(m => {
             const u = this.getUnitAt(m.x, m.y);
             return u && u.owner !== unit.owner;
@@ -704,6 +759,32 @@ export class GameEngineService {
             { x: pos.x, y: pos.y + 1 },
             { x: pos.x, y: pos.y - 1 }
         ].filter(p => this.inBounds(p.x, p.y));
+    }
+
+    private bfsPath(start: Position, target: Position): Position[] | null {
+        const q: { pos: Position; path: Position[] }[] = [{ pos: start, path: [start] }];
+        const visited = new Set<string>();
+        visited.add(`${start.x},${start.y}`);
+        
+        let iter = 0;
+        // Limit search depth/iterations for performance
+        while (q.length > 0 && iter < 500) {
+            iter++;
+            const curr = q.shift()!;
+            if (curr.pos.x === target.x && curr.pos.y === target.y) {
+                return curr.path;
+            }
+            
+            const neighbors = this.getNeighbors(curr.pos);
+            for (const nb of neighbors) {
+                const key = `${nb.x},${nb.y}`;
+                if (!visited.has(key)) {
+                    visited.add(key);
+                    q.push({ pos: nb, path: [...curr.path, nb] });
+                }
+            }
+        }
+        return null;
     }
 
     private getPointsForTierLevel(tier: number, level: number): number {
@@ -1249,10 +1330,22 @@ export class GameEngineService {
         this.aiBatchingActions = true;
         const aiBase = this.getBasePosition('ai');
         // console.log('[AI] Phase: Economy');
+        
+        // 0. Global Strategy: Fortress Mode
+        const aiForests = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
+        const fortressMode = aiForests > 3;
+        if (fortressMode) {
+             // console.log('[AI] FORTRESS MODE ACTIVE');
+        }
+
         {
             let iter = 0;
             const maxIter = 50;
-            while (this.aiWoodSignal() > 30) {
+            // Reserve Rule: Keep 50 Wood untouchable (UNLESS Emergency: Base HP < 50%)
+            const baseHp = this.baseHealthSignal().ai;
+            const threshold = baseHp < 50 ? 20 : 70;
+
+            while (this.aiWoodSignal() > threshold) { 
                 iter++;
                 if (iter > maxIter) {
                     try { console.warn('[AI] Economy convert safety break'); } catch {}
@@ -1428,14 +1521,39 @@ export class GameEngineService {
             const currentUnit = this.unitsSignal().find(u => u.id === unit.id);
             if (!currentUnit || currentUnit.hasActed) continue;
 
-            let action: { type: 'move' | 'attack' | 'wall_attack'; target: Position; reason: string } | null = null;
+            let action: { type: 'move' | 'attack' | 'wall_attack' | 'build_wall'; target: Position; reason: string } | null = null;
             
+            // Priority Zero: Hold Position (Forest Occupants)
+            if (this.isForest(currentUnit.position.x, currentUnit.position.y)) {
+                 const rawMoves = this.calculateValidMoves(currentUnit);
+                 // Check for killable adjacent enemy
+                 const combatTarget = this.findCombatTarget(currentUnit, turnContext, rawMoves);
+                 if (combatTarget) {
+                     action = { type: 'attack', target: combatTarget, reason: 'Defense: Defend Forest' };
+                 } else {
+                     // Step E (Early Check): Defensive Wall Building
+                     // If holding forest, check if we should build a wall (cost 10 wood)
+                     if (this.aiWoodSignal() >= 10) {
+                         const wallTarget = this.findDefensiveWallTarget(currentUnit);
+                         if (wallTarget) {
+                             action = { type: 'build_wall', target: wallTarget, reason: 'Defense: Fortify Position' };
+                         }
+                     }
+
+                     if (!action) {
+                        this.appendLog(`[AI Unit ${currentUnit.id.substring(0,4)}] Holding forest position.`);
+                        this.unitsSignal.update(units => units.map(u => u.id === currentUnit.id ? { ...u, hasActed: true } : u));
+                        continue;
+                     }
+                 }
+            }
+
             // Valid moves filtered by claimed targets
             const rawMoves = this.calculateValidMoves(currentUnit);
             const validMoves = rawMoves.filter(m => !turnContext.claimedTargets.has(`${m.x},${m.y}`));
 
             // Step A: Survival Check
-            if (this.isUnitInDanger(currentUnit)) {
+            if (!action && this.isUnitInDanger(currentUnit)) {
                 const safeMove = this.findSafeMove(currentUnit, validMoves);
                 if (safeMove) {
                     action = { type: 'move', target: safeMove, reason: 'Survival: Evade Threat' };
@@ -1446,9 +1564,35 @@ export class GameEngineService {
             if (!action) {
                 const resourceTarget = this.findResourceTarget(currentUnit, turnContext);
                 if (resourceTarget) {
-                    const nextStep = this.getNextStepTowards(currentUnit, resourceTarget, validMoves);
-                    if (nextStep) {
-                        action = { type: 'move', target: nextStep, reason: 'Objective: Capture Resource' };
+                    // Fortress Mode: Limit expansion range
+                    const dist = Math.abs(resourceTarget.x - currentUnit.position.x) + Math.abs(resourceTarget.y - currentUnit.position.y);
+                    if (!fortressMode || dist <= 8) {
+                        // Adaptive Pathfinding: Try respecting walls first, then breaching
+                        let path = this.bfsPath(currentUnit.position, resourceTarget); // Respect walls
+                        
+                        if (!path) {
+                             path = this.bfsPath(currentUnit.position, resourceTarget); // Ignore walls (breach)
+                        }
+
+                        if (path && path.length > 1) {
+                            const nextStep = path[1];
+                            
+                            // Check for wall blockage
+                            const wall = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, nextStep.x, nextStep.y);
+                            if (wall) {
+                                 // Self-Breach allowed (Adaptive Pathfinding), but protect base walls
+                                 if (wall.owner === 'ai' && this.isBaseProtectionEdge(currentUnit.position, nextStep)) {
+                                     // Do not breach base protection
+                                 } else {
+                                     action = { type: 'wall_attack', target: nextStep, reason: 'Objective: Breaching Wall' };
+                                 }
+                            } else {
+                                // Verify move validity (e.g., not blocked by unit)
+                                if (validMoves.some(vm => vm.x === nextStep.x && vm.y === nextStep.y)) {
+                                    action = { type: 'move', target: nextStep, reason: 'Objective: Capture Resource' };
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1461,18 +1605,36 @@ export class GameEngineService {
                 }
             }
             
+            // Step E: Defensive Construction (Adjacent to Forest)
+            if (!action && this.aiWoodSignal() >= 10) {
+                 // Check if adjacent to OUR forest
+                 const neighbors = this.getNeighbors(currentUnit.position);
+                 const nearOwnedForest = neighbors.some(n => this.isForest(n.x, n.y) && this.getUnitAt(n.x, n.y)?.owner === 'ai');
+                 if (nearOwnedForest) {
+                     const wallTarget = this.findDefensiveWallTarget(currentUnit);
+                     if (wallTarget) {
+                         action = { type: 'build_wall', target: wallTarget, reason: 'Defense: Fortify Perimeter' };
+                     }
+                 }
+            }
+
             // Step D: Fallback (Prevent Freezing)
             if (!action) {
-                const fallback = this.findFallbackMove(currentUnit, validMoves, playerBase);
+                const fallbackTarget = fortressMode ? aiBase : playerBase;
+                const fallback = this.findFallbackMove(currentUnit, validMoves, fallbackTarget);
                 if (fallback) {
-                    action = { type: 'move', target: fallback, reason: 'Fallback: Advance/Patrol' };
+                    action = { type: 'move', target: fallback, reason: fortressMode ? 'Fallback: Patrol Base' : 'Fallback: Advance' };
                 }
             }
 
             // Execute
             if (action) {
                 this.appendLog(`[AI Unit ${currentUnit.id.substring(0,4)}] Action: ${action.reason} -> Target: (${action.target.x},${action.target.y})`);
-                this.executeMove(currentUnit, action.target);
+                if (action.type === 'build_wall') {
+                    this.aiBuildWallBetween(currentUnit.position, action.target);
+                } else {
+                    this.executeMove(currentUnit, action.target);
+                }
                 turnContext.claimedTargets.add(`${action.target.x},${action.target.y}`);
             } else {
                 this.appendLog(`[AI Unit ${currentUnit.id.substring(0,4)}] No valid moves. Passing.`);
@@ -1671,6 +1833,7 @@ export class GameEngineService {
         }
         for (const pos of candidates) {
             if (created >= maxCount) break;
+            // Reserve Rule: Spend available reserves (Wood is already reserved in conversion step)
             if (reserves < cost) break;
             if (countExclForests(tier) >= 5) break;
             const tl = this.calculateTierAndLevel(cost);
@@ -1688,7 +1851,10 @@ export class GameEngineService {
     }
     private aiConvertWoodToReserve() {
         const w = this.aiWoodSignal();
-        if (w < 30) return;
+        const baseHp = this.baseHealthSignal().ai;
+        // Reserve Rule: Keep 50 wood untouchable (UNLESS Emergency: Base HP < 50%)
+        const threshold = baseHp < 50 ? 20 : 70;
+        if (w < threshold) return;
         this.aiWoodSignal.update(x => x - 20);
         this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai + 1 }));
     }
