@@ -227,13 +227,13 @@ export class GameEngineService {
 
         // START RESERVE
         if (difficulty === 'baby') {
-            this.reservePointsSignal.set({ player: 60, ai: 20 });
+            this.reservePointsSignal.set({ player: 5, ai: 5 });
         } else if (difficulty === 'normal') {
-            this.reservePointsSignal.set({ player: 40, ai: 60 });
+            this.reservePointsSignal.set({ player: 5, ai: 5 });
         } else if (difficulty === 'hard') {
-            this.reservePointsSignal.set({ player: 40, ai: 80 });
+            this.reservePointsSignal.set({ player: 5, ai: 10 });
         } else {
-            this.reservePointsSignal.set({ player: 30, ai: 100 });
+            this.reservePointsSignal.set({ player: 5, ai: 15 });
         }
 
         this.deployTargetsSignal.set([]);
@@ -2076,8 +2076,8 @@ const baseHp = this.baseHealthSignal().ai;
             }
         }
         const unitsToCreate = [
-            { tier: 3, level: 1 },
-            { tier: 2, level: 1 },
+            // { tier: 3, level: 1 },
+            // { tier: 2, level: 1 },
             { tier: 1, level: 1 }
         ];
         const newUnits: Unit[] = [];
