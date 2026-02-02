@@ -2100,12 +2100,20 @@ export class GameEngineService {
                 candidates.push({ x, y });
             }
         }
-        const unitsToCreate = [
-            { tier: 4, level: 1 },
-            { tier: 3, level: 1 },
-            { tier: 2, level: 1 },
-            { tier: 1, level: 1 }
-        ];
+        const diff: Difficulty = this.settings.difficulty();
+        let unitsToCreate;
+        if (diff === 'baby') {
+            unitsToCreate = [
+                { tier: 4, level: 1 },
+                { tier: 3, level: 1 },
+                { tier: 2, level: 1 },
+                { tier: 1, level: 1 }
+            ];
+        } else {
+            unitsToCreate = [
+                { tier: 1, level: 1 }
+            ];
+        }
         const newUnits: Unit[] = [];
         const occupied = (x: number, y: number) =>
             this.unitsSignal().some(u => u.position.x === x && u.position.y === y) ||
