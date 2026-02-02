@@ -95,6 +95,9 @@ export class GameEngineService {
     private aiInvalidActionCountSignal = signal<number>(0);
     private aiLastRejectedActionKeySignal = signal<string | null>(null);
     private sandboxSpawnPendingSignal = signal<{ owner: Owner; tier: number } | null>(null);
+    private unitMoveOffsetSignal = signal<Map<string, { dx: number; dy: number }>>(new Map());
+    private movingUnitsSignal = signal<Set<string>>(new Set());
+    private attackingUnitsSignal = signal<Set<string>>(new Set());
 
     // Computed signals
     readonly units = this.unitsSignal.asReadonly();
@@ -123,6 +126,23 @@ export class GameEngineService {
     readonly aiUnitTimeNearBase = this.aiUnitTimeNearBaseSignal.asReadonly();
     sandboxSpawnPending(): { owner: Owner; tier: number } | null {
         return this.sandboxSpawnPendingSignal();
+    }
+    getMoveOffsetFor(id: string): { dx: number; dy: number } | null {
+        const m = this.unitMoveOffsetSignal();
+        return m.get(id) ?? null;
+    }
+    isUnitMoving(id: string): boolean {
+        return this.movingUnitsSignal().has(id);
+    }
+    isUnitAttacking(id: string): boolean {
+        return this.attackingUnitsSignal().has(id);
+    }
+    getCombinedTransform(id: string): string {
+        const n = this.attackerNudgeSignal();
+        const off = this.getMoveOffsetFor(id);
+        const dx = (n && n.id === id ? n.dx : 0) + (off ? off.dx : 0);
+        const dy = (n && n.id === id ? n.dy : 0) + (off ? off.dy : 0);
+        return `translate(${dx}px, ${dy}px)`;
     }
     aggressionMode(): boolean {
         return this.aggressionModeSignal();
@@ -411,9 +431,30 @@ export class GameEngineService {
                         return updatedUnits; // blocked by isValidMove; safety
                     }
                 } else {
-                    if (movingUnit.owner === 'player' || this.gridSize <= 20) {
-                        this.attackerNudgeSignal.set({ id: movingUnit.id, dx: stepX * 8, dy: stepY * 8 });
-                        setTimeout(() => this.attackerNudgeSignal.set(null), 150);
+                    // Attack lunge for both Player and AI: ping-pong towards target axis
+                    {
+                        const dxTotal = target.x - start.x;
+                        const dyTotal = target.y - start.y;
+                        const useX = Math.abs(dxTotal) >= Math.abs(dyTotal);
+                        const step = useX ? Math.sign(dxTotal) : Math.sign(dyTotal);
+                        const gap = this.wallThicknessPx + 2;
+                        const cell = this.tileSizePx + gap;
+                        const amp = Math.round(cell * 0.35);
+                        const dx = useX ? step * amp : 0;
+                        const dy = useX ? 0 : step * amp;
+                        const s = new Set(this.attackingUnitsSignal());
+                        s.add(movingUnit.id);
+                        this.attackingUnitsSignal.set(s);
+                        this.attackerNudgeSignal.set({ id: movingUnit.id, dx, dy });
+                        setTimeout(() => {
+                            this.attackerNudgeSignal.set({ id: movingUnit.id, dx: 0, dy: 0 });
+                        }, 100);
+                        setTimeout(() => {
+                            this.attackerNudgeSignal.set(null);
+                            const s2 = new Set(this.attackingUnitsSignal());
+                            s2.delete(movingUnit.id);
+                            this.attackingUnitsSignal.set(s2);
+                        }, 200);
                     }
                     this.shakenUnitIdSignal.set(targetUnit.id);
                     setTimeout(() => this.shakenUnitIdSignal.set(null), 200);
@@ -532,6 +573,34 @@ export class GameEngineService {
 
             return updatedUnits;
         });
+
+        // Smooth movement offset: render at target tile with offset back to start, then animate to zero
+        const dxTiles = target.x - unit.position.x;
+        const dyTiles = target.y - unit.position.y;
+        const gap = this.wallThicknessPx + 2;
+        const cell = this.tileSizePx + gap;
+        const off = { dx: -dxTiles * cell, dy: -dyTiles * cell };
+        if (dxTiles !== 0 || dyTiles !== 0) {
+            const offMap = new Map(this.unitMoveOffsetSignal());
+            offMap.set(unit.id, off);
+            this.unitMoveOffsetSignal.set(offMap);
+            const moving = new Set(this.movingUnitsSignal());
+            moving.add(unit.id);
+            this.movingUnitsSignal.set(moving);
+            setTimeout(() => {
+                const m2 = new Map(this.unitMoveOffsetSignal());
+                m2.set(unit.id, { dx: 0, dy: 0 });
+                this.unitMoveOffsetSignal.set(m2);
+                setTimeout(() => {
+                    const m3 = new Map(this.unitMoveOffsetSignal());
+                    m3.delete(unit.id);
+                    this.unitMoveOffsetSignal.set(m3);
+                    const s = new Set(this.movingUnitsSignal());
+                    s.delete(unit.id);
+                    this.movingUnitsSignal.set(s);
+                }, 180);
+            }, 0);
+        }
 
         if (merged) {
             // For simple merge, the moving unit is gone, so we highlight target?
@@ -2451,6 +2520,32 @@ export class GameEngineService {
                 : this.getBestAdjacentAiUnit(tile1, tile2);
         if (!unit) return;
         if (actor === 'player' && unit.hasActed) return;
+
+        // Attack lunge ping-pong for wall attacks
+        {
+            const dxTotal = tile2.x - tile1.x;
+            const dyTotal = tile2.y - tile1.y;
+            const useX = Math.abs(dxTotal) >= Math.abs(dyTotal);
+            const step = useX ? Math.sign(dxTotal) : Math.sign(dyTotal);
+            const gap = this.wallThicknessPx + 2;
+            const cell = this.tileSizePx + gap;
+            const amp = Math.round(cell * 0.35);
+            const dx = useX ? step * amp : 0;
+            const dy = useX ? 0 : step * amp;
+            const s = new Set(this.attackingUnitsSignal());
+            s.add(unit.id);
+            this.attackingUnitsSignal.set(s);
+            this.attackerNudgeSignal.set({ id: unit.id, dx, dy });
+            setTimeout(() => {
+                this.attackerNudgeSignal.set({ id: unit.id, dx: 0, dy: 0 });
+            }, 100);
+            setTimeout(() => {
+                this.attackerNudgeSignal.set(null);
+                const s2 = new Set(this.attackingUnitsSignal());
+                s2.delete(unit.id);
+                this.attackingUnitsSignal.set(s2);
+            }, 200);
+        }
 
         const dmgPercent = wall.owner === 'neutral' ? 100 : this.combat.getWallHitPercent(unit.tier);
         const [a, b] = this.sortEdgeEndpoints(tile1, tile2);
