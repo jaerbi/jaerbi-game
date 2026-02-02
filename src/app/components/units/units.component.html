@@ -1,0 +1,192 @@
+
+@switch (unit.tier) {
+  @case (1) {
+    <svg viewBox="0 0 100 100" class="w-full h-full">
+      <!-- base -->
+      <circle cx="50" cy="50" r="32" [attr.fill]="'url(#vol-fill-' + unit.owner + ')'"  filter="url(#soft-shadow)" />
+      <!-- inner highlight -->
+      <circle cx="50" cy="50" r="31" fill="none" stroke="url(#edge-light)" stroke-width="2" />
+
+      <!-- level -->
+      <text
+        x="49"
+        y="61"
+        text-anchor="middle"
+        font-size="30"
+        font-weight="700"
+        fill="var(--u-font)"
+        class="select-none pointer-events-none shadow-text"
+      >
+        {{ unit.level }}
+      </text>
+
+      @if (unit.level >= 2) {
+        <circle cx="50" cy="50" r="35" fill="none" stroke="var(--u-stroke)" stroke-width="2" />
+      }
+
+      @if (unit.level >= 3) {
+        <circle cx="50" cy="50" r="40" fill="none" stroke="var(--u-stroke)" stroke-width="1.5" stroke-dasharray="4 4" />
+      }
+
+      @if (unit.level >= 4) {
+        <circle cx="50" cy="50" r="28" fill="none" stroke="var(--u-light)" stroke-width="2" />
+      }
+    </svg>
+  }
+
+  @case (2) {
+    <svg viewBox="0 0 100 100" class="w-full h-full scale-95">
+      <g transform="translate(0, 4)">
+        <polygon points="50,16 86,78 14,78" [attr.fill]="'url(#vol-fill-' + unit.owner + ')'" filter="url(#soft-shadow)" />
+        <polygon points="50,18 82,74 18,74" fill="none" stroke="url(#edge-light)" stroke-width="2" />
+        <text
+          x="50"
+          y="68"
+          text-anchor="middle"
+          font-size="30"
+          font-weight="700"
+          fill="var(--u-font)"
+          class="select-none pointer-events-none shadow-text"
+        >
+          {{ unit.level }}
+        </text>
+
+        @if (unit.level >= 2) {
+          <polygon
+            points="50,10 91,81 9,81"
+            fill="none"
+            stroke="var(--u-core)"
+            stroke-width="2"
+            stroke-linejoin="round"
+          />
+        }
+
+        @if (unit.level >= 3) {
+          <polygon
+            points="50,0 98,86 2,86"
+            fill="none"
+            stroke="var(--u-stroke)"
+            stroke-width="1.5"
+            stroke-dasharray="4 4"
+            stroke-linejoin="round"
+          />
+        }
+
+        @if (unit.level >= 4) {
+          <g>
+            <polygon points="50,0 56,10 44,10" fill="var(--u-light)" stroke-linejoin="round" />
+            <polygon points="99,87 92,74 84,87" fill="var(--u-light)" stroke-linejoin="round" />
+            <polygon points="1,87 15,87 8,74" fill="var(--u-light)" stroke-linejoin="round" />
+          </g>
+        }
+      </g>
+    </svg>
+  }
+
+  @case (3) {
+    <svg viewBox="0 0 100 100" class="w-full h-full">
+      <!-- base -->
+      <!-- <rect x="21" y="21" width="56" height="56" rx="6" fill="var(--u-dark)" /> -->
+      <rect x="21" y="21" width="56" height="56" rx="6" [attr.fill]="'url(#vol-fill-' + unit.owner + ')'" filter="url(#soft-shadow)" />
+      <rect x="23" y="23" width="52" height="52" rx="5" fill="none" stroke="url(#edge-light)" stroke-width="2" />
+
+      <!-- level -->
+      <text
+        x="49"
+        y="60"
+        text-anchor="middle"
+        font-size="30"
+        font-weight="600"
+        fill="var(--u-font)"
+        class="select-none pointer-events-none shadow-text"
+      >
+        {{ unit.level }}
+      </text>
+
+      @if (unit.level >= 2) {
+        <rect x="18" y="18" width="62" height="62" rx="8" fill="none" stroke="var(--u-core)" stroke-width="2" />
+      }
+
+      @if (unit.level >= 3) {
+        <rect
+          x="14"
+          y="14"
+          width="70"
+          height="70"
+          rx="10"
+          fill="none"
+          stroke="var(--u-stroke)"
+          stroke-width="1.5"
+          stroke-dasharray="4 4"
+        />
+      }
+
+      @if (unit.level >= 4) {
+        <!-- corner minis -->
+        <rect x="12" y="12" width="8" height="8" fill="var(--u-light)" />
+        <rect x="78" y="12" width="8" height="8" fill="var(--u-light)" />
+        <rect x="12" y="78" width="8" height="8" fill="var(--u-light)" />
+        <rect x="78" y="78" width="8" height="8" fill="var(--u-light)" />
+      }
+    </svg>
+  }
+
+  @case (4) {
+    <svg viewBox="0 0 100 100" class="w-full h-full">
+      <!-- base -->
+      <!-- <polygon points="50,20 78,36 78,64 50,80 22,64 22,36" fill="var(--u-darker)" stroke-linejoin="round" /> -->
+      <polygon points="50,20 78,36 78,64 50,80 22,64 22,36" [attr.fill]="'url(#vol-fill-' + unit.owner + ')'" filter="url(#soft-shadow)" />
+      <polygon
+        points="50,20 78,36 78,64 50,80 22,64 22,36"
+        fill="none"
+        stroke="var(--u-light)"
+        stroke-width="2"
+        opacity="0.4"
+      />
+
+      <!-- level -->
+      <text
+        x="49"
+        y="62"
+        text-anchor="middle"
+        font-size="28"
+        font-weight="600"
+        fill="var(--u-font)"
+        class="select-none pointer-events-none shadow-text"
+      >
+        {{ unit.level }}
+      </text>
+
+      @if (unit.level >= 2) {
+        <polygon
+          points="50,17 81,35 81,65 50,83 19,65 19,35"
+          fill="none"
+          stroke="var(--u-core)"
+          stroke-width="1.5"
+          stroke-linejoin="round"
+        />
+      }
+
+      @if (unit.level >= 3) {
+        <polygon
+          points="50,12 86,32 86,68 50,88 14,68 14,32"
+          fill="none"
+          stroke="var(--u-stroke)"
+          stroke-width="1.5"
+          stroke-dasharray="4 4"
+          stroke-linejoin="round"
+        />
+      }
+
+      @if (unit.level >= 4) {
+        <!-- vertex minis -->
+        <circle cx="50" cy="12" r="3" fill="var(--u-light)" />
+        <circle cx="86" cy="32" r="3" fill="var(--u-light)" />
+        <circle cx="86" cy="68" r="3" fill="var(--u-light)" />
+        <circle cx="50" cy="88" r="3" fill="var(--u-light)" />
+        <circle cx="14" cy="68" r="3" fill="var(--u-light)" />
+        <circle cx="14" cy="32" r="3" fill="var(--u-light)" />
+      }
+    </svg>
+  }
+}

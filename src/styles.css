@@ -1,6 +1,11 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import "tailwindcss";
+@import "./app/styles/units.css";
+
+body {
+    font-family: Roboto, Helvetica, Arial, sans-serif;
+}
 
 /* width */
 ::-webkit-scrollbar {

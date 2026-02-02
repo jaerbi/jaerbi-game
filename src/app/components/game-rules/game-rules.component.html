@@ -64,6 +64,183 @@
           </div>
         </div>
       </div>
+      <div class="bg-gray-800/60 border border-blue-500/30 rounded-lg p-4 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+        <div class="text-lg font-semibold mb-3 flex items-center gap-2">
+          <span class="text-blue-400">⌨️</span>
+          {{ settings.currentLang() === 'uk' ? 'Тактичне управління' : 'Tactical Controls' }}
+        </div>
+
+        <div class="space-y-4">
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex gap-1">
+              <kbd
+                class="px-2 py-1 bg-gray-700 border-b-4 border-gray-900 rounded text-xs font-mono text-white min-w-[45px] text-center"
+              >
+                Tab
+              </kbd>
+              <kbd
+                class="px-2 py-1 bg-gray-700 border-b-4 border-gray-900 rounded text-xs font-mono text-white min-w-[60px] text-center"
+              >
+                Space
+              </kbd>
+            </div>
+            <div class="text-xs text-gray-400 text-right italic">
+              {{ settings.currentLang() === 'uk' ? 'Наступний вільний юніт' : 'Cycle through available units' }}
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex flex-col items-center gap-1">
+              <kbd class="px-2 py-1 bg-gray-700 border-b-4 border-gray-900 rounded text-xs text-white">↑</kbd>
+              <div class="flex gap-1">
+                <kbd class="px-2 py-1 bg-gray-700 border-b-4 border-gray-900 rounded text-xs text-white">←</kbd>
+                <kbd class="px-2 py-1 bg-gray-700 border-b-4 border-gray-900 rounded text-xs text-white">↓</kbd>
+                <kbd class="px-2 py-1 bg-gray-700 border-b-4 border-gray-900 rounded text-xs text-white">→</kbd>
+              </div>
+            </div>
+            <div class="text-xs text-gray-400 text-right italic">
+              {{
+                settings.currentLang() === 'uk' ? 'Рух або атака вибраним юнітом' : 'Move or attack with selected unit'
+              }}
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between gap-4 border-t border-white/5 pt-3">
+            <kbd
+              class="px-4 py-1 bg-blue-600 border-b-4 border-blue-800 rounded text-xs font-mono text-white font-bold"
+            >
+              Enter
+            </kbd>
+            <div class="text-xs text-blue-300 font-semibold uppercase tracking-wider">
+              {{ settings.currentLang() === 'uk' ? 'Завершити хід' : 'End player turn' }}
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="mt-4 p-2 bg-blue-500/10 border border-blue-500/20 rounded text-[10px] text-blue-200/70 leading-tight"
+        >
+          <strong>TIP:</strong>
+          {{
+            settings.currentLang() === 'uk'
+              ? 'На початку кожного ходу гра автоматично фокусується на мобільному юніті.'
+              : 'At turn start, the game auto-focuses on your most mobile unit.'
+          }}
+        </div>
+      </div>
+
+      <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4 md:col-span-2 unit-svg-wrapper theme-test-player">
+        <div class="flex flex-col flex-center">
+          <div class="text-lg font-semibold mb-3">
+            {{ settings.currentLang() === 'uk' ? 'Третя ітерація одиниць' : 'Third iteration the units' }}
+          </div>
+          <div class="flex flex-center gap-2">
+            <svg viewBox="0 0 100 100" class="w-full h-full scale-80">
+              <g><polygon points="50,16 86,78 14,78" fill="var(--u-fill)" /></g>
+              <!-- <g><circle cx="50" cy="55" r="6" fill="var(--u-core)" /></g> -->
+              <text
+                x="49"
+                y="66"
+                text-anchor="middle"
+                font-size="30"
+                font-weight="600"
+                fill="var(--u-font)"
+                class="select-none pointer-events-none"
+              >
+                {{ 1 }}
+              </text>
+            </svg>
+            <svg viewBox="0 0 100 100" class="w-full h-full scale-80">
+              <g><polygon points="50,16 86,78 14,78" fill="var(--u-fill)" /></g>
+              <!-- <g><circle cx="50" cy="55" r="6" fill="var(--u-core)" /></g> -->
+              <text
+                x="49"
+                y="66"
+                text-anchor="middle"
+                font-size="30"
+                font-weight="600"
+                fill="var(--u-font)"
+                class="select-none pointer-events-none"
+              >
+                {{ 2 }}
+              </text>
+              @if (true) {
+                <polygon points="50,10 91,81 9,81" fill="none" stroke="var(--u-core)" stroke-width="2" />
+              }
+            </svg>
+            <svg viewBox="0 0 100 100" class="w-full h-full scale-80">
+              <g><polygon points="50,16 86,78 14,78" fill="var(--u-fill)" /></g>
+              <!-- <g><circle cx="50" cy="55" r="6" fill="var(--u-core)" /></g> -->
+              <text
+                x="49"
+                y="66"
+                text-anchor="middle"
+                font-size="30"
+                font-weight="600"
+                fill="var(--u-font)"
+                class="select-none pointer-events-none"
+              >
+                {{ 3 }}
+              </text>
+              @if (true) {
+                <polygon points="50,10 91,81 9,81" fill="none" stroke="var(--u-core)" stroke-width="2" />
+              }
+              @if (true) {
+                <g>
+                  <polygon
+                    points="50,0 98,86 2,86"
+                    fill="none"
+                    stroke="var(--u-stroke)"
+                    stroke-width="1.5"
+                    stroke-dasharray="4 4"
+                  />
+                </g>
+              }
+            </svg>
+            <svg viewBox="0 0 100 100" class="w-full h-full scale-80">
+              <g><polygon points="50,16 86,78 14,78" fill="var(--u-fill)" /></g>
+              <!-- <g><circle cx="50" cy="55" r="6" fill="var(--u-core)" /></g> -->
+              <text
+                x="49"
+                y="66"
+                text-anchor="middle"
+                font-size="30"
+                font-weight="600"
+                fill="var(--u-font)"
+                class="select-none pointer-events-none"
+              >
+                {{ 4 }}
+              </text>
+              @if (true) {
+                <polygon points="50,10 91,81 9,81" fill="none" stroke="var(--u-core)" stroke-width="2" />
+              }
+              @if (true) {
+                <g>
+                  <polygon
+                    points="50,0 98,86 2,86"
+                    fill="none"
+                    stroke="var(--u-stroke)"
+                    stroke-width="1.5"
+                    stroke-dasharray="4 4"
+                  />
+                </g>
+              }
+              @if (true) {
+                <g>
+                  <!-- top -->
+                  <polygon points="50,0 56,10 44,10" fill="var(--u-light)" />
+
+                  <!-- bottom right -->
+                  <polygon points="99,87 92,74 84,87" fill="var(--u-light)" />
+
+                  <!-- bottom left -->
+                  <polygon points="1,87 15,87 8,74" fill="var(--u-light)" />
+                </g>
+              }
+            </svg>
+          </div>
+        </div>
+      </div>
 
       <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
         <div class="text-lg font-semibold mb-3">{{ settings.t('NEW_DESIGN_UNIT') }}</div>
@@ -100,7 +277,7 @@
           </svg>
           <!-- T1 END -->
           <!-- T2 -->
-          <div class="unit-svg-wrapper theme-ai">
+          <div class="unit-svg-wrapper theme-test-ai">
             <svg viewBox="0 0 100 100" class="w-full h-full scale-70">
               <g><polygon points="50,16 86,78 14,78" fill="var(--u-fill)" /></g>
               <g><circle cx="50" cy="55" r="6" fill="var(--u-core)" /></g>
@@ -304,7 +481,7 @@
           </div>
           <div>
             <div class="text-xs text-gray-300 mb-1">{{ settings.t('T3_3_TILES') }}</div>
-            <div class="path-grid" style="--start-x: 2; --start-y: 2; --line-steps: 2">
+            <div class="path-grid" style="--start-x: 2; --start-y: 2; --line-steps: 3">
               <div class="path-cell"></div>
               <div class="path-cell"></div>
               <div class="path-cell"></div>
@@ -333,6 +510,39 @@
               <div class="mover square t3-path">3</div>
               <div class="path-line path-animation"></div>
               <div class="castle red" [style.right.px]="6" [style.bottom.px]="6">🏰</div>
+            </div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-300 mb-1">{{ settings.t('T4_4_TILES') }}</div>
+            <div class="path-grid" style="--start-x: 2; --start-y: 2; --line-steps: 4">
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell active"></div>
+              <div class="path-cell active"></div>
+              <div class="path-cell active"></div>
+              <div class="path-cell active"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="mover triangle t1-path">4</div>
+              <div class="path-line path-animation"></div>
+              <div class="castle" [style.left.px]="6" [style.top.px]="6">🏰</div>
             </div>
           </div>
         </div>
@@ -378,10 +588,12 @@
         </div>
       </div>
 
-      <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4 md:col-span-2 unit-svg-wrapper">
+      <div
+        class="bg-gray-800/60 border border-gray-700 rounded-lg p-4 md:col-span-2 unit-svg-wrapper unit-svg-wrapper-game_rules"
+      >
         <div class="text-lg font-semibold mb-3">{{ settings.t('NEW_UNIT_EVOLUTION') }}</div>
         <!-- T1 -->
-        <div class="flex items-center gap-6 theme-player">
+        <div class="flex items-center gap-6 theme-test-player">
           <!-- T1 (1) -->
           <svg viewBox="0 0 100 100" class="w-full h-full">
             <g>
@@ -468,7 +680,7 @@
         </div>
 
         <!-- T2 -->
-        <div class="flex items-center gap-6 theme-ai">
+        <div class="flex items-center gap-6 theme-test-ai">
           <!-- T2 (1) -->
           <svg viewBox="0 0 100 100" class="w-full h-full scale-75">
             <g><polygon points="50,16 86,78 14,78" fill="var(--u-fill)" /></g>
@@ -537,7 +749,7 @@
         </div>
 
         <!-- T3 -->
-        <div class="flex items-center gap-6 theme-player">
+        <div class="flex items-center gap-6 theme-test-player">
           <!-- T3 (1) -->
           <svg viewBox="0 0 100 100" class="w-full h-full scale-110">
             <g><rect x="20" y="20" width="60" height="60" rx="6" fill="var(--u-dark)" /></g>
@@ -600,7 +812,7 @@
         </div>
 
         <!-- T4 -->
-        <div class="flex items-center gap-6 theme-ai">
+        <div class="flex items-center gap-6 theme-test-ai">
           <!-- T4 (1) -->
           <svg viewBox="0 0 100 100" class="w-full h-full">
             <g><polygon points="50,15 80,32 80,68 50,85 20,68 20,32" fill="var(--u-emerald)" /></g>

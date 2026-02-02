@@ -8,6 +8,7 @@ export interface GameSettings {
     gridSize: number;
     difficulty: Difficulty;
     language: LangCode;
+    customMode: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -15,7 +16,8 @@ export class SettingsService {
     private difficultySignal = signal<Difficulty>('normal');
     private mapSizeSignal = signal<MapSize>(10);
     private langSignal = signal<LangCode>('uk');
-    public version = 'v.0.6.0';
+    private customModeSignal = signal<boolean>(false);
+    public version = 'v.0.7.7';
     public diffArr: Difficulty[] = ['baby', 'normal', 'hard', 'nightmare'];
     private storageKey = 'shape_tactics_settings';
 
@@ -73,6 +75,13 @@ export class SettingsService {
     t(key: TranslationKey): string {
         return translate(key, this.langSignal());
     }
+    customMode(): boolean {
+        return this.customModeSignal();
+    }
+    setCustomMode(active: boolean) {
+        this.customModeSignal.set(active);
+        this.persistSettings();
+    }
 
     private loadSettings() {
         if (typeof window === 'undefined') return;
@@ -90,6 +99,7 @@ export class SettingsService {
             this.difficultySignal.set(diff);
             this.mapSizeSignal.set(size as MapSize);
             this.langSignal.set(lang);
+            this.customModeSignal.set(!!parsed.customMode);
         } catch {}
     }
 
@@ -99,7 +109,8 @@ export class SettingsService {
             const payload: GameSettings = {
                 gridSize: this.mapSizeSignal(),
                 difficulty: this.difficultySignal(),
-                language: this.langSignal()
+                language: this.langSignal(),
+                customMode: this.customModeSignal()
             };
             localStorage.setItem(this.storageKey, JSON.stringify(payload));
         } catch {}
