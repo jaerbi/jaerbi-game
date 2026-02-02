@@ -146,3 +146,13 @@
 .castle.red {
   filter: hue-rotate(140deg); /* Approximate blue->red shift if it was an image, but it's text emoji so irrelevant, just for classing */
 }
+.wall-formation-active.wall-formation-player {
+  filter: drop-shadow(0 0 8px rgb(59, 130, 246, 0.9));
+}
+.wall-formation-active.wall-formation-ai {
+  filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.9));
+  
+}
+.wall-formation-active {
+border: 2px dashed rgba(255, 255, 255, 0.7);
+}
