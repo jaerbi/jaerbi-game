@@ -8,11 +8,12 @@ import { FirebaseService } from './services/firebase.service';
 import { SupportCommunityComponent } from './components/support-community/support-community.component';
 import { LeaderboardModalComponent } from './components/leaderboard-modal/leaderboard-modal.component';
 import { UnitsComponent } from './components/units/units.component';
+import { SandboxComponent } from './components/sandbox/sandbox.component';
 
 @Component({
     selector: 'app-game',
     standalone: true,
-    imports: [CommonModule, GameRulesComponent, SupportCommunityComponent, LeaderboardModalComponent, UnitsComponent],
+    imports: [CommonModule, GameRulesComponent, SupportCommunityComponent, LeaderboardModalComponent, UnitsComponent, SandboxComponent],
     templateUrl: './app-game.html',
     styleUrl: './app.css'
 })
@@ -136,6 +137,13 @@ export class AppGame {
 
     onTileClick(x: number, y: number) {
         if (this.gameEngine.gameStatus() !== 'playing') return;
+        if (this.settings.customMode() && this.gameEngine.sandboxSpawnPending()) {
+            const occupied = this.gameEngine.getUnitAt(x, y);
+            if (!occupied) {
+                this.gameEngine.spawnSandboxAt({ x, y });
+            }
+            return;
+        }
 
         if (this.gameEngine.isDeployTarget(x, y)) {
             this.gameEngine.deployTo({ x, y });
@@ -166,6 +174,10 @@ export class AppGame {
 
         // Clicking elsewhere deselects
         this.gameEngine.selectUnit(null);
+    }
+    setCustomMode(active: boolean) {
+        this.settings.setCustomMode(active);
+        this.gameEngine.resetGame();
     }
 
     onEdgeClick(event: MouseEvent, x1: number, y1: number, x2: number, y2: number) {

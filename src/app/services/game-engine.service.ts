@@ -94,6 +94,7 @@ export class GameEngineService {
     private totalWarModeSignal = signal<boolean>(false);
     private aiInvalidActionCountSignal = signal<number>(0);
     private aiLastRejectedActionKeySignal = signal<string | null>(null);
+    private sandboxSpawnPendingSignal = signal<{ owner: Owner; tier: number } | null>(null);
 
     // Computed signals
     readonly units = this.unitsSignal.asReadonly();
@@ -120,6 +121,9 @@ export class GameEngineService {
     readonly lastArrivedUnitId = this.lastArrivedUnitIdSignal.asReadonly();
     readonly pulseUnitId = this.pulseUnitIdSignal.asReadonly();
     readonly aiUnitTimeNearBase = this.aiUnitTimeNearBaseSignal.asReadonly();
+    sandboxSpawnPending(): { owner: Owner; tier: number } | null {
+        return this.sandboxSpawnPendingSignal();
+    }
     aggressionMode(): boolean {
         return this.aggressionModeSignal();
     }
@@ -223,7 +227,7 @@ export class GameEngineService {
         this.lastMergedUnitIdSignal.set(null);
         this.lastRemainderUnitIdSignal.set(null);
         this.resourcesSignal.set({ wood: 0 });
-        this.baseHealthSignal.set({ player: 100, ai: 100 });
+        this.baseHealthSignal.set(this.settings.customMode() ? { player: 1000, ai: 1000 } : { player: 100, ai: 100 });
 
         // START RESERVE
         if (difficulty === 'baby') {
@@ -945,7 +949,11 @@ export class GameEngineService {
             }, 1000);
             const aiBase = this.getBasePosition('ai');
             this.queueCombatText('💥', aiBase);
-            this.recordHighScore('player wins', 'destroy');
+            if (this.settings.customMode()) {
+                this.endReasonSignal.set('Match Finished (Custom Mode)');
+            } else {
+                this.recordHighScore('player wins', 'destroy');
+            }
         } else if (hp.player <= 0) {
             this.gameStatusSignal.set('jaerbi wins');
             this.screenShakeSignal.set(true);
@@ -955,7 +963,11 @@ export class GameEngineService {
             }, 1000);
             const playerBase = this.getBasePosition('player');
             this.queueCombatText('💥', playerBase);
-            this.recordHighScore('jaerbi wins', 'destroy');
+            if (this.settings.customMode()) {
+                this.endReasonSignal.set('Match Finished (Custom Mode)');
+            } else {
+                this.recordHighScore('jaerbi wins', 'destroy');
+            }
         }
     }
 
@@ -1052,6 +1064,9 @@ export class GameEngineService {
         return this.playerName.name();
     }
     confirmAndSaveScore(name: string) {
+        if (this.settings.customMode()) {
+            return;
+        }
         this.playerName.setName(name);
         const pending = this.pendingScoreSignal();
         if (pending) {
@@ -1180,6 +1195,10 @@ export class GameEngineService {
     }
 
     private recordHighScore(result: 'player wins' | 'jaerbi wins', condition: 'monopoly' | 'destroy') {
+        if (this.settings.customMode()) {
+            this.endReasonSignal.set('Match Finished (Custom Mode)');
+            return;
+        }
         const key = `${this.settings.difficulty()}|${this.settings.mapSize()}`;
         const current = { ...this.highScoresSignal() };
         const entry = { turns: this.turnSignal(), date: Date.now(), condition };
@@ -2291,6 +2310,35 @@ export class GameEngineService {
         }
         this.deployTargetsSignal.set(targets);
         this.baseDeployActiveSignal.set(true);
+    }
+    startSandboxSpawn(owner: Owner, tier: number) {
+        if (!this.settings.customMode()) return;
+        this.sandboxSpawnPendingSignal.set({ owner, tier });
+    }
+    cancelSandboxSpawn() {
+        this.sandboxSpawnPendingSignal.set(null);
+    }
+    spawnSandboxAt(target: Position) {
+        const pending = this.sandboxSpawnPendingSignal();
+        if (!pending) return;
+        if (!this.settings.customMode()) return;
+        if (this.getUnitAt(target.x, target.y)) return;
+        const points = this.getPointsForTierLevel(pending.tier, 1);
+        const newUnit: Unit = {
+            id: crypto.randomUUID(),
+            position: { ...target },
+            level: 1,
+            tier: pending.tier,
+            points,
+            owner: pending.owner,
+            turnsStationary: 0,
+            forestOccupationTurns: 0,
+            productionActive: false,
+            hasActed: true
+        };
+        this.unitsSignal.update(units => [...units, newUnit]);
+        this.sandboxSpawnPendingSignal.set(null);
+        this.recomputeVisibility();
     }
     private autoDeployFromReserves() {
         const base = this.getBasePosition('player');
