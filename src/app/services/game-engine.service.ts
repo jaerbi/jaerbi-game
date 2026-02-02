@@ -944,7 +944,7 @@ export class GameEngineService {
         ].filter(p => this.inBounds(p.x, p.y));
     }
 
-    private bfsPath(start: Position, target: Position): Position[] | null {
+    private bfsPath(start: Position, target: Position, opts?: { respectWalls?: boolean; avoidFriendlyUnits?: boolean }): Position[] | null {
         const q: { pos: Position; path: Position[] }[] = [{ pos: start, path: [start] }];
         const visited = new Set<string>();
         visited.add(`${start.x},${start.y}`);
@@ -962,6 +962,14 @@ export class GameEngineService {
             for (const nb of neighbors) {
                 const key = `${nb.x},${nb.y}`;
                 if (!visited.has(key)) {
+                    if (opts?.avoidFriendlyUnits) {
+                        const u = this.getUnitAt(nb.x, nb.y);
+                        if (u && u.owner === 'ai') continue;
+                    }
+                    if (opts?.respectWalls) {
+                        const w = this.getWallBetween(curr.pos.x, curr.pos.y, nb.x, nb.y);
+                        if (w) continue;
+                    }
                     visited.add(key);
                     q.push({ pos: nb, path: [...curr.path, nb] });
                 }
@@ -1618,6 +1626,16 @@ export class GameEngineService {
                 }
             }
         } catch { }
+        if (this.turnSignal() <= 10) {
+            let made = 0;
+            const cost1 = this.getPointsForTierLevel(1, 1);
+            while (this.reservePointsSignal().ai >= cost1 && made < 2) {
+                const created = this.aiSpawnTier(1, 1, new Set<string>());
+                if (created === 0) break;
+                made++;
+                await new Promise(r => setTimeout(r, 60));
+            }
+        }
         await new Promise(r => setTimeout(r, 100));
         const currentAiUnits = this.unitsSignal().filter(u => u.owner === 'ai');
         const timeMap = new Map(this.aiUnitTimeNearBaseSignal());
@@ -1789,6 +1807,33 @@ export class GameEngineService {
                 }
             }
 
+            const distToPlayerBase = Math.max(Math.abs(currentUnit.position.x - playerBase.x), Math.abs(currentUnit.position.y - playerBase.y));
+            if (!action && distToPlayerBase < 4) {
+                const canBaseAttack = validMoves.some(m => m.x === playerBase.x && m.y === playerBase.y);
+                if (canBaseAttack) {
+                    action = { type: 'attack', target: playerBase, reason: 'Siege: Strike Base' };
+                } else {
+                    const step = this.getNextStepTowards(currentUnit, playerBase, validMoves);
+                    if (step) {
+                        const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, step.x, step.y);
+                        if (w) {
+                            action = { type: 'wall_attack', target: step, reason: 'Siege: Breach' };
+                        } else {
+                            action = { type: 'move', target: step, reason: 'Siege: Advance on Base' };
+                        }
+                    } else {
+                        const path = this.bfsPath(currentUnit.position, playerBase);
+                        if (path && path.length > 1) {
+                            const nextStep = path[1];
+                            const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, nextStep.x, nextStep.y);
+                            if (w) {
+                                action = { type: 'wall_attack', target: nextStep, reason: 'Siege: Breaching' };
+                            }
+                        }
+                    }
+                }
+            }
+
             // Step A: Survival Check
             if (!action && this.isUnitInDanger(currentUnit)) {
                 const safeMove = this.findSafeMove(currentUnit, validMoves);
@@ -1871,10 +1916,10 @@ export class GameEngineService {
                         // const dist = Math.abs(resourceTarget.x - currentUnit.position.x) + Math.abs(resourceTarget.y - currentUnit.position.y);
                         // if (!fortressMode || dist <= 8) {
                         // Adaptive Pathfinding: Try respecting walls first, then breaching
-                        let path = this.bfsPath(currentUnit.position, resourceTarget); // Respect walls
+                        let path = this.bfsPath(currentUnit.position, resourceTarget, { respectWalls: true, avoidFriendlyUnits: true });
 
                         if (!path) {
-                            path = this.bfsPath(currentUnit.position, resourceTarget); // Ignore walls (breach)
+                            path = this.bfsPath(currentUnit.position, resourceTarget, { avoidFriendlyUnits: true });
                         }
 
                         if (path && path.length > 1) {
