@@ -151,7 +151,7 @@
 
 /* --- NEW SVG & UNIT STYLES --- */
 
-.theme-player {
+.theme-test-player {
   --u-fill: #3b82f6;
   --u-fill2: #3882fa;
   --u-stroke: #60a5fa;
@@ -165,7 +165,7 @@
   --u-emerald-stroke: #34d399;
 }
 
-.theme-ai {
+.theme-test-ai {
   --u-fill: #ef4444;
   --u-fill2: #eb3a3a;
   --u-stroke: #f87171;
@@ -177,6 +177,27 @@
   --u-bg-glow: rgba(239, 68, 68, 0.5);
   --u-emerald: #b91c1c; /* Red T4 */
   --u-emerald-stroke: #ef4444;
+}
+.unit-svg-wrapper.theme-player {
+  --u-fill: #3b82f6;
+  --u-fill2: #3882fa;
+  --u-stroke: #60a5fa;
+  --u-core: #93c5fd;
+  --u-light: #bfdbfe;
+  --u-font: #e2efff;
+  --u-dark: #2563eb;
+  --u-darker: #2263ef;
+}
+
+.unit-svg-wrapper.theme-ai {
+  --u-fill: #ef4444;
+  --u-fill2: #eb3a3a;
+  --u-stroke: #f87171;
+  --u-core: #fca5a5;
+  --u-light: #fecaca;
+  --u-font: #fff4f4;
+  --u-dark: #dc2626;
+  --u-darker: #b91c1c;
 }
 
 .unit-svg-wrapper {
