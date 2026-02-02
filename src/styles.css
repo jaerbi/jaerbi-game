@@ -3,6 +3,10 @@
 @import "tailwindcss";
 @import "./app/styles/units.css";
 
+body {
+    font-family: Roboto, Helvetica, Arial, sans-serif;
+}
+
 /* width */
 ::-webkit-scrollbar {
   width: 10px;

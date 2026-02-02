@@ -7,11 +7,12 @@ import { SettingsService } from './services/settings.service';
 import { FirebaseService } from './services/firebase.service';
 import { SupportCommunityComponent } from './components/support-community/support-community.component';
 import { LeaderboardModalComponent } from './components/leaderboard-modal/leaderboard-modal.component';
+import { UnitsComponent } from './components/units/units.component';
 
 @Component({
     selector: 'app-game',
     standalone: true,
-    imports: [CommonModule, GameRulesComponent, SupportCommunityComponent, LeaderboardModalComponent],
+    imports: [CommonModule, GameRulesComponent, SupportCommunityComponent, LeaderboardModalComponent, UnitsComponent],
     templateUrl: './app-game.html',
     styleUrl: './app.css'
 })

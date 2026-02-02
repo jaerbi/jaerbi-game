@@ -156,6 +156,7 @@
   --u-stroke: #60a5fa;
   --u-core: #93c5fd;
   --u-light: #bfdbfe;
+  --u-font: #e2efff;
   --u-dark: #2563eb;
   --u-bg-glow: rgba(59, 130, 246, 0.5);
   --u-emerald: #10b981; /* Keep T4 distinct or map to blue? User said blue-ish. Let's map emerald to a teal/cyan for player T4 */
@@ -167,6 +168,7 @@
   --u-stroke: #f87171;
   --u-core: #fca5a5;
   --u-light: #fecaca;
+  --u-font: #fff4f4;
   --u-dark: #dc2626;
   --u-bg-glow: rgba(239, 68, 68, 0.5);
   --u-emerald: #b91c1c; /* Red T4 */
@@ -174,16 +176,20 @@
 }
 
 .unit-svg-wrapper {
-    width: 100%;
-    height: 100%;
-    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
     transition: transform 0.2s ease-out, filter 0.2s;
+    position: relative; 
+    overflow: visible;
 }
 
 .unit-svg-wrapper:hover {
-    transform: scale(1.05);
-    filter: drop-shadow(0 0 8px var(--u-bg-glow));
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 12px var(--u-bg-glow));
 }
 
 .move-anim {
