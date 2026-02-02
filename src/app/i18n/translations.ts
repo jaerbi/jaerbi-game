@@ -46,6 +46,7 @@ export type TranslationKey =
   | 'MOVEMENT'
   | 'T1_1_TILE'
   | 'T3_3_TILES'
+  | 'T4_4_TILES'
   | 'FOREST_CYCLE'
   | 'TURN_1'
   | 'TURN_2'
@@ -472,6 +473,10 @@ export type TranslationKey =
   T3_3_TILES: {
     en: 'T3: 3 tiles',
     uk: 'T3: 3 клітинки',
+  },
+  T4_4_TILES: {
+    en: 'T4: 4 tiles',
+    uk: 'T4: 4 клітинки',
   },
   FOREST_CYCLE: {
     en: 'Forest Cycle',
