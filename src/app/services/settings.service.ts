@@ -15,7 +15,7 @@ export class SettingsService {
     private difficultySignal = signal<Difficulty>('normal');
     private mapSizeSignal = signal<MapSize>(10);
     private langSignal = signal<LangCode>('uk');
-    public version = 'v.0.7.4';
+    public version = 'v.0.7.5';
     public diffArr: Difficulty[] = ['baby', 'normal', 'hard', 'nightmare'];
     private storageKey = 'shape_tactics_settings';
 

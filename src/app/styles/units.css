@@ -153,23 +153,27 @@
 
 .theme-player {
   --u-fill: #3b82f6;
+  --u-fill2: #3882fa;
   --u-stroke: #60a5fa;
   --u-core: #93c5fd;
   --u-light: #bfdbfe;
   --u-font: #e2efff;
   --u-dark: #2563eb;
+  --u-darker: #2263ef;
   --u-bg-glow: rgba(59, 130, 246, 0.5);
-  --u-emerald: #10b981; /* Keep T4 distinct or map to blue? User said blue-ish. Let's map emerald to a teal/cyan for player T4 */
+  --u-emerald: #10b981;
   --u-emerald-stroke: #34d399;
 }
 
 .theme-ai {
   --u-fill: #ef4444;
+  --u-fill2: #eb3a3a;
   --u-stroke: #f87171;
   --u-core: #fca5a5;
   --u-light: #fecaca;
   --u-font: #fff4f4;
   --u-dark: #dc2626;
+  --u-darker: #b91c1c;
   --u-bg-glow: rgba(239, 68, 68, 0.5);
   --u-emerald: #b91c1c; /* Red T4 */
   --u-emerald-stroke: #ef4444;
