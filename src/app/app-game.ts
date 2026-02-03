@@ -87,6 +87,7 @@ export class AppGame {
         el.scrollTo({ left: targetLeft, top: targetTop, behavior: 'smooth' });
     }
 
+    private activeKeys = new Set<string>();
     @HostListener('window:keydown', ['$event'])
     onKeyDown(event: KeyboardEvent) {
         if (this.gameEngine.gameStatus() !== 'playing') return;
@@ -106,30 +107,51 @@ export class AppGame {
         }
         const unit = this.gameEngine.selectedUnit();
         if (!unit || unit.hasActed) return;
+        this.activeKeys.add(key);
         let dx = 0, dy = 0;
-        if (key === 'ArrowUp' || key.toLowerCase() === 'w') dy = -1;
-        else if (key === 'ArrowDown' || key.toLowerCase() === 's') dy = 1;
-        else if (key === 'ArrowLeft' || key.toLowerCase() === 'a') dx = -1;
-        else if (key === 'ArrowRight' || key.toLowerCase() === 'd') dx = 1;
-        else return;
+        if (this.activeKeys.has('ArrowUp') || this.activeKeys.has('w') || this.activeKeys.has('W')) dy -= 1;
+        if (this.activeKeys.has('ArrowDown') || this.activeKeys.has('s') || this.activeKeys.has('S')) dy += 1;
+        if (this.activeKeys.has('ArrowLeft') || this.activeKeys.has('a') || this.activeKeys.has('A')) dx -= 1;
+        if (this.activeKeys.has('ArrowRight') || this.activeKeys.has('d') || this.activeKeys.has('D')) dx += 1;
+        if (dx === 0 && dy === 0) return;
         event.preventDefault();
-        const tx = unit.position.x + dx;
-        const ty = unit.position.y + dy;
-        const from = { x: unit.position.x, y: unit.position.y };
-        const to = { x: tx, y: ty };
-        const wall = this.gameEngine.getWallBetween(from.x, from.y, to.x, to.y);
-        if (wall) {
-            this.gameEngine.attackOrDestroyWallBetween(from, to);
+        const moves = this.gameEngine.validMoves();
+        const isDiagonal = dx !== 0 && dy !== 0;
+        const maxSteps = isDiagonal ? (unit.tier === 4 ? 3 : 1) : (unit.tier >= 3 ? 2 : unit.tier === 2 ? 2 : 1);
+        let target = null as { x: number; y: number } | null;
+        for (let step = 1; step <= maxSteps; step++) {
+            const tx = unit.position.x + dx * step;
+            const ty = unit.position.y + dy * step;
+            const candidate = { x: tx, y: ty };
+            if (moves.some(m => m.x === tx && m.y === ty)) {
+                target = candidate;
+            } else {
+                break;
+            }
+        }
+        if (!target) {
+            const from = { x: unit.position.x, y: unit.position.y };
+            const to = { x: unit.position.x + dx, y: unit.position.y + dy };
+            const wall = this.gameEngine.getWallBetween(from.x, from.y, to.x, to.y);
+            if (wall) {
+                this.gameEngine.attackOrDestroyWallBetween(from, to);
+                return;
+            }
+            const tu = this.gameEngine.getUnitAt(to.x, to.y);
+            if (tu && tu.owner !== unit.owner) {
+                this.gameEngine.moveSelectedUnit(to);
+                return;
+            }
+            if (this.gameEngine.isValidMove(to.x, to.y)) {
+                this.gameEngine.moveSelectedUnit(to);
+            }
             return;
         }
-        const targetUnit = this.gameEngine.getUnitAt(tx, ty);
-        if (targetUnit && targetUnit.owner !== unit.owner) {
-            this.gameEngine.moveSelectedUnit(to);
-            return;
-        }
-        if (this.gameEngine.isValidMove(tx, ty)) {
-            this.gameEngine.moveSelectedUnit(to);
-        }
+        this.gameEngine.moveSelectedUnit(target);
+    }
+    @HostListener('window:keyup', ['$event'])
+    onKeyUp(event: KeyboardEvent) {
+        this.activeKeys.delete(event.key);
     }
     onDifficultyChange(diff: any) {
         this.settings.setDifficulty(diff);
@@ -176,6 +198,18 @@ export class AppGame {
         if (this.gameEngine.selectedUnit() && this.gameEngine.isValidMove(x, y)) {
             this.gameEngine.moveSelectedUnit({ x, y });
             return;
+        }
+        const sel = this.gameEngine.selectedUnit();
+        if (sel) {
+            const dx = x - sel.position.x;
+            const dy = y - sel.position.y;
+            if ((Math.abs(dx) + Math.abs(dy)) === 1) {
+                const wall = this.gameEngine.getWallBetween(sel.position.x, sel.position.y, x, y);
+                if (wall) {
+                    this.gameEngine.attackOrDestroyWallBetween(sel.position, { x, y });
+                    return;
+                }
+            }
         }
 
         // If clicking on a unit owned by player, select it
