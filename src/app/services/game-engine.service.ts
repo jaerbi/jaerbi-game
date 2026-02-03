@@ -469,6 +469,16 @@ export class GameEngineService {
                     }
                     this.shakenUnitIdSignal.set(targetUnit.id);
                     setTimeout(() => this.shakenUnitIdSignal.set(null), 200);
+                    const hitChance = this.combat.calculateHitChance(movingUnit, targetUnit);
+                    const hitRoll = Math.floor(Math.random() * 100) + 1;
+                    if (hitRoll > hitChance) {
+                        this.queueCombatText('DEFLECTED!', target);
+                        this.log.addCombat(movingUnit.owner, `[Combat] DEFLECTED! T${movingUnit.tier} failed to penetrate T${targetUnit.tier}. Attacker destroyed.`, false);
+                        updatedUnits.splice(unitIndex, 1);
+                        return updatedUnits;
+                    } else {
+                        this.log.addCombat(movingUnit.owner, `[Combat] HIT! T${movingUnit.tier} breached T${targetUnit.tier} armor.`, false);
+                    }
                     const attackerBase = this.calculateTotalPoints(movingUnit);
                     const luckObj = this.getAttackLuckModifier(movingUnit);
                     const defenderBase = this.calculateTotalPoints(targetUnit);
@@ -1214,6 +1224,26 @@ export class GameEngineService {
         const luck = this.getLuckDeltaForTier(u.tier);
         const def = this.getDefenseBonus(u);
         return { atkMin: Math.max(0, base - luck), atkMax: base + luck, hp: u.points, support: def };
+    }
+    isUnitHovered(id: string): boolean {
+        return this.hoveredUnitIdSignal() === id;
+    }
+    getHitChanceInfo(targetUnitId: string): { chance: number; bg: string; icon: string; skull: boolean } | null {
+        const attacker = this.selectedUnit();
+        if (!attacker) return null;
+        const defender = this.unitsSignal().find(u => u.id === targetUnitId);
+        if (!defender) return null;
+        if (attacker.owner !== 'player') return null;
+        if (defender.owner === attacker.owner) return null;
+        if (!this.isVisibleToPlayer(defender.position.x, defender.position.y)) return null;
+        const canAttack = this.validMoves().some(m => m.x === defender.position.x && m.y === defender.position.y);
+        if (!canAttack) return null;
+        const chance = this.combat.calculateHitChance(attacker, defender);
+        let bg = 'bg-green-600';
+        if (chance < 50) bg = 'bg-red-600';
+        else if (chance < 100) bg = 'bg-amber-600';
+        const skull = chance < 10;
+        return { chance, bg, icon: skull ? '☠️' : '⚔️', skull };
     }
     shouldRenderWall(tile1: Position, tile2: Position, owner?: 'player' | 'ai' | 'neutral'): boolean {
         const wall = this.getWallBetween(tile1.x, tile1.y, tile2.x, tile2.y);
