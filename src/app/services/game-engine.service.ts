@@ -258,11 +258,11 @@ export class GameEngineService {
         if (difficulty === 'baby') {
             this.reservePointsSignal.set({ player: 5, ai: 5 });
         } else if (difficulty === 'normal') {
-            this.reservePointsSignal.set({ player: 5, ai: 5 });
+            this.reservePointsSignal.set({ player: 1, ai: 1 });
         } else if (difficulty === 'hard') {
-            this.reservePointsSignal.set({ player: 5, ai: 10 });
+            this.reservePointsSignal.set({ player: 1, ai: 3 });
         } else {
-            this.reservePointsSignal.set({ player: 5, ai: 15 });
+            this.reservePointsSignal.set({ player: 1, ai: 5 });
         }
 
         this.deployTargetsSignal.set([]);
@@ -2149,6 +2149,16 @@ export class GameEngineService {
             }
         }
 
+        // Overcoming unit limitations:
+        // If AvailableReserve > 25 and ForestOwnership > 5, force building T3 (ignore type cap)
+        {
+            const reservesNow = this.reservePointsSignal().ai;
+            const aiOwnedForests = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
+            if (reservesNow > 25 && aiOwnedForests > 5) {
+                const made = this.aiSpawnTier(3, 1, new Set<string>(), true);
+                if (made > 0) return true;
+            }
+        }
         // 3. Expansion Spawning (Only if not threatened)
         if (threatsBase.length === 0) {
             // Logic from original code, but single step
@@ -2258,7 +2268,7 @@ export class GameEngineService {
     }
     // --- Spawning ---
 
-    private aiSpawnTier(tier: number, maxCount: number, blocked: Set<string>) {
+    private aiSpawnTier(tier: number, maxCount: number, blocked: Set<string>, overrideCap: boolean = false) {
         const base = this.getBasePosition('ai');
         const candidates: Position[] = [];
         const radius = 2;
@@ -2282,7 +2292,7 @@ export class GameEngineService {
         const countExclForests = (t: number) =>
             this.unitsSignal().filter(u => u.owner === 'ai' && u.tier === t && !this.isForest(u.position.x, u.position.y)).length;
         const typeCapReached = countExclForests(tier) >= 5;
-        if (typeCapReached) {
+        if (typeCapReached && !(overrideCap && tier === 3)) {
             return 0;
         }
         for (const pos of candidates) {
@@ -2347,7 +2357,8 @@ export class GameEngineService {
             ];
         } else {
             unitsToCreate = [
-                { tier: 1, level: 1 }
+                { tier: 1, level: 1 },
+                { tier: 1, level: 1 },
             ];
         }
         const newUnits: Unit[] = [];
