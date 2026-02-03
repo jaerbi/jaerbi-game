@@ -824,6 +824,10 @@
         opacity: 0.6;
       }
     }
+    .move-anim {
+      transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      will-change: transform;
+    }
   </style>
 
   <div class="relative z-10">
@@ -1027,14 +1031,20 @@
                       class="absolute rounded-xs right-0 top-0 h-full flex items-center justify-center"
                       [style.right.px]="-gameEngine.wallThicknessPx - 2"
                       [style.width.px]="gameEngine.wallThicknessPx"
-                      [style.height.%]="vWall.health"
+                      [style.height.%]="(vWall.health / (vWall.maxHealth || 100)) * 100"
                       [style.z-index]="40"
                       [style.transition]="'height 0.25s ease-out'"
-                      [class.bg-lime-400]="vWall.owner === 'player'"
+                      [class.bg-blue-400]="vWall.owner === 'player'"
                       [class.bg-red-400]="vWall.owner === 'ai'"
+                      [class.wall-formation-player]="vWall.owner === 'player'"
+                      [class.wall-formation-ai]="vWall.owner === 'ai'"
                       [class.bg-gray-300]="vWall.owner === 'neutral'"
                       [class.shake]="gameEngine.isWallShaking(vWall.id)"
+                      [class.wall-formation-active]="gameEngine.isFormationHovered(vWall.formationId)"
+                      (mouseenter)="gameEngine.hoverFormationById(vWall.formationId)"
+                      (mouseleave)="gameEngine.hoverFormationById(null)"
                     >
+                      <!-- hover glow only -->
                       @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x + 1, y: y })) {
                         <button
                           class="absolute cursor-pointer shadow-2xl flex items-center justify-center text-white rounded-full border border-white/20 hover:scale-110 active:scale-95 transition-all z-[45]"
@@ -1121,14 +1131,20 @@
                       class="absolute rounded-xs left-0 bottom-0 w-full flex items-center justify-center"
                       [style.bottom.px]="-gameEngine.wallThicknessPx - 2"
                       [style.height.px]="gameEngine.wallThicknessPx"
-                      [style.width.%]="hWall.health"
+                      [style.width.%]="(hWall.health / (hWall.maxHealth || 100)) * 100"
                       [style.z-index]="40"
                       [style.transition]="'width 0.25s ease-out'"
-                      [class.bg-lime-400]="hWall.owner === 'player'"
+                      [class.bg-blue-400]="hWall.owner === 'player'"
                       [class.bg-red-400]="hWall.owner === 'ai'"
+                      [class.wall-formation-player]="hWall.owner === 'player'"
+                      [class.wall-formation-ai]="hWall.owner === 'ai'"
                       [class.bg-gray-300]="hWall.owner === 'neutral'"
                       [class.shake]="gameEngine.isWallShaking(hWall.id)"
+                      [class.wall-formation-active]="gameEngine.isFormationHovered(hWall.formationId)"
+                      (mouseenter)="gameEngine.hoverFormationById(hWall.formationId)"
+                      (mouseleave)="gameEngine.hoverFormationById(null)"
                     >
+                      <!-- hover glow only -->
                       @if (gameEngine.canShowAttackIcon({ x: x, y: y }, { x: x, y: y + 1 })) {
                         <button
                           class="absolute cursor-pointer shadow-2xl flex items-center justify-center text-white rounded-full border border-white/20 hover:scale-110 active:scale-95 transition-all z-[45]"
@@ -1214,15 +1230,8 @@
                     <div
                       class="pointer-events-none move-anim"
                       [class.shake]="gameEngine.isUnitShaking(unit.id)"
-                      [style.transform]="
-                        gameEngine.getNudgeFor(unit.id)
-                          ? 'translate(' +
-                            gameEngine.getNudgeFor(unit.id)!.dx +
-                            'px,' +
-                            gameEngine.getNudgeFor(unit.id)!.dy +
-                            'px)'
-                          : 'translate(0,0)'
-                      "
+                      [style.transform]="gameEngine.getCombinedTransform(unit.id)"
+                      [style.z-index]="(gameEngine.isUnitMoving(unit.id) || gameEngine.isUnitAttacking(unit.id)) ? 200 : null"
                     >
                       <!-- [class.ring-4]="gameEngine.selectedUnitId() === unit.id"
                         [class.ring-yellow-400]="gameEngine.selectedUnitId() === unit.id"

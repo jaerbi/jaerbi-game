@@ -107,16 +107,28 @@ export class AppGame {
         const unit = this.gameEngine.selectedUnit();
         if (!unit || unit.hasActed) return;
         let dx = 0, dy = 0;
-        if (key === 'ArrowUp') dy = -1;
-        else if (key === 'ArrowDown') dy = 1;
-        else if (key === 'ArrowLeft') dx = -1;
-        else if (key === 'ArrowRight') dx = 1;
+        if (key === 'ArrowUp' || key.toLowerCase() === 'w') dy = -1;
+        else if (key === 'ArrowDown' || key.toLowerCase() === 's') dy = 1;
+        else if (key === 'ArrowLeft' || key.toLowerCase() === 'a') dx = -1;
+        else if (key === 'ArrowRight' || key.toLowerCase() === 'd') dx = 1;
         else return;
         event.preventDefault();
         const tx = unit.position.x + dx;
         const ty = unit.position.y + dy;
+        const from = { x: unit.position.x, y: unit.position.y };
+        const to = { x: tx, y: ty };
+        const wall = this.gameEngine.getWallBetween(from.x, from.y, to.x, to.y);
+        if (wall) {
+            this.gameEngine.attackOrDestroyWallBetween(from, to);
+            return;
+        }
+        const targetUnit = this.gameEngine.getUnitAt(tx, ty);
+        if (targetUnit && targetUnit.owner !== unit.owner) {
+            this.gameEngine.moveSelectedUnit(to);
+            return;
+        }
         if (this.gameEngine.isValidMove(tx, ty)) {
-            this.gameEngine.moveSelectedUnit({ x: tx, y: ty });
+            this.gameEngine.moveSelectedUnit(to);
         }
     }
     onDifficultyChange(diff: any) {

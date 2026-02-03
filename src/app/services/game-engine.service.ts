@@ -16,6 +16,10 @@ interface Wall {
     tile2: Position;
     health: number;
     owner: 'player' | 'ai' | 'neutral';
+    formationId?: string;
+    formationSize?: number;
+    maxHealth?: number;
+    bonusHp?: number;
 }
 
 interface TurnContext {
@@ -58,6 +62,7 @@ export class GameEngineService {
     private wallBuiltThisTurnSignal = signal<boolean>(false);
     private rulesOpenSignal = signal<boolean>(false);
     private movedThisTurnSignal = signal<Set<string>>(new Set<string>());
+    private hoveredFormationIdSignal = signal<string | null>(null);
     private aiWoodSignal = signal<number>(0);
     private logsOpenSignal = signal<boolean>(false);
     private settingsOpenSignal = signal<boolean>(false);
@@ -95,6 +100,9 @@ export class GameEngineService {
     private aiInvalidActionCountSignal = signal<number>(0);
     private aiLastRejectedActionKeySignal = signal<string | null>(null);
     private sandboxSpawnPendingSignal = signal<{ owner: Owner; tier: number } | null>(null);
+    private unitMoveOffsetSignal = signal<Map<string, { dx: number; dy: number }>>(new Map());
+    private movingUnitsSignal = signal<Set<string>>(new Set());
+    private attackingUnitsSignal = signal<Set<string>>(new Set());
 
     // Computed signals
     readonly units = this.unitsSignal.asReadonly();
@@ -123,6 +131,23 @@ export class GameEngineService {
     readonly aiUnitTimeNearBase = this.aiUnitTimeNearBaseSignal.asReadonly();
     sandboxSpawnPending(): { owner: Owner; tier: number } | null {
         return this.sandboxSpawnPendingSignal();
+    }
+    getMoveOffsetFor(id: string): { dx: number; dy: number } | null {
+        const m = this.unitMoveOffsetSignal();
+        return m.get(id) ?? null;
+    }
+    isUnitMoving(id: string): boolean {
+        return this.movingUnitsSignal().has(id);
+    }
+    isUnitAttacking(id: string): boolean {
+        return this.attackingUnitsSignal().has(id);
+    }
+    getCombinedTransform(id: string): string {
+        const n = this.attackerNudgeSignal();
+        const off = this.getMoveOffsetFor(id);
+        const dx = (n && n.id === id ? n.dx : 0) + (off ? off.dx : 0);
+        const dy = (n && n.id === id ? n.dy : 0) + (off ? off.dy : 0);
+        return `translate(${dx}px, ${dy}px)`;
     }
     aggressionMode(): boolean {
         return this.aggressionModeSignal();
@@ -315,19 +340,25 @@ export class GameEngineService {
             if (wallCheck.hitEnemy) {
                 const lastFrom = wallCheck.lastFrom!;
                 const wall = this.getWallBetween(lastFrom.x, lastFrom.y, target.x, target.y)!;
-                const dmgPercent = wall.owner === 'neutral' ? 100 : this.combat.getWallHitPercent(movingUnit.tier);
-                this.wallsSignal.update(ws =>
-                    ws
-                        .map(w =>
-                            w.id === wall.id
-                                ? { ...w, health: Math.max(0, (w as any).health - dmgPercent) }
-                                : w
-                        )
-                        .filter((w: any) => (w.health ?? w.hitsRemaining ?? 0) > 0)
-                );
+                {
+                    const maxH = wall.maxHealth ?? 100;
+                    const damageAbs = this.combat.getWallHitAmount(movingUnit.tier);
+                    const nextHealth = Math.max(0, wall.health - damageAbs);
+                    this.wallsSignal.update(ws =>
+                        ws
+                            .map(w =>
+                                w.id === wall.id
+                                    ? { ...w, health: nextHealth }
+                                    : w
+                            )
+                            .filter((w: any) => (w.health ?? w.hitsRemaining ?? 0) > 0)
+                    );
+                    const ownerText = wall.owner === 'neutral' ? 'Neutral' : (wall.owner === 'player' ? 'Player' : 'AI');
+                    this.appendLog(`[Combat] Tier ${movingUnit.tier} Unit attacked ${ownerText} Wall. Damage: ${damageAbs}. Wall HP: ${nextHealth}/${maxH}.`);
+                }
+                this.updateWallFormations();
                 this.shakenWallIdSignal.set(wall.id);
                 setTimeout(() => this.shakenWallIdSignal.set(null), 200);
-                this.appendLog(`[Turn ${this.turnSignal()}] ${movingUnit.owner === 'player' ? 'Player' : 'AI'} auto-hit wall between (${lastFrom.x},${lastFrom.y})-(${target.x},${target.y}) for ${dmgPercent}% damage.`);
                 return updatedUnits;
             }
 
@@ -411,9 +442,30 @@ export class GameEngineService {
                         return updatedUnits; // blocked by isValidMove; safety
                     }
                 } else {
-                    if (movingUnit.owner === 'player' || this.gridSize <= 20) {
-                        this.attackerNudgeSignal.set({ id: movingUnit.id, dx: stepX * 8, dy: stepY * 8 });
-                        setTimeout(() => this.attackerNudgeSignal.set(null), 150);
+                    // Attack lunge for both Player and AI: ping-pong towards target axis
+                    {
+                        const dxTotal = target.x - start.x;
+                        const dyTotal = target.y - start.y;
+                        const useX = Math.abs(dxTotal) >= Math.abs(dyTotal);
+                        const step = useX ? Math.sign(dxTotal) : Math.sign(dyTotal);
+                        const gap = this.wallThicknessPx + 2;
+                        const cell = this.tileSizePx + gap;
+                        const amp = Math.round(cell * 0.35);
+                        const dx = useX ? step * amp : 0;
+                        const dy = useX ? 0 : step * amp;
+                        const s = new Set(this.attackingUnitsSignal());
+                        s.add(movingUnit.id);
+                        this.attackingUnitsSignal.set(s);
+                        this.attackerNudgeSignal.set({ id: movingUnit.id, dx, dy });
+                        setTimeout(() => {
+                            this.attackerNudgeSignal.set({ id: movingUnit.id, dx: 0, dy: 0 });
+                        }, 100);
+                        setTimeout(() => {
+                            this.attackerNudgeSignal.set(null);
+                            const s2 = new Set(this.attackingUnitsSignal());
+                            s2.delete(movingUnit.id);
+                            this.attackingUnitsSignal.set(s2);
+                        }, 200);
                     }
                     this.shakenUnitIdSignal.set(targetUnit.id);
                     setTimeout(() => this.shakenUnitIdSignal.set(null), 200);
@@ -532,6 +584,34 @@ export class GameEngineService {
 
             return updatedUnits;
         });
+
+        // Smooth movement offset: render at target tile with offset back to start, then animate to zero
+        const dxTiles = target.x - unit.position.x;
+        const dyTiles = target.y - unit.position.y;
+        const gap = this.wallThicknessPx + 2;
+        const cell = this.tileSizePx + gap;
+        const off = { dx: -dxTiles * cell, dy: -dyTiles * cell };
+        if (dxTiles !== 0 || dyTiles !== 0) {
+            const offMap = new Map(this.unitMoveOffsetSignal());
+            offMap.set(unit.id, off);
+            this.unitMoveOffsetSignal.set(offMap);
+            const moving = new Set(this.movingUnitsSignal());
+            moving.add(unit.id);
+            this.movingUnitsSignal.set(moving);
+            setTimeout(() => {
+                const m2 = new Map(this.unitMoveOffsetSignal());
+                m2.set(unit.id, { dx: 0, dy: 0 });
+                this.unitMoveOffsetSignal.set(m2);
+                setTimeout(() => {
+                    const m3 = new Map(this.unitMoveOffsetSignal());
+                    m3.delete(unit.id);
+                    this.unitMoveOffsetSignal.set(m3);
+                    const s = new Set(this.movingUnitsSignal());
+                    s.delete(unit.id);
+                    this.movingUnitsSignal.set(s);
+                }, 180);
+            }, 0);
+        }
 
         if (merged) {
             // For simple merge, the moving unit is gone, so we highlight target?
@@ -875,7 +955,7 @@ export class GameEngineService {
         ].filter(p => this.inBounds(p.x, p.y));
     }
 
-    private bfsPath(start: Position, target: Position): Position[] | null {
+    private bfsPath(start: Position, target: Position, opts?: { respectWalls?: boolean; avoidFriendlyUnits?: boolean }): Position[] | null {
         const q: { pos: Position; path: Position[] }[] = [{ pos: start, path: [start] }];
         const visited = new Set<string>();
         visited.add(`${start.x},${start.y}`);
@@ -893,6 +973,14 @@ export class GameEngineService {
             for (const nb of neighbors) {
                 const key = `${nb.x},${nb.y}`;
                 if (!visited.has(key)) {
+                    if (opts?.avoidFriendlyUnits) {
+                        const u = this.getUnitAt(nb.x, nb.y);
+                        if (u && u.owner === 'ai') continue;
+                    }
+                    if (opts?.respectWalls) {
+                        const w = this.getWallBetween(curr.pos.x, curr.pos.y, nb.x, nb.y);
+                        if (w) continue;
+                    }
                     visited.add(key);
                     q.push({ pos: nb, path: [...curr.path, nb] });
                 }
@@ -1134,6 +1222,98 @@ export class GameEngineService {
         if (ow === 'player') return true;
         if (this.fogDebugDisabledSignal()) return true;
         return this.isVisibleToPlayer(tile1.x, tile1.y) || this.isVisibleToPlayer(tile2.x, tile2.y);
+    }
+    hoverFormationById(id: string | undefined | null) {
+        this.hoveredFormationIdSignal.set(id ?? null);
+    }
+    isFormationHovered(id?: string | null): boolean {
+        if (!id) return false;
+        return this.hoveredFormationIdSignal() === id;
+    }
+    getFormationInfo(id: string | null | undefined): { size: number; bonus: number } | null {
+        const fid = id ?? null;
+        if (!fid) return null;
+        const w = this.wallsSignal().find(x => x.formationId === fid);
+        if (!w) return null;
+        return { size: w.formationSize ?? 1, bonus: w.bonusHp ?? 0 };
+    }
+    updateWallFormations() {
+        const wallsAll = this.wallsSignal();
+        if (wallsAll.length === 0) return;
+        const byId = new Map<string, Wall>();
+        const byNode = new Map<string, string[]>();
+        for (const w of wallsAll) {
+            byId.set(w.id, w);
+            const k1 = `${w.tile1.x},${w.tile1.y}`;
+            const k2 = `${w.tile2.x},${w.tile2.y}`;
+            const arr1 = byNode.get(k1) ?? [];
+            arr1.push(w.id);
+            byNode.set(k1, arr1);
+            const arr2 = byNode.get(k2) ?? [];
+            arr2.push(w.id);
+            byNode.set(k2, arr2);
+        }
+        const visited = new Set<string>();
+        const groups: string[][] = [];
+        for (const w of wallsAll) {
+            if (visited.has(w.id)) continue;
+            // // Skip neutral walls for grouping
+            if (w.owner === 'neutral') {
+                groups.push([w.id]);
+                visited.add(w.id);
+                continue;
+            }
+            const q: string[] = [w.id];
+            visited.add(w.id);
+            const group: string[] = [];
+            const owner = w.owner;
+            while (q.length > 0) {
+                const id = q.shift()!;
+                group.push(id);
+                const curr = byId.get(id)!;
+                const nodes = [`${curr.tile1.x},${curr.tile1.y}`, `${curr.tile2.x},${curr.tile2.y}`];
+                for (const nk of nodes) {
+                    const neighbors = byNode.get(nk) ?? [];
+                    for (const nid of neighbors) {
+                        if (!visited.has(nid)) {
+                            const neighborWall = byId.get(nid)!;
+                            // Strict touch and owner match; exclude neutral
+                            if (neighborWall.owner === owner) {
+                                visited.add(nid);
+                                q.push(nid);
+                            }
+                        }
+                    }
+                }
+            }
+            groups.push(group);
+        }
+        const nextWalls = wallsAll.map(w => ({ ...w }));
+        const idxById = new Map<string, number>();
+        for (let i = 0; i < nextWalls.length; i++) idxById.set(nextWalls[i].id, i);
+        for (const group of groups) {
+            const any = byId.get(group[0])!;
+            const isNeutralGroup = any.owner === 'neutral';
+            const size = isNeutralGroup ? 1 : group.length;
+            const bonus = isNeutralGroup ? 0 : Math.min(80, Math.max(0, (size - 1) * 20));
+            const newMax = 100 + bonus;
+            const formationId = isNeutralGroup ? null : group[0];
+            for (const id of group) {
+                const i = idxById.get(id)!;
+                const w = nextWalls[i];
+                const oldMax = w.maxHealth ?? 100;
+                const bonusDiff = newMax - oldMax;
+                let newHealth = w.health;
+                if (bonusDiff > 0) {
+                    newHealth = w.health + bonusDiff;
+                } else if (bonusDiff < 0) {
+                    newHealth = Math.min(w.health, newMax);
+                }
+                newHealth = Math.max(0, Math.min(newMax, newHealth));
+                nextWalls[i] = { ...w, formationId: formationId ?? undefined, formationSize: size, maxHealth: newMax, bonusHp: bonus, health: newHealth };
+            }
+        }
+        this.wallsSignal.set(nextWalls);
     }
     getCombatTextEntriesAt(x: number, y: number): { id: string; text: string; opacity: number }[] {
         return this.combatTextsSignal()
@@ -1549,6 +1729,16 @@ export class GameEngineService {
                 }
             }
         } catch { }
+        if (this.turnSignal() <= 10) {
+            let made = 0;
+            const cost1 = this.getPointsForTierLevel(1, 1);
+            while (this.reservePointsSignal().ai >= cost1 && made < 2) {
+                const created = this.aiSpawnTier(1, 1, new Set<string>());
+                if (created === 0) break;
+                made++;
+                await new Promise(r => setTimeout(r, 60));
+            }
+        }
         await new Promise(r => setTimeout(r, 100));
         const currentAiUnits = this.unitsSignal().filter(u => u.owner === 'ai');
         const timeMap = new Map(this.aiUnitTimeNearBaseSignal());
@@ -1720,6 +1910,33 @@ export class GameEngineService {
                 }
             }
 
+            const distToPlayerBase = Math.max(Math.abs(currentUnit.position.x - playerBase.x), Math.abs(currentUnit.position.y - playerBase.y));
+            if (!action && distToPlayerBase < 4) {
+                const canBaseAttack = validMoves.some(m => m.x === playerBase.x && m.y === playerBase.y);
+                if (canBaseAttack) {
+                    action = { type: 'attack', target: playerBase, reason: 'Siege: Strike Base' };
+                } else {
+                    const step = this.getNextStepTowards(currentUnit, playerBase, validMoves);
+                    if (step) {
+                        const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, step.x, step.y);
+                        if (w) {
+                            action = { type: 'wall_attack', target: step, reason: 'Siege: Breach' };
+                        } else {
+                            action = { type: 'move', target: step, reason: 'Siege: Advance on Base' };
+                        }
+                    } else {
+                        const path = this.bfsPath(currentUnit.position, playerBase);
+                        if (path && path.length > 1) {
+                            const nextStep = path[1];
+                            const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, nextStep.x, nextStep.y);
+                            if (w) {
+                                action = { type: 'wall_attack', target: nextStep, reason: 'Siege: Breaching' };
+                            }
+                        }
+                    }
+                }
+            }
+
             // Step A: Survival Check
             if (!action && this.isUnitInDanger(currentUnit)) {
                 const safeMove = this.findSafeMove(currentUnit, validMoves);
@@ -1802,10 +2019,10 @@ export class GameEngineService {
                         // const dist = Math.abs(resourceTarget.x - currentUnit.position.x) + Math.abs(resourceTarget.y - currentUnit.position.y);
                         // if (!fortressMode || dist <= 8) {
                         // Adaptive Pathfinding: Try respecting walls first, then breaching
-                        let path = this.bfsPath(currentUnit.position, resourceTarget); // Respect walls
+                        let path = this.bfsPath(currentUnit.position, resourceTarget, { respectWalls: true, avoidFriendlyUnits: true });
 
                         if (!path) {
-                            path = this.bfsPath(currentUnit.position, resourceTarget); // Ignore walls (breach)
+                            path = this.bfsPath(currentUnit.position, resourceTarget, { avoidFriendlyUnits: true });
                         }
 
                         if (path && path.length > 1) {
@@ -2265,6 +2482,7 @@ export class GameEngineService {
                 owner: 'player'
             }
         ]);
+        this.updateWallFormations();
         this.resourcesSignal.update(r => ({ wood: r.wood - 10 }));
         this.buildModeSignal.set(false);
         this.wallBuiltThisTurnSignal.set(true);
@@ -2452,27 +2670,56 @@ export class GameEngineService {
         if (!unit) return;
         if (actor === 'player' && unit.hasActed) return;
 
-        const dmgPercent = wall.owner === 'neutral' ? 100 : this.combat.getWallHitPercent(unit.tier);
+        // Attack lunge ping-pong for wall attacks
+        {
+            const dxTotal = tile2.x - tile1.x;
+            const dyTotal = tile2.y - tile1.y;
+            const useX = Math.abs(dxTotal) >= Math.abs(dyTotal);
+            const step = useX ? Math.sign(dxTotal) : Math.sign(dyTotal);
+            const gap = this.wallThicknessPx + 2;
+            const cell = this.tileSizePx + gap;
+            const amp = Math.round(cell * 0.35);
+            const dx = useX ? step * amp : 0;
+            const dy = useX ? 0 : step * amp;
+            const s = new Set(this.attackingUnitsSignal());
+            s.add(unit.id);
+            this.attackingUnitsSignal.set(s);
+            this.attackerNudgeSignal.set({ id: unit.id, dx, dy });
+            setTimeout(() => {
+                this.attackerNudgeSignal.set({ id: unit.id, dx: 0, dy: 0 });
+            }, 100);
+            setTimeout(() => {
+                this.attackerNudgeSignal.set(null);
+                const s2 = new Set(this.attackingUnitsSignal());
+                s2.delete(unit.id);
+                this.attackingUnitsSignal.set(s2);
+            }, 200);
+        }
+
+        const damageAbs = this.combat.getWallHitAmount(unit.tier);
         const [a, b] = this.sortEdgeEndpoints(tile1, tile2);
-        const nextHealth = Math.max(0, wall.health - dmgPercent);
+        const maxH = wall.maxHealth ?? 100;
+        const nextHealth = Math.max(0, wall.health - damageAbs);
         this.wallsSignal.update(ws =>
             ws
                 .map(w =>
                     w.id === wall.id
-                        ? { ...w, health: Math.max(0, w.health - dmgPercent) }
+                        ? { ...w, health: Math.max(0, w.health - damageAbs) }
                         : w
                 )
                 .filter(w => w.health > 0)
         );
         if (nextHealth <= 0) {
             this.registerWallDestroyedEdge(a, b);
+            this.updateWallFormations();
+        } else {
+            this.updateWallFormations();
         }
         this.shakenWallIdSignal.set(wall.id);
         setTimeout(() => this.shakenWallIdSignal.set(null), 200);
         const actorText = actor === 'player' ? 'Player' : 'AI';
-        const targetOwnerText =
-            wall.owner === 'neutral' ? 'Neutral' : (wall.owner === 'player' ? 'Player' : 'AI');
-        this.appendLog(`[Turn ${this.turnSignal()}] ${actorText} hit ${targetOwnerText} wall (${tile1.x},${tile1.y})-(${tile2.x},${tile2.y}) for ${dmgPercent}% damage.`);
+        const targetOwnerText = wall.owner === 'neutral' ? 'Neutral' : (wall.owner === 'player' ? 'Player' : 'AI');
+        this.appendLog(`[Combat] Tier ${unit.tier} Unit attacked ${targetOwnerText} Wall. Damage: ${damageAbs}. Wall HP: ${nextHealth}/${maxH}.`);
         if (actor === 'ai') {
             this.appendLog(`[AI Pathfinding] Breaking through wall at (${tile2.x},${tile2.y}) to reach target.`);
         }
@@ -2493,6 +2740,7 @@ export class GameEngineService {
         const [a, b] = this.sortEdgeEndpoints(tile1, tile2);
         this.registerWallDestroyedEdge(a, b);
         this.appendLog(`[Turn ${this.turnSignal()}] Player removed own wall between (${tile1.x},${tile1.y})-(${tile2.x},${tile2.y}).`);
+        this.updateWallFormations();
     }
 
     canDestroyOwnWall(tile1: Position, tile2: Position): boolean {
@@ -2653,6 +2901,7 @@ export class GameEngineService {
         this.unitsSignal.update(units =>
             units.map(u => (u.id === actor.id ? { ...u, hasActed: true } : u))
         );
+        this.updateWallFormations();
     }
     private isBaseProtectionEdge(tile1: Position, tile2: Position): boolean {
         const aiBase = this.getBasePosition('ai');
@@ -2773,6 +3022,7 @@ export class GameEngineService {
                     owner: 'neutral'
                 }
             ]);
+            this.updateWallFormations();
         };
         const bases = [this.getBasePosition('player'), this.getBasePosition('ai')];
         for (const base of bases) {

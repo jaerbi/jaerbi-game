@@ -67,6 +67,11 @@ export class CombatService {
     if (tier === 2) return 51;
     return 100;
   }
+  getWallHitAmount(tier: number): number {
+    if (tier === 1) return 34;
+    if (tier === 2) return 51;
+    return 101;
+  }
 
   isDiagonalBlocked(from: Position, to: Position, getWallBetween: (x1: number, y1: number, x2: number, y2: number) => any): boolean {
     const stepX = Math.sign(to.x - from.x);
