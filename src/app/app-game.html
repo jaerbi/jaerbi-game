@@ -877,6 +877,8 @@
           @for (x of gameEngine.gridCols; track x) {
             <div
               (click)="onTileClick(x, y)"
+              (mouseenter)="gameEngine.setHoveredUnit(gameEngine.getUnitAt(x, y) && (gameEngine.getUnitAt(x, y)!.owner === 'player' || gameEngine.isVisibleToPlayer(x, y)) ? gameEngine.getUnitAt(x, y)!.id : null)"
+              (mouseleave)="gameEngine.setHoveredUnit(null)"
               class="tile rounded flex items-center justify-center border transition-colors duration-200"
               [style.width.px]="gameEngine.tileSizePx"
               [style.height.px]="gameEngine.tileSizePx"
@@ -1257,6 +1259,17 @@
                           <app-units [unit]="unit" />
                         }
                       </div>
+                      @if (gameEngine.isUnitHovered(unit.id) && gameEngine.getHitChanceInfo(unit.id); as hc) {
+                        <span
+                          class="absolute -top-1 left-1 px-1.5 py-0.5 rounded text-white text-[10px] font-bold pointer-events-none shadow"
+                          [class.bg-green-600]="hc.bg === 'bg-green-600'"
+                          [class.bg-amber-600]="hc.bg === 'bg-amber-600'"
+                          [class.bg-red-600]="hc.bg === 'bg-red-600'"
+                          [style.z-index]="200"
+                        >
+                          {{ hc.icon }} {{ hc.chance }}% Hit
+                        </span>
+                      }
                       @if (gameEngine.hasDefenseBonus(unit)) {
                         <span
                           class="absolute -top-1 -right-1 rounded-full bg-blue-200 text-blue-900 flex items-center justify-center"

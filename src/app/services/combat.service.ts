@@ -72,6 +72,14 @@ export class CombatService {
     if (tier === 2) return 51;
     return 101;
   }
+  calculateHitChance(attacker: Unit, defender: Unit): number {
+    const gap = defender.tier - attacker.tier;
+    const level = attacker.level ?? 1;
+    if (gap <= 0) return 100;
+    if (gap === 1) return Math.min(100, 50 + level * 15);
+    if (gap === 2) return Math.min(100, 25 + level * 5);
+    return Math.min(100, 1 + level * 1);
+  }
 
   isDiagonalBlocked(from: Position, to: Position, getWallBetween: (x1: number, y1: number, x2: number, y2: number) => any): boolean {
     const stepX = Math.sign(to.x - from.x);
