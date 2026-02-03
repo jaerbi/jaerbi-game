@@ -1910,27 +1910,70 @@ export class GameEngineService {
                 }
             }
 
+            const totalForestsForAggro = this.forestsSignal().length;
+            const aiOwnedForestsForAggro = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
+            const aiOwnedPctForAggro = totalForestsForAggro > 0 ? aiOwnedForestsForAggro / totalForestsForAggro : 0;
+            const isEmergency = currentUnit.tier >= 3 || aiOwnedPctForAggro >= 0.7;
             const distToPlayerBase = Math.max(Math.abs(currentUnit.position.x - playerBase.x), Math.abs(currentUnit.position.y - playerBase.y));
             if (!action && distToPlayerBase < 4) {
-                const canBaseAttack = validMoves.some(m => m.x === playerBase.x && m.y === playerBase.y);
-                if (canBaseAttack) {
-                    action = { type: 'attack', target: playerBase, reason: 'Siege: Strike Base' };
-                } else {
+                // Ultimate Siege Fix: Weighted decision within siege range; prioritize wall attacks and base hits
+                if (isEmergency && distToPlayerBase <= 3) {
+                    const candidates: { type: 'move' | 'attack' | 'wall_attack'; target: Position; weight: number; reason: string }[] = [];
+                    const canBaseAttack = validMoves.some(m => m.x === playerBase.x && m.y === playerBase.y);
+                    if (canBaseAttack) {
+                        candidates.push({ type: 'attack', target: playerBase, weight: 1.0, reason: 'Siege: Strike Base' });
+                    }
+                    const neighbors = this.getNeighbors(currentUnit.position);
+                    const currDist = distToPlayerBase;
+                    let wallAttackAvailable = false;
+                    for (const nb of neighbors) {
+                        const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, nb.x, nb.y);
+                        if (w) {
+                            const nbDist = Math.max(Math.abs(nb.x - playerBase.x), Math.abs(nb.y - playerBase.y));
+                            if (nbDist < currDist) {
+                                candidates.push({ type: 'wall_attack', target: nb, weight: 0.9, reason: 'Siege: Breach (Path to Base)' });
+                                wallAttackAvailable = true;
+                            }
+                        }
+                    }
                     const step = this.getNextStepTowards(currentUnit, playerBase, validMoves);
                     if (step) {
-                        const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, step.x, step.y);
-                        if (w) {
-                            action = { type: 'wall_attack', target: step, reason: 'Siege: Breach' };
-                        } else {
-                            action = { type: 'move', target: step, reason: 'Siege: Advance on Base' };
+                        const stepDist = Math.max(Math.abs(step.x - playerBase.x), Math.abs(step.y - playerBase.y));
+                        const allowMove = !wallAttackAvailable ? true : (stepDist < currDist);
+                        if (allowMove) {
+                            candidates.push({ type: 'move', target: step, weight: 0.5, reason: 'Siege: Advance on Base' });
                         }
+                    }
+                    if (candidates.length > 0) {
+                        candidates.sort((a, b) => b.weight - a.weight);
+                        const chosen = candidates[0];
+                        action = { type: chosen.type, target: chosen.target, reason: chosen.reason };
+                        if (chosen.type === 'move' && wallAttackAvailable) {
+                            this.appendLog(`[AI Debug] Unit at (${currentUnit.position.x},${currentUnit.position.y}) chose Move over Wall Attack. Weights: wall=0.9, move=${chosen.weight}`);
+                        }
+                    }
+                }
+                if (!action) {
+                    const canBaseAttack = validMoves.some(m => m.x === playerBase.x && m.y === playerBase.y);
+                    if (canBaseAttack) {
+                        action = { type: 'attack', target: playerBase, reason: 'Siege: Strike Base' };
                     } else {
-                        const path = this.bfsPath(currentUnit.position, playerBase);
-                        if (path && path.length > 1) {
-                            const nextStep = path[1];
-                            const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, nextStep.x, nextStep.y);
+                        const step = this.getNextStepTowards(currentUnit, playerBase, validMoves);
+                        if (step) {
+                            const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, step.x, step.y);
                             if (w) {
-                                action = { type: 'wall_attack', target: nextStep, reason: 'Siege: Breaching' };
+                                action = { type: 'wall_attack', target: step, reason: 'Siege: Breach' };
+                            } else {
+                                action = { type: 'move', target: step, reason: 'Siege: Advance on Base' };
+                            }
+                        } else {
+                            const path = this.bfsPath(currentUnit.position, playerBase);
+                            if (path && path.length > 1) {
+                                const nextStep = path[1];
+                                const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, nextStep.x, nextStep.y);
+                                if (w) {
+                                    action = { type: 'wall_attack', target: nextStep, reason: 'Siege: Breaching' };
+                                }
                             }
                         }
                     }
