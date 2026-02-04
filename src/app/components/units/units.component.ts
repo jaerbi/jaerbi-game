@@ -15,5 +15,5 @@ export class UnitsComponent {
 
     @Input({ required: true }) unit!: Unit;
 
-    constructor(public engine: GameEngineService, public settings: SettingsService) { }
+    constructor(public gameEngine: GameEngineService, public settings: SettingsService) { }
 }

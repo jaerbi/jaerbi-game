@@ -41,16 +41,16 @@ export class CombatService {
       bonus += 1;
       tags.push('Shield +1');
     }
-    const hasSupport = units.some(
+    const hasSupport = units.filter(
       u =>
         u.owner === unit.owner &&
         u.id !== unit.id &&
         u.tier === unit.tier &&
         Math.max(Math.abs(u.position.x - unit.position.x), Math.abs(u.position.y - unit.position.y)) === 1
     );
-    if (hasSupport) {
-      bonus += 1;
-      tags.push('Support +1');
+    if (!!hasSupport.length) {
+      bonus += hasSupport.length;
+      tags.push(`Support +${hasSupport.length}`);
     }
     return { bonus, tags };
   }

@@ -1,12 +1,33 @@
-
 @switch (unit.tier) {
   @case (1) {
     <svg viewBox="0 0 100 100" class="w-full h-full">
       <!-- base -->
-      <circle cx="50" cy="50" r="32" [attr.fill]="'url(#vol-fill-' + unit.owner + ')'"  filter="url(#soft-shadow)" />
+      <circle cx="50" cy="50" r="32" [attr.fill]="'url(#vol-fill-' + unit.owner + ')'" filter="url(#soft-shadow)" />
       <!-- inner highlight -->
       <circle cx="50" cy="50" r="31" fill="none" stroke="url(#edge-light)" stroke-width="2" />
+      @if (gameEngine.hasDefenseBonus(unit)) {
+        <!-- shield icon -->
+        <g>
+          <path d="M0,0 L12,0 L12,8 C12,12 6,16 6,16 C6,16 0,12 0,8 Z" fill="var(--u-light)" opacity="0.9" />
+          <path d="M6,2 V12" stroke="var(--u-core)" stroke-width="1" opacity="0.8" />
+        </g>
+      }
+      @if (false) {
+        <!-- sword icon -->
+        <g transform="rotate(-45 6 8)">
+          <rect x="5" y="0" width="2" height="10" fill="var(--u-light)" />
+          <polygon points="6,-2 8,2 4,2" fill="var(--u-light)" />
+          <rect x="3" y="10" width="6" height="2" fill="var(--u-core)" />
+        </g>
+      }
 
+      @if (false) {
+        <!-- armor icon -->
+        <g>
+          <rect x="2" y="2" width="12" height="10" rx="2" fill="var(--u-light)" />
+          <rect x="4" y="4" width="8" height="6" rx="1" fill="var(--u-core)" opacity="0.7" />
+        </g>
+      }
       <!-- level -->
       <text
         x="49"
@@ -37,7 +58,11 @@
   @case (2) {
     <svg viewBox="0 0 100 100" class="w-full h-full scale-95">
       <g transform="translate(0, 4)">
-        <polygon points="50,16 86,78 14,78" [attr.fill]="'url(#vol-fill-' + unit.owner + ')'" filter="url(#soft-shadow)" />
+        <polygon
+          points="50,16 86,78 14,78"
+          [attr.fill]="'url(#vol-fill-' + unit.owner + ')'"
+          filter="url(#soft-shadow)"
+        />
         <polygon points="50,18 82,74 18,74" fill="none" stroke="url(#edge-light)" stroke-width="2" />
         <text
           x="50"
@@ -87,7 +112,15 @@
     <svg viewBox="0 0 100 100" class="w-full h-full">
       <!-- base -->
       <!-- <rect x="21" y="21" width="56" height="56" rx="6" fill="var(--u-dark)" /> -->
-      <rect x="21" y="21" width="56" height="56" rx="6" [attr.fill]="'url(#vol-fill-' + unit.owner + ')'" filter="url(#soft-shadow)" />
+      <rect
+        x="21"
+        y="21"
+        width="56"
+        height="56"
+        rx="6"
+        [attr.fill]="'url(#vol-fill-' + unit.owner + ')'"
+        filter="url(#soft-shadow)"
+      />
       <rect x="23" y="23" width="52" height="52" rx="5" fill="none" stroke="url(#edge-light)" stroke-width="2" />
 
       <!-- level -->
@@ -135,7 +168,11 @@
     <svg viewBox="0 0 100 100" class="w-full h-full">
       <!-- base -->
       <!-- <polygon points="50,20 78,36 78,64 50,80 22,64 22,36" fill="var(--u-darker)" stroke-linejoin="round" /> -->
-      <polygon points="50,20 78,36 78,64 50,80 22,64 22,36" [attr.fill]="'url(#vol-fill-' + unit.owner + ')'" filter="url(#soft-shadow)" />
+      <polygon
+        points="50,20 78,36 78,64 50,80 22,64 22,36"
+        [attr.fill]="'url(#vol-fill-' + unit.owner + ')'"
+        filter="url(#soft-shadow)"
+      />
       <polygon
         points="50,20 78,36 78,64 50,80 22,64 22,36"
         fill="none"
