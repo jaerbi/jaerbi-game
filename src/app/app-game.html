@@ -1261,13 +1261,13 @@
                       </div>
                       @if (gameEngine.isUnitHovered(unit.id) && gameEngine.getHitChanceInfo(unit.id); as hc) {
                         <span
-                          class="absolute -top-1 left-1 px-1.5 py-0.5 rounded text-white text-[10px] font-bold pointer-events-none shadow"
+                          class="absolute -top-1 -left-1 px-0.5 py-0.5 rounded text-white text-[8px] font-bold pointer-events-none shadow"
                           [class.bg-green-600]="hc.bg === 'bg-green-600'"
                           [class.bg-amber-600]="hc.bg === 'bg-amber-600'"
                           [class.bg-red-600]="hc.bg === 'bg-red-600'"
                           [style.z-index]="200"
                         >
-                          {{ hc.icon }} {{ hc.chance }}% Hit
+                          {{ hc.chance }}%
                         </span>
                       }
                       @if (gameEngine.hasDefenseBonus(unit)) {

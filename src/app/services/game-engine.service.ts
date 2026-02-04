@@ -500,13 +500,18 @@ export class GameEngineService {
                     }
 
                     if (attackerPoints > defenderPoints) {
-                        const newPoints = attackerPoints - defenderPoints;
+                        const counterChance = this.combat.calculateHitChance(targetUnit, movingUnit);
+                        const counterRoll = Math.floor(Math.random() * 100) + 1;
+                        const counterHit = counterRoll <= counterChance;
+                        const counterDamage = counterHit ? defenderBase : 0;
+                        const newPoints = Math.max(0, attackerPoints - counterDamage);
                         const { tier, level } = this.calculateTierAndLevel(newPoints);
-
                         movingUnit.points = newPoints;
                         movingUnit.tier = tier;
                         movingUnit.level = level;
-
+                        if (!counterHit) {
+                            this.log.addCombat(movingUnit.owner, `[Combat] T${movingUnit.tier} armor deflected the counter-attack from T${targetUnit.tier}. Final HP: ${movingUnit.points}`, false);
+                        }
                         updatedUnits.splice(targetUnitIndex, 1); // Remove defender
                         if (luckObj.tag) {
                             this.queueCombatText(luckObj.tag.startsWith('CRIT') ? 'CRIT!' : 'MISS!', target);
@@ -1162,7 +1167,7 @@ export class GameEngineService {
         return this.playerName.name();
     }
     confirmAndSaveScore(name: string) {
-        if (this.settings.customMode()) {
+        if (this.settings.customMode() && this.endReasonSignal() !== 'Debug Victory') {
             return;
         }
         this.playerName.setName(name);
@@ -1380,7 +1385,23 @@ export class GameEngineService {
     debugInstantWin() {
         this.turnSignal.set(Math.floor(Math.random() * 10) + 5);
         this.gameStatusSignal.set('player wins');
-        this.recordHighScore('player wins', 'destroy');
+        this.endReasonSignal.set('Debug Victory');
+        this.endOverlaySignal.set(true);
+        const ctrl = this.getForestControl();
+        const forestsCaptured = ctrl.player;
+        const victoryType: ScoreEntry['victoryType'] = 'Annihilation';
+        const basePayload: ScoreEntry = {
+            playerName: this.playerName.name(),
+            turnsPlayed: this.turnSignal(),
+            forestsCaptured,
+            victoryType,
+            timestamp: Date.now(),
+            difficulty: this.settings.difficulty(),
+            mapSize: this.settings.mapSize() as MapSize,
+            victory: true
+        };
+        this.pendingScoreSignal.set(basePayload);
+        this.namePromptOpenSignal.set(true);
     }
 
     debugCycleSettings() {
