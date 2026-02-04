@@ -1247,6 +1247,8 @@
                         [style.width.px]="gameEngine.tileUnitSizePx"
                         [style.height.px]="gameEngine.tileUnitSizePx"
                         [attr.title]="gameEngine.formatHoverInfo(unit.id)"
+                        [class.ring]="gameEngine.selectedUnitId() === unit.id"
+                        [class.ring-yellow-400]="gameEngine.selectedUnitId() === unit.id"
                         [class.ring-offset-gray-800]="gameEngine.selectedUnitId() === unit.id"
                         [class.scale-115]="gameEngine.selectedUnitId() === unit.id && !gameEngine.buildMode()"
                         [class.scale-120]="gameEngine.lastMergedUnitId() === unit.id"
@@ -1270,7 +1272,7 @@
                           {{ hc.chance }}%
                         </span>
                       }
-                      @if (gameEngine.hasDefenseBonus(unit)) {
+                      <!-- @if (gameEngine.hasDefenseBonus(unit)) {
                         <span
                           class="absolute -top-1 -right-1 rounded-full bg-blue-200 text-blue-900 flex items-center justify-center"
                           [style.width.px]="gameEngine.iconSizePx"
@@ -1280,7 +1282,7 @@
                         >
                           🛡
                         </span>
-                      }
+                      } -->
                       @if (unit.productionActive) {
                         <span
                           class="absolute -bottom-1 -right-1 [filter:drop-shadow(0_0_2px_rgba(0,0,0,0.5))]"
