@@ -736,12 +736,18 @@ export class GameEngineService {
             return;
         }
 
-        // Priority Queue: Mobile (not on forest) first, then Forest occupants
+        // Priority Queue: Mobile (not on forest or mine) first, then Forest\Mine occupants
         candidates.sort((a, b) => {
-            const aForest = this.isForest(a.position.x, a.position.y) ? 1 : 0;
-            const bForest = this.isForest(b.position.x, b.position.y) ? 1 : 0;
-            return aForest - bForest; // 0 (Mobile) < 1 (Forest)
+            const aInObstacle = (this.isForest(a.position.x, a.position.y) || this.isMine(a.position.x, a.position.y)) ? 1 : 0;
+            const bInObstacle = (this.isForest(b.position.x, b.position.y) || this.isMine(b.position.x, b.position.y)) ? 1 : 0;
+
+            if (aInObstacle !== bInObstacle) {
+                return aInObstacle - bInObstacle;
+            }
+
+            return 0;
         });
+
 
         this.selectUnit(candidates[0].id);
     }
@@ -2876,7 +2882,7 @@ export class GameEngineService {
         if (this.wallBuiltThisTurnSignal()) return;
 
         const [a, b] = this.sortEdgeEndpoints(tile1, tile2);
-                this.wallsSignal.update(ws => [
+        this.wallsSignal.update(ws => [
             ...ws,
             {
                 id: crypto.randomUUID(),
