@@ -982,6 +982,57 @@
                 ></div>
               }
               @let unitOnTile = gameEngine.getUnitAt(x, y);
+              @if (gameEngine.buildMode() && gameEngine.canBuildForgeAt(x, y)) {
+                <button
+                  class="absolute top-1 left-1 text-[10px] px-1.5 py-0.5 rounded bg-yellow-600/80 hover:bg-yellow-500 text-black shadow cursor-pointer"
+                  (click)="gameEngine.buildForgeAt({ x: x, y: y })"
+                  [style.z-index]="60"
+                >
+                  Build Forge
+                </button>
+              }
+              @if (gameEngine.isForgeSite(x, y)) {
+                <span
+                  class="absolute bottom-1 left-1 text-[10px] font-bold px-1 rounded bg-yellow-400/80 text-black pointer-events-none"
+                  [style.z-index]="55"
+                >
+                  {{ gameEngine.getForgeProgress(x, y) }}%
+                </span>
+              }
+              @if (gameEngine.isForge(x, y)) {
+                <span
+                  class="absolute text-[10px] font-bold px-1 rounded bg-yellow-300/80 text-black pointer-events-none"
+                  [style.z-index]="55"
+                  [class.scale-60]="unitOnTile && unitOnTile.owner === 'player'"
+                  [class.scale-50]="unitOnTile && unitOnTile.owner === 'player'"
+                  [class.top-1]="!(unitOnTile && unitOnTile.owner === 'player')"
+                  [class.left-1]="!(unitOnTile && unitOnTile.owner === 'player')"
+                  [class.top-0]="unitOnTile && unitOnTile.owner === 'player'"
+                  [class.-right-1]="unitOnTile && unitOnTile.owner === 'player'"
+                >
+                  Forge
+                </span>
+                @if (unitOnTile && unitOnTile.owner === 'player') {
+                  <div class="absolute bottom-1 right-1 flex gap-1 flex-col " [style.z-index]="60">
+                    @if (!unitOnTile.hasWeapon && gameEngine.resources().iron >= 20) {
+                      <button
+                        class="text-[9px] px-1 py-0.5 rounded bg-indigo-500 hover:bg-indigo-400 text-white shadow cursor-pointer"
+                        (click)="gameEngine.buyWeapon(unitOnTile.id)"
+                      >
+                        Weapon
+                      </button>
+                    }
+                    @if (!unitOnTile.hasArmor && gameEngine.resources().iron >= 20) {
+                      <button
+                        class="text-[9px] px-1 py-0.5 rounded bg-emerald-500 hover:bg-emerald-400 text-white shadow cursor-pointer"
+                        (click)="gameEngine.buyArmor(unitOnTile.id)"
+                      >
+                        Armor
+                      </button>
+                    }
+                  </div>
+                }
+              }
               @if (gameEngine.isForest(x, y) && gameEngine.isVisibleToPlayer(x, y)) {
                 <span
                   class="absolute inset-0 pointer-events-none flex items-center justify-center transition-all duration-500"

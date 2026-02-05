@@ -18,4 +18,7 @@ export interface Unit {
   mineOccupationTurns?: number;
   productionActive?: boolean;
   hasActed: boolean;
+  hasWeapon?: boolean;
+  hasArmor?: boolean;
+  armorHp?: number;
 }

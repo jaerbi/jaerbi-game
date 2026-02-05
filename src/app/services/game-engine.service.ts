@@ -45,6 +45,9 @@ export class GameEngineService {
     private resourcesSignal = signal<{ wood: number; iron: number }>({ wood: 0, iron: 0 });
     private forestsSignal = signal<Position[]>([]);
     private minesSignal = signal<Position[]>([]);
+    private forgeSitesSignal = signal<{ position: Position; owner: Owner; turnsLeft: number }[]>([]);
+    private forgesSignal = signal<Position[]>([]);
+    private aiForgesSignal = signal<Position[]>([]);
     private baseHealthSignal = signal<{ player: number; ai: number }>({ player: 100, ai: 100 });
     private reservePointsSignal = signal<{ player: number; ai: number }>({ player: 0, ai: 0 });
     private deployTargetsSignal = signal<Position[]>([]);
@@ -116,6 +119,7 @@ export class GameEngineService {
     readonly resources = this.resourcesSignal.asReadonly();
     readonly forests = this.forestsSignal.asReadonly();
     readonly mines = this.minesSignal.asReadonly();
+    readonly forges = this.forgesSignal.asReadonly();
     readonly baseHealth = this.baseHealthSignal.asReadonly();
     readonly reservePoints = this.reservePointsSignal.asReadonly();
     readonly deployTargets = this.deployTargetsSignal.asReadonly();
@@ -271,6 +275,9 @@ export class GameEngineService {
         this.deployTargetsSignal.set([]);
         this.forestsSignal.set(this.map.generateForests(this.gridSize, this.getBasePosition('player'), this.getBasePosition('ai')));
         this.minesSignal.set(this.map.generateMines(this.gridSize, this.getBasePosition('player'), this.getBasePosition('ai'), this.forestsSignal()));
+        this.forgeSitesSignal.set([]);
+        this.forgesSignal.set([]);
+        this.aiForgesSignal.set([]);
         const forestKeys = new Set(this.forestsSignal().map(p => `${p.x},${p.y}`));
         this.playerExploredSignal.set(new Set(forestKeys));
         this.aiExploredSignal.set(new Set(forestKeys));
@@ -421,6 +428,13 @@ export class GameEngineService {
                             const tl = this.calculateTierAndLevel(targetUnit.points);
                             targetUnit.tier = tl.tier;
                             targetUnit.level = tl.level;
+                            // Equipment inheritance (Boolean OR) for simple merge
+                            const mergedHasWeapon = !!(targetUnit.hasWeapon || movingUnit.hasWeapon);
+                            const mergedHasArmor = !!(targetUnit.hasArmor || movingUnit.hasArmor);
+                            const mergedArmorHp = mergedHasArmor ? Math.max(targetUnit.armorHp ?? 0, movingUnit.armorHp ?? 0) : 0;
+                            targetUnit.hasWeapon = mergedHasWeapon;
+                            targetUnit.hasArmor = mergedHasArmor;
+                            targetUnit.armorHp = mergedArmorHp;
                             updatedUnits.splice(unitIndex, 1);
                         } else {
                             const nextTier = Math.min(4, tier + 1);
@@ -429,12 +443,23 @@ export class GameEngineService {
                             const tlTarget = this.calculateTierAndLevel(targetUnit.points);
                             targetUnit.tier = tlTarget.tier;
                             targetUnit.level = tlTarget.level;
+                            // Overflow handling: higher-tier result receives ALL equipment from parents
+                            const mergedHasWeapon = !!(targetUnit.hasWeapon || movingUnit.hasWeapon);
+                            const mergedHasArmor = !!(targetUnit.hasArmor || movingUnit.hasArmor);
+                            const mergedArmorHp = mergedHasArmor ? Math.max(targetUnit.armorHp ?? 0, movingUnit.armorHp ?? 0) : 0;
+                            targetUnit.hasWeapon = mergedHasWeapon;
+                            targetUnit.hasArmor = mergedHasArmor;
+                            targetUnit.armorHp = mergedArmorHp;
                             const remainderPoints = sumPoints - nextTierLevel1Cost;
                             if (remainderPoints > 0) {
                                 movingUnit.points = remainderPoints;
                                 const tlMove = this.calculateTierAndLevel(movingUnit.points);
                                 movingUnit.tier = tlMove.tier;
                                 movingUnit.level = tlMove.level;
+                                // Remainder spawns with NO equipment
+                                movingUnit.hasWeapon = false;
+                                movingUnit.hasArmor = false;
+                                movingUnit.armorHp = 0;
                                 updatedUnits[unitIndex] = movingUnit;
                                 remainderId = movingUnit.id;
                             } else {
@@ -483,14 +508,15 @@ export class GameEngineService {
                     } else {
                         this.log.addCombat(movingUnit.owner, `[Combat] HIT! T${movingUnit.tier} breached T${targetUnit.tier} armor.`, false);
                     }
-                    const attackerBase = this.calculateTotalPoints(movingUnit);
+                    const attackerBase = this.calculateTotalPoints(movingUnit) + (movingUnit.hasWeapon ? 20 : 0);
                     const luckObj = this.getAttackLuckModifier(movingUnit);
                     const defenderBase = this.calculateTotalPoints(targetUnit);
                     const defBonus = this.combat.getDefenseBonus(targetUnit, updatedUnits);
                     const attackerPoints = Math.max(0, attackerBase + luckObj.delta);
                     const defenderPoints = defenderBase + defBonus.bonus;
 
-                    const modifiersText = [...defBonus.tags, luckObj.tag ?? ''].filter(Boolean).join(', ') || 'None';
+                    const weaponTag = movingUnit.hasWeapon ? 'Weapon +20' : '';
+                    const modifiersText = [...defBonus.tags, luckObj.tag ?? '', weaponTag].filter(Boolean).join(', ') || 'None';
                     const diff = attackerPoints - defenderPoints;
                     const formulaText =
                         `[Turn ${this.turnSignal()}] ${movingUnit.owner === 'player' ? 'Player' : 'AI'} T${movingUnit.tier}(L${movingUnit.level}) attacked ${targetUnit.owner === 'player' ? 'Player' : 'AI'} T${targetUnit.tier}(L${targetUnit.level}). ` +
@@ -508,11 +534,13 @@ export class GameEngineService {
                         const counterRoll = Math.floor(Math.random() * 100) + 1;
                         const counterHit = counterRoll <= counterChance;
                         const counterDamage = counterHit ? defenderBase : 0;
-                        const newPoints = Math.max(0, attackerPoints - counterDamage);
-                        const { tier, level } = this.calculateTierAndLevel(newPoints);
-                        movingUnit.points = newPoints;
-                        movingUnit.tier = tier;
-                        movingUnit.level = level;
+                        if (counterDamage > 0) {
+                            const updated = this.combat.applyDamage(movingUnit, counterDamage);
+                            movingUnit.points = updated.points;
+                            movingUnit.tier = updated.tier;
+                            movingUnit.level = updated.level;
+                            movingUnit.armorHp = updated.armorHp;
+                        }
                         if (!counterHit) {
                             this.log.addCombat(movingUnit.owner, `[Combat] T${movingUnit.tier} armor deflected the counter-attack from T${targetUnit.tier}. Final HP: ${movingUnit.points}`, false);
                         }
@@ -522,10 +550,9 @@ export class GameEngineService {
                         }
                         // movingUnit moves to target (below)
                     } else if (attackerPoints < defenderPoints) {
-                        const newPoints = defenderPoints - attackerPoints;
-                        const { tier, level } = this.calculateTierAndLevel(newPoints);
-
-                        const defender = { ...targetUnit, points: newPoints, tier, level };
+                        const damage = attackerPoints;
+                        const defenderUpdated = this.combat.applyDamage(targetUnit, damage);
+                        const defender = { ...defenderUpdated };
                         updatedUnits[targetUnitIndex] = defender;
                         updatedUnits.splice(unitIndex, 1); // Remove attacker
                         return updatedUnits;
@@ -730,15 +757,23 @@ export class GameEngineService {
     }
 
     // --- NEW AI HELPERS ---
+    private effectiveAttack(unit: Unit): number {
+        return this.calculateTotalPoints(unit) + (unit.hasWeapon ? 20 : 0);
+    }
+    private effectiveDefense(unit: Unit): number {
+        return (unit.points ?? 0) + (unit.armorHp ?? 0);
+    }
 
     private isUnitInDanger(unit: Unit): boolean {
         const neighbors = this.getNeighbors(unit.position);
         for (const nb of neighbors) {
             const enemy = this.getUnitAt(nb.x, nb.y);
             if (enemy && enemy.owner !== unit.owner) {
-                if (this.calculateTotalPoints(enemy) > this.calculateTotalPoints(unit)) {
-                    return true;
-                }
+                const enemyEA = this.effectiveAttack(enemy);
+                const selfED = this.effectiveDefense(unit);
+                // Weapon-equipped units are bolder: require a larger margin to be considered "danger"
+                const margin = unit.hasWeapon ? (unit.tier >= 3 ? 20 : 10) : 0;
+                if (enemyEA > selfED + margin) return true;
             }
         }
         return false;
@@ -955,14 +990,20 @@ export class GameEngineService {
             }
         }
 
-        // 3. General Enemies
-        const attackMoves = validMoves.filter(m => {
-            const u = this.getUnitAt(m.x, m.y);
-            return u && u.owner !== unit.owner;
-        });
+        // 3. General Enemies (weighted by resource occupation and effective value)
+        const attackMoves = validMoves
+            .map(m => {
+                const u = this.getUnitAt(m.x, m.y);
+                if (!u || u.owner === unit.owner) return null;
+                const onResource = this.isMine(m.x, m.y) || this.isForge(m.x, m.y);
+                const weight = (onResource ? 100 : 0) + (this.effectiveAttack(unit) - this.effectiveDefense(u));
+                return { pos: m, weight };
+            })
+            .filter(Boolean) as { pos: Position; weight: number }[];
 
         if (attackMoves.length > 0) {
-            return attackMoves[0];
+            attackMoves.sort((a, b) => b.weight - a.weight);
+            return attackMoves[0].pos;
         }
 
         return null;
@@ -1004,7 +1045,8 @@ export class GameEngineService {
                 const neighbors = this.getNeighbors(unit.position);
                 isCritical = neighbors.some(nb => {
                     const u = this.getUnitAt(nb.x, nb.y);
-                    return u && u.owner !== unit.owner && u.tier > unit.tier;
+                    if (!u || u.owner === unit.owner) return false;
+                    return this.effectiveAttack(u) > this.effectiveDefense(unit);
                 });
             }
 
@@ -1288,7 +1330,7 @@ export class GameEngineService {
         const base = this.calculateTotalPoints(u);
         const luck = this.getLuckDeltaForTier(u.tier);
         const def = this.getDefenseBonus(u);
-        return { atkMin: Math.max(0, base - luck), atkMax: base + luck, hp: u.points, support: def };
+        return { atkMin: Math.max(0, base - luck), atkMax: base + luck + (u.hasWeapon ? 20 : 0), hp: u.points, support: def };
     }
     isUnitHovered(id: string): boolean {
         return this.hoveredUnitIdSignal() === id;
@@ -1422,7 +1464,11 @@ export class GameEngineService {
         if (!u) return '';
         const maxHp = this.combat.getPointsForTierLevel(u.tier, 4);
         const def = h.support > 0 ? `+${h.support}` : '+0';
-        return `Unit T${u.tier} | HP: ${h.hp}/${maxHp} | ATK: ${h.atkMin}-${h.atkMax} | DEF: ${def}`;
+        const wTag = u.hasWeapon ? ' | Weapon:+20' : '';
+        const shield = u.armorHp ?? 0;
+        const aTag = u.hasArmor ? ` | Armor:${shield}` : '';
+        const hpText = shield > 0 ? `${h.hp} + ${shield}` : `${h.hp}`;
+        return `Unit T${u.tier} | HP: ${hpText}/${maxHp} | ATK: ${h.atkMin}-${h.atkMax} | DEF: ${def}${wTag}${aTag}`;
     }
     private loadHighScores() {
         if (typeof window === 'undefined') return;
@@ -1680,6 +1726,26 @@ export class GameEngineService {
                     this.aiIronSignal.update(v => v + countOnMine * 2);
                 }
             }
+            if (ownerJustActed === 'player') {
+                const sites = this.forgeSitesSignal().map(s => ({ ...s }));
+                for (const s of sites) {
+                    s.turnsLeft = Math.max(0, s.turnsLeft - 1);
+                }
+                const completedSites = sites.filter(s => s.turnsLeft === 0);
+                const completed = completedSites.map(s => s.position);
+                const remaining = sites.filter(s => s.turnsLeft > 0);
+                if (completed.length > 0) {
+                    this.forgesSignal.update(fs => [...fs, ...completed]);
+                    const aiDone = completedSites.filter(s => s.owner === 'ai').map(s => s.position);
+                    if (aiDone.length > 0) {
+                        this.aiForgesSignal.update(fs => [...fs, ...aiDone]);
+                        for (const p of aiDone) {
+                            this.appendLog(`[AI] Forge completed at (${p.x},${p.y}).`);
+                        }
+                    }
+                }
+                this.forgeSitesSignal.set(remaining);
+            }
         }
         this.deployTargetsSignal.set([]);
         this.baseDeployActiveSignal.set(false);
@@ -1853,6 +1919,8 @@ export class GameEngineService {
                 }
             }
         } catch { }
+        // Infrastructure phase: attempt Forge construction when conditions are met
+        this.manageInfrastructure();
         if (this.turnSignal() <= 10) {
             let made = 0;
             const cost1 = this.getPointsForTierLevel(1, 1);
@@ -1956,6 +2024,8 @@ export class GameEngineService {
         const priorityTargets = this.unitsSignal().filter(u =>
             u.owner === 'player' && (
                 this.isForest(u.position.x, u.position.y) ||
+                this.isMine(u.position.x, u.position.y) ||
+                this.isForge(u.position.x, u.position.y) ||
                 Math.max(Math.abs(u.position.x - aiBase.x), Math.abs(u.position.y - aiBase.y)) <= 4
             )
         );
@@ -2119,6 +2189,13 @@ export class GameEngineService {
                 }
             }
 
+            // Equipment phase: move to nearest Forge to upgrade if eligible
+            if (!action && currentUnit.tier >= 2 && (!currentUnit.hasArmor || !currentUnit.hasWeapon)) {
+                const upg = this.seekUpgrades(currentUnit, validMoves);
+                if (upg.type === 'move' && upg.target) {
+                    action = { type: 'move', target: upg.target, reason: 'Upgrade: Move to Forge' };
+                }
+            }
             // Step A: Survival Check
             if (!action && this.isUnitInDanger(currentUnit)) {
                 const safeMove = this.findSafeMove(currentUnit, validMoves);
@@ -2440,7 +2517,9 @@ export class GameEngineService {
                 turnsStationary: 0,
                 forestOccupationTurns: 0,
                 productionActive: false,
-                hasActed: true
+                hasActed: true,
+                hasWeapon: false,
+                hasArmor: false
             }
         ]);
         this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai - cost }));
@@ -2483,7 +2562,7 @@ export class GameEngineService {
             if (reserves < cost) break;
             if (countExclForests(tier) >= 5) break;
             const tl = this.calculateTierAndLevel(cost);
-            placed.push({ id: crypto.randomUUID(), position: { ...pos }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0, forestOccupationTurns: 0, mineOccupationTurns: 0, productionActive: false, hasActed: true });
+            placed.push({ id: crypto.randomUUID(), position: { ...pos }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0, forestOccupationTurns: 0, mineOccupationTurns: 0, productionActive: false, hasActed: true, hasWeapon: false, hasArmor: false, armorHp: 0 });
             reserves -= cost;
             created++;
         }
@@ -2509,7 +2588,7 @@ export class GameEngineService {
         this.unitsSignal.update(units => {
             const occupied = units.some(u => u.position.x === basePosition.x && u.position.y === basePosition.y);
             if (occupied) return units;
-            const newUnit: Unit = { id: crypto.randomUUID(), position: { ...basePosition }, level: 1, tier: 1, points: 1, owner, turnsStationary: 0, forestOccupationTurns: 0, mineOccupationTurns: 0, productionActive: false, hasActed: true };
+            const newUnit: Unit = { id: crypto.randomUUID(), position: { ...basePosition }, level: 1, tier: 1, points: 1, owner, turnsStationary: 0, forestOccupationTurns: 0, mineOccupationTurns: 0, productionActive: false, hasActed: true, hasWeapon: false, hasArmor: false, armorHp: 0 };
             return [...units, newUnit];
         });
     }
@@ -2561,7 +2640,10 @@ export class GameEngineService {
                 points,
                 owner,
                 turnsStationary: 0,
-                hasActed: true
+                hasActed: true,
+                hasWeapon: false,
+                hasArmor: false,
+                armorHp: 0
             });
         }
         if (newUnits.length > 0) {
@@ -2599,6 +2681,53 @@ export class GameEngineService {
     }
     isMine(x: number, y: number): boolean {
         return this.minesSignal().some(p => p.x === x && p.y === y);
+    }
+    isForgeSite(x: number, y: number): boolean {
+        return this.forgeSitesSignal().some(s => s.position.x === x && s.position.y === y);
+    }
+    isForge(x: number, y: number): boolean {
+        return this.forgesSignal().some(p => p.x === x && p.y === y);
+    }
+    getForgeProgress(x: number, y: number): number {
+        const s = this.forgeSitesSignal().find(s => s.position.x === x && s.position.y === y);
+        if (!s) return 0;
+        const total = 5;
+        return Math.round(((total - s.turnsLeft) / total) * 100);
+    }
+    canBuildForgeAt(x: number, y: number): boolean {
+        const base = this.getBasePosition('player');
+        const dist = Math.max(Math.abs(x - base.x), Math.abs(y - base.y));
+        if (dist > 2) return false;
+        if (!this.inBounds(x, y)) return false;
+        if (x === base.x && y === base.y) return false;
+        if (this.getUnitAt(x, y)) return false;
+        if (this.isForest(x, y) || this.isMine(x, y) || this.isForgeSite(x, y) || this.isForge(x, y)) return false;
+        const r = this.resourcesSignal();
+        return r.wood >= 40 && r.iron >= 20 && this.isPlayerTurn();
+    }
+    buildForgeAt(pos: Position) {
+        if (!this.canBuildForgeAt(pos.x, pos.y)) return;
+        this.resourcesSignal.update(r => ({ wood: r.wood - 40, iron: r.iron - 20 }));
+        this.forgeSitesSignal.update(s => [...s, { position: { ...pos }, owner: 'player', turnsLeft: 5 }]);
+    }
+    buyWeapon(unitId: string) {
+        const u = this.unitsSignal().find(x => x.id === unitId && x.owner === 'player');
+        if (!u) return;
+        if (u.hasWeapon) return;
+        const r = this.resourcesSignal();
+        if (r.iron < 20) return;
+        this.resourcesSignal.update(rr => ({ wood: rr.wood, iron: rr.iron - 20 }));
+        this.unitsSignal.update(units => units.map(x => x.id === unitId ? { ...x, hasWeapon: true } : x));
+    }
+    buyArmor(unitId: string) {
+        const u = this.unitsSignal().find(x => x.id === unitId && x.owner === 'player');
+        if (!u) return;
+        if (u.hasArmor) return;
+        const r = this.resourcesSignal();
+        if (r.iron < 20) return;
+        this.resourcesSignal.update(rr => ({ wood: rr.wood, iron: rr.iron - 20 }));
+        this.unitsSignal.update(units => units.map(x => x.id === unitId ? { ...x, hasArmor: true, armorHp: 20 } : x));
+        this.appendLog(`[Forge] Player unit equipped Armor (+20 Shield HP).`);
     }
 
     getBasePosition(owner: Owner): Position {
@@ -2659,6 +2788,85 @@ export class GameEngineService {
         this.log.add(entry, color);
     }
 
+    private aiBuyArmor(unitId: string) {
+        const u = this.unitsSignal().find(x => x.id === unitId && x.owner === 'ai');
+        if (!u) return;
+        if (u.hasArmor) return;
+        const iron = this.aiIronSignal();
+        if (iron < 20) return;
+        this.aiIronSignal.update(v => v - 20);
+        this.unitsSignal.update(units => units.map(x => x.id === unitId ? { ...x, hasArmor: true, armorHp: 20 } : x));
+        this.appendLog(`[AI] AI unit equipped Heavy Armor (+20 Shield HP).`);
+    }
+    private aiBuyWeapon(unitId: string) {
+        const u = this.unitsSignal().find(x => x.id === unitId && x.owner === 'ai');
+        if (!u) return;
+        if (u.hasWeapon) return;
+        const iron = this.aiIronSignal();
+        if (iron < 20) return;
+        this.aiIronSignal.update(v => v - 20);
+        this.unitsSignal.update(units => units.map(x => x.id === unitId ? { ...x, hasWeapon: true } : x));
+        this.appendLog(`[AI] AI unit forged a Weapon (+20 ATK, +10 hit vs higher tier).`);
+    }
+    private manageInfrastructure() {
+        const aiForgeCount = this.aiForgesSignal().length + this.forgeSitesSignal().filter(s => s.owner === 'ai').length;
+        if (aiForgeCount >= 2) return;
+        const wood = this.aiWoodSignal();
+        const iron = this.aiIronSignal();
+        const aiIronTotal = this.aiIronSignal();
+        if (aiForgeCount === 0) {
+            if (wood < 40 || iron < 20) return;
+        } else if (aiForgeCount < 2) {
+            if (aiIronTotal <= 50 || wood < 40 || iron < 20) return;
+        }
+        const base = this.getBasePosition('ai');
+        const candidates: Position[] = [];
+        for (let dx = -2; dx <= 2; dx++) {
+            for (let dy = -2; dy <= 2; dy++) {
+                const x = base.x + dx;
+                const y = base.y + dy;
+                if (!this.inBounds(x, y)) continue;
+                if (x === base.x && y === base.y) continue;
+                if (Math.max(Math.abs(dx), Math.abs(dy)) > 2) continue;
+                if (this.getUnitAt(x, y)) continue;
+                if (this.isForest(x, y) || this.isMine(x, y) || this.isForgeSite(x, y) || this.isForge(x, y)) continue;
+                candidates.push({ x, y });
+            }
+        }
+        if (candidates.length === 0) return;
+        const idx = Math.floor(Math.random() * candidates.length);
+        const pos = candidates[idx];
+        this.aiWoodSignal.update(v => v - 40);
+        this.aiIronSignal.update(v => v - 20);
+        this.forgeSitesSignal.update(s => [...s, { position: { ...pos }, owner: 'ai', turnsLeft: 5 }]);
+        this.appendLog(`[AI] Constructing a Forge at (${pos.x},${pos.y}).`);
+    }
+    private seekUpgrades(currentUnit: Unit, validMoves: Position[]): { type: 'move' | 'none'; target?: Position } {
+        if (currentUnit.owner !== 'ai') return { type: 'none' };
+        if (currentUnit.tier < 2) return { type: 'none' };
+        if ((currentUnit.hasArmor && currentUnit.hasWeapon) || this.aiIronSignal() < 20) return { type: 'none' };
+        const aiForges = this.aiForgesSignal();
+        if (aiForges.length === 0) return { type: 'none' };
+        const nearest = aiForges.reduce((best, p) => {
+            const db = Math.max(Math.abs(p.x - currentUnit.position.x), Math.abs(p.y - currentUnit.position.y));
+            const dBest = Math.max(Math.abs(best.x - currentUnit.position.x), Math.abs(best.y - currentUnit.position.y));
+            return db < dBest ? p : best;
+        }, aiForges[0]);
+        if (currentUnit.position.x === nearest.x && currentUnit.position.y === nearest.y) {
+            let iron = this.aiIronSignal();
+            if (!currentUnit.hasArmor && iron >= 20) {
+                this.aiBuyArmor(currentUnit.id);
+                iron = this.aiIronSignal();
+            }
+            if (!currentUnit.hasWeapon && iron >= 20) {
+                this.aiBuyWeapon(currentUnit.id);
+            }
+            return { type: 'none' };
+        }
+        const step = this.getNextStepTowards(currentUnit, nearest, validMoves);
+        if (step) return { type: 'move', target: step };
+        return { type: 'none' };
+    }
     buildWallBetween(tile1: Position, tile2: Position) {
         const wood = this.resourcesSignal().wood;
         if (wood < 10) return;
@@ -2668,7 +2876,7 @@ export class GameEngineService {
         if (this.wallBuiltThisTurnSignal()) return;
 
         const [a, b] = this.sortEdgeEndpoints(tile1, tile2);
-        this.wallsSignal.update(ws => [
+                this.wallsSignal.update(ws => [
             ...ws,
             {
                 id: crypto.randomUUID(),
@@ -2749,7 +2957,10 @@ export class GameEngineService {
             forestOccupationTurns: 0,
             mineOccupationTurns: 0,
             productionActive: false,
-            hasActed: true
+            hasActed: true,
+            hasWeapon: false,
+            hasArmor: false,
+            armorHp: 0
         };
         this.unitsSignal.update(units => [...units, newUnit]);
         this.sandboxSpawnPendingSignal.set(null);
@@ -2775,7 +2986,7 @@ export class GameEngineService {
             const cost = this.economy.getHighestAffordableCost(reserves);
             if (cost <= 0) break;
             const tl = this.calculateTierAndLevel(cost);
-            this.unitsSignal.update(units => [...units, { id: crypto.randomUUID(), position: { ...pos }, level: tl.level, tier: tl.tier, points: cost, owner: 'player', turnsStationary: 0, forestOccupationTurns: 0, mineOccupationTurns: 0, productionActive: false, hasActed: true }]);
+            this.unitsSignal.update(units => [...units, { id: crypto.randomUUID(), position: { ...pos }, level: tl.level, tier: tl.tier, points: cost, owner: 'player', turnsStationary: 0, forestOccupationTurns: 0, mineOccupationTurns: 0, productionActive: false, hasActed: true, hasWeapon: false, hasArmor: false, armorHp: 0 }]);
             reserves -= cost;
             placed.push(pos);
         }
