@@ -6,6 +6,7 @@
     display: none;
 }
 @media (max-width: 1024px) {
+  .roadmap { display: none; }
   .nav-bar { display: none; }
   .status-bar { display: none; }
   .mobile-hud-header { display: flex; margin-bottom: 0; }
