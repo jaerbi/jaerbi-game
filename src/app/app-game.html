@@ -435,13 +435,49 @@
             <path d="M6 6l12 12M18 6L6 18" stroke="#fff" stroke-width="2" />
           </svg>
         </button>
+        <button class="menu-link" (click)="gameEngine.resetGame()">{{ settings.t('RELOAD') }}</button>
         <button class="menu-link" (click)="gameEngine.toggleRules()">{{ settings.t('INFO') }}</button>
         <button class="menu-link" (click)="gameEngine.toggleLeaderboard()">{{ settings.t('RANKING') }}</button>
         <button class="menu-link" (click)="gameEngine.toggleLog()">{{ settings.t('SYSTEM_LOG') }}</button>
         <button class="menu-link" (click)="navigateToFeedback()">{{ settings.t('FEEDBACK_MODULE') }}</button>
         <button class="menu-link" (click)="navigateToRoadmap()">{{ settings.t('STRATEGIC_PLAN') }}</button>
-        <button class="menu-link" (click)="gameEngine.resetGame()">{{ settings.t('RELOAD') }}</button>
         <button class="menu-link" (click)="gameEngine.toggleSettings()">{{ settings.t('SETTINGS') }}</button>
+        @if (firebase.user$(); as user) {
+        <div class="flex items-center gap-3 pl-3 pr-1 py-1 rounded-full bg-white/5 border border-white/10 shadow-inner">
+          <div class="flex flex-col items-end leading-none">
+            <span class="text-[9px] font-black text-blue-400 uppercase tracking-tighter mb-0.5">
+              {{ settings.t('VERIFIED') }}
+            </span>
+            <button
+              (click)="firebase.logout()"
+              class="cursor-pointer text-[9px] text-stone-500 hover:text-red-400 uppercase font-bold tracking-widest transition-colors"
+            >
+              {{ settings.t('LOGOUT') }}
+            </button>
+          </div>
+
+          <div class="relative">
+            <img
+              [src]="user.photoURL"
+              class="w-8 h-8 rounded-full border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.3)]"
+              referrerpolicy="no-referrer"
+            />
+            <div
+              class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-gray-900 rounded-full"
+            ></div>
+          </div>
+        </div>
+      } @else {
+        <button
+          (click)="firebase.loginWithGoogle()"
+          class="cursor-pointer flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-600/10 border border-blue-500/20 hover:bg-blue-600/30 transition-all group"
+        >
+          <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+          <span class="text-[9px] font-black uppercase tracking-widest text-blue-200">
+            {{ settings.t('CONNECT') }}
+          </span>
+        </button>
+      }
       </div>
     </div>
   }

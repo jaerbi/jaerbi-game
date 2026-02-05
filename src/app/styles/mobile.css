@@ -12,7 +12,7 @@
   .mobile-hud-header .hud-item { min-width: 0; }
   .mobile-hud-header .hud-value { white-space: nowrap; }
   .burger-btn { min-width: 34px; min-height: 34px; }
-  .actions-bar { display: flex; position: sticky; top: 42px; z-index: 1; }
+  .actions-bar { display: flex; position: fixed; bottom: 0px; background: rgb(5, 19, 43); z-index: 100; }
   .action-btn {
     width: 34px;
     height: 34px;
@@ -48,8 +48,10 @@
     display: none;
   }
   .mobile-actions-compact {
-    right: 0;
-    bottom: 6px;
+    left: 0;
+    top: 0;
+    bottom: unset;
+    right: unset;
     opacity: 0.8;
     scale: 0.8;
   }
