@@ -1,4 +1,4 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { Unit, Position, Owner, AggressionAiMode } from '../models/unit.model';
 import { CombatService } from './combat.service';
 import { BuildService } from './build.service';
@@ -9,6 +9,9 @@ import { EconomyService } from './economy.service';
 import { AiStrategyService } from './ai-strategy.service';
 import { FirebaseService, ScoreEntry } from './firebase.service';
 import { PlayerNameService } from './player-name.service';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 
 interface Wall {
     id: string;
@@ -34,6 +37,14 @@ export class GameEngineService {
     get gridSize(): number {
         return this.settings.mapSize();
     }
+
+    private breakpointObserver = inject(BreakpointObserver);
+    private screenState = toSignal(
+        this.breakpointObserver.observe('(max-width: 1024px)').pipe(
+            map(result => result.matches)
+        ),
+        { initialValue: false }
+    );
 
     // State using Signals
     private unitsSignal = signal<Unit[]>([]);
@@ -136,6 +147,7 @@ export class GameEngineService {
     readonly lastArrivedUnitId = this.lastArrivedUnitIdSignal.asReadonly();
     readonly pulseUnitId = this.pulseUnitIdSignal.asReadonly();
     readonly aiUnitTimeNearBase = this.aiUnitTimeNearBaseSignal.asReadonly();
+    public isMobile = computed(() => this.screenState());
     sandboxSpawnPending(): { owner: Owner; tier: number } | null {
         return this.sandboxSpawnPendingSignal();
     }
@@ -208,25 +220,45 @@ export class GameEngineService {
     }
     get tileSizePx(): number {
         const gs = this.gridSize;
-        if (gs <= 10) return 64;
+        if (gs <= 10) {
+            if (this.isMobile()) {
+                return 48;
+            }
+            return 64;
+        }
         if (gs <= 20) return 48;
         return 32;
     }
     get tileMinSizePx(): number {
         const gs = this.gridSize;
-        if (gs <= 10) return 64;
+        if (gs <= 10) {
+            if (this.isMobile()) {
+                return 40;
+            }
+            return 64;
+        }
         if (gs <= 20) return 40;
         return 32;
     }
     get wallThicknessPx(): number {
         const gs = this.gridSize;
-        if (gs <= 10) return 6;
+        if (gs <= 10) {
+            if (this.isMobile()) {
+                return 4;
+            }
+            return 6;
+        }
         if (gs <= 20) return 4;
         return 2;
     }
     get iconSizePx(): number {
         const gs = this.gridSize;
-        if (gs <= 10) return 16;
+        if (gs <= 10) {
+            if (this.isMobile()) {
+                return 12;
+            }
+            return 16;
+        }
         if (gs <= 20) return 12;
         return 8;
     }
