@@ -1016,16 +1016,27 @@ export class GameEngineService {
         );
         if (reachableThreats.length > 0) return reachableThreats[0].position;
 
-        // 2. Adjacent Walls (Breacher Logic)
-        // Identify walls that are blocking or hostile
+        // 2. Adjacent Walls (Breacher Logic with Reinforcement Awareness)
+        // Score hostile walls by reinforcement level and unit capability
         const neighbors = this.getNeighbors(unit.position);
+        const wallCandidates: { pos: Position; score: number }[] = [];
         for (const nb of neighbors) {
             const wall = this.getWallBetween(unit.position.x, unit.position.y, nb.x, nb.y);
-            if (wall && wall.owner !== 'ai') {
-                // Return the tile across the wall as the target.
-                // executeMove will detect the wall intersection and trigger an attack.
-                return nb;
-            }
+            if (!wall || wall.owner === unit.owner) continue;
+            const maxH = wall.maxHealth ?? 100;
+            // Base desirability: smaller clusters preferred
+            let score = 100 - (maxH - 100);
+            // Strong penalty for heavily reinforced walls if unit lacks weapon
+            if (maxH > 200 && !unit.hasWeapon) score -= 150;
+            // Weapon-equipped units are better breachers: reduce penalty
+            if (unit.hasWeapon) score += 40;
+            // Prefer isolated walls
+            if ((wall.formationSize ?? 1) <= 2) score += 30;
+            wallCandidates.push({ pos: nb, score });
+        }
+        if (wallCandidates.length > 0) {
+            wallCandidates.sort((a, b) => b.score - a.score);
+            return wallCandidates[0].pos;
         }
 
         // 3. General Enemies (weighted by resource occupation and effective value)
@@ -1470,7 +1481,7 @@ export class GameEngineService {
             const any = byId.get(group[0])!;
             const isNeutralGroup = any.owner === 'neutral';
             const size = isNeutralGroup ? 1 : group.length;
-            const bonus = isNeutralGroup ? 0 : Math.min(80, Math.max(0, (size - 1) * 20));
+            const bonus = isNeutralGroup ? 0 : Math.max(0, size * 20);
             const newMax = 100 + bonus;
             const formationId = isNeutralGroup ? null : group[0];
             for (const id of group) {

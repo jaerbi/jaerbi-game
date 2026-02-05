@@ -1189,6 +1189,11 @@
                       [class.bg-gray-300]="vWall.owner === 'neutral'"
                       [class.shake]="gameEngine.isWallShaking(vWall.id)"
                       [class.wall-formation-active]="gameEngine.isFormationHovered(vWall.formationId)"
+                      [attr.title]="
+                        'Wall ' +
+                        ((vWall.bonusHp || 0) > 0 ? '(Reinforced: +' + (vWall.bonusHp || 0) + ' HP from formation)' : '') +
+                        ' — HP: ' + vWall.health + '/' + (vWall.maxHealth || 100)
+                      "
                       (mouseenter)="gameEngine.hoverFormationById(vWall.formationId)"
                       (mouseleave)="gameEngine.hoverFormationById(null)"
                     >
@@ -1289,6 +1294,11 @@
                       [class.bg-gray-300]="hWall.owner === 'neutral'"
                       [class.shake]="gameEngine.isWallShaking(hWall.id)"
                       [class.wall-formation-active]="gameEngine.isFormationHovered(hWall.formationId)"
+                      [attr.title]="
+                        'Wall ' +
+                        ((hWall.bonusHp || 0) > 0 ? '(Reinforced: +' + (hWall.bonusHp || 0) + ' HP from formation)' : '') +
+                        ' — HP: ' + hWall.health + '/' + (hWall.maxHealth || 100)
+                      "
                       (mouseenter)="gameEngine.hoverFormationById(hWall.formationId)"
                       (mouseleave)="gameEngine.hoverFormationById(null)"
                     >
