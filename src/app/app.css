@@ -143,6 +143,10 @@
   box-shadow: 0 0 0 1px rgba(45, 87, 66, 0.9), inset 0 0 40px rgba(45, 87, 66, 0.8);
   border-color: rgb(52, 106, 79);
 }
+.mine-area {
+  box-shadow: 0 0 0 1px rgba(170, 115, 43, 0.9), inset 0 0 40px rgba(170, 115, 43, 0.2);
+  border-color: rgb(170, 115, 43);
+}
 .castle.red {
   filter: hue-rotate(140deg); /* Approximate blue->red shift if it was an image, but it's text emoji so irrelevant, just for classing */
 }

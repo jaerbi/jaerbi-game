@@ -72,13 +72,26 @@ export class CombatService {
     if (tier === 2) return 51;
     return 101;
   }
+  applyDamage(unit: Unit, damage: number): Unit {
+    const shield = unit.armorHp ?? 0;
+    const shieldLeft = Math.max(0, shield - damage);
+    const spill = Math.max(0, damage - shield);
+    const nextPoints = Math.max(0, unit.points - spill);
+    const { tier, level } = this.calculateTierAndLevel(nextPoints);
+    return { ...unit, armorHp: shieldLeft, points: nextPoints, tier, level };
+  }
   calculateHitChance(attacker: Unit, defender: Unit): number {
     const gap = defender.tier - attacker.tier;
     const level = attacker.level ?? 1;
-    if (gap <= 0) return 100;
-    if (gap === 1) return Math.min(100, 50 + level * 15);
-    if (gap === 2) return Math.min(100, 25 + level * 5);
-    return Math.min(100, 1 + level * 1);
+    let base = 0;
+    if (gap <= 0) base = 100;
+    else if (gap === 1) base = Math.min(100, 50 + level * 15);
+    else if (gap === 2) base = Math.min(100, 25 + level * 5);
+    else base = Math.min(100, 1 + level * 1);
+    const weaponBonus = attacker.hasWeapon && defender.tier > attacker.tier ? 10 : 0;
+    const armorPenalty = defender.hasArmor ? 10 : 0;
+    const final = Math.max(1, Math.min(100, base + weaponBonus - armorPenalty));
+    return final;
   }
 
   isDiagonalBlocked(from: Position, to: Position, getWallBetween: (x1: number, y1: number, x2: number, y2: number) => any): boolean {
