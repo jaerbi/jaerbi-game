@@ -42,8 +42,9 @@ export class GameEngineService {
     private gameStatusSignal = signal<'playing' | 'player wins' | 'jaerbi wins'>('playing');
     private lastMergedUnitIdSignal = signal<string | null>(null);
     private lastRemainderUnitIdSignal = signal<string | null>(null);
-    private resourcesSignal = signal<{ wood: number }>({ wood: 0 });
+    private resourcesSignal = signal<{ wood: number; iron: number }>({ wood: 0, iron: 0 });
     private forestsSignal = signal<Position[]>([]);
+    private minesSignal = signal<Position[]>([]);
     private baseHealthSignal = signal<{ player: number; ai: number }>({ player: 100, ai: 100 });
     private reservePointsSignal = signal<{ player: number; ai: number }>({ player: 0, ai: 0 });
     private deployTargetsSignal = signal<Position[]>([]);
@@ -64,6 +65,7 @@ export class GameEngineService {
     private movedThisTurnSignal = signal<Set<string>>(new Set<string>());
     private hoveredFormationIdSignal = signal<string | null>(null);
     private aiWoodSignal = signal<number>(0);
+    private aiIronSignal = signal<number>(0);
     private logsOpenSignal = signal<boolean>(false);
     private settingsOpenSignal = signal<boolean>(false);
     private activeSideSignal = signal<Owner>('ai');
@@ -113,6 +115,7 @@ export class GameEngineService {
     readonly lastRemainderUnitId = this.lastRemainderUnitIdSignal.asReadonly();
     readonly resources = this.resourcesSignal.asReadonly();
     readonly forests = this.forestsSignal.asReadonly();
+    readonly mines = this.minesSignal.asReadonly();
     readonly baseHealth = this.baseHealthSignal.asReadonly();
     readonly reservePoints = this.reservePointsSignal.asReadonly();
     readonly deployTargets = this.deployTargetsSignal.asReadonly();
@@ -251,7 +254,7 @@ export class GameEngineService {
         this.forestMonopolySignal.set({ player: 0, ai: 0 });
         this.lastMergedUnitIdSignal.set(null);
         this.lastRemainderUnitIdSignal.set(null);
-        this.resourcesSignal.set({ wood: 0 });
+        this.resourcesSignal.set({ wood: 0, iron: 0 });
         this.baseHealthSignal.set(this.settings.customMode() ? { player: 1000, ai: 1000 } : { player: 100, ai: 100 });
 
         // START RESERVE
@@ -267,6 +270,7 @@ export class GameEngineService {
 
         this.deployTargetsSignal.set([]);
         this.forestsSignal.set(this.map.generateForests(this.gridSize, this.getBasePosition('player'), this.getBasePosition('ai')));
+        this.minesSignal.set(this.map.generateMines(this.gridSize, this.getBasePosition('player'), this.getBasePosition('ai'), this.forestsSignal()));
         const forestKeys = new Set(this.forestsSignal().map(p => `${p.x},${p.y}`));
         this.playerExploredSignal.set(new Set(forestKeys));
         this.aiExploredSignal.set(new Set(forestKeys));
@@ -752,9 +756,9 @@ export class GameEngineService {
 
     private findResourceTarget(unit: Unit, context: TurnContext): Position | null {
         const forests = this.forestsSignal();
+        const mines = this.minesSignal();
+        const earlyGame = this.turnSignal() <= 20;
 
-        // Filter out forests already claimed by other AI agents in this turn
-        // And filter out forests already occupied by other AI units (we don't need to go there)
         const availableForests = forests.filter(f => {
             const key = `${f.x},${f.y}`;
             if (context.claimedTargets.has(key)) return false;
@@ -762,42 +766,95 @@ export class GameEngineService {
             if (u && u.owner === 'ai') return false; // Already held by AI
             return true;
         });
+        const availableMines = mines.filter(m => {
+            const key = `${m.x},${m.y}`;
+            if (context.claimedTargets.has(key)) return false;
+            const u = this.getUnitAt(m.x, m.y);
+            if (u && u.owner === 'ai') return false;
+            return true;
+        });
 
-        // 1. Truly Empty Forests (Priority 1: Expansion)
         const emptyForests = availableForests.filter(f => !this.getUnitAt(f.x, f.y));
+        const emptyMines = availableMines.filter(m => !this.getUnitAt(m.x, m.y));
 
-        if (emptyForests.length > 0) {
-            emptyForests.sort((a, b) => {
-                const da = Math.abs(a.x - unit.position.x) + Math.abs(a.y - unit.position.y);
-                const db = Math.abs(b.x - unit.position.x) + Math.abs(b.y - unit.position.y);
-                return da - db;
-            });
-            return emptyForests[0];
+        if (earlyGame) {
+            if (emptyForests.length > 0) {
+                emptyForests.sort((a, b) => {
+                    const da = Math.abs(a.x - unit.position.x) + Math.abs(a.y - unit.position.y);
+                    const db = Math.abs(b.x - unit.position.x) + Math.abs(b.y - unit.position.y);
+                    return da - db;
+                });
+                return emptyForests[0];
+            }
+            if (emptyMines.length > 0) {
+                emptyMines.sort((a, b) => {
+                    const da = Math.abs(a.x - unit.position.x) + Math.abs(a.y - unit.position.y);
+                    const db = Math.abs(b.x - unit.position.x) + Math.abs(b.y - unit.position.y);
+                    return da - db;
+                });
+                return emptyMines[0];
+            }
+        } else {
+            const emptyBoth = [...emptyForests, ...emptyMines];
+            if (emptyBoth.length > 0) {
+                emptyBoth.sort((a, b) => {
+                    const da = Math.abs(a.x - unit.position.x) + Math.abs(a.y - unit.position.y);
+                    const db = Math.abs(b.x - unit.position.x) + Math.abs(b.y - unit.position.y);
+                    return da - db;
+                });
+                return emptyBoth[0];
+            }
         }
 
-        // 2. Strategic Resource Reclamation (Priority 2: Recapture)
-        // Rule: Only attack player-held forests if AI Unit Tier >= Player Unit Tier
         const playerForests = availableForests.filter(f => {
             const u = this.getUnitAt(f.x, f.y);
             return u && u.owner === 'player';
         });
+        const playerMines = availableMines.filter(m => {
+            const u = this.getUnitAt(m.x, m.y);
+            return u && u.owner === 'player';
+        });
 
+        const validReclaimedMines = playerMines.filter(m => {
+            const occupier = this.getUnitAt(m.x, m.y);
+            return occupier && unit.tier >= occupier.tier;
+        });
         const validReclamation = playerForests.filter(f => {
             const occupier = this.getUnitAt(f.x, f.y);
             // Safety check, though playerForests filter ensures u exists and is player
             return occupier && unit.tier >= occupier.tier;
         });
 
-        if (validReclamation.length > 0) {
-            validReclamation.sort((a, b) => {
-                const da = Math.abs(a.x - unit.position.x) + Math.abs(a.y - unit.position.y);
-                const db = Math.abs(b.x - unit.position.x) + Math.abs(b.y - unit.position.y);
-                return da - db;
-            });
-            return validReclamation[0];
+        if (earlyGame) {
+            if (validReclamation.length > 0) {
+                validReclamation.sort((a, b) => {
+                    const da = Math.abs(a.x - unit.position.x) + Math.abs(a.y - unit.position.y);
+                    const db = Math.abs(b.x - unit.position.x) + Math.abs(b.y - unit.position.y);
+                    return da - db;
+                });
+                return validReclamation[0];
+            }
+            if (validReclaimedMines.length > 0) {
+                validReclaimedMines.sort((a, b) => {
+                    const da = Math.abs(a.x - unit.position.x) + Math.abs(a.y - unit.position.y);
+                    const db = Math.abs(b.x - unit.position.x) + Math.abs(b.y - unit.position.y);
+                    return da - db;
+                });
+                return validReclaimedMines[0];
+            }
+        } else {
+            const both = [...validReclamation, ...validReclaimedMines];
+            if (both.length > 0) {
+                both.sort((a, b) => {
+                    const da = Math.abs(a.x - unit.position.x) + Math.abs(a.y - unit.position.y);
+                    const db = Math.abs(b.x - unit.position.x) + Math.abs(b.y - unit.position.y);
+                    return da - db;
+                });
+                return both[0];
+            }
         }
 
-        // 3. Dynamic Re-Targeting (Idle/Desperation)
+        // 4. Dynamic Re-Targeting (Idle/Desperation)
         // If no safe targets, target the player's weakest held forest to force conflict
         if (playerForests.length > 0) {
             // Sort primarily by Occupier Tier (Weakest first), then by distance
@@ -1191,6 +1248,9 @@ export class GameEngineService {
     aiWood(): number {
         return this.aiWoodSignal();
     }
+    aiIron(): number {
+        return this.aiIronSignal();
+    }
     monopolyCounter() {
         return this.forestMonopolySignal();
     }
@@ -1569,14 +1629,19 @@ export class GameEngineService {
                 if (u.owner !== ownerJustActed) return u;
                 const moved = movedIds.has(u.id);
                 const onForest = this.isForest(u.position.x, u.position.y);
+                const onMine = this.isMine(u.position.x, u.position.y);
                 const occ = onForest
                     ? (moved ? 1 : (u.forestOccupationTurns ?? 0) + 1)
+                    : (moved ? 0 : 0);
+                const occMine = onMine
+                    ? (moved ? 1 : (u.mineOccupationTurns ?? 0) + 1)
                     : (moved ? 0 : 0);
                 const active = onForest ? occ >= 3 : false;
                 return {
                     ...u,
                     turnsStationary: moved ? 0 : (u.turnsStationary ?? 0) + 1,
                     forestOccupationTurns: occ,
+                    mineOccupationTurns: occMine,
                     productionActive: active
                 };
             })
@@ -1599,12 +1664,20 @@ export class GameEngineService {
         }
         if (this.gameStatus() === 'playing') {
             const countOnForest = this.unitsSignal().filter(u => u.owner === ownerJustActed && this.isForest(u.position.x, u.position.y) && (u.productionActive ?? false)).length;
+            const countOnMine = this.unitsSignal().filter(u => u.owner === ownerJustActed && this.isMine(u.position.x, u.position.y) && (u.mineOccupationTurns ?? 0) >= 5).length;
             if (countOnForest > 0) {
                 if (ownerJustActed === 'player') {
                     // ADD Wood Resources
-                    this.resourcesSignal.update(r => ({ wood: r.wood + countOnForest * getWoodsResources(this.settings.difficulty()) }));
+                    this.resourcesSignal.update(r => ({ wood: r.wood + countOnForest * getWoodsResources(this.settings.difficulty()), iron: r.iron }));
                 } else {
                     this.aiWoodSignal.update(w => w + countOnForest * getWoodsResources(this.settings.difficulty()));
+                }
+            }
+            if (countOnMine > 0) {
+                if (ownerJustActed === 'player') {
+                    this.resourcesSignal.update(r => ({ wood: r.wood, iron: r.iron + countOnMine * 2 }));
+                } else {
+                    this.aiIronSignal.update(v => v + countOnMine * 2);
                 }
             }
         }
@@ -1952,9 +2025,24 @@ export class GameEngineService {
                             action = { type: 'build_wall', target: wallTarget, reason: 'Defense: Fortify Position' };
                         }
                     }
-
                     if (!action) {
-                        this.appendLog(`[AI Unit ${currentUnit.id.substring(0, 4)}] Holding forest position.`);
+                        const danger = this.isUnitInDanger(currentUnit);
+                        if (!danger) {
+                            this.unitsSignal.update(units => units.map(u => u.id === currentUnit.id ? { ...u, hasActed: true } : u));
+                            continue;
+                        }
+                    }
+                }
+            }
+            // Priority Zero: Hold Position (Mine Occupants)
+            if (!action && this.isMine(currentUnit.position.x, currentUnit.position.y)) {
+                const rawMoves = this.calculateValidMoves(currentUnit);
+                const combatTarget = this.findCombatTarget(currentUnit, turnContext, rawMoves);
+                if (combatTarget) {
+                    action = { type: 'attack', target: combatTarget, reason: 'Defense: Defend Mine' };
+                } else {
+                    const danger = this.isUnitInDanger(currentUnit);
+                    if (!danger) {
                         this.unitsSignal.update(units => units.map(u => u.id === currentUnit.id ? { ...u, hasActed: true } : u));
                         continue;
                     }
@@ -2395,7 +2483,7 @@ export class GameEngineService {
             if (reserves < cost) break;
             if (countExclForests(tier) >= 5) break;
             const tl = this.calculateTierAndLevel(cost);
-            placed.push({ id: crypto.randomUUID(), position: { ...pos }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0, forestOccupationTurns: 0, productionActive: false, hasActed: true });
+            placed.push({ id: crypto.randomUUID(), position: { ...pos }, level: tl.level, tier: tl.tier, points: cost, owner: 'ai', turnsStationary: 0, forestOccupationTurns: 0, mineOccupationTurns: 0, productionActive: false, hasActed: true });
             reserves -= cost;
             created++;
         }
@@ -2421,7 +2509,7 @@ export class GameEngineService {
         this.unitsSignal.update(units => {
             const occupied = units.some(u => u.position.x === basePosition.x && u.position.y === basePosition.y);
             if (occupied) return units;
-            const newUnit: Unit = { id: crypto.randomUUID(), position: { ...basePosition }, level: 1, tier: 1, points: 1, owner, turnsStationary: 0, forestOccupationTurns: 0, productionActive: false, hasActed: true };
+            const newUnit: Unit = { id: crypto.randomUUID(), position: { ...basePosition }, level: 1, tier: 1, points: 1, owner, turnsStationary: 0, forestOccupationTurns: 0, mineOccupationTurns: 0, productionActive: false, hasActed: true };
             return [...units, newUnit];
         });
     }
@@ -2509,6 +2597,9 @@ export class GameEngineService {
     isForest(x: number, y: number): boolean {
         return this.forestsSignal().some(p => p.x === x && p.y === y);
     }
+    isMine(x: number, y: number): boolean {
+        return this.minesSignal().some(p => p.x === x && p.y === y);
+    }
 
     getBasePosition(owner: Owner): Position {
         return owner === 'player' ? { x: 0, y: 0 } : { x: this.gridSize - 1, y: this.gridSize - 1 };
@@ -2588,7 +2679,7 @@ export class GameEngineService {
             }
         ]);
         this.updateWallFormations();
-        this.resourcesSignal.update(r => ({ wood: r.wood - 10 }));
+        this.resourcesSignal.update(r => ({ wood: r.wood - 10, iron: r.iron }));
         this.buildModeSignal.set(false);
         this.wallBuiltThisTurnSignal.set(true);
         this.unitsSignal.update(units =>
@@ -2599,7 +2690,7 @@ export class GameEngineService {
     convertWoodToReserve() {
         const wood = this.resourcesSignal().wood;
         if (wood < 20) return;
-        this.resourcesSignal.update(r => ({ wood: r.wood - 20 }));
+        this.resourcesSignal.update(r => ({ wood: r.wood - 20, iron: r.iron }));
         this.reservePointsSignal.update(r => ({ player: r.player + 1, ai: r.ai }));
         this.playerConvertedThisTurnSignal.set(true);
     }
@@ -2607,7 +2698,7 @@ export class GameEngineService {
         const wood = this.resourcesSignal().wood;
         const count = Math.floor(wood / 20);
         if (count <= 0) return;
-        this.resourcesSignal.update(r => ({ wood: r.wood - count * 20 }));
+        this.resourcesSignal.update(r => ({ wood: r.wood - count * 20, iron: r.iron }));
         this.reservePointsSignal.update(r => ({ player: r.player + count, ai: r.ai }));
         this.playerConvertedThisTurnSignal.set(true);
     }
@@ -2656,6 +2747,7 @@ export class GameEngineService {
             owner: pending.owner,
             turnsStationary: 0,
             forestOccupationTurns: 0,
+            mineOccupationTurns: 0,
             productionActive: false,
             hasActed: true
         };
@@ -2683,7 +2775,7 @@ export class GameEngineService {
             const cost = this.economy.getHighestAffordableCost(reserves);
             if (cost <= 0) break;
             const tl = this.calculateTierAndLevel(cost);
-            this.unitsSignal.update(units => [...units, { id: crypto.randomUUID(), position: { ...pos }, level: tl.level, tier: tl.tier, points: cost, owner: 'player', turnsStationary: 0, forestOccupationTurns: 0, productionActive: false, hasActed: true }]);
+            this.unitsSignal.update(units => [...units, { id: crypto.randomUUID(), position: { ...pos }, level: tl.level, tier: tl.tier, points: cost, owner: 'player', turnsStationary: 0, forestOccupationTurns: 0, mineOccupationTurns: 0, productionActive: false, hasActed: true }]);
             reserves -= cost;
             placed.push(pos);
         }
@@ -2705,7 +2797,7 @@ export class GameEngineService {
         if (cost <= 0) return;
         const tl = this.calculateTierAndLevel(cost);
         this.unitsSignal.update(units => {
-            const newUnit: Unit = { id: crypto.randomUUID(), position: { ...target }, level: tl.level, tier: tl.tier, points: cost, owner: 'player', turnsStationary: 0, hasActed: true };
+            const newUnit: Unit = { id: crypto.randomUUID(), position: { ...target }, level: tl.level, tier: tl.tier, points: cost, owner: 'player', turnsStationary: 0, forestOccupationTurns: 0, mineOccupationTurns: 0, productionActive: false, hasActed: true };
             return [...units, newUnit];
         });
         this.reservePointsSignal.update(r => ({ player: r.player - cost, ai: r.ai }));
@@ -3150,6 +3242,16 @@ export class GameEngineService {
             if (this.inBounds(south.x, south.y)) addNeutral(f, south);
             if (this.inBounds(west.x, west.y)) addNeutral(f, west);
             if (this.inBounds(north.x, north.y)) addNeutral(f, north);
+        }
+        for (const m of this.minesSignal()) {
+            const east = { x: m.x + 1, y: m.y };
+            const south = { x: m.x, y: m.y + 1 };
+            const west = { x: m.x - 1, y: m.y };
+            const north = { x: m.x, y: m.y - 1 };
+            if (this.inBounds(east.x, east.y)) addNeutral(m, east);
+            if (this.inBounds(south.x, south.y)) addNeutral(m, south);
+            if (this.inBounds(west.x, west.y)) addNeutral(m, west);
+            if (this.inBounds(north.x, north.y)) addNeutral(m, north);
         }
     }
 }

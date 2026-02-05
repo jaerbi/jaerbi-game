@@ -15,6 +15,7 @@ export interface Unit {
   owner: Owner;
   turnsStationary: number;
   forestOccupationTurns?: number;
+  mineOccupationTurns?: number;
   productionActive?: boolean;
   hasActed: boolean;
 }

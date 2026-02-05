@@ -21,6 +21,26 @@ export class MapService {
     }
     return positions;
   }
+  generateMines(gridSize: number, playerBase: Position, aiBase: Position, avoid: Position[]): Position[] {
+    const avoidSet = new Set(avoid.map(p => `${p.x},${p.y}`));
+    const count = gridSize === 10 ? 4 : Math.max(1, Math.floor((gridSize * gridSize) * 0.04));
+    const positions: Position[] = [];
+    const inSpawnSafeZone = (x: number, y: number) => {
+      const dPlayer = Math.max(Math.abs(x - playerBase.x), Math.abs(y - playerBase.y));
+      const dAi = Math.max(Math.abs(x - aiBase.x), Math.abs(y - aiBase.y));
+      return dPlayer <= 3 || dAi <= 3;
+    };
+    while (positions.length < count) {
+      const x = Math.floor(Math.random() * gridSize);
+      const y = Math.floor(Math.random() * gridSize);
+      if (inSpawnSafeZone(x, y)) continue;
+      const key = `${x},${y}`;
+      if (avoidSet.has(key)) continue;
+      if (positions.some(p => p.x === x && p.y === y)) continue;
+      positions.push({ x, y });
+    }
+    return positions;
+  }
 
   computeVisibility(gridSize: number, units: Unit[], playerBase: Position, aiBase: Position, fogDebugDisabled: boolean): { player: Set<string>; ai: Set<string> } {
     const res = { player: new Set<string>(), ai: new Set<string>() };

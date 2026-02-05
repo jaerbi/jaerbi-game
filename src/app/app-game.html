@@ -330,6 +330,13 @@
     </div>
     <div class="hud-item flex items-center gap-2">
       <svg width="20" height="20" viewBox="0 0 24 24">
+        <path d="M6 18 L10 12 L14 18 Z" fill="#9ca3af" />
+        <circle cx="12" cy="10" r="3" fill="#6b7280" />
+      </svg>
+      <span class="hud-value font-mono text-sm font-bold text-slate-300">{{ gameEngine.resources().iron }}</span>
+    </div>
+    <div class="hud-item flex items-center gap-2">
+      <svg width="20" height="20" viewBox="0 0 24 24">
         <polygon points="12,3 6,13 9,13 4,21 20,21 15,13 18,13" fill="#6fbf73" />
       </svg>
       <span class="hud-value font-mono text-sm font-bold text-blue-300">
@@ -441,7 +448,7 @@
   <!-- MOBILE Navigation END -->
   <!-- Battle Status Bar -->
   <div
-    class="status-bar w-full max-w-5xl flex items-center justify-between mb-8 px-6 py-3 rounded-2xl bg-gray-900/40 backdrop-blur-xl border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.5)] relative overflow-hidden"
+    class="status-bar w-full max-w-6xl flex items-center justify-between mb-8 px-6 py-3 rounded-2xl bg-gray-900/40 backdrop-blur-xl border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.5)] relative overflow-hidden"
   >
     <div
       class="absolute bottom-0 left-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent w-full"
@@ -473,6 +480,15 @@
             </svg>
           </span>
           <span class="font-mono text-lg font-bold text-emerald-400">{{ gameEngine.resources().wood }}</span>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner">
+          <span class="text-lg">
+            <svg width="24" height="24" viewBox="0 0 24 24">
+              <path d="M6 18 L10 12 L14 18 Z" fill="#9ca3af" />
+              <circle cx="12" cy="10" r="3" fill="#6b7280" />
+            </svg>
+          </span>
+          <span class="font-mono text-lg font-bold text-slate-300">{{ gameEngine.resources().iron }}</span>
         </div>
         <div
           class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 shadow-inner"
@@ -571,6 +587,15 @@
               <circle cx="7" cy="8" r="1.5" stroke="#8B5E3C" stroke-width="0.5" />
             </svg>
           </span>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner">
+          <span class="text-lg">
+            <svg width="24" height="24" viewBox="0 0 24 24">
+              <path d="M6 18 L10 12 L14 18 Z" fill="#9ca3af" />
+              <circle cx="12" cy="10" r="3" fill="#6b7280" />
+            </svg>
+          </span>
+          <span class="font-mono text-lg font-bold text-slate-300">{{ gameEngine.aiIron() }}</span>
         </div>
         <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 shadow-inner">
           <span class="font-mono text-lg font-bold text-red-300">
@@ -877,7 +902,14 @@
           @for (x of gameEngine.gridCols; track x) {
             <div
               (click)="onTileClick(x, y)"
-              (mouseenter)="gameEngine.setHoveredUnit(gameEngine.getUnitAt(x, y) && (gameEngine.getUnitAt(x, y)!.owner === 'player' || gameEngine.isVisibleToPlayer(x, y)) ? gameEngine.getUnitAt(x, y)!.id : null)"
+              (mouseenter)="
+                gameEngine.setHoveredUnit(
+                  gameEngine.getUnitAt(x, y) &&
+                    (gameEngine.getUnitAt(x, y)!.owner === 'player' || gameEngine.isVisibleToPlayer(x, y))
+                    ? gameEngine.getUnitAt(x, y)!.id
+                    : null
+                )
+              "
               (mouseleave)="gameEngine.setHoveredUnit(null)"
               class="tile rounded flex items-center justify-center border transition-colors duration-200"
               [style.width.px]="gameEngine.tileSizePx"
@@ -889,7 +921,9 @@
                 gameEngine.getUnitAt(x, y) &&
                 (gameEngine.getUnitAt(x, y)!.owner === 'player' || gameEngine.isVisibleToPlayer(x, y))
                   ? gameEngine.formatHoverInfo(gameEngine.getUnitAt(x, y)!.id)
-                  : null
+                  : gameEngine.isMine(x, y) && gameEngine.isVisibleToPlayer(x, y)
+                    ? 'Iron Mine: Requires 5 consecutive turns of occupation to activate. Once active, yields +2 Iron per turn.'
+                    : null
               "
               [class.bg-gray-700]="!gameEngine.isValidMove(x, y)"
               [class.border-gray-600]="!gameEngine.isValidMove(x, y)"
@@ -905,6 +939,7 @@
               [class.ring-red-300]="x === gameEngine.gridSize - 1 && y === gameEngine.gridSize - 1"
               [class.spawn-zone-highlight]="gameEngine.baseDeployActive() && x <= 2 && y <= 2 && (x !== 0 || y !== 0)"
               [class.forest-area]="gameEngine.isForest(x, y)"
+              [class.mine-area]="gameEngine.isMine(x, y)"
               [class.bg-amber-900]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
               [class.border-amber-500]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
               [class.bg-gray-950]="!gameEngine.isVisibleToPlayer(x, y)"
@@ -988,6 +1023,29 @@
                       <g transform="translate(78, 30) rotate(15) scale(1.5)">
                         <rect width="4" height="30" rx="2" fill="#7a4a21" />
                         <path d="M0 0 C10 -2, 12 8, 2 12 Z" fill="#9aa3a8" transform="translate(4,0)" />
+                      </g>
+                    }
+                  </svg>
+                </span>
+              }
+              @if (gameEngine.isMine(x, y) && gameEngine.isVisibleToPlayer(x, y)) {
+                <span
+                  class="absolute inset-0 pointer-events-none flex items-center justify-center transition-all duration-500"
+                  [class.scale-50]="unitOnTile"
+                  [class.opacity-40]="unitOnTile"
+                  [class.-translate-x-4]="unitOnTile"
+                  [class.translate-y-4]="unitOnTile"
+                >
+                  <svg viewBox="0 0 128 128" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                    <g>
+                      <ellipse cx="64" cy="96" rx="40" ry="10" fill="#374151" />
+                      <path d="M32 96 L56 48 L72 80 L96 96 Z" fill="#6b7280" stroke="#4b5563" stroke-width="4" />
+                      <circle cx="58" cy="60" r="6" fill="#9ca3af" />
+                    </g>
+                    @if (!unitOnTile) {
+                      <g transform="translate(82, 30) rotate(-20) scale(1.3)">
+                        <rect width="4" height="30" rx="2" fill="#6b7280" />
+                        <path d="M0 0 C10 -2, 12 8, 2 12 Z" fill="#f59e0b" transform="translate(4,0)" />
                       </g>
                     }
                   </svg>
@@ -1233,7 +1291,9 @@
                       class="pointer-events-none move-anim"
                       [class.shake]="gameEngine.isUnitShaking(unit.id)"
                       [style.transform]="gameEngine.getCombinedTransform(unit.id)"
-                      [style.z-index]="(gameEngine.isUnitMoving(unit.id) || gameEngine.isUnitAttacking(unit.id)) ? 200 : null"
+                      [style.z-index]="
+                        gameEngine.isUnitMoving(unit.id) || gameEngine.isUnitAttacking(unit.id) ? 200 : null
+                      "
                     >
                       <!-- [class.ring-4]="gameEngine.selectedUnitId() === unit.id"
                         [class.ring-yellow-400]="gameEngine.selectedUnitId() === unit.id"
@@ -1304,6 +1364,24 @@
                         >
                           🌿
                         </span>
+                      }
+                      @if (gameEngine.isMine(unit.position.x, unit.position.y)) {
+                        @if ((unit.mineOccupationTurns ?? 0) >= 5) {
+                          <span
+                            class="absolute -bottom-1 -left-1 [filter:drop-shadow(0_0_2px_rgba(0,0,0,0.5))]"
+                            [style.z-index]="100"
+                          >
+                            🧱
+                          </span>
+                        } @else if ((unit.mineOccupationTurns ?? 0) === 1) {
+                          <span class="absolute -bottom-1 -left-1 opacity-70 [style.z-index]='100'">⛰️</span>
+                        } @else if ((unit.mineOccupationTurns ?? 0) === 2) {
+                          <span class="absolute -bottom-1 -left-1 opacity-70 [style.z-index]='100'">⛏️</span>
+                        } @else if ((unit.mineOccupationTurns ?? 0) === 3) {
+                          <span class="absolute -bottom-1 -left-1 opacity-70 [style.z-index]='100'">⛏</span>
+                        } @else if ((unit.mineOccupationTurns ?? 0) > 3) {
+                          <span class="absolute -bottom-1 -left-1 opacity-70 [style.z-index]='100'">⚒</span>
+                        }
                       }
                     </div>
                   }
