@@ -119,6 +119,7 @@ export class GameEngineService {
     private unitMoveOffsetSignal = signal<Map<string, { dx: number; dy: number }>>(new Map());
     private movingUnitsSignal = signal<Set<string>>(new Set());
     private attackingUnitsSignal = signal<Set<string>>(new Set());
+    private reclamationGoalsSignal = signal<Map<string, { target: Position; type: 'hunt' | 'merge' }>>(new Map());
 
     // Computed signals
     readonly units = this.unitsSignal.asReadonly();
@@ -1926,6 +1927,62 @@ export class GameEngineService {
         const aiBase = this.getBasePosition('ai');
         // console.log('[AI] Phase: Economy');
 
+        // Reclamation Mode: Global resource control assessment
+        const totalResources = this.forestsSignal().length + this.minesSignal().length;
+        const playerOnResources = this.unitsSignal().filter(u =>
+            u.owner === 'player' && (this.isForest(u.position.x, u.position.y) || this.isMine(u.position.x, u.position.y))
+        );
+        const playerControlPct = totalResources > 0 ? (playerOnResources.length / totalResources) : 0;
+        const reclamationMode = playerControlPct > 0.5;
+        if (reclamationMode) {
+            const goals = new Map<string, { target: Position; type: 'hunt' | 'merge' }>();
+            const aiUnitsAvail = this.unitsSignal().filter(u => u.owner === 'ai' && !u.hasActed);
+            const assigned = new Set<string>();
+            const targets = playerOnResources
+                .slice()
+                .sort((a, b) => b.tier - a.tier);
+            for (const t of targets) {
+                const requiredTier = Math.min(4, t.tier + 1);
+                // Try to assign an existing counter unit
+                const candidates = aiUnitsAvail
+                    .filter(u => u.tier === requiredTier && !assigned.has(u.id))
+                    .sort((a, b) => {
+                        const da = Math.max(Math.abs(a.position.x - t.position.x), Math.abs(a.position.y - t.position.y));
+                        const db = Math.max(Math.abs(b.position.x - t.position.x), Math.abs(b.position.y - t.position.y));
+                        return da - db;
+                    });
+                if (candidates.length > 0) {
+                    const hunter = candidates[0];
+                    goals.set(hunter.id, { target: { ...t.position }, type: 'hunt' });
+                    assigned.add(hunter.id);
+                    continue;
+                }
+                // Attempt immediate merge to create counter-tier
+                const sameTier = aiUnitsAvail.filter(u => u.tier === t.tier && !assigned.has(u.id));
+                let mergedAssigned = false;
+                for (const u of sameTier) {
+                    const moves = this.calculateValidMoves(u);
+                    // Look for same-tier ally tile we can move onto
+                    const ally = this.unitsSignal().find(x => x.owner === 'ai' && x.tier === u.tier &&
+                        ((x.position.x !== u.position.x) || (x.position.y !== u.position.y)) &&
+                        moves.some(m => m.x === x.position.x && m.y === x.position.y));
+                    if (ally) {
+                        goals.set(u.id, { target: { ...ally.position }, type: 'merge' });
+                        assigned.add(u.id);
+                        mergedAssigned = true;
+                        break;
+                    }
+                }
+                if (mergedAssigned) continue;
+                // Fall back to spawning the required tier near base
+                this.aiSpawnTier(requiredTier, 1, new Set<string>());
+            }
+            this.reclamationGoalsSignal.set(goals);
+            this.appendLog(`[AI Mode] Reclamation active. Player controls ${(playerControlPct * 100).toFixed(0)}% of resources.`);
+        } else {
+            this.reclamationGoalsSignal.set(new Map());
+        }
+
         // 0. Global Strategy: Fortress Mode
         const aiForests = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
         const fortressMode = aiForests > 3;
@@ -2165,6 +2222,56 @@ export class GameEngineService {
                 }
             }
 
+            // Reclamation Mode: Tunnel Vision towards assigned resource target
+            if (!action) {
+                const goal = this.reclamationGoalsSignal().get(currentUnit.id);
+                if (goal) {
+                    const dest = goal.target;
+                    const enemyAtDest = this.getUnitAt(dest.x, dest.y);
+                    if (enemyAtDest && enemyAtDest.owner !== currentUnit.owner) {
+                        const canAttack = validMoves.some(m => m.x === dest.x && m.y === dest.y);
+                        if (canAttack) {
+                            action = { type: 'attack', target: dest, reason: 'Reclaim: Attack Occupier' };
+                        } else {
+                            // Move directly towards target; ignore distractions
+                            let path = this.bfsPath(currentUnit.position, dest, { respectWalls: true, avoidFriendlyUnits: true });
+                            if (!path) {
+                                path = this.bfsPath(currentUnit.position, dest, { avoidFriendlyUnits: true });
+                            }
+                            if (path && path.length > 1) {
+                                const step = path[1];
+                                const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, step.x, step.y);
+                                if (w) {
+                                    action = { type: 'wall_attack', target: step, reason: 'Reclaim: Breach Blocker' };
+                                } else {
+                                    action = { type: 'move', target: step, reason: 'Reclaim: Pursue Resource' };
+                                }
+                            }
+                        }
+                    } else {
+                        // If merge goal or empty target tile, proceed similarly
+                        if (goal.type === 'merge') {
+                            const canMerge = validMoves.some(m => m.x === dest.x && m.y === dest.y);
+                            if (canMerge) {
+                                action = { type: 'move', target: dest, reason: 'Reclaim: Merge to Counter' };
+                            } else {
+                                const step = this.getNextStepTowards(currentUnit, dest, validMoves);
+                                if (step) {
+                                    const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, step.x, step.y);
+                                    action = w ? { type: 'wall_attack', target: step, reason: 'Reclaim: Breach to Merge' } : { type: 'move', target: step, reason: 'Reclaim: Approach Ally' };
+                                }
+                            }
+                        } else {
+                            const step = this.getNextStepTowards(currentUnit, dest, validMoves);
+                            if (step) {
+                                const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, step.x, step.y);
+                                action = w ? { type: 'wall_attack', target: step, reason: 'Reclaim: Breach Path' } : { type: 'move', target: step, reason: 'Reclaim: Close Distance' };
+                            }
+                        }
+                    }
+                }
+            }
+
             // Priority Zero: Hold Position (Forest Occupants)
             if (this.isForest(currentUnit.position.x, currentUnit.position.y)) {
                 const rawMoves = this.calculateValidMoves(currentUnit);
@@ -2282,11 +2389,29 @@ export class GameEngineService {
                     action = { type: 'move', target: upg.target, reason: 'Upgrade: Move to Forge' };
                 }
             }
-            // Step A: Survival Check
-            if (!action && this.isUnitInDanger(currentUnit)) {
-                const safeMove = this.findSafeMove(currentUnit, validMoves);
-                if (safeMove) {
-                    action = { type: 'move', target: safeMove, reason: 'Survival: Evade Threat' };
+            // Step A: Survival Check (with Reclamation tunnel vision)
+            if (!action) {
+                const danger = this.isUnitInDanger(currentUnit);
+                const hasGoal = this.reclamationGoalsSignal().has(currentUnit.id);
+                if (!hasGoal && danger) {
+                    const safeMove = this.findSafeMove(currentUnit, validMoves);
+                    if (safeMove) {
+                        action = { type: 'move', target: safeMove, reason: 'Survival: Evade Threat' };
+                    }
+                } else if (hasGoal && danger) {
+                    // Only retreat if lethal
+                    const neighbors = this.getNeighbors(currentUnit.position);
+                    const lethal = neighbors.some(nb => {
+                        const u = this.getUnitAt(nb.x, nb.y);
+                        if (!u || u.owner === currentUnit.owner) return false;
+                        return this.effectiveAttack(u) > this.effectiveDefense(currentUnit) + (currentUnit.tier >= 3 ? 10 : 0);
+                    });
+                    if (lethal) {
+                        const safeMove = this.findSafeMove(currentUnit, validMoves);
+                        if (safeMove) {
+                            action = { type: 'move', target: safeMove, reason: 'Survival: Lethal Evade' };
+                        }
+                    }
                 }
             }
             // Step A1: T4 Backline Raid Prioritization
