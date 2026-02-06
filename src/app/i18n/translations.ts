@@ -50,7 +50,10 @@ export type TranslationKey =
   | 'FOREST_CYCLE'
   | 'TURN_1'
   | 'TURN_2'
+  | 'TURN_3'
+  | 'TURN_4'
   | 'PLUS_8_WOOD_PER_TURN'
+  | 'PLUS_2_IRON_PER_TURN'
   | 'WALL_LEGEND'
   | 'AI_FACTION'
   | 'RANKING'
@@ -99,9 +102,14 @@ export type TranslationKey =
   | 'NEXT_TURN'
   | 'SETTINGS'
   | 'NEW_DESIGN_UNIT'
+  | 'IRON_CYCLE'
   | 'INFO';
 
   export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    IRON_CYCLE: {
+      en: 'Iron Cycle',
+      uk: `Цикл Заліза`,
+    },
     NEW_DESIGN_UNIT: {
       en: 'New Evolution',
       uk: `Нова еволюція`,
@@ -490,9 +498,21 @@ export type TranslationKey =
     en: 'Turn 2',
     uk: 'Хід 2',
   },
+  TURN_3: {
+    en: 'Turn 3',
+    uk: 'Хід 3',
+  },
+  TURN_4: {
+    en: 'Turn 4',
+    uk: 'Хід 4',
+  },
   PLUS_8_WOOD_PER_TURN: {
     en: '+8 Wood/turn',
-    uk: '+8 дерева/хід',
+    uk: '+8 Дерева/хід',
+  },
+  PLUS_2_IRON_PER_TURN: {
+    en: '+2 Iron/turn',
+    uk: '+2 Заліза/хід',
   },
   WALL_LEGEND: {
     en: 'Wall Legend',

@@ -42,12 +42,6 @@
 .combat-stage .square {
   border-radius: 4px;
 }
-.combat-stage .defender-fade {
-  animation: fadeOut 1s ease-out forwards 1s;
-}
-@keyframes fadeOut {
-  to { opacity: 0; transform: scale(0.5); }
-}
 .crit-pop {
   position: absolute;
   right: 10px;
@@ -212,10 +206,10 @@
     overflow: visible;
 }
 
-.unit-svg-wrapper:hover {
+/* .unit-svg-wrapper:hover {
     transform: scale(1.1);
     filter: drop-shadow(0 0 12px var(--u-bg-glow));
-}
+} */
 
 .move-anim {
     transition: transform 0.3s ease-out;
