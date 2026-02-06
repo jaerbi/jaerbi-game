@@ -233,7 +233,7 @@ export class GameEngineService {
         const gs = this.gridSize;
         if (gs <= 10) {
             if (this.isMobile()) {
-                return 40;
+                return 48;
             }
             return 64;
         }
