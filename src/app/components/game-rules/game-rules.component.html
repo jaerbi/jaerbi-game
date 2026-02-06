@@ -34,36 +34,53 @@
         </div>
       </div>
 
-      <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
-        <div class="text-lg font-semibold mb-3">{{ settings.t('UNIT_EVOLUTION') }}</div>
-        <div class="flex items-center gap-6">
-          <div class="flex flex-col items-center gap-2">
-            <div class="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
-              1
+      <div class="flex flex-col justify-between">
+        <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
+          <div class="text-lg font-semibold mb-3">{{ settings.t('UNIT_EVOLUTION') }}</div>
+          <div class="flex items-center gap-6">
+            <div class="flex flex-col items-center gap-2">
+              <div class="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
+                1
+              </div>
+              <div class="text-xs text-gray-300">1–4</div>
             </div>
-            <div class="text-xs text-gray-300">1–4</div>
-          </div>
-          <div class="flex flex-col items-center gap-2">
-            <div
-              class="w-12 h-12 bg-blue-500 text-white flex items-center justify-center font-bold"
-              [style.clip-path]="'polygon(50% 0%, 0% 100%, 100% 100%)'"
-            >
-              5
+            <div class="flex flex-col items-center gap-2">
+              <div
+                class="w-12 h-12 bg-blue-500 text-white flex items-center justify-center font-bold"
+                [style.clip-path]="'polygon(50% 0%, 0% 100%, 100% 100%)'"
+              >
+                5
+              </div>
+              <div class="text-xs text-gray-300">5–20</div>
             </div>
-            <div class="text-xs text-gray-300">5–20</div>
-          </div>
-          <div class="flex flex-col items-center gap-2">
-            <div class="w-12 h-12 bg-blue-500 text-white flex items-center justify-center font-bold">25</div>
-            <div class="text-xs text-gray-300">25–100</div>
-          </div>
-          <div class="flex flex-col items-center gap-2">
-            <div class="w-12 h-12 bg-blue-500 text-white flex items-center justify-center font-bold rotate-45 scale-75">
-              <span class="rotate-315">125</span>
+            <div class="flex flex-col items-center gap-2">
+              <div class="w-12 h-12 bg-blue-500 text-white flex items-center justify-center font-bold">25</div>
+              <div class="text-xs text-gray-300">25–100</div>
             </div>
-            <div class="text-xs text-gray-300">125–500</div>
+            <div class="flex flex-col items-center gap-2">
+              <div
+                class="w-12 h-12 bg-blue-500 text-white flex items-center justify-center font-bold rotate-45 scale-75"
+              >
+                <span class="rotate-315">125</span>
+              </div>
+              <div class="text-xs text-gray-300">125–500</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
+          <!-- <div class="text-lg font-semibold mb-1">{{ settings.t('EVOLUTION') }}</div> -->
+          <div class="text-sm text-gray-300 mb-3">{{ settings.t('EVOLUTION_DESC') }}</div>
+          <div class="flex items-center justify-center h-[40px]">
+            <div class="merge-loop relative">
+              <div class="unit u1">2</div>
+              <div class="unit u2">2</div>
+              <div class="result">1</div>
+            </div>
           </div>
         </div>
       </div>
+
       <div class="bg-gray-800/60 border border-blue-500/30 rounded-lg p-4 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
         <div class="text-lg font-semibold mb-3 flex items-center gap-2">
           <span class="text-blue-400">⌨️</span>
@@ -129,7 +146,355 @@
         </div>
       </div>
 
-      <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4 md:col-span-2 unit-svg-wrapper theme-test-player">
+      <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4 md:col-span-2">
+        <div class="text-lg font-semibold mb-3">{{ settings.t('COMBAT_DEEP_DIVE') }}</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <div class="text-sm font-semibold mb-2">{{ settings.t('SUCCESSFUL_ATTACK') }}</div>
+            <div class="combat-stage">
+              <div class="attacker triangle">1</div>
+              <div class="defender circle hit-flash defender-fade">1</div>
+            </div>
+            <div class="text-[11px] text-gray-400 mt-2">{{ settings.t('SUCCESSFUL_ATTACK_DESC') }}</div>
+          </div>
+          <div>
+            <div class="text-sm font-semibold mb-2">{{ settings.t('CRITICAL_HIT') }}</div>
+            <div class="combat-stage">
+              <div class="attacker triangle">4</div>
+              <div class="defender square hit-flash defender-fade">1</div>
+              <span class="crit-pop">CRIT!</span>
+            </div>
+            <div class="text-[11px] text-gray-400 mt-2">{{ settings.t('CRITICAL_HIT_DESC') }}</div>
+          </div>
+          <div>
+            <div class="text-sm font-semibold mb-2">{{ settings.t('MISS') }}</div>
+            <div class="combat-stage">
+              <div class="attacker triangle">1</div>
+              <div class="defender circle">4</div>
+              <span class="miss-pop">MISS!</span>
+            </div>
+            <div class="text-[11px] text-gray-400 mt-2">{{ settings.t('MISS_DESC') }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-6 md:col-span-2 shadow-2xl backdrop-blur-sm">
+        <!-- Заголовок секції (якщо потрібно) -->
+        <div class="text-xs uppercase tracking-widest text-gray-500 font-bold mb-6 flex items-center gap-2">
+          <span class="w-8 h-[1px] bg-gray-700"></span>
+          {{ settings.currentLang() === 'uk' ? 'Додаткові механіки' : 'Extra Mechanics' }}
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          <!-- Ліва колонка: Шанси та рівні -->
+          <div class="space-y-6">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between p-3 bg-gray-900/40 rounded-lg border border-gray-700/50">
+                <span class="text-gray-300 text-sm">
+                  {{ settings.currentLang() === 'uk' ? 'Шанс криту' : 'Crit Chance' }}
+                </span>
+                <span class="text-orange-400 font-bold">20%</span>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-gray-900/40 rounded-lg border border-gray-700/50">
+                <span class="text-gray-300 text-sm">
+                  {{ settings.currentLang() === 'uk' ? 'Шанс промаху' : 'Miss Chance' }}
+                </span>
+                <span class="text-blue-400 font-bold">20%</span>
+              </div>
+              <div class="p-3 bg-gray-900/40 rounded-lg border border-gray-700/50">
+                <p class="text-xs text-gray-400 leading-relaxed">
+                  <span class="text-white font-semibold">50%</span>
+                  {{
+                    settings.currentLang() === 'uk' ? 'при рівних силах: Захист/Нічия' : 'at equal force: Defense/Draw'
+                  }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Середня та Права колонки: Юніти з описами -->
+          <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Unit 1: Defense Focus -->
+            <div
+              class="group bg-gray-900/40 p-4 rounded-xl border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300 flex items-center gap-4"
+            >
+              <div class="w-20 h-20 shrink-0">
+                <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]">
+                  <circle cx="50" cy="50" r="32" [attr.fill]="'url(#vol-fill-player)'" />
+                  <circle cx="50" cy="50" r="31" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" />
+                  <text x="50" y="62" text-anchor="middle" font-size="32" font-weight="800" fill="white">1</text>
+                  <g transform="translate(18, 5) scale(0.8)">
+                    <path
+                      d="M0 1.5C3 1.5 4.5 0 6 0C7.5 0 9 1.5 12 1.5C12 5 12 7.5 6 11C0 7.5 0 5 0 1.5Z"
+                      fill="#60a5fa"
+                    />
+                  </g>
+                </svg>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-blue-400 text-xs font-bold uppercase tracking-tighter mb-1">+20 HP Bonus</span>
+                <p class="text-gray-300 text-sm leading-tight">
+                  {{
+                    settings.currentLang() === 'uk' ? '-10% у ворога шанс промахнутись' : '-10% enemy chance to miss'
+                  }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Unit 2: Attack Focus -->
+            <div
+              class="group bg-gray-900/40 p-4 rounded-xl border border-gray-700/50 hover:border-red-500/50 transition-all duration-300 flex items-center gap-4"
+            >
+              <div class="w-20 h-20 shrink-0">
+                <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]">
+                  <circle cx="50" cy="50" r="32" [attr.fill]="'url(#vol-fill-player)'" />
+                  <circle cx="50" cy="50" r="31" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" />
+                  <text x="50" y="62" text-anchor="middle" font-size="32" font-weight="800" fill="white">1</text>
+                  <g transform="rotate(-45 50 50) translate(40, 10) scale(1.2)">
+                    <rect x="5" y="0" width="2" height="10" fill="#f87171" />
+                    <rect x="3" y="10" width="6" height="2" fill="#991b1b" />
+                  </g>
+                </svg>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-red-400 text-xs font-bold uppercase tracking-tighter mb-1">+20 DMG Bonus</span>
+                <p class="text-gray-300 text-sm leading-tight">
+                  {{ settings.currentLang() === 'uk' ? '10% шанс попасти по ворогу' : '10% chance to hit the enemy' }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-4 bg-gray-800/40 rounded-lg border border-gray-700/30">
+              <p class="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-3">
+                {{ settings.currentLang() === 'uk' ? 'Значення Tier-рівнів' : 'Tier Values' }}
+              </p>
+              <div class="grid grid-cols-2 gap-2 text-sm">
+                <div class="flex justify-between border-b border-gray-700/50 pb-1">
+                  <span class="text-gray-500">T1</span>
+                  <span class="text-white">1</span>
+                </div>
+                <div class="flex justify-between border-b border-gray-700/50 pb-1">
+                  <span class="text-gray-500">T2</span>
+                  <span class="text-white">2</span>
+                </div>
+                <div class="flex justify-between border-b border-gray-700/50 pb-1">
+                  <span class="text-gray-500">T3</span>
+                  <span class="text-white">4</span>
+                </div>
+                <div class="flex justify-between border-b border-gray-700/50 pb-1">
+                  <span class="text-gray-500">T4</span>
+                  <span class="text-white">8</span>
+                </div>
+              </div>
+            </div>
+            <div
+              class="group bg-gray-900/40 p-4 rounded-xl border border-gray-700/50 hover:border-red-500/50 transition-all duration-300 flex items-center gap-4"
+            >
+              <div class="w-20 h-20 shrink-0">
+                <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]">
+                  <circle cx="50" cy="50" r="32" [attr.fill]="'url(#vol-fill-player)'" />
+                  <circle cx="50" cy="50" r="31" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" />
+                  <text x="50" y="62" text-anchor="middle" font-size="32" font-weight="800" fill="white">1</text>
+                  <g>
+                    <path d="M0,0 L12,0 L12,8 C12,12 6,16 6,16 C6,16 0,12 0,8 Z" fill="#60a5fa" opacity="0.9" />
+                    <path d="M6,2 V12" stroke="var(--u-fill)" stroke-width="1" opacity="0.9" />
+                  </g>
+                </svg>
+              </div>
+              <div class="flex flex-col">
+                <p class="text-gray-300 text-sm leading-tight">
+                  {{
+                    settings.currentLang() === 'uk'
+                      ? '+1 до атаки від сусідства'
+                      : '+1 to an attack from the neighborhood'
+                  }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
+        <div class="text-lg font-semibold mb-1">{{ settings.t('MOVEMENT') }}</div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <div class="text-xs text-gray-300 mb-1">{{ settings.t('T1_1_TILE') }}</div>
+            <div class="path-grid" style="--start-x: 2; --start-y: 2; --line-steps: 1">
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell active"></div>
+              <div class="path-cell active"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="mover circle t1-path">2</div>
+              <div class="path-line path-animation"></div>
+              <div class="castle" [style.left.px]="6" [style.top.px]="6">🏰</div>
+            </div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-300 mb-1">{{ settings.t('T3_3_TILES') }}</div>
+            <div class="path-grid" style="--start-x: 2; --start-y: 2; --line-steps: 3">
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell active"></div>
+              <div class="path-cell active"></div>
+              <div class="path-cell active"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="mover square t3-path">3</div>
+              <div class="path-line path-animation"></div>
+              <div class="castle red" [style.right.px]="6" [style.bottom.px]="6">🏰</div>
+            </div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-300 mb-1">{{ settings.t('T4_4_TILES') }}</div>
+            <div class="path-grid" style="--start-x: 2; --start-y: 2; --line-steps: 4">
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell active"></div>
+              <div class="path-cell active"></div>
+              <div class="path-cell active"></div>
+              <div class="path-cell active"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="path-cell"></div>
+              <div class="mover triangle t1-path">4</div>
+              <div class="path-line path-animation"></div>
+              <div class="castle" [style.left.px]="6" [style.top.px]="6">🏰</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col justify-between">
+        <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
+          <div class="text-lg font-semibold mb-3">{{ settings.t('FOREST_CYCLE') }}</div>
+          <div class="flex items-center gap-6">
+            <div class="flex flex-col items-center">
+              <div class="text-2xl">🌱</div>
+              <div class="text-[11px] text-gray-400">{{ settings.t('TURN_1') }}</div>
+            </div>
+            <div class="flex items-center text-gray-500">→</div>
+            <div class="flex flex-col items-center">
+              <div class="text-2xl">🌿</div>
+              <div class="text-[11px] text-gray-400">{{ settings.t('TURN_2') }}</div>
+            </div>
+            <div class="flex items-center text-gray-500">→</div>
+            <div class="flex flex-col items-center">
+              <div class="text-2xl">🌳</div>
+              <div class="text-[11px] text-emerald-400">{{ settings.t('PLUS_8_WOOD_PER_TURN') }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
+          <div class="text-lg font-semibold mb-3">{{ settings.t('IRON_CYCLE') }}</div>
+          <div class="flex items-center gap-1">
+            <div class="flex flex-col items-center">
+              <div class="text-2xl">⛰️</div>
+              <div class="text-[10px] text-gray-400">{{ settings.t('TURN_1') }}</div>
+            </div>
+            <div class="flex items-center text-gray-500">→</div>
+            <div class="flex flex-col items-center">
+              <div class="text-2xl">⛏️</div>
+              <div class="text-[10px] text-gray-400">{{ settings.t('TURN_2') }}</div>
+            </div>
+            <div class="flex items-center text-gray-500">→</div>
+            <div class="flex flex-col items-center">
+              <div class="text-2xl">⛏</div>
+              <div class="text-[10px] text-gray-400">{{ settings.t('TURN_3') }}</div>
+            </div>
+            <div class="flex items-center text-gray-500">→</div>
+            <div class="flex flex-col items-center">
+              <div class="text-2xl">⚒</div>
+              <div class="text-[10px] text-gray-400">{{ settings.t('TURN_4') }}</div>
+            </div>
+            <div class="flex items-center text-gray-500">→</div>
+            <div class="flex flex-col items-center">
+              <div class="text-2xl">🧱</div>
+              <div class="text-[10px] text-emerald-400">{{ settings.t('PLUS_2_IRON_PER_TURN') }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
+          <div class="text-lg font-semibold mb-4">{{ settings.t('WALL_LEGEND') }}</div>
+          <div class="grid grid-cols-3 gap-4 mb-1">
+            <div class="flex items-center gap-2">
+              <div class="h-4 w-16 rounded bg-lime-400"></div>
+              <div class="text-xs text-gray-300">{{ settings.t('PLAYER') }}</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="h-4 w-16 rounded bg-red-400"></div>
+              <div class="text-xs text-gray-300">{{ settings.t('AI_FACTION') }}</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="h-4 w-16 rounded bg-gray-300"></div>
+              <div class="text-xs text-gray-300">Neutral</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="bg-gray-800/60 border border-gray-700 rounded-lg p-4 md:col-span-2 unit-svg-wrapper theme-test-player"
+      >
         <div class="flex flex-col flex-center">
           <div class="text-lg font-semibold mb-3">
             {{ settings.currentLang() === 'uk' ? 'Третя ітерація одиниць' : 'Third iteration the units' }}
@@ -396,195 +761,6 @@
             </g>
           </svg>
           <!-- T4 END -->
-        </div>
-      </div>
-
-      <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
-        <div class="text-lg font-semibold mb-1">{{ settings.t('EVOLUTION') }}</div>
-        <div class="text-sm text-gray-300 mb-3">{{ settings.t('EVOLUTION_DESC') }}</div>
-        <div class="flex items-center justify-center h-[40px]">
-          <div class="merge-loop relative">
-            <div class="unit u1">2</div>
-            <div class="unit u2">2</div>
-            <div class="result">1</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4 md:col-span-2">
-        <div class="text-lg font-semibold mb-3">{{ settings.t('COMBAT_DEEP_DIVE') }}</div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <div class="text-sm font-semibold mb-2">{{ settings.t('SUCCESSFUL_ATTACK') }}</div>
-            <div class="combat-stage">
-              <div class="attacker triangle">1</div>
-              <div class="defender circle hit-flash defender-fade">1</div>
-            </div>
-            <div class="text-[11px] text-gray-400 mt-2">{{ settings.t('SUCCESSFUL_ATTACK_DESC') }}</div>
-          </div>
-          <div>
-            <div class="text-sm font-semibold mb-2">{{ settings.t('CRITICAL_HIT') }}</div>
-            <div class="combat-stage">
-              <div class="attacker triangle">4</div>
-              <div class="defender square hit-flash defender-fade">1</div>
-              <span class="crit-pop">CRIT!</span>
-            </div>
-            <div class="text-[11px] text-gray-400 mt-2">{{ settings.t('CRITICAL_HIT_DESC') }}</div>
-          </div>
-          <div>
-            <div class="text-sm font-semibold mb-2">{{ settings.t('MISS') }}</div>
-            <div class="combat-stage">
-              <div class="attacker triangle">1</div>
-              <div class="defender circle">4</div>
-              <span class="miss-pop">MISS!</span>
-            </div>
-            <div class="text-[11px] text-gray-400 mt-2">{{ settings.t('MISS_DESC') }}</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
-        <div class="text-lg font-semibold mb-1">{{ settings.t('MOVEMENT') }}</div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <div class="text-xs text-gray-300 mb-1">{{ settings.t('T1_1_TILE') }}</div>
-            <div class="path-grid" style="--start-x: 2; --start-y: 2; --line-steps: 1">
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell active"></div>
-              <div class="path-cell active"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="mover circle t1-path">2</div>
-              <div class="path-line path-animation"></div>
-              <div class="castle" [style.left.px]="6" [style.top.px]="6">🏰</div>
-            </div>
-          </div>
-          <div>
-            <div class="text-xs text-gray-300 mb-1">{{ settings.t('T3_3_TILES') }}</div>
-            <div class="path-grid" style="--start-x: 2; --start-y: 2; --line-steps: 3">
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell active"></div>
-              <div class="path-cell active"></div>
-              <div class="path-cell active"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="mover square t3-path">3</div>
-              <div class="path-line path-animation"></div>
-              <div class="castle red" [style.right.px]="6" [style.bottom.px]="6">🏰</div>
-            </div>
-          </div>
-          <div>
-            <div class="text-xs text-gray-300 mb-1">{{ settings.t('T4_4_TILES') }}</div>
-            <div class="path-grid" style="--start-x: 2; --start-y: 2; --line-steps: 4">
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell active"></div>
-              <div class="path-cell active"></div>
-              <div class="path-cell active"></div>
-              <div class="path-cell active"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="path-cell"></div>
-              <div class="mover triangle t1-path">4</div>
-              <div class="path-line path-animation"></div>
-              <div class="castle" [style.left.px]="6" [style.top.px]="6">🏰</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="flex flex-col justify-between">
-        <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
-          <div class="text-lg font-semibold mb-3">{{ settings.t('FOREST_CYCLE') }}</div>
-          <div class="flex items-center gap-6">
-            <div class="flex flex-col items-center">
-              <div class="text-2xl">🌱</div>
-              <div class="text-[11px] text-gray-400">{{ settings.t('TURN_1') }}</div>
-            </div>
-            <div class="flex items-center text-gray-500">→</div>
-            <div class="flex flex-col items-center">
-              <div class="text-2xl">🌿</div>
-              <div class="text-[11px] text-gray-400">{{ settings.t('TURN_2') }}</div>
-            </div>
-            <div class="flex items-center text-gray-500">→</div>
-            <div class="flex flex-col items-center">
-              <div class="text-2xl">🌳</div>
-              <div class="text-[11px] text-emerald-400">{{ settings.t('PLUS_8_WOOD_PER_TURN') }}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
-          <div class="text-lg font-semibold mb-4">{{ settings.t('WALL_LEGEND') }}</div>
-          <div class="grid grid-cols-3 gap-4 mb-1">
-            <div class="flex items-center gap-2">
-              <div class="h-4 w-16 rounded bg-lime-400"></div>
-              <div class="text-xs text-gray-300">{{ settings.t('PLAYER') }}</div>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="h-4 w-16 rounded bg-red-400"></div>
-              <div class="text-xs text-gray-300">{{ settings.t('AI_FACTION') }}</div>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="h-4 w-16 rounded bg-gray-300"></div>
-              <div class="text-xs text-gray-300">Neutral</div>
-            </div>
-          </div>
         </div>
       </div>
 

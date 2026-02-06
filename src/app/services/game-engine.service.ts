@@ -784,6 +784,40 @@ export class GameEngineService {
         this.selectUnit(candidates[0].id);
     }
 
+    selectNextAvailableUnitTab() {
+        const units = this.unitsSignal();
+        const candidates = units.filter(u => u.owner === 'player' && !u.hasActed);
+
+        if (candidates.length === 0) {
+            this.selectUnit(null);
+            return;
+        }
+
+        candidates.sort((a, b) => {
+            const aInObstacle = (this.isForest(a.position.x, a.position.y) || this.isMine(a.position.x, a.position.y)) ? 1 : 0;
+            const bInObstacle = (this.isForest(b.position.x, b.position.y) || this.isMine(b.position.x, b.position.y)) ? 1 : 0;
+
+            if (aInObstacle !== bInObstacle) {
+                return aInObstacle - bInObstacle;
+            }
+            return a.id.localeCompare(b.id);
+        });
+
+        const currentSelectedId = this.selectedUnitId();
+
+        if (!currentSelectedId) {
+            this.selectUnit(candidates[0].id);
+        } else {
+            const currentIndex = candidates.findIndex(u => u.id === currentSelectedId);
+
+            if (currentIndex === -1) {
+                this.selectUnit(candidates[0].id);
+            } else {
+                const nextIndex = (currentIndex + 1) % candidates.length;
+                this.selectUnit(candidates[nextIndex].id);
+            }
+        }
+    }
     // --- Helper Methods ---
 
     private calculateTotalPoints(unit: Unit): number {

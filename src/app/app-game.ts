@@ -95,8 +95,8 @@ export class AppGame {
         if (key === 'Tab' || key === ' ' || event.code === 'Space') {
             event.preventDefault();
             if (this.gameEngine.isPlayerTurn()) {
-                this.gameEngine.selectNextAvailableUnit();
-                this.centerOnSelectedUnit();
+                this.gameEngine.selectNextAvailableUnitTab();
+                // this.centerOnSelectedUnit();
             }
             return;
         }
