@@ -396,6 +396,9 @@ export class GameEngineService {
                             )
                             .filter((w: any) => (w.health ?? w.hitsRemaining ?? 0) > 0)
                     );
+                        if (nextHealth <= 0) {
+                            this.registerWallDestroyedEdge(lastFrom, target);
+                        }
                     const ownerText = wall.owner === 'neutral' ? 'Neutral' : (wall.owner === 'player' ? 'Player' : 'AI');
                     this.appendLog(`[Combat] Tier ${movingUnit.tier} Unit attacked ${ownerText} Wall. Damage: ${damageAbs}. Wall HP: ${nextHealth}/${maxH}.`);
                 }
@@ -2953,7 +2956,13 @@ export class GameEngineService {
     buildWallBetween(tile1: Position, tile2: Position) {
         const wood = this.resourcesSignal().wood;
         if (wood < 10) return;
-        if (!this.canBuildWallBetween(tile1, tile2)) return;
+        if (!this.canBuildWallBetween(tile1, tile2)) {
+            if (this.isEdgeOnCooldown(tile1, tile2)) {
+                const remaining = this.edgeCooldownRemaining(tile1, tile2);
+                this.appendLog(`[Build] This area is too unstable to rebuild yet (CD: ${remaining} turns).`);
+            }
+            return;
+        }
         const actor = this.getBestAdjacentPlayerUnit(tile1, tile2);
         if (!actor || actor.hasActed) return;
         if (this.wallBuiltThisTurnSignal()) return;
