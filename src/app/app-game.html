@@ -506,7 +506,10 @@
       <div class="h-10 w-[1px] bg-white/5"></div>
 
       <div class="flex gap-4">
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner"
+        [attr.title]="
+                (settings.currentLang() === 'uk' ? 'Зібраної Деревини' : 'Harvested Wood')
+              ">
           <span class="text-lg">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="7" y="14" width="13" height="6" rx="3" fill="#8B5E3C" />
@@ -520,7 +523,10 @@
           </span>
           <span class="font-mono text-lg font-bold text-emerald-400">{{ gameEngine.resources().wood }}</span>
         </div>
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner"
+        [attr.title]="
+                (settings.currentLang() === 'uk' ? 'Зібраного Заліза' : 'Harvested Iron')
+              ">
           <span class="text-lg">
             <svg width="24" height="24" viewBox="0 0 24 24">
               <path d="M6 18 L10 12 L14 18 Z" fill="#9ca3af" />
@@ -531,7 +537,9 @@
         </div>
         <div
           class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 shadow-inner"
-        >
+        [attr.title]="
+                (settings.currentLang() === 'uk' ? 'Монополія Лісів' : 'Monopoly of Forests')
+              ">
           <span class="text-lg">
             <div class="w-8 h-8 flex-shrink-0">
               <svg viewBox="0 0 64 64" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -613,7 +621,10 @@
 
     <div class="flex items-center gap-6">
       <div class="flex gap-4">
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner"
+        [attr.title]="
+                (settings.currentLang() === 'uk' ? 'Зібраної Деревини' : 'Harvested Wood')
+              ">
           <span class="font-mono text-lg font-bold text-red-400">{{ gameEngine.aiWood() }}</span>
           <span class="text-lg">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -627,7 +638,10 @@
             </svg>
           </span>
         </div>
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner"
+        [attr.title]="
+                (settings.currentLang() === 'uk' ? 'Зібраного Заліза' : 'Harvested Iron')
+              ">
           <span class="text-lg">
             <svg width="24" height="24" viewBox="0 0 24 24">
               <path d="M6 18 L10 12 L14 18 Z" fill="#9ca3af" />
@@ -636,7 +650,10 @@
           </span>
           <span class="font-mono text-lg font-bold text-slate-300">{{ gameEngine.aiIron() }}</span>
         </div>
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 shadow-inner">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 shadow-inner"
+        [attr.title]="
+                (settings.currentLang() === 'uk' ? 'Монополія Лісів' : 'Monopoly of Forests')
+              ">
           <span class="font-mono text-lg font-bold text-red-300">
             {{ gameEngine.getForestControl().ai }}
             <span class="text-xs text-white/30 mx-1">/</span>
@@ -961,7 +978,7 @@
                 (gameEngine.getUnitAt(x, y)!.owner === 'player' || gameEngine.isVisibleToPlayer(x, y))
                   ? gameEngine.formatHoverInfo(gameEngine.getUnitAt(x, y)!.id)
                   : gameEngine.isMine(x, y) && gameEngine.isVisibleToPlayer(x, y)
-                    ? 'Iron Mine: Requires 5 consecutive turns of occupation to activate. Once active, yields +2 Iron per turn.'
+                    ? (settings.currentLang() === 'uk' ? 'Залізна шахта: Для активації потрібно 5 послідовних ходів зайняття. Після активації дає +2 заліза за хід.' : 'Iron Mine: Requires 5 consecutive turns of occupation to activate. Once active, yields +2 Iron per turn.')
                     : null
               "
               [class.bg-gray-700]="!gameEngine.isValidMove(x, y)"
