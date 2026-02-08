@@ -1188,6 +1188,28 @@ export class GameEngineService {
         return false;
     }
 
+    private getMergePartnerForUnit(unit: Unit, validMoves: Position[]): Unit | null {
+        const goals = this.reclamationGoalsSignal();
+        const g = goals.get(unit.id);
+        if (g && g.type === 'merge') {
+            const u = this.getUnitAt(g.target.x, g.target.y);
+            if (u && u.owner === unit.owner && u.tier === unit.tier) return u;
+        }
+        const ally = this.unitsSignal().find(x =>
+            x.owner === unit.owner &&
+            x.tier === unit.tier &&
+            (x.position.x !== unit.position.x || x.position.y !== unit.position.y) &&
+            validMoves.some(m => m.x === x.position.x && m.y === x.position.y)
+        );
+        return ally ?? null;
+    }
+
+    private computeHighestTierNeedingUpgrade(): number {
+        const candidates = this.unitsSignal().filter(u => u.owner === 'ai' && u.tier >= 2 && (!u.hasArmor || !u.hasWeapon));
+        if (candidates.length === 0) return 0;
+        return candidates.reduce((max, u) => Math.max(max, u.tier), 0);
+    }
+
     private getNeighbors(pos: Position): Position[] {
         return [
             { x: pos.x + 1, y: pos.y },
@@ -3201,6 +3223,20 @@ export class GameEngineService {
         if ((currentUnit.hasArmor && currentUnit.hasWeapon) || this.aiIronSignal() < 20) return { type: 'none' };
         const aiForges = this.aiForgesSignal();
         if (aiForges.length === 0) return { type: 'none' };
+        const partner = this.getMergePartnerForUnit(currentUnit, validMoves);
+        const ironNow = this.aiIronSignal();
+        if (ironNow < 40) {
+            const highest = this.computeHighestTierNeedingUpgrade();
+            if (highest > 0 && currentUnit.tier < highest) return { type: 'none' };
+        }
+        if (partner) {
+            const partnerCoversWeapon = !currentUnit.hasWeapon && partner.hasWeapon;
+            const partnerCoversArmor = !currentUnit.hasArmor && partner.hasArmor;
+            if (partnerCoversWeapon || partnerCoversArmor) {
+                this.appendLog(`[AI] Unit at (${currentUnit.position.x},${currentUnit.position.y}) skipped redundant Forge visit; partner already equipped.`);
+                return { type: 'none' };
+            }
+        }
         const nearest = aiForges.reduce((best, p) => {
             const db = Math.max(Math.abs(p.x - currentUnit.position.x), Math.abs(p.y - currentUnit.position.y));
             const dBest = Math.max(Math.abs(best.x - currentUnit.position.x), Math.abs(best.y - currentUnit.position.y));
@@ -3208,14 +3244,31 @@ export class GameEngineService {
         }, aiForges[0]);
         if (currentUnit.position.x === nearest.x && currentUnit.position.y === nearest.y) {
             let iron = this.aiIronSignal();
-            if (!currentUnit.hasArmor && iron >= 20) {
-                this.aiBuyArmor(currentUnit.id);
-                iron = this.aiIronSignal();
+            if (partner) {
+                let didBuy = false;
+                if (!partner.hasArmor && !currentUnit.hasArmor && iron >= 20) {
+                    this.aiBuyArmor(currentUnit.id);
+                    iron = this.aiIronSignal();
+                    didBuy = true;
+                }
+                if (!partner.hasWeapon && !currentUnit.hasWeapon && iron >= 20) {
+                    this.aiBuyWeapon(currentUnit.id);
+                    didBuy = true;
+                }
+                if (!didBuy && partner.hasArmor && partner.hasWeapon) {
+                    this.appendLog(`[AI] Unit at (${currentUnit.position.x},${currentUnit.position.y}) skipped redundant Forge visit; partner already equipped.`);
+                }
+                return { type: 'none' };
+            } else {
+                if (!currentUnit.hasArmor && iron >= 20) {
+                    this.aiBuyArmor(currentUnit.id);
+                    iron = this.aiIronSignal();
+                }
+                if (!currentUnit.hasWeapon && iron >= 20) {
+                    this.aiBuyWeapon(currentUnit.id);
+                }
+                return { type: 'none' };
             }
-            if (!currentUnit.hasWeapon && iron >= 20) {
-                this.aiBuyWeapon(currentUnit.id);
-            }
-            return { type: 'none' };
         }
         const step = this.getNextStepTowards(currentUnit, nearest, validMoves);
         if (step) return { type: 'move', target: step };
