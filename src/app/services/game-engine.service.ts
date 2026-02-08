@@ -120,6 +120,8 @@ export class GameEngineService {
     private movingUnitsSignal = signal<Set<string>>(new Set());
     private attackingUnitsSignal = signal<Set<string>>(new Set());
     private reclamationGoalsSignal = signal<Map<string, { target: Position; type: 'hunt' | 'merge' }>>(new Map());
+    private mergeIntentSignal = signal<Map<string, string>>(new Map());
+    private ignoreForgeUntilTurnSignal = signal<Map<string, number>>(new Map());
 
     // Computed signals
     readonly units = this.unitsSignal.asReadonly();
@@ -503,6 +505,10 @@ export class GameEngineService {
                             }
                         }
                         merged = true;
+                        const mi = new Map(this.mergeIntentSignal());
+                        mi.delete(movingUnit.id);
+                        mi.delete(targetUnit.id);
+                        this.mergeIntentSignal.set(mi);
                     } else {
                         return updatedUnits; // blocked by isValidMove; safety
                     }
@@ -1195,13 +1201,35 @@ export class GameEngineService {
             const u = this.getUnitAt(g.target.x, g.target.y);
             if (u && u.owner === unit.owner && u.tier === unit.tier) return u;
         }
+        const intent = this.mergeIntentSignal();
+        const partnerId = intent.get(unit.id);
+        if (partnerId) {
+            const u = this.unitsSignal().find(x => x.id === partnerId);
+            if (u && u.owner === unit.owner && u.tier === unit.tier) return u;
+        }
         const ally = this.unitsSignal().find(x =>
             x.owner === unit.owner &&
             x.tier === unit.tier &&
             (x.position.x !== unit.position.x || x.position.y !== unit.position.y) &&
             validMoves.some(m => m.x === x.position.x && m.y === x.position.y)
         );
-        return ally ?? null;
+        if (ally) return ally;
+        const allies = this.unitsSignal().filter(x =>
+            x.owner === unit.owner &&
+            x.tier === unit.tier &&
+            (x.position.x !== unit.position.x || x.position.y !== unit.position.y)
+        );
+        for (const a of allies) {
+            const myStep = this.getNextStepTowards(unit, a.position, validMoves);
+            if (!myStep) continue;
+            const aMoves = this.calculateValidMoves(a);
+            const aStep = this.getNextStepTowards(a, unit.position, aMoves);
+            if (!aStep) continue;
+            const currDist = Math.abs(unit.position.x - a.position.x) + Math.abs(unit.position.y - a.position.y);
+            const nextDist = Math.abs(myStep.x - aStep.x) + Math.abs(myStep.y - aStep.y);
+            if (nextDist < currDist) return a;
+        }
+        return null;
     }
 
     private computeHighestTierNeedingUpgrade(): number {
@@ -2720,6 +2748,15 @@ export class GameEngineService {
                 if (action.type === 'build_wall') {
                     this.aiBuildWallBetween(currentUnit.position, action.target);
                 } else {
+                    if (action.type === 'move') {
+                        const partner = this.getUnitAt(action.target.x, action.target.y);
+                        if (partner && partner.owner === 'ai' && partner.tier === currentUnit.tier) {
+                            const map = new Map(this.mergeIntentSignal());
+                            map.set(currentUnit.id, partner.id);
+                            map.set(partner.id, currentUnit.id);
+                            this.mergeIntentSignal.set(map);
+                        }
+                    }
                     this.executeMove(currentUnit, action.target);
                 }
                 turnContext.claimedTargets.add(`${action.target.x},${action.target.y}`);
@@ -2921,6 +2958,15 @@ export class GameEngineService {
                 if (!this.getUnitAt(x, y)) candidates.push({ x, y });
             }
         }
+        const aiForges = this.aiForgesSignal();
+        const ironLow = this.aiIronSignal() < 40;
+        if (ironLow && aiForges.length > 0) {
+            candidates.sort((a, b) => {
+                const da = aiForges.reduce((min, f) => Math.min(min, Math.max(Math.abs(a.x - f.x), Math.abs(a.y - f.y))), Infinity);
+                const db = aiForges.reduce((min, f) => Math.min(min, Math.max(Math.abs(b.x - f.x), Math.abs(b.y - f.y))), Infinity);
+                return db - da;
+            });
+        }
         let reserves = this.reservePointsSignal().ai;
         const cost = this.getPointsForTierLevel(tier, 1);
         let created = 0;
@@ -2946,6 +2992,12 @@ export class GameEngineService {
             this.unitsSignal.update(units => [...units, ...placed]);
             this.reservePointsSignal.update(r => ({ player: r.player, ai: reserves }));
             this.recomputeVisibility();
+            const map = new Map(this.ignoreForgeUntilTurnSignal());
+            const until = this.turnSignal() + (ironLow ? 2 : 1);
+            for (const u of placed) {
+                map.set(u.id, until);
+            }
+            this.ignoreForgeUntilTurnSignal.set(map);
             // console.log(`[AI Spawn] Created ${placed.length} unit(s) of T${tier}.`);
         }
         return created;
@@ -3233,7 +3285,8 @@ export class GameEngineService {
             const partnerCoversWeapon = !currentUnit.hasWeapon && partner.hasWeapon;
             const partnerCoversArmor = !currentUnit.hasArmor && partner.hasArmor;
             if (partnerCoversWeapon || partnerCoversArmor) {
-                this.appendLog(`[AI] Unit at (${currentUnit.position.x},${currentUnit.position.y}) skipped redundant Forge visit; partner already equipped.`);
+                const eq = partnerCoversWeapon && partnerCoversArmor ? 'Weapon & Armor' : (partnerCoversWeapon ? 'Weapon' : 'Armor');
+                this.appendLog(`[AI] Efficiency: T${currentUnit.tier} at (${currentUnit.position.x},${currentUnit.position.y}) ignored ${eq} purchase (Partner T${partner.tier} at (${partner.position.x},${partner.position.y}) already has it).`);
                 return { type: 'none' };
             }
         }
@@ -3242,6 +3295,9 @@ export class GameEngineService {
             const dBest = Math.max(Math.abs(best.x - currentUnit.position.x), Math.abs(best.y - currentUnit.position.y));
             return db < dBest ? p : best;
         }, aiForges[0]);
+        const ignoreMap = this.ignoreForgeUntilTurnSignal();
+        const ignoreUntil = ignoreMap.get(currentUnit.id) ?? 0;
+        if (this.turnSignal() <= ignoreUntil) return { type: 'none' };
         if (currentUnit.position.x === nearest.x && currentUnit.position.y === nearest.y) {
             let iron = this.aiIronSignal();
             if (partner) {
@@ -3256,7 +3312,7 @@ export class GameEngineService {
                     didBuy = true;
                 }
                 if (!didBuy && partner.hasArmor && partner.hasWeapon) {
-                    this.appendLog(`[AI] Unit at (${currentUnit.position.x},${currentUnit.position.y}) skipped redundant Forge visit; partner already equipped.`);
+                    this.appendLog(`[AI] Efficiency: T${currentUnit.tier} at (${currentUnit.position.x},${currentUnit.position.y}) ignored purchase (Partner T${partner.tier} at (${partner.position.x},${partner.position.y}) fully equipped).`);
                 }
                 return { type: 'none' };
             } else {
