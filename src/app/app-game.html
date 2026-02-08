@@ -981,6 +981,14 @@
                     ? (settings.currentLang() === 'uk' ? 'Залізна шахта: Для активації потрібно 5 послідовних ходів зайняття. Після активації дає +2 заліза за хід.' : 'Iron Mine: Requires 5 consecutive turns of occupation to activate. Once active, yields +2 Iron per turn.')
                     : null
               "
+              [attr.title]="
+                gameEngine.getUnitAt(x, y) &&
+                (gameEngine.getUnitAt(x, y)!.owner === 'player' || gameEngine.isVisibleToPlayer(x, y))
+                  ? gameEngine.formatHoverInfo(gameEngine.getUnitAt(x, y)!.id)
+                  : gameEngine.isForest(x, y) && gameEngine.isVisibleToPlayer(x, y)
+                    ? (settings.currentLang() === 'uk' ? 'Лісопильня: Для активації потрібно 2 послідовних ходів зайняття. Після активації дає +8 деревини за хід.' : 'Sawmill: Requires 2 consecutive occupation turns to activate. Once activated, it gives +8 wood per turn.')
+                    : null
+              "
               [class.bg-gray-700]="!gameEngine.isValidMove(x, y)"
               [class.border-gray-600]="!gameEngine.isValidMove(x, y)"
               [class.bg-blue-900]="x === 0 && y === 0"
@@ -996,6 +1004,7 @@
               [class.spawn-zone-highlight]="gameEngine.baseDeployActive() && x <= 2 && y <= 2 && (x !== 0 || y !== 0)"
               [class.forest-area]="gameEngine.isForest(x, y)"
               [class.mine-area]="gameEngine.isMine(x, y)"
+              [class.forge-area]="gameEngine.isForge(x, y)"
               [class.bg-amber-900]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
               [class.border-amber-500]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
               [class.bg-gray-950]="!gameEngine.isVisibleToPlayer(x, y)"
@@ -1068,6 +1077,22 @@
                 >
                   Forge
                 </span>
+                @if (gameEngine.isVisibleToPlayer(x, y)) {
+                  <span
+                    class="absolute inset-0 pointer-events-none flex items-center justify-center opacity-90"
+                    [style.z-index]="50"
+                  >
+                    <svg viewBox="0 0 128 128" class="w-full h-full">
+                      <g transform="translate(0,10) scale(1)">
+                        <rect x="20" y="80" width="88" height="18" rx="4" fill="#6b7280" />
+                        <rect x="30" y="70" width="68" height="12" rx="3" fill="#9ca3af" />
+                        <path d="M32 40 H96 L86 56 H42 Z" fill="#4b5563" />
+                        <rect x="56" y="30" width="16" height="12" rx="2" fill="#6b7280" />
+                        <rect x="60" y="20" width="8" height="12" rx="2" fill="#9ca3af" />
+                      </g>
+                    </svg>
+                  </span>
+                }
                 @if (unitOnTile && unitOnTile.owner === 'player') {
                   <div class="absolute bottom-1 right-1 flex gap-1 flex-col" [style.z-index]="60">
                     @if (!unitOnTile.hasWeapon && gameEngine.resources().iron >= 20) {

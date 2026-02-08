@@ -840,6 +840,15 @@ export class GameEngineService {
         return (unit.points ?? 0) + (unit.armorHp ?? 0);
     }
 
+    private computeSideEffectivePower(owner: 'ai' | 'player'): number {
+        const units = this.unitsSignal().filter(u => u.owner === owner);
+        let sum = 0;
+        for (const u of units) {
+            sum += this.effectiveAttack(u);
+        }
+        return sum;
+    }
+
     private isUnitInDanger(unit: Unit): boolean {
         const neighbors = this.getNeighbors(unit.position);
         for (const nb of neighbors) {
@@ -1032,15 +1041,24 @@ export class GameEngineService {
         return bestScore > 0 ? bestTarget : null;
     }
 
-    private getNextStepTowards(unit: Unit, target: Position, validMoves: Position[]): Position | null {
+    private getNextStepTowards(unit: Unit, target: Position, validMoves: Position[], opts?: { noCohesion?: boolean }): Position | null {
         if (validMoves.length === 0) return null;
-        let best = null;
-        let minDist = Infinity;
-
-        for (const m of validMoves) {
+        const scoreMove = (m: Position): number => {
             const d = Math.abs(m.x - target.x) + Math.abs(m.y - target.y);
-            if (d < minDist) {
-                minDist = d;
+            if (opts?.noCohesion) return d * 10;
+            const neighbors = this.getNeighbors(m);
+            const friendly = neighbors.filter(n => {
+                const u = this.getUnitAt(n.x, n.y);
+                return u && u.owner === unit.owner;
+            }).length;
+            return d * 10 - friendly * 2;
+        };
+        let best = null;
+        let bestScore = Infinity;
+        for (const m of validMoves) {
+            const s = scoreMove(m);
+            if (s < bestScore) {
+                bestScore = s;
                 best = m;
             }
         }
@@ -1048,11 +1066,20 @@ export class GameEngineService {
     }
 
     private findCombatTarget(unit: Unit, context: TurnContext, validMoves: Position[]): Position | null {
-        // 1. Priority Targets (High Value Units)
+        // 1. Priority Targets (High Value Units) with Focus Fire
         const reachableThreats = context.priorityTargets.filter(t =>
             validMoves.some(m => m.x === t.position.x && m.y === t.position.y)
         );
-        if (reachableThreats.length > 0) return reachableThreats[0].position;
+        if (reachableThreats.length > 0) {
+            // Prefer lethal, otherwise lowest effective defense (HP)
+            const lethal = reachableThreats.filter(t => this.effectiveAttack(unit) >= this.effectiveDefense(t));
+            if (lethal.length > 0) {
+                lethal.sort((a, b) => this.effectiveDefense(a) - this.effectiveDefense(b));
+                return lethal[0].position;
+            }
+            reachableThreats.sort((a, b) => this.effectiveDefense(a) - this.effectiveDefense(b));
+            return reachableThreats[0].position;
+        }
 
         // 2. Adjacent Walls (Breacher Logic with Reinforcement Awareness)
         // Score hostile walls by reinforcement level and unit capability
@@ -1077,20 +1104,23 @@ export class GameEngineService {
             return wallCandidates[0].pos;
         }
 
-        // 3. General Enemies (weighted by resource occupation and effective value)
-        const attackMoves = validMoves
+        // 3. General Enemies (Focus Fire)
+        const attackCandidates = validMoves
             .map(m => {
                 const u = this.getUnitAt(m.x, m.y);
                 if (!u || u.owner === unit.owner) return null;
-                const onResource = this.isMine(m.x, m.y) || this.isForge(m.x, m.y);
-                const weight = (onResource ? 100 : 0) + (this.effectiveAttack(unit) - this.effectiveDefense(u));
-                return { pos: m, weight };
+                return { pos: m, enemy: u };
             })
-            .filter(Boolean) as { pos: Position; weight: number }[];
+            .filter(Boolean) as { pos: Position; enemy: Unit }[];
 
-        if (attackMoves.length > 0) {
-            attackMoves.sort((a, b) => b.weight - a.weight);
-            return attackMoves[0].pos;
+        if (attackCandidates.length > 0) {
+            const lethal = attackCandidates.filter(c => this.effectiveAttack(unit) >= this.effectiveDefense(c.enemy));
+            if (lethal.length > 0) {
+                lethal.sort((a, b) => this.effectiveDefense(a.enemy) - this.effectiveDefense(b.enemy));
+                return lethal[0].pos;
+            }
+            attackCandidates.sort((a, b) => this.effectiveDefense(a.enemy) - this.effectiveDefense(b.enemy));
+            return attackCandidates[0].pos;
         }
 
         return null;
@@ -1145,6 +1175,17 @@ export class GameEngineService {
         }
 
         return best;
+    }
+
+    private isTileThreatenedByEnemy(unit: Unit, tile: Position): boolean {
+        const adj = this.getNeighbors(tile);
+        for (const p of adj) {
+            const enemy = this.getUnitAt(p.x, p.y);
+            if (enemy && enemy.owner !== unit.owner) {
+                if (this.effectiveAttack(enemy) >= this.effectiveDefense(unit)) return true;
+            }
+        }
+        return false;
     }
 
     private getNeighbors(pos: Position): Position[] {
@@ -2241,10 +2282,44 @@ export class GameEngineService {
                             if (path && path.length > 1) {
                                 const step = path[1];
                                 const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, step.x, step.y);
-                                if (w) {
+                                const enemyStep = this.getUnitAt(step.x, step.y);
+                                if (enemyStep && enemyStep.owner !== currentUnit.owner) {
+                                    const enemyStrong = this.effectiveAttack(enemyStep) > this.effectiveDefense(currentUnit);
+                                    const canAttackStep = validMoves.some(m => m.x === step.x && m.y === step.y);
+                                    if (enemyStrong && canAttackStep) {
+                                        action = { type: 'attack', target: step, reason: 'Reclaim: Engage Blocker' };
+                                    } else if (w) {
+                                        action = { type: 'wall_attack', target: step, reason: 'Reclaim: Breach Blocker' };
+                                    } else {
+                                        // Zone of Control: avoid threatened tiles if possible
+                                        if (this.isTileThreatenedByEnemy(currentUnit, step)) {
+                                            const alts = validMoves
+                                                .filter(m => {
+                                                    const dd = Math.abs(m.x - dest.x) + Math.abs(m.y - dest.y);
+                                                    const ds = Math.abs(step.x - dest.x) + Math.abs(step.y - dest.y);
+                                                    return dd <= ds && !this.isTileThreatenedByEnemy(currentUnit, m);
+                                                });
+                                            const alt = alts.length > 0 ? this.getNextStepTowards(currentUnit, dest, alts) : null;
+                                            action = alt ? { type: 'move', target: alt, reason: 'Reclaim: Bypass Threat' } : { type: 'move', target: step, reason: 'Reclaim: Pursue Resource' };
+                                        } else {
+                                            action = { type: 'move', target: step, reason: 'Reclaim: Pursue Resource' };
+                                        }
+                                    }
+                                } else if (w) {
                                     action = { type: 'wall_attack', target: step, reason: 'Reclaim: Breach Blocker' };
                                 } else {
-                                    action = { type: 'move', target: step, reason: 'Reclaim: Pursue Resource' };
+                                    if (this.isTileThreatenedByEnemy(currentUnit, step)) {
+                                        const alts = validMoves
+                                            .filter(m => {
+                                                const dd = Math.abs(m.x - dest.x) + Math.abs(m.y - dest.y);
+                                                const ds = Math.abs(step.x - dest.x) + Math.abs(step.y - dest.y);
+                                                return dd <= ds && !this.isTileThreatenedByEnemy(currentUnit, m);
+                                            });
+                                        const alt = alts.length > 0 ? this.getNextStepTowards(currentUnit, dest, alts) : null;
+                                        action = alt ? { type: 'move', target: alt, reason: 'Reclaim: Bypass Threat' } : { type: 'move', target: step, reason: 'Reclaim: Pursue Resource' };
+                                    } else {
+                                        action = { type: 'move', target: step, reason: 'Reclaim: Pursue Resource' };
+                                    }
                                 }
                             }
                         }
@@ -2265,7 +2340,44 @@ export class GameEngineService {
                             const step = this.getNextStepTowards(currentUnit, dest, validMoves);
                             if (step) {
                                 const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, step.x, step.y);
-                                action = w ? { type: 'wall_attack', target: step, reason: 'Reclaim: Breach Path' } : { type: 'move', target: step, reason: 'Reclaim: Close Distance' };
+                                const enemyStep = this.getUnitAt(step.x, step.y);
+                                if (enemyStep && enemyStep.owner !== currentUnit.owner) {
+                                    const enemyStrong = this.effectiveAttack(enemyStep) > this.effectiveDefense(currentUnit);
+                                    const canAttackStep = validMoves.some(m => m.x === step.x && m.y === step.y);
+                                    if (enemyStrong && canAttackStep) {
+                                        action = { type: 'attack', target: step, reason: 'Reclaim: Engage Blocker' };
+                                    } else if (w) {
+                                        action = { type: 'wall_attack', target: step, reason: 'Reclaim: Breach Path' };
+                                    } else {
+                                        if (this.isTileThreatenedByEnemy(currentUnit, step)) {
+                                            const alts = validMoves
+                                                .filter(m => {
+                                                    const dd = Math.abs(m.x - dest.x) + Math.abs(m.y - dest.y);
+                                                    const ds = Math.abs(step.x - dest.x) + Math.abs(step.y - dest.y);
+                                                    return dd <= ds && !this.isTileThreatenedByEnemy(currentUnit, m);
+                                                });
+                                            const alt = alts.length > 0 ? this.getNextStepTowards(currentUnit, dest, alts) : null;
+                                            action = alt ? { type: 'move', target: alt, reason: 'Reclaim: Bypass Threat' } : { type: 'move', target: step, reason: 'Reclaim: Close Distance' };
+                                        } else {
+                                            action = { type: 'move', target: step, reason: 'Reclaim: Close Distance' };
+                                        }
+                                    }
+                                } else {
+                                    if (w) {
+                                        action = { type: 'wall_attack', target: step, reason: 'Reclaim: Breach Path' };
+                                    } else if (this.isTileThreatenedByEnemy(currentUnit, step)) {
+                                        const alts = validMoves
+                                            .filter(m => {
+                                                const dd = Math.abs(m.x - dest.x) + Math.abs(m.y - dest.y);
+                                                const ds = Math.abs(step.x - dest.x) + Math.abs(step.y - dest.y);
+                                                return dd <= ds && !this.isTileThreatenedByEnemy(currentUnit, m);
+                                            });
+                                        const alt = alts.length > 0 ? this.getNextStepTowards(currentUnit, dest, alts) : null;
+                                        action = alt ? { type: 'move', target: alt, reason: 'Reclaim: Bypass Threat' } : { type: 'move', target: step, reason: 'Reclaim: Close Distance' };
+                                    } else {
+                                        action = { type: 'move', target: step, reason: 'Reclaim: Close Distance' };
+                                    }
+                                }
                             }
                         }
                     }
@@ -2338,7 +2450,7 @@ export class GameEngineService {
                             }
                         }
                     }
-                    const step = this.getNextStepTowards(currentUnit, playerBase, validMoves);
+                    const step = this.getNextStepTowards(currentUnit, playerBase, validMoves, { noCohesion: true });
                     if (step) {
                         const stepDist = Math.max(Math.abs(step.x - playerBase.x), Math.abs(step.y - playerBase.y));
                         const allowMove = !wallAttackAvailable ? true : (stepDist < currDist);
@@ -2360,7 +2472,7 @@ export class GameEngineService {
                     if (canBaseAttack) {
                         action = { type: 'attack', target: playerBase, reason: 'Siege: Strike Base' };
                     } else {
-                        const step = this.getNextStepTowards(currentUnit, playerBase, validMoves);
+                        const step = this.getNextStepTowards(currentUnit, playerBase, validMoves, { noCohesion: true });
                         if (step) {
                             const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, step.x, step.y);
                             if (w) {
@@ -2383,6 +2495,35 @@ export class GameEngineService {
             }
 
             // Equipment phase: move to nearest Forge to upgrade if eligible
+            // Forge Defense: if enemy approaches AI Forge (radius 3), free units should defend
+            if (!action) {
+                const aiForges = this.aiForgesSignal();
+                const playerUnits = this.unitsSignal().filter(u => u.owner === 'player');
+                const threatenedEnemies: Unit[] = [];
+                for (const f of aiForges) {
+                    for (const e of playerUnits) {
+                        const d = Math.max(Math.abs(e.position.x - f.x), Math.abs(e.position.y - f.y));
+                        if (d <= 3) threatenedEnemies.push(e);
+                    }
+                }
+                if (threatenedEnemies.length > 0) {
+                    const nearestThreat = threatenedEnemies.reduce((prev, curr) => {
+                        const dPrev = Math.abs(prev.position.x - currentUnit.position.x) + Math.abs(prev.position.y - currentUnit.position.y);
+                        const dCurr = Math.abs(curr.position.x - currentUnit.position.x) + Math.abs(curr.position.y - currentUnit.position.y);
+                        return dCurr < dPrev ? curr : prev;
+                    });
+                    const canAttack = validMoves.some(m => m.x === nearestThreat.position.x && m.y === nearestThreat.position.y);
+                    if (canAttack) {
+                        action = { type: 'attack', target: nearestThreat.position, reason: 'Defense: Guard Forge' };
+                    } else {
+                        const step = this.getNextStepTowards(currentUnit, nearestThreat.position, validMoves);
+                        if (step) {
+                            const w = this.getWallBetween(currentUnit.position.x, currentUnit.position.y, step.x, step.y);
+                            action = w ? { type: 'wall_attack', target: step, reason: 'Defense: Breach to Forge' } : { type: 'move', target: step, reason: 'Defense: Approach Forge Threat' };
+                        }
+                    }
+                }
+            }
             if (!action && currentUnit.tier >= 2 && (!currentUnit.hasArmor || !currentUnit.hasWeapon)) {
                 const upg = this.seekUpgrades(currentUnit, validMoves);
                 if (upg.type === 'move' && upg.target) {
@@ -2435,10 +2576,12 @@ export class GameEngineService {
             }
             // Step B: Global Objective (Resource Capture / Siege Mode)
             if (!action) {
-                // SIEGE MODE CHECK
-                // Rule: If Wood > 100, 50% of mobile units switch to Siege Mode
-                // Logic: ID-based deterministic selection for 50% split
-                const siegeModeActive = this.aiWoodSignal() > 100;
+                // SIEGE MODE CHECK (Effective Power Ratio)
+                // New Rule: If AI Effective Power > Player Effective Power * 1.2,
+                // 50% of mobile units switch to Siege Mode (ID-based deterministic selection).
+                const aiPower = this.computeSideEffectivePower('ai');
+                const playerPower = this.computeSideEffectivePower('player');
+                const siegeModeActive = playerPower > 0 && aiPower > playerPower * 1.2;
                 const isSiegeUnit = siegeModeActive && !this.isForest(currentUnit.position.x, currentUnit.position.y) && (parseInt(currentUnit.id.slice(-1), 16) % 2 === 0);
 
                 if (isSiegeUnit) {
@@ -2465,7 +2608,7 @@ export class GameEngineService {
                             action = { type: 'attack', target: combatTarget, reason: 'Siege: Engage Enemy' };
                         }
                     } else {
-                        const step = this.getNextStepTowards(currentUnit, target, validMoves);
+                        const step = this.getNextStepTowards(currentUnit, target, validMoves, { noCohesion: true });
                         if (step) {
                             action = { type: 'move', target: step, reason: 'Siege: Advance' };
                         } else {
