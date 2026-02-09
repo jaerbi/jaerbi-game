@@ -1069,6 +1069,23 @@ export class GameEngineService {
         return bestScore > 0 ? bestTarget : null;
     }
 
+    private findBlockingWall(start: Position, target: Position): { pos: Position; wall: Wall } | null {
+        // Find the wall that's blocking the path from start to target
+        const path = this.bfsPath(start, target, { respectWalls: false });
+        if (!path || path.length < 2) return null;
+        
+        // Find the first wall in the path
+        for (let i = 0; i < path.length - 1; i++) {
+            const current = path[i];
+            const next = path[i + 1];
+            const wall = this.getWallBetween(current.x, current.y, next.x, next.y);
+            if (wall) {
+                return { pos: next, wall };
+            }
+        }
+        return null;
+    }
+
     private findDefensiveWallTargetForOwner(unit: Unit, owner: Owner): Position | null {
         const neighbors = this.getNeighbors(unit.position);
         const enemyOwner: Owner = owner === 'player' ? 'ai' : 'player';
@@ -1169,6 +1186,23 @@ export class GameEngineService {
     }
 
     private findCombatTarget(unit: Unit, context: TurnContext, validMoves: Position[]): Position | null {
+        // OBSTACLE SMASH: Check if high-value target is blocked by wall
+        const highValueTarget = context.priorityTargets.find(t => {
+            const dist = Math.max(Math.abs(t.position.x - unit.position.x), Math.abs(t.position.y - unit.position.y));
+            return dist <= 5;
+        });
+        if (highValueTarget) {
+            const path = this.bfsPath(unit.position, highValueTarget.position, { respectWalls: true });
+            if (!path) {
+                // Path is blocked by wall, find the blocking wall
+                const blockingWall = this.findBlockingWall(unit.position, highValueTarget.position);
+                if (blockingWall) {
+                    this.appendLog(`[Obstacle Smash] T${unit.tier} targeting wall at (${blockingWall.pos.x},${blockingWall.pos.y}) blocking path to high-value target`);
+                    return blockingWall.pos;
+                }
+            }
+        }
+
         // 1. Priority Targets (High Value Units) with Focus Fire
         const reachableThreats = context.priorityTargets.filter(t =>
             validMoves.some(m => m.x === t.position.x && m.y === t.position.y)
@@ -3240,6 +3274,14 @@ export class GameEngineService {
         const u = this.unitsSignal().find(x => x.id === unitId && x.owner === 'player');
         if (!u) return;
         if (u.hasWeapon) return;
+        
+        // Forge ownership validation
+        const isOnForge = this.isForge(u.position.x, u.position.y) || this.isForgeSite(u.position.x, u.position.y);
+        if (!isOnForge) {
+            console.warn(`[Cheat Attempt] Unit ${unitId} tried to buy weapon without being on a forge`);
+            return;
+        }
+        
         const r = this.resourcesSignal();
         if (r.iron < 20) return;
         this.resourcesSignal.update(rr => ({ wood: rr.wood, iron: rr.iron - 20 }));
@@ -3249,6 +3291,14 @@ export class GameEngineService {
         const u = this.unitsSignal().find(x => x.id === unitId && x.owner === 'player');
         if (!u) return;
         if (u.hasArmor) return;
+        
+        // Forge ownership validation
+        const isOnForge = this.isForge(u.position.x, u.position.y) || this.isForgeSite(u.position.x, u.position.y);
+        if (!isOnForge) {
+            console.warn(`[Cheat Attempt] Unit ${unitId} tried to buy armor without being on a forge`);
+            return;
+        }
+        
         const r = this.resourcesSignal();
         if (r.iron < 20) return;
         this.resourcesSignal.update(rr => ({ wood: rr.wood, iron: rr.iron - 20 }));
@@ -3318,6 +3368,14 @@ export class GameEngineService {
         const u = this.unitsSignal().find(x => x.id === unitId && x.owner === 'ai');
         if (!u) return;
         if (u.hasArmor) return;
+        
+        // Forge ownership validation
+        const isOnForge = this.isForge(u.position.x, u.position.y) || this.isForgeSite(u.position.x, u.position.y);
+        if (!isOnForge) {
+            console.warn(`[Cheat Attempt] AI Unit ${unitId} tried to buy armor without being on a forge`);
+            return;
+        }
+        
         const iron = this.aiIronSignal();
         if (iron < 20) return;
         this.aiIronSignal.update(v => v - 20);
@@ -3328,6 +3386,14 @@ export class GameEngineService {
         const u = this.unitsSignal().find(x => x.id === unitId && x.owner === 'ai');
         if (!u) return;
         if (u.hasWeapon) return;
+        
+        // Forge ownership validation
+        const isOnForge = this.isForge(u.position.x, u.position.y) || this.isForgeSite(u.position.x, u.position.y);
+        if (!isOnForge) {
+            console.warn(`[Cheat Attempt] AI Unit ${unitId} tried to buy weapon without being on a forge`);
+            return;
+        }
+        
         const iron = this.aiIronSignal();
         if (iron < 20) return;
         this.aiIronSignal.update(v => v - 20);
@@ -3375,11 +3441,18 @@ export class GameEngineService {
         if (aiForges.length === 0) return { type: 'none' };
         const partner = this.getMergePartnerForUnit(currentUnit, validMoves);
         const ironNow = this.aiIronSignal();
-        if (ironNow < 40) {
+        
+        // WEALTH OVERRIDE: If AI has plenty of iron, ignore all "scarcity" and "partner" checks.
+        // Just buy the upgrade if the unit is at a forge or near one.
+        const wealthOverride = ironNow >= 100;
+        if (wealthOverride) {
+            this.appendLog(`[AI Wealth Override] T${currentUnit.tier} at (${currentUnit.position.x},${currentUnit.position.y}) bypassing normal checks (iron: ${ironNow})`);
+        } else if (ironNow < 40) {
             const highest = this.computeHighestTierNeedingUpgrade();
             if (highest > 0 && currentUnit.tier < highest) return { type: 'none' };
         }
-        if (partner) {
+        
+        if (!wealthOverride && partner) {
             const partnerCoversWeapon = !currentUnit.hasWeapon && partner.hasWeapon;
             const partnerCoversArmor = !currentUnit.hasArmor && partner.hasArmor;
             if (partnerCoversWeapon || partnerCoversArmor) {
@@ -3437,11 +3510,18 @@ export class GameEngineService {
         if (forges.length === 0) return { type: 'none' };
         const partner = owner === 'ai' ? this.getMergePartnerForUnit(currentUnit, validMoves) : this.getMergePartnerForUnit(currentUnit, validMoves);
         const ironNow = this.getIron(owner);
-        if (ironNow < 40) {
+        
+        // WEALTH OVERRIDE: If AI has plenty of iron, ignore all "scarcity" and "partner" checks.
+        // Just buy the upgrade if the unit is at a forge or near one.
+        const wealthOverride = owner === 'ai' && ironNow >= 100;
+        if (wealthOverride) {
+            this.appendLog(`[AI Wealth Override] T${currentUnit.tier} at (${currentUnit.position.x},${currentUnit.position.y}) bypassing normal checks (iron: ${ironNow})`);
+        } else if (ironNow < 40) {
             const highest = this.computeHighestTierNeedingUpgrade();
             if (highest > 0 && currentUnit.tier < highest) return { type: 'none' };
         }
-        if (partner) {
+        
+        if (!wealthOverride && partner) {
             const partnerCoversWeapon = !currentUnit.hasWeapon && partner.hasWeapon;
             const partnerCoversArmor = !currentUnit.hasArmor && partner.hasArmor;
             if (partnerCoversWeapon || partnerCoversArmor) {
