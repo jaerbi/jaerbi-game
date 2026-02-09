@@ -22,6 +22,7 @@ export class AppGame {
 
     isAutoBattleActive = signal(false);
     isMobileMenuOpen = signal(false);
+    private lastEconomyProcessedTurn: number = -1;
 
     constructor(
         public gameEngine: GameEngineService,
@@ -265,82 +266,27 @@ export class AppGame {
     }
 
     private async executeAutoMove() {
-        await new Promise(res => setTimeout(res, 500));
+        await new Promise(res => setTimeout(res, 250));
         if (!this.isAutoBattleActive()) return;
         if (this.gameEngine.gameStatus() !== 'playing') return;
         if (!this.gameEngine.isPlayerTurn()) return;
-
-        const units = this.gameEngine.units ? this.gameEngine.units() : [];
-        const aiBase = this.gameEngine.getBasePosition('ai');
-        const center = { x: Math.floor(this.gameEngine.gridSize / 2), y: Math.floor(this.gameEngine.gridSize / 2) };
-        const enemies = units.filter(u => u.owner === 'ai');
-        const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
-
-        let bestScore = -Infinity;
-        let bestUnitId: string | null = null;
-        let bestMove: { x: number; y: number } | null = null;
-        let bestTie = Infinity;
-        let willAttack = false;
-
-        for (const u of units) {
-            if (u.owner !== 'player') continue;
-            this.gameEngine.selectUnit(u.id);
-            const moves = this.gameEngine.validMoves();
-            if (moves.length === 0) continue;
-            for (const m of moves) {
-                let score = 0;
-                const targetUnit = this.gameEngine.getUnitAt(m.x, m.y);
-                const isBaseHit = m.x === aiBase.x && m.y === aiBase.y;
-                const isAttack = !!(targetUnit && targetUnit.owner === 'ai') || isBaseHit;
-                if (isAttack) {
-                    score += 100;
-                } else {
-                    let nearest: { x: number; y: number } = aiBase;
-                    let nearestD = dist(m, aiBase);
-                    for (const e of enemies) {
-                        const d = dist(m, e.position);
-                        if (d < nearestD) {
-                            nearestD = d;
-                            nearest = e.position;
-                        }
-                    }
-                    const currentD = dist(u.position, nearest);
-                    if (nearestD < currentD) {
-                        score += 50;
-                    }
-                    if (enemies.length === 0) {
-                        const centerD = dist(m, center);
-                        const currCenterD = dist(u.position, center);
-                        const baseD = dist(m, aiBase);
-                        const currBaseD = dist(u.position, aiBase);
-                        if (centerD < currCenterD || baseD < currBaseD) {
-                            score += 20;
-                        }
-                    }
-                }
-                const tie = isAttack ? 0 : Math.min(
-                    ...[...enemies.map(e => dist(m, e.position)), dist(m, aiBase)]
-                );
-                if (score > bestScore || (score === bestScore && tie < bestTie)) {
-                    bestScore = score;
-                    bestUnitId = u.id;
-                    bestMove = m;
-                    bestTie = tie;
-                    willAttack = isAttack;
-                }
-            }
+        // Economy & Spawn Phase (run once per player turn)
+        const turnNow = this.gameEngine.turn();
+        if (this.lastEconomyProcessedTurn !== turnNow) {
+            this.gameEngine.botEconomyPhase('player');
+            this.lastEconomyProcessedTurn = turnNow;
         }
-
-        if (bestUnitId && bestMove) {
-            this.gameEngine.selectUnit(bestUnitId);
-            if (willAttack) {
-                try {
-                    console.log('[AUTO_ENGAGE][АВТОПІЛОТ] Ціль захоплена. Починаю атаку...');
-                } catch {}
-            }
-            this.gameEngine.moveSelectedUnit(bestMove);
-        } else {
+        const acted = this.gameEngine.playerAutoStep();
+        if (!acted) {
             this.gameEngine.selectUnit(null);
+        }
+        // Auto-End Turn when no actions remain
+        const remaining = this.gameEngine.remainingActions();
+        if (remaining === 0) {
+            await new Promise(res => setTimeout(res, 1000));
+            if (this.isAutoBattleActive() && this.gameEngine.isPlayerTurn()) {
+                this.gameEngine.endPlayerTurn();
+            }
         }
     }
 }
