@@ -84,10 +84,13 @@ import { RouterLink } from '@angular/router';
             </div>
         </div>
 
-        <div class="roadmap-card group">
+        <div class="roadmap-card group  border-emerald-500/30 bg-emerald-500/5 relative overflow-hidden opacity-45">
           <div class="card-header">
              <span class="text-[11px] font-mono text-blue-200/50 italic">REF: RESOURCE_IRON</span>
-             <span class="status-tag status-concept">{{ settings.currentLang() === 'uk' ? 'Концепт' : 'In Concept' }}</span>
+             <!-- <span class="status-tag status-concept">{{ settings.currentLang() === 'uk' ? 'Концепт' : 'In Concept' }}</span> -->
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                {{ settings.currentLang() === 'uk' ? 'Виконано' : 'Completed' }}
+                </span>
           </div>
           <div class="flex items-start gap-4 mt-4">
              <div class="w-12 h-12 flex-shrink-0 bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -108,10 +111,13 @@ import { RouterLink } from '@angular/router';
           </div>
         </div>
 
-        <div class="roadmap-card group md:col-span-2">
+        <div class="roadmap-card group md:col-span-2  border-emerald-500/30 bg-emerald-500/5 relative overflow-hidden opacity-45">
           <div class="card-header">
              <span class="text-[11px] font-mono text-blue-200/50 italic">REF: INFRA_SMITHY</span>
-             <span class="status-tag status-research">{{ settings.currentLang() === 'uk' ? 'Дослідження' : 'Researching' }}</span>
+             <!-- <span class="status-tag status-research">{{ settings.currentLang() === 'uk' ? 'Дослідження' : 'Researching' }}</span> -->
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                {{ settings.currentLang() === 'uk' ? 'Виконано' : 'Completed' }}
+                </span>
           </div>
           <div class="flex items-start gap-6 mt-4">
              <div class="w-16 h-16 flex-shrink-0 bg-blue-600/20 border-2 border-blue-500/40 rounded-sm flex items-center justify-center relative overflow-hidden group-hover:border-blue-400 transition-colors">

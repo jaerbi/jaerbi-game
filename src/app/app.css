@@ -147,6 +147,14 @@
   box-shadow: 0 0 0 1px rgba(170, 115, 43, 0.9), inset 0 0 40px rgba(170, 115, 43, 0.2);
   border-color: rgb(170, 115, 43);
 }
+.forge-area {
+  box-shadow: 0 0 0 1px rgba(100, 100, 110, 0.9), inset 0 0 40px rgba(75, 75, 85, 0.5);
+  border-color: rgb(100, 100, 110);
+  background-image:
+    radial-gradient(ellipse at center, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0) 60%),
+    repeating-linear-gradient(45deg, rgba(80,80,90,0.3) 0, rgba(80,80,90,0.3) 4px, rgba(60,60,70,0.3) 4px, rgba(60,60,70,0.3) 8px);
+  background-blend-mode: overlay;
+}
 .castle.red {
   filter: hue-rotate(140deg); /* Approximate blue->red shift if it was an image, but it's text emoji so irrelevant, just for classing */
 }

@@ -470,6 +470,28 @@
               ></div>
             </div>
           </div>
+          <button
+            (click)="toggleAutoBattle()"
+            class="cursor-pointer group relative px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-between gap-3 overflow-hidden border border-green-400/30 bg-gradient-to-br from-green-600/20 to-green-800/40 hover:from-green-500/40 hover:to-green-700/60 shadow-[0_0_15px_rgba(34,197,94,0.2)] active:scale-95 disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed"
+            [class.ring-2]="isAutoBattleActive()"
+            [class.ring-green-400]="isAutoBattleActive()"
+            [disabled]="gameEngine.gameStatus() !== 'playing'"
+          >
+            <div class="flex items-center gap-2 z-10">
+              <span class="text-green-200 text-xs tracking-widest uppercase">{{ settings.t('AUTO') }}</span>
+              <span class="text-white">{{ settings.t('ENGAGE') }}</span>
+            </div>
+            <div class="flex items-center gap-2 z-10">
+              <span
+                class="h-2 w-2 rounded-full"
+                [class.bg-green-400]="isAutoBattleActive()"
+                [class.bg-gray-500]="!isAutoBattleActive()"
+              ></span>
+            </div>
+            <div
+              class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none"
+            ></div>
+          </button>
         } @else {
           <button
             (click)="firebase.loginWithGoogle()"
@@ -506,10 +528,10 @@
       <div class="h-10 w-[1px] bg-white/5"></div>
 
       <div class="flex gap-4">
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner"
-        [attr.title]="
-                (settings.currentLang() === 'uk' ? 'Зібраної Деревини' : 'Harvested Wood')
-              ">
+        <div
+          class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner"
+          [attr.title]="settings.currentLang() === 'uk' ? 'Зібраної Деревини' : 'Harvested Wood'"
+        >
           <span class="text-lg">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="7" y="14" width="13" height="6" rx="3" fill="#8B5E3C" />
@@ -523,10 +545,10 @@
           </span>
           <span class="font-mono text-lg font-bold text-emerald-400">{{ gameEngine.resources().wood }}</span>
         </div>
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner"
-        [attr.title]="
-                (settings.currentLang() === 'uk' ? 'Зібраного Заліза' : 'Harvested Iron')
-              ">
+        <div
+          class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner"
+          [attr.title]="settings.currentLang() === 'uk' ? 'Зібраного Заліза' : 'Harvested Iron'"
+        >
           <span class="text-lg">
             <svg width="24" height="24" viewBox="0 0 24 24">
               <path d="M6 18 L10 12 L14 18 Z" fill="#9ca3af" />
@@ -537,9 +559,8 @@
         </div>
         <div
           class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 shadow-inner"
-        [attr.title]="
-                (settings.currentLang() === 'uk' ? 'Монополія Лісів' : 'Monopoly of Forests')
-              ">
+          [attr.title]="settings.currentLang() === 'uk' ? 'Монополія Лісів' : 'Monopoly of Forests'"
+        >
           <span class="text-lg">
             <div class="w-8 h-8 flex-shrink-0">
               <svg viewBox="0 0 64 64" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -621,10 +642,10 @@
 
     <div class="flex items-center gap-6">
       <div class="flex gap-4">
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner"
-        [attr.title]="
-                (settings.currentLang() === 'uk' ? 'Зібраної Деревини' : 'Harvested Wood')
-              ">
+        <div
+          class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner"
+          [attr.title]="settings.currentLang() === 'uk' ? 'Зібраної Деревини' : 'Harvested Wood'"
+        >
           <span class="font-mono text-lg font-bold text-red-400">{{ gameEngine.aiWood() }}</span>
           <span class="text-lg">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -638,10 +659,10 @@
             </svg>
           </span>
         </div>
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner"
-        [attr.title]="
-                (settings.currentLang() === 'uk' ? 'Зібраного Заліза' : 'Harvested Iron')
-              ">
+        <div
+          class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 shadow-inner"
+          [attr.title]="settings.currentLang() === 'uk' ? 'Зібраного Заліза' : 'Harvested Iron'"
+        >
           <span class="text-lg">
             <svg width="24" height="24" viewBox="0 0 24 24">
               <path d="M6 18 L10 12 L14 18 Z" fill="#9ca3af" />
@@ -650,10 +671,10 @@
           </span>
           <span class="font-mono text-lg font-bold text-slate-300">{{ gameEngine.aiIron() }}</span>
         </div>
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 shadow-inner"
-        [attr.title]="
-                (settings.currentLang() === 'uk' ? 'Монополія Лісів' : 'Monopoly of Forests')
-              ">
+        <div
+          class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 shadow-inner"
+          [attr.title]="settings.currentLang() === 'uk' ? 'Монополія Лісів' : 'Monopoly of Forests'"
+        >
           <span class="font-mono text-lg font-bold text-red-300">
             {{ gameEngine.getForestControl().ai }}
             <span class="text-xs text-white/30 mx-1">/</span>
@@ -978,7 +999,19 @@
                 (gameEngine.getUnitAt(x, y)!.owner === 'player' || gameEngine.isVisibleToPlayer(x, y))
                   ? gameEngine.formatHoverInfo(gameEngine.getUnitAt(x, y)!.id)
                   : gameEngine.isMine(x, y) && gameEngine.isVisibleToPlayer(x, y)
-                    ? (settings.currentLang() === 'uk' ? 'Залізна шахта: Для активації потрібно 5 послідовних ходів зайняття. Після активації дає +2 заліза за хід.' : 'Iron Mine: Requires 5 consecutive turns of occupation to activate. Once active, yields +2 Iron per turn.')
+                    ? settings.currentLang() === 'uk'
+                      ? 'Залізна шахта: Для активації потрібно 5 послідовних ходів зайняття. Після активації дає +2 заліза за хід.'
+                      : 'Iron Mine: Requires 5 consecutive turns of occupation to activate. Once active, yields +2 Iron per turn.'
+                    : null
+              "
+              [attr.title]="
+                gameEngine.getUnitAt(x, y) &&
+                (gameEngine.getUnitAt(x, y)!.owner === 'player' || gameEngine.isVisibleToPlayer(x, y))
+                  ? gameEngine.formatHoverInfo(gameEngine.getUnitAt(x, y)!.id)
+                  : gameEngine.isForest(x, y) && gameEngine.isVisibleToPlayer(x, y)
+                    ? settings.currentLang() === 'uk'
+                      ? 'Лісопильня: Для активації потрібно 2 послідовних ходів зайняття. Після активації дає +8 деревини за хід.'
+                      : 'Sawmill: Requires 2 consecutive occupation turns to activate. Once activated, it gives +8 wood per turn.'
                     : null
               "
               [class.bg-gray-700]="!gameEngine.isValidMove(x, y)"
@@ -996,6 +1029,7 @@
               [class.spawn-zone-highlight]="gameEngine.baseDeployActive() && x <= 2 && y <= 2 && (x !== 0 || y !== 0)"
               [class.forest-area]="gameEngine.isForest(x, y)"
               [class.mine-area]="gameEngine.isMine(x, y)"
+              [class.forge-area]="gameEngine.isForge(x, y)"
               [class.bg-amber-900]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
               [class.border-amber-500]="gameEngine.isDeployTarget(x, y) && !gameEngine.buildMode()"
               [class.bg-gray-950]="!gameEngine.isVisibleToPlayer(x, y)"
@@ -1068,6 +1102,22 @@
                 >
                   Forge
                 </span>
+                @if (gameEngine.isVisibleToPlayer(x, y)) {
+                  <span
+                    class="absolute inset-0 pointer-events-none flex items-center justify-center opacity-90"
+                    [style.z-index]="50"
+                  >
+                    <svg viewBox="0 0 128 128" class="w-full h-full">
+                      <g transform="translate(0,10) scale(1)">
+                        <rect x="20" y="80" width="88" height="18" rx="4" fill="#6b7280" />
+                        <rect x="30" y="70" width="68" height="12" rx="3" fill="#9ca3af" />
+                        <path d="M32 40 H96 L86 56 H42 Z" fill="#4b5563" />
+                        <rect x="56" y="30" width="16" height="12" rx="2" fill="#6b7280" />
+                        <rect x="60" y="20" width="8" height="12" rx="2" fill="#9ca3af" />
+                      </g>
+                    </svg>
+                  </span>
+                }
                 @if (unitOnTile && unitOnTile.owner === 'player') {
                   <div class="absolute bottom-1 right-1 flex gap-1 flex-col" [style.z-index]="60">
                     @if (!unitOnTile.hasWeapon && gameEngine.resources().iron >= 20) {
@@ -1612,7 +1662,6 @@
       <div class="flex gap-2 flex-col w-full">
         <button
           (click)="toggleAutoBattle()"
-          style="display: none"
           class="cursor-pointer group relative px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-between gap-3 overflow-hidden border border-green-400/30 bg-gradient-to-br from-green-600/20 to-green-800/40 hover:from-green-500/40 hover:to-green-700/60 shadow-[0_0_15px_rgba(34,197,94,0.2)] active:scale-95 disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed"
           [class.ring-2]="isAutoBattleActive()"
           [class.ring-green-400]="isAutoBattleActive()"
