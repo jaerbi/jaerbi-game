@@ -1,22 +1,34 @@
-# AI Behavior
+# AI Behavior Profile
 
-## Wall Breaker
-- Goal pursuit prioritizes forests, enemy units, and base.
-- If the path toward the goal is obstructed by any wall (Neutral, Player, or AI):
-  - Cardinal step blocked: move adjacent and queue a wall attack on that edge.
-  - Diagonal step blocked: check the two adjacent cardinal edges; attack the blocking edge to clear the diagonal.
-- Forest access:
-  - If a forest neighbor is free but blocked by a wall, attack that wall to open access.
-  - Player walls near forests are preferred breach targets when detours are significantly longer.
-- Base siege:
-  - T3+ units attack base-adjacent walls to enable direct strikes on the base.
-- Anti-clustering:
-  - When allies block the intended direction and an adjacent wall obstructs alternatives, attack that wall to disperse.
-- Anti-stagnation:
-  - With no clear forest path and local neutral walls, attack a neutral wall to break out.
+The AI's personality has undergone a significant refactor, moving from a simple, greedy algorithm to a more nuanced and efficient tactical engine. This document outlines the key behavioral shifts.
 
-## Desperation Spawning (Economy Override)
-- Condition: AI units on board < 3 AND reserves >= T2 cost AND reserves < T3 cost.
-- Action: Immediately spawn a T2 unit near the AI base.
-- Intent: Restore map presence and enable forest capture; subsequent goals prioritize nearest forests visible to AI.
+## Core Personality: Efficient & Opportunistic
 
+The AI's primary directive is to maximize efficiency and capitalize on opportunities. It is no longer purely driven by hoarding resources but by making the most effective use of them.
+
+### Economic Behavior: From Greedy to Efficient
+
+The AI's economic decision-making is now governed by a "Wealth Override" and a focus on return on investment.
+
+-   **Wealth Override (`seekUpgrades`)**: The old AI was a "miser," often hoarding resources even when it had a significant advantage. The new logic includes a critical check: if the AI's iron reserves are **100 or greater**, it aggressively seeks to spend it. Units will prioritize moving to the nearest forge to acquire weapon and armor upgrades, ignoring previous "scarcity" and "partner" checks that made them hesitant.
+-   **Forced Conversion (`botEconomyPhase`)**: The AI will automatically convert wood to reserve points if its wood stockpile exceeds a certain threshold (typically 100 wood) and it has not already done so this turn. This prevents resource hoarding and ensures a steady stream of reinforcements.
+
+### Combat Behavior: From Passive to Wall Breacher
+
+The AI is now far more aggressive and intelligent when it comes to engaging fortifications.
+
+-   **"Obstacle Smash" Logic (`findCombatTarget`)**: This is a major behavioral change. The AI now actively looks for high-value targets (like high-tier enemy units or the player's base) within a 5-tile radius.
+    1.  It first attempts to find a clear path to the target.
+    2.  If no path exists (`bfsPath` returns null), it assumes a wall is blocking the way.
+    3.  It then calls `findBlockingWall` to identify the specific wall segment obstructing its path.
+    4.  That wall segment becomes its **highest priority target**.
+    
+    This logic transforms the AI from a passive attacker that gives up when faced with a wall to a determined breacher that will smash through obstacles to reach its goal.
+
+-   **Anti-Clumping (`getNextStepTowards`)**: To prevent units from forming a single, vulnerable conga line, the pathfinding algorithm now includes a "congestion penalty." When evaluating potential moves, a unit will slightly prefer moves that lead to less-crowded areas, encouraging a natural spreading of forces.
+
+-   **Target Prioritization**:
+    -   **Lethal First**: The AI prioritizes targets it can destroy in a single hit.
+    -   **Lowest HP Second**: If no lethal targets are available, it focuses fire on the weakest enemy to remove threats from the board as quickly as possible.
+
+This new behavioral profile makes the AI a much more formidable and human-like opponent, capable of both long-term economic planning and decisive, aggressive assaults.
