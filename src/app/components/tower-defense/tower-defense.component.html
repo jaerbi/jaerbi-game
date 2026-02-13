@@ -1,0 +1,199 @@
+<div class="flex flex-col h-full p-4 overflow-hidden">
+  <!-- Style for Units -->
+  <svg style="position: absolute; width: 0; height: 0" aria-hidden="true">
+    <defs>
+      <radialGradient id="vol-fill-player" cx="35%" cy="30%" r="70%">
+        <stop offset="0%" stop-color="#bfdbfe" />
+        <stop offset="60%" stop-color="#3b82f6" />
+        <stop offset="100%" stop-color="#2563eb" />
+      </radialGradient>
+
+      <radialGradient id="vol-fill-ai" cx="35%" cy="30%" r="70%">
+        <stop offset="0%" stop-color="#fecaca" />
+        <stop offset="60%" stop-color="#ef4444" />
+        <stop offset="100%" stop-color="#dc2626" />
+      </radialGradient>
+
+      <radialGradient id="vol-fill-emerald" cx="35%" cy="30%" r="70%">
+        <stop offset="0%" stop-color="#a7f3d0" />
+        <stop offset="60%" stop-color="#10b981" />
+        <stop offset="100%" stop-color="#059669" />
+      </radialGradient>
+
+      <linearGradient id="edge-light" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="white" stop-opacity="0.4" />
+        <stop offset="100%" stop-color="white" stop-opacity="0" />
+      </linearGradient>
+
+      <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000" flood-opacity="0.4" />
+      </filter>
+    </defs>
+  </svg>
+  <!-- Style for Units END -->
+  <!-- Top Bar -->
+  <div class="flex justify-between items-center mb-4 bg-slate-800 p-3 rounded-lg border border-slate-700">
+    <div class="flex gap-6">
+      <div class="flex flex-col">
+        <span class="text-xs text-slate-400 uppercase font-bold">Money</span>
+        <span class="text-xl font-mono text-emerald-400">${{ tdEngine.money() }}</span>
+      </div>
+      <div class="flex flex-col">
+        <span class="text-xs text-slate-400 uppercase font-bold">Lives</span>
+        <span class="text-xl font-mono text-rose-400">{{ tdEngine.lives() }}</span>
+      </div>
+      <div class="flex flex-col">
+        <span class="text-xs text-slate-400 uppercase font-bold">Wave</span>
+        <span class="text-xl font-mono text-sky-400">{{ tdEngine.wave() }}</span>
+      </div>
+    </div>
+
+    <button
+      (click)="goBack()"
+      class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm font-bold transition-colors"
+    >
+      EXIT GAME
+    </button>
+  </div>
+
+  <div class="flex gap-4 flex-1 min-h-0">
+    <!-- Main Game Area -->
+    <div
+      class="flex-1 relative bg-slate-900 rounded-lg overflow-hidden border border-slate-700 flex items-center justify-center p-4"
+    >
+      <div class="td-grid w-full max-w-[600px] relative">
+        @for (row of tdEngine.grid(); track $index; let y = $index) {
+          @for (tile of row; track $index; let x = $index) {
+            <div
+              class="td-tile unit-svg-wrapper theme-player"
+              [class.tile-path]="tile.type === 'path'"
+              [class.tile-buildable]="tile.type === 'buildable'"
+              [class.tile-void]="tile.type === 'void'"
+              [class.ring-2]="selectedTile() === tile"
+              [class.ring-white]="selectedTile() === tile"
+              (click)="onTileClick(tile)"
+            >
+              @if (tile.tower) {
+                <app-units [unit]="asUnit(tile.tower)" class="w-full h-full p-1"></app-units>
+              }
+            </div>
+          }
+        }
+
+        <!-- Enemies -->
+        @for (enemy of tdEngine.enemies(); track enemy.id) {
+          <div class="enemy" [ngStyle]="getEnemyStyle(enemy)">
+            <!-- HP Bar -->
+            <div class="absolute -top-2 left-0 w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+              <div class="h-full bg-emerald-500" [style.width.%]="(enemy.hp / enemy.maxHp) * 100"></div>
+            </div>
+          </div>
+        }
+
+        <!-- Projectiles -->
+        @for (proj of tdEngine.projectiles(); track proj.id) {
+          <div class="projectile" [ngStyle]="getProjectileStyle(proj)"></div>
+        }
+      </div>
+    </div>
+
+    <!-- Sidebar Controls -->
+    <div class="w-64 flex flex-col gap-4">
+      <!-- Wave Control -->
+      <button
+        (click)="tdEngine.startWave()"
+        [disabled]="tdEngine.isWaveInProgress()"
+        class="w-full py-6 rounded-lg text-xl font-black transition-all"
+        [class.bg-sky-600]="!tdEngine.isWaveInProgress()"
+        [class.hover:bg-sky-500]="!tdEngine.isWaveInProgress()"
+        [class.bg-slate-700]="tdEngine.isWaveInProgress()"
+        [class.text-slate-500]="tdEngine.isWaveInProgress()"
+      >
+        {{ tdEngine.isWaveInProgress() ? 'WAVE IN PROGRESS' : 'START WAVE' }}
+      </button>
+
+      <!-- Shop / Context Menu -->
+      <div class="flex-1 bg-slate-800 rounded-lg border border-slate-700 p-4 overflow-y-auto">
+        @if (selectedTile(); as tile) {
+          @if (!tile.tower) {
+            <h3 class="text-sm font-bold text-slate-400 mb-4 uppercase tracking-wider">Buy Defender</h3>
+            <div class="flex flex-col gap-3">
+              @for (cost of tdEngine.towerCosts; track $index) {
+                @let tier = $index + 1;
+                <button
+                  (click)="buyTower(tier)"
+                  [disabled]="tdEngine.money() < cost"
+                  class="shop-btn flex justify-between items-center"
+                  [class.bg-slate-700]="tdEngine.money() >= cost"
+                  [class.hover:bg-slate-600]="tdEngine.money() >= cost"
+                  [class.bg-slate-900]="tdEngine.money() < cost"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs bg-slate-600 px-1.5 rounded">T{{ tier }}</span>
+                    <span>Tier {{ tier }}</span>
+                  </div>
+                  <span class="text-emerald-400 font-mono">${{ cost }}</span>
+                </button>
+              }
+            </div>
+          } @else {
+            <h3 class="text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider">Defender Info</h3>
+            <div class="bg-slate-900 rounded p-3 mb-4">
+              <div class="flex justify-between mb-1">
+                <span class="text-xs text-slate-500">Tier</span>
+                <span class="text-xs font-bold">{{ tile.tower.type }}</span>
+              </div>
+              <div class="flex justify-between mb-1">
+                <span class="text-xs text-slate-500">Level</span>
+                <span class="text-xs font-bold">{{ tile.tower.level }} / 4</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-xs text-slate-500">Damage</span>
+                <span class="text-xs font-bold text-rose-400">{{ tile.tower.damage }}</span>
+              </div>
+            </div>
+
+            @if (tile.tower.level < 4) {
+              <button
+                (click)="upgradeTower()"
+                [disabled]="tdEngine.money() < tdEngine.upgradeCosts[tile.tower.level - 1]"
+                class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 rounded font-bold transition-all flex justify-between px-4 items-center"
+              >
+                <span>UPGRADE</span>
+                <span class="font-mono">${{ tdEngine.upgradeCosts[tile.tower.level - 1] }}</span>
+              </button>
+            } @else {
+              <div
+                class="w-full py-3 bg-slate-900 text-slate-500 rounded text-center font-bold border border-slate-700"
+              >
+                MAX LEVEL
+              </div>
+            }
+          }
+        } @else {
+          <div class="h-full flex flex-col items-center justify-center text-center text-slate-500">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-12 w-12 mb-2 opacity-20"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"
+              />
+            </svg>
+            <p class="text-sm">
+              Select a buildable tile
+              <br />
+              to place a defender
+            </p>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

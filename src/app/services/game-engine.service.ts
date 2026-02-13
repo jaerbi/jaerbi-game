@@ -283,6 +283,7 @@ export class GameEngineService {
 
     resetGame() {
         const difficulty = this.settings.difficulty();
+        this.stopAiLoops();
         this.unitsSignal.set([]);
         this.wallCooldownSignal.set(new Map());
         this.turnSignal.set(1);
@@ -328,7 +329,7 @@ export class GameEngineService {
         this.recomputeVisibility();
         // Ensure the current side's units are ready to act at game start
         this.startSideTurn(this.activeSideSignal());
-        setTimeout(() => this.aiTurn(), 10);
+        this.aiTurnTimeout = setTimeout(() => this.aiTurn(), 10);
     }
 
     // --- Selection & Movement ---
@@ -2078,13 +2079,27 @@ export class GameEngineService {
         // Reset per-unit action flags at the start of next side's turn
         this.startSideTurn(nextSide);
         if (nextSide === 'ai' && this.gameStatus() === 'playing') {
-            setTimeout(() => this.aiTurn(), 10);
+            this.aiTurnTimeout = setTimeout(() => this.aiTurn(), 10);
         }
     }
     endPlayerTurn() {
         if (this.activeSideSignal() !== 'player' || this.gameStatus() !== 'playing') return;
         this.endTurn();
     }
+    pauseGame() {
+        this.stopAiLoops();
+    }
+
+    private aiTurnTimeout: any = null;
+
+    private stopAiLoops() {
+        if (this.aiTurnTimeout) {
+            clearTimeout(this.aiTurnTimeout);
+            this.aiTurnTimeout = null;
+        }
+        this.isAiThinking = false;
+    }
+
     private startSideTurn(owner: Owner) {
         this.unitsSignal.update(units =>
             units.map(u => (u.owner === owner ? { ...u, hasActed: false } : u))
