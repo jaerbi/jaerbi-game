@@ -103,9 +103,19 @@ export type TranslationKey =
   | 'SETTINGS'
   | 'NEW_DESIGN_UNIT'
   | 'IRON_CYCLE'
+  | 'SHAPE_TACTIC_DESCRIPTION'
+  | 'TOWER_DEFFENCE_DESCRIPTION'
   | 'INFO';
 
   export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    TOWER_DEFFENCE_DESCRIPTION: {
+      en: 'A new game is already in development. Stay tuned for a completely different strategy experience. Coming soon to Game Center.',
+      uk: `Нова гра вже розробляється. Слідкуйте за оновленнями, щоб дізнатися про зовсім інший стратегічний досвід. Скоро в ігровому центрі.`,
+    },
+    SHAPE_TACTIC_DESCRIPTION: {
+      en: 'Strategic turn-based combat with AI and merging mechanics. Build your base, manage resources, and conquer the battlefield.',
+      uk: `Стратегічний покроковий бій зі штучним інтелектом та об'єднаними механіками. Побудуйте свою базу, керуйте ресурсами та завойовуйте поле бою.`,
+    },
     IRON_CYCLE: {
       en: 'Iron Cycle',
       uk: `Цикл Заліза`,

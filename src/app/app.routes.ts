@@ -3,7 +3,7 @@ import { AppGame } from './app-game';
 import { FeedbackComponent } from './components/feedback/feedback.component';
 import { RoadmapComponent } from './components/roadmap/roadmap.component';
 import { LandingPageComponent } from './components/landing-page/landing-page.component';
-import { NewGamePlaceholderComponent } from './components/new-game-placeholder/new-game-placeholder.component';
+import { TowerDefenseComponent } from './components/tower-defense/tower-defense.component';
 
 export const routes: Routes = [
     {
@@ -15,8 +15,8 @@ export const routes: Routes = [
         component: AppGame,
     },
     {
-        path: 'new-game',
-        component: NewGamePlaceholderComponent,
+        path: 'tower-defense',
+        component: TowerDefenseComponent,
     },
     {
         path: 'feedback',
