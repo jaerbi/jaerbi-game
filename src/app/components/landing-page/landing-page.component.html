@@ -1,0 +1,89 @@
+<div
+  class="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-white overflow-hidden relative"
+>
+  <!-- Background Glow Effects -->
+  <div class="absolute top-1/4 -left-1/4 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl animate-pulse"></div>
+  <div
+    class="absolute bottom-1/4 -right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse"
+    style="animation-delay: 2s"
+  ></div>
+
+  <div class="z-10 text-center mb-12">
+    <h1
+      class="text-6xl font-black tracking-tighter mb-4 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-sm"
+    >
+      {{ settings.currentLang() === 'uk' ? 'ІГРОВИЙ ЦЕНТР' : 'GAMING HUB'}}
+    </h1>
+    <p class="text-slate-400 text-lg max-w-md mx-auto">
+      {{ settings.currentLang() === 'uk' ? 'Виберіть портал, щоб розпочати свою подорож.' : 'Select a portal to begin your journey.' }}
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl z-10">
+    <!-- Shape Tactics Card -->
+    <button
+      (click)="navigateTo('shape-tactics')"
+      class="group relative overflow-hidden bg-slate-900 border border-emerald-500/30 rounded-2xl p-8 transition-all duration-500 hover:scale-105 hover:border-emerald-400 hover:shadow-[0_0_40px_-10px_rgba(52,211,153,0.3)] text-left"
+    >
+      <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+        <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 24 24">
+          <path
+            d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.8L19.5 8 12 11.2 4.5 8 12 4.8zM4 15.5v-5.2l7 3.1v5.2l-7-3.1zm9 3.1v-5.2l7-3.1v5.2l-7 3.1z"
+          />
+        </svg>
+      </div>
+      <div class="relative z-20">
+        <span
+          class="inline-block px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full mb-4 border border-emerald-500/20 uppercase tracking-widest"
+        >
+          Live Now
+        </span>
+        <h2 class="text-3xl font-bold mb-3 text-emerald-50">Shape Tactics</h2>
+        <p class="text-slate-400 leading-relaxed mb-6">
+          Strategic turn-based combat with AI and merging mechanics. Build your base, manage resources, and conquer the
+          battlefield.
+        </p>
+        <div class="flex items-center text-emerald-400 font-bold group-hover:translate-x-2 transition-transform">
+          ENTER PORTAL
+          <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+          </svg>
+        </div>
+      </div>
+    </button>
+
+    <!-- New Game Placeholder Card -->
+    <button
+      (click)="navigateTo('new-game')"
+      class="group relative overflow-hidden bg-slate-900 border border-purple-500/30 rounded-2xl p-8 transition-all duration-500 hover:scale-105 hover:border-purple-400 hover:shadow-[0_0_40px_-10px_rgba(168,85,247,0.3)] text-left"
+    >
+      <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+        <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      </div>
+      <div class="relative z-20">
+        <span
+          class="inline-block px-3 py-1 bg-purple-500/10 text-purple-400 text-xs font-bold rounded-full mb-4 border border-purple-500/20 uppercase tracking-widest"
+        >
+          In Development
+        </span>
+        <h2 class="text-3xl font-bold mb-3 text-purple-50">Project: X</h2>
+        <p class="text-slate-400 leading-relaxed mb-6">
+          A new frontier is being mapped. Stay tuned for a completely different strategic experience. Coming soon to the
+          Gaming Hub.
+        </p>
+        <div class="flex items-center text-purple-400 font-bold group-hover:translate-x-2 transition-transform">
+          EXPLORE LOGS
+          <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+          </svg>
+        </div>
+      </div>
+    </button>
+  </div>
+
+  <footer class="absolute bottom-6 text-slate-500 text-sm font-medium uppercase tracking-widest">
+    &copy; 2026 Shape Tactics Labs // v1.0.3
+  </footer>
+</div>

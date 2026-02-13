@@ -31,4 +31,9 @@ The AI is now far more aggressive and intelligent when it comes to engaging fort
     -   **Lethal First**: The AI prioritizes targets it can destroy in a single hit.
     -   **Lowest HP Second**: If no lethal targets are available, it focuses fire on the weakest enemy to remove threats from the board as quickly as possible.
 
-This new behavioral profile makes the AI a much more formidable and human-like opponent, capable of both long-term economic planning and decisive, aggressive assaults.
+### Gaming Hub Navigation
+
+With the new Gaming Hub architecture, the AI's "brain" is properly managed:
+- **Initialization**: When the user enters the `/shape-tactics` route, the game state and AI loops are initialized.
+- **Persistence**: The AI's state is maintained while the user is within the game route.
+- **Cleanup**: If the user navigates back to the Hub (/) or to another game, all AI timeouts and background processes are immediately terminated via the `pauseGame()` hook in [game-engine.service.ts](file:///d%3A/jaerbi-game/src/app/services/game-engine.service.ts).

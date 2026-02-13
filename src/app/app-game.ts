@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, isDevMode, signal, HostListener } from '@angular/core';
+import { Component, ElementRef, ViewChild, isDevMode, signal, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { GameRulesComponent } from './components/game-rules/game-rules.component';
@@ -17,7 +17,7 @@ import { SandboxComponent } from './components/sandbox/sandbox.component';
     templateUrl: './app-game.html',
     styleUrl: './app.css'
 })
-export class AppGame {
+export class AppGame implements OnInit, OnDestroy {
     @ViewChild('boardContainer') boardContainer?: ElementRef<HTMLDivElement>;
 
     isAutoBattleActive = signal(false);
@@ -30,6 +30,22 @@ export class AppGame {
         public firebase: FirebaseService,
         private router: Router
     ) {
+    }
+
+    ngOnInit() {
+        // Reset game state when entering the route to ensure a fresh start
+        this.gameEngine.resetGame();
+    }
+
+    ngOnDestroy() {
+        // Stop any background loops
+        this.isAutoBattleActive.set(false);
+        this.gameEngine.pauseGame();
+    }
+
+    goToHub() {
+        this.isAutoBattleActive.set(false);
+        this.router.navigate(['/']);
     }
 
     get isProduction() {

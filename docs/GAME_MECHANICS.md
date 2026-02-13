@@ -29,13 +29,21 @@ Walls provide defensive bonuses and can be reinforced. Their health and behavior
 -   **Base Health**: A standard wall segment has **100 HP**.
 -   **Formation Bonus**: Walls built adjacent to each other form a "formation." The strength of the formation provides a health bonus to all connected wall segments.
     -   The `updateWallFormations` function calculates the size of each connected wall group.
-    -   **Formula**: `bonusHp = (formationSize - 1) * 20`.
+    -   **Formula**: `bonusHp = formationSize * 20`.
     -   **Max Health**: `maxHealth = 100 + bonusHp`.
     
-    *Example: A single wall has 100 HP. Two connected walls each have 120 HP. A formation of 5 walls gives each segment (5-1)*20 = 80 bonus HP, for a total of 180 HP each.*
+    *Example: A single wall segment in a "formation" of 1 has 120 HP. A formation of 5 walls gives each segment 5 * 20 = 100 bonus HP, for a total of 200 HP each.*
 
 -   **Siege Threshold & Damage**:
     -   Attacking a wall is a valid move for any unit adjacent to it.
-    -   **Damage Calculation (`getWallHitAmount`)**: The damage dealt to a wall is based on the attacking unit's tier. A higher tier unit deals more damage.
+    -   **Damage Calculation (`getWallHitAmount`)**: The damage dealt to a wall is fixed based on the attacking unit's tier:
+        - **Tier 1**: 34 damage.
+        - **Tier 2**: 51 damage.
+        - **Tier 3+**: 101 damage.
     -   **Breaching**: When a wall's health is reduced to 0, it is destroyed and removed from the board. The `findBlockingWall` logic used by the AI makes targeting and breaching walls a core part of offensive strategy.
--   **Destruction & Reclamation**: Players and the AI can destroy their own walls using the `destroyOwnWallBetween` function. This action refunds a portion of the initial wood cost, providing a strategic option for resource reclamation or repositioning.
+
+### Routing & State Management
+
+The game's lifecycle is tied to the Angular Router:
+- **Navigation In**: Entering `/shape-tactics` triggers `ngOnInit` in [app-game.ts](file:///d%3A/jaerbi-game/src/app/app-game.ts), which calls `resetGame()` to ensure a clean board.
+- **Navigation Out**: Leaving the game route triggers `ngOnDestroy`, which calls `pauseGame()` to stop all AI background timers and clear any pending `isAiThinking` flags. This prevents memory leaks and ensures background loops don't persist in the Gaming Hub.
