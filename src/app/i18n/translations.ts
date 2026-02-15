@@ -105,9 +105,119 @@ export type TranslationKey =
   | 'IRON_CYCLE'
   | 'SHAPE_TACTIC_DESCRIPTION'
   | 'TOWER_DEFFENCE_DESCRIPTION'
+  | 'EXIT_GAME'
+  | 'MONEY'
+  | 'LIVES'
+  | 'WAVE'
+  | 'WAVES'
+  | 'RESTART_GAME'
+  | 'WAVE_IN_PROGRESS'
+  | 'START_WAVE'
+  | 'BUY_DEFENDER'
+  | 'DEFENDER_INFO'
+  | 'TIER'
+  | 'LEVEL'
+  | 'DAMAGE'
+  | 'RANGE'
+  | 'UPGRADE'
+  | 'MAX_LEVEL'
+  | 'SELL'
+  | 'SELECT_BUILD_TILE'
+  | 'TO_PLACE_DEFENDER'
+  | 'GAME_OVER'
+  | 'YOU_SURVIVED'
+  | 'TRY_AGAIN'
   | 'INFO';
 
   export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    TRY_AGAIN: {
+      en: 'TRY AGAIN',
+      uk: `СПРОБУЙТЕ ЗНОВУ`,
+    },
+    WAVES: {
+      en: 'waves',
+      uk: `хвиль`,
+    },
+    YOU_SURVIVED: {
+      en: 'You survived',
+      uk: `Ти вижив`,
+    },
+    GAME_OVER: {
+      en: 'GAME OVER',
+      uk: `ГРА ЗАКІНЧЕНА`,
+    },
+    TO_PLACE_DEFENDER: {
+      en: 'to place a defender',
+      uk: `щоб розмістити захисника`,
+    },
+    SELECT_BUILD_TILE: {
+      en: 'Select a buildable tile',
+      uk: `Виберіть плитку для будівництва,`,
+    },
+    SELL: {
+      en: 'SELL',
+      uk: `ПРОДАТИ`,
+    },
+    MAX_LEVEL: {
+      en: 'MAX LEVEL',
+      uk: `МАКС РІВЕНЬ`,
+    },
+    UPGRADE: {
+      en: 'UPGRADE',
+      uk: `ОНОВЛЕННЯ`,
+    },
+    RANGE: {
+      en: 'Range',
+      uk: `Дальність`,
+    },
+    DAMAGE: {
+      en: 'Damage',
+      uk: `Пошкодження`,
+    },
+    TIER: {
+      en: 'Tier',
+      uk: `Ранг`,
+    },
+    LEVEL: {
+      en: 'Level',
+      uk: `Рівень`,
+    },
+    DEFENDER_INFO: {
+      en: 'Defender Info',
+      uk: `Інформація про захисника`,
+    },
+    BUY_DEFENDER: {
+      en: 'Buy Defender',
+      uk: `Купити Захисника`,
+    },
+    START_WAVE: {
+      en: 'START WAVE',
+      uk: `ПОЧАТОК ХВИЛІ`,
+    },
+    WAVE_IN_PROGRESS: {
+      en: 'WAVE IN PROGRESS',
+      uk: `ХВИЛЯ В ПРОЦЕСІ`,
+    },
+    RESTART_GAME: {
+      en: 'RESTART GAME',
+      uk: `ПЕРЕЗАПУСК ГРИ`,
+    },
+    WAVE: {
+      en: 'WAVE',
+      uk: `ХВИЛЯ`,
+    },
+    LIVES: {
+      en: 'LIVES',
+      uk: `ЖИТТЯ`,
+    },
+    MONEY: {
+      en: 'MONEY',
+      uk: `ГРОШІ`,
+    },
+    EXIT_GAME: {
+      en: 'EXIT GAME',
+      uk: `ВИХІД З ГРИ`,
+    },
     TOWER_DEFFENCE_DESCRIPTION: {
       en: 'A new game is already in development. Stay tuned for a completely different strategy experience. Coming soon to Game Center.',
       uk: `Нова гра вже розробляється. Слідкуйте за оновленнями, щоб дізнатися про зовсім інший стратегічний досвід. Скоро в ігровому центрі.`,

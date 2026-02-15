@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { TowerDefenseEngineService, TDTile } from '../../services/tower-defense-engine.service';
 import { UnitsComponent } from '../units/units.component';
 import { Unit } from '../../models/unit.model';
+import { SettingsService } from '../../services/settings.service';
 
 @Component({
   selector: 'app-tower-defense',
@@ -94,7 +95,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy {
 
   constructor(
     public tdEngine: TowerDefenseEngineService,
-    private router: Router
+    public settings: SettingsService,
+    private router: Router,
   ) {}
 
   ngOnInit() {
