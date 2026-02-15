@@ -1,16 +1,17 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TowerDefenseEngineService, TDTile } from '../../services/tower-defense-engine.service';
 import { UnitsComponent } from '../units/units.component';
 import { Unit } from '../../models/unit.model';
+import { SettingsService } from '../../services/settings.service';
 
 @Component({
   selector: 'app-tower-defense',
   standalone: true,
   imports: [CommonModule, UnitsComponent],
   templateUrl: 'tower-defense.component.html',
-  styleUrls: ['../../app.css',],
+  styleUrls: ['../../app.css'],
   styles: [`
     :host {
       display: block;
@@ -20,18 +21,20 @@ import { Unit } from '../../models/unit.model';
     }
     .td-grid {
       display: grid;
-      grid-template-columns: repeat(10, 1fr);
+      grid-template-columns: repeat(10, 60px);
+      grid-template-rows: repeat(10, 60px);
       gap: 2px;
-      aspect-ratio: 1;
       background: #1e293b;
       border: 4px solid #334155;
       border-radius: 8px;
+      position: relative;
     }
     .td-tile {
       position: relative;
-      width: 100%;
-      height: 100%;
+      width: 60px;
+      height: 60px;
       transition: all 0.2s;
+      overflow: hidden;
     }
     .tile-path { background: #475569; }
     .tile-buildable { 
@@ -41,26 +44,38 @@ import { Unit } from '../../models/unit.model';
     .tile-buildable:hover { background: #334155; }
     .tile-void { opacity: 0.1; }
     
+    .range-indicator {
+      position: absolute;
+      background: rgba(56, 189, 248, 0.15);
+      border: 2px solid rgba(56, 189, 248, 0.5);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 5;
+      transform: translate(-50%, -50%);
+      transition: all 0.2s ease-out;
+    }
+
     .enemy {
       position: absolute;
-      width: 60%;
-      height: 60%;
+      width: 40px;
+      height: 40px;
       background: #ef4444;
       border-radius: 50%;
-      top: 20%;
-      left: 20%;
       z-index: 10;
       box-shadow: 0 0 10px #ef4444;
-      transition: all 0.05s linear;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     .projectile {
       position: absolute;
-      width: 4px;
-      height: 4px;
+      width: 6px;
+      height: 6px;
       background: #fbbf24;
       border-radius: 50%;
       z-index: 20;
+      box-shadow: 0 0 5px #fbbf24;
     }
 
     .shop-btn {
@@ -75,16 +90,31 @@ import { Unit } from '../../models/unit.model';
     }
   `]
 })
-export class TowerDefenseComponent {
+export class TowerDefenseComponent implements OnInit, OnDestroy {
   selectedTile = signal<TDTile | null>(null);
 
   constructor(
     public tdEngine: TowerDefenseEngineService,
-    private router: Router
+    public settings: SettingsService,
+    private router: Router,
   ) {}
 
+  ngOnInit() {
+    this.tdEngine.initGame();
+  }
+
+  ngOnDestroy() {
+    this.tdEngine.dispose();
+  }
+
   goBack() {
+    this.tdEngine.dispose();
     this.router.navigate(['/']);
+  }
+
+  onRestart() {
+    this.tdEngine.resetGame();
+    this.selectedTile.set(null);
   }
 
   onTileClick(tile: TDTile) {
@@ -129,11 +159,14 @@ export class TowerDefenseComponent {
     const x = current.x + (next.x - current.x) * enemy.progress;
     const y = current.y + (next.y - current.y) * enemy.progress;
     
+    const hue = enemy.hue ?? ((this.tdEngine.wave() * 40) % 360);
+    const scale = enemy.isBoss ? 1.5 : 1;
+
     return {
-      left: `${x * 10}%`,
-      top: `${y * 10}%`,
-      width: '10%',
-      height: '10%'
+      left: `${x * 62 + 10}px`,
+      top: `${y * 62 + 10}px`,
+      transform: `scale(${scale})`,
+      background: `hsl(${hue}, 70%, 50%)`
     };
   }
 
@@ -141,8 +174,31 @@ export class TowerDefenseComponent {
     const x = p.from.x + (p.to.x - p.from.x) * p.progress;
     const y = p.from.y + (p.to.y - p.from.y) * p.progress;
     return {
-      left: `${x * 10 + 4}%`,
-      top: `${y * 10 + 4}%`
+      left: `${x * 62 + 28}px`,
+      top: `${y * 62 + 28}px`
     };
+  }
+
+  getRangeStyle() {
+    const tile = this.selectedTile();
+    if (!tile || !tile.tower) return { display: 'none' };
+    
+    const tower = tile.tower;
+    const size = tower.range * 2 * 62; // range is in tiles
+    return {
+      left: `${tower.position.x * 62 + 30}px`,
+      top: `${tower.position.y * 62 + 30}px`,
+      width: `${size}px`,
+      height: `${size}px`,
+      display: 'block'
+    };
+  }
+
+  sellTower() {
+    const tile = this.selectedTile();
+    if (tile && tile.tower) {
+      this.tdEngine.sellTower(tile.x, tile.y);
+      this.selectedTile.set(null);
+    }
   }
 }
