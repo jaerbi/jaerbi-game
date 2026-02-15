@@ -100,8 +100,7 @@
         <!-- Enemies -->
         @for (enemy of tdEngine.enemies(); track enemy.id) {
           <div class="enemy" [ngStyle]="getEnemyStyle(enemy)">
-            <!-- HP Bar -->
-            <div class="absolute -top-2 left-0 w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+            <div class="absolute -top-2 left-0 w-full h-1 bg-slate-800 rounded-full overflow-hidden" style="z-index: 100;">
               <div class="h-full bg-emerald-500" [style.width.%]="(enemy.hp / enemy.maxHp) * 100"></div>
             </div>
           </div>
@@ -161,22 +160,30 @@
               </div>
             </div>
 
-            @if (tile.tower.level < 4) {
+            <div class="flex flex-col gap-2">
+              @if (tile.tower.level < 4) {
+                <button
+                  (click)="upgradeTower()"
+                  [disabled]="tdEngine.money() < tdEngine.getUpgradeCost(tile.tower)"
+                  class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 rounded font-bold transition-all flex justify-between px-4 items-center"
+                >
+                  <span>UPGRADE</span>
+                  <span class="font-mono">${{ tdEngine.getUpgradeCost(tile.tower) }}</span>
+                </button>
+              } @else {
+                <div
+                  class="w-full py-3 bg-slate-900 text-slate-500 rounded text-center font-bold border border-slate-700"
+                >
+                  MAX LEVEL
+                </div>
+              }
               <button
-                (click)="upgradeTower()"
-                [disabled]="tdEngine.money() < tdEngine.getUpgradeCost(tile.tower)"
-                class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 rounded font-bold transition-all flex justify-between px-4 items-center"
+                (click)="sellTower()"
+                class="w-full py-3 bg-rose-700 hover:bg-rose-600 rounded font-bold transition-all flex justify-center items-center text-sm"
               >
-                <span>UPGRADE</span>
-                <span class="font-mono">${{ tdEngine.getUpgradeCost(tile.tower) }}</span>
+                SELL (50% REFUND)
               </button>
-            } @else {
-              <div
-                class="w-full py-3 bg-slate-900 text-slate-500 rounded text-center font-bold border border-slate-700"
-              >
-                MAX LEVEL
-              </div>
-            }
+            </div>
           }
         } @else {
           <div class="h-full flex flex-col items-center justify-center text-center text-slate-500">
@@ -204,4 +211,19 @@
       </div>
     </div>
   </div>
+
+  @if (tdEngine.gameOver()) {
+    <div class="fixed inset-0 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm z-[200]">
+      <div class="bg-slate-900 border border-slate-700 rounded-lg px-8 py-6 text-center shadow-xl">
+        <h2 class="text-2xl font-black text-rose-400 mb-2">GAME OVER</h2>
+        <p class="text-slate-300 mb-4">You survived {{ tdEngine.wave() }} Waves</p>
+        <button
+          (click)="onRestart()"
+          class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2 rounded"
+        >
+          TRY AGAIN
+        </button>
+      </div>
+    </div>
+  }
 </div>

@@ -153,11 +153,14 @@ export class TowerDefenseComponent implements OnDestroy {
     const x = current.x + (next.x - current.x) * enemy.progress;
     const y = current.y + (next.y - current.y) * enemy.progress;
     
-    // Cell size is 60px, gap is 2px. 
-    // center of cell is (x * 62 + 30)
+    const hue = enemy.hue ?? ((this.tdEngine.wave() * 40) % 360);
+    const scale = enemy.isBoss ? 1.5 : 1;
+
     return {
       left: `${x * 62 + 10}px`,
-      top: `${y * 62 + 10}px`
+      top: `${y * 62 + 10}px`,
+      transform: `scale(${scale})`,
+      background: `hsl(${hue}, 70%, 50%)`
     };
   }
 
@@ -183,5 +186,13 @@ export class TowerDefenseComponent implements OnDestroy {
       height: `${size}px`,
       display: 'block'
     };
+  }
+
+  sellTower() {
+    const tile = this.selectedTile();
+    if (tile && tile.tower) {
+      this.tdEngine.sellTower(tile.x, tile.y);
+      this.selectedTile.set(null);
+    }
   }
 }

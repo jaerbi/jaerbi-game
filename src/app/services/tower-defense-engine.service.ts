@@ -10,13 +10,14 @@ export type TileType = 'path' | 'buildable' | 'void';
 
 export interface Tower {
   id: string;
-  type: number; // Tier 1-4
-  level: number; // Level 1-4
+  type: number;
+  level: number;
   position: Position;
   baseCost: number;
+  invested: number;
   damage: number;
   range: number;
-  fireInterval: number; // ms between shots
+  fireInterval: number;
   lastFired: number;
 }
 
@@ -27,7 +28,9 @@ export interface Enemy {
   hp: number;
   maxHp: number;
   speed: number;
-  progress: number; // For smooth animation between path tiles
+  progress: number;
+  isBoss?: boolean;
+  hue: number;
 }
 
 export interface Projectile {
@@ -53,6 +56,7 @@ export class TowerDefenseEngineService {
   lives = signal(20);
   wave = signal(0);
   isWaveInProgress = signal(false);
+  gameOver = signal(false);
   
   gridSize = 10;
   grid = signal<TDTile[][]>([]);
@@ -67,6 +71,7 @@ export class TowerDefenseEngineService {
   private animationFrameId: number | null = null;
   private lastUpdateTime = 0;
   private enemiesToSpawn = 0;
+  private currentWaveEnemyCount = 0;
   private spawnTimer = 0;
   private spawnInterval = 1000; // ms between spawns
 
@@ -86,8 +91,9 @@ export class TowerDefenseEngineService {
 
   initGame() {
     this.money.set(100);
-    this.lives.set(20);
+    this.lives.set(100);
     this.wave.set(0);
+    this.gameOver.set(false);
     this.enemiesInternal = [];
     this.projectilesInternal = [];
     this.enemies.set([]);
@@ -178,11 +184,13 @@ export class TowerDefenseEngineService {
   }
 
   startWave() {
-    if (this.isWaveInProgress()) return;
+    if (this.isWaveInProgress() || this.gameOver()) return;
     this.wave.update(w => w + 1);
     this.isWaveInProgress.set(true);
     
-    this.enemiesToSpawn = 5 + this.wave() * 2;
+    const enemyCount = 5 + this.wave() * 2;
+    this.enemiesToSpawn = enemyCount;
+    this.currentWaveEnemyCount = enemyCount;
     this.spawnTimer = 0;
     
     this.startGameLoop();
@@ -221,6 +229,20 @@ export class TowerDefenseEngineService {
     this.updateTowers(dt);
     this.updateProjectiles(dt);
     
+    if (this.lives() <= 0 && !this.gameOver()) {
+      this.enemiesInternal = [];
+      this.projectilesInternal = [];
+      this.enemiesToSpawn = 0;
+      this.stopGameLoop();
+      this.ngZone.run(() => {
+        this.enemies.set([]);
+        this.projectiles.set([]);
+        this.isWaveInProgress.set(false);
+        this.gameOver.set(true);
+      });
+      return;
+    }
+    
     if (this.enemiesInternal.length === 0 && this.enemiesToSpawn === 0 && this.isWaveInProgress()) {
       this.ngZone.run(() => this.isWaveInProgress.set(false));
     }
@@ -239,14 +261,27 @@ export class TowerDefenseEngineService {
 
   private spawnEnemy() {
     const hp = 50 * Math.pow(1.2, this.wave());
+    const baseSpeed = 0.5 + (this.wave() * 0.05);
+    const total = this.currentWaveEnemyCount || (5 + this.wave() * 2);
+    const spawnedSoFar = total - this.enemiesToSpawn;
+    const isBossWave = this.wave() % 5 === 0;
+    const isLastOfWave = spawnedSoFar === total - 1;
+    const boss = isBossWave && isLastOfWave;
+    const hue = (this.wave() * 40) % 360;
+
+    const hpFinal = boss ? hp * 3 : hp;
+    const speedFinal = boss ? baseSpeed * 0.5 : baseSpeed;
+
     const newEnemy: Enemy = {
       id: crypto.randomUUID(),
       position: { ...this.path()[0] },
       pathIndex: 0,
-      hp: hp,
-      maxHp: hp,
-      speed: 0.5 + (this.wave() * 0.05),
-      progress: 0
+      hp: hpFinal,
+      maxHp: hpFinal,
+      speed: speedFinal,
+      progress: 0,
+      isBoss: boss,
+      hue
     };
      this.enemiesInternal.push(newEnemy);
   }
@@ -262,7 +297,6 @@ export class TowerDefenseEngineService {
         enemy.progress = 0;
         
         if (enemy.pathIndex >= this.path().length - 1) {
-          // Reached base
           this.enemiesInternal.splice(i, 1);
           this.ngZone.run(() => this.lives.update(l => Math.max(0, l - 1)));
           continue; 
@@ -352,6 +386,7 @@ export class TowerDefenseEngineService {
           level: 1,
           position: { x, y },
           baseCost: cost,
+          invested: cost,
           damage: stats.damage,
           range: stats.range,
           fireInterval: stats.fireInterval,
@@ -370,10 +405,9 @@ export class TowerDefenseEngineService {
         const cost = this.getUpgradeCost(tile.tower);
         if (this.money() >= cost) {
           tile.tower.level++;
-          // Compounding +30% damage
           tile.tower.damage = Math.floor(tile.tower.damage * 1.3);
-          // +0.5 range
           tile.tower.range += 0.5;
+          tile.tower.invested += cost;
           this.money.update(m => m - cost);
         }
       }
@@ -383,5 +417,18 @@ export class TowerDefenseEngineService {
 
   getUpgradeCost(tower: Tower): number {
     return Math.floor(tower.baseCost * 0.5);
+  }
+
+  sellTower(x: number, y: number) {
+    this.grid.update(grid => {
+      const tile = grid[y][x];
+      if (tile.tower) {
+        const invested = tile.tower.invested ?? tile.tower.baseCost;
+        const refund = Math.floor(invested * 0.5);
+        tile.tower = null;
+        this.money.update(m => m + refund);
+      }
+      return [...grid];
+    });
   }
 }
