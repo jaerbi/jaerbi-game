@@ -89,30 +89,43 @@ export class TowerDefenseEngineService {
     this.initGame();
   }
 
-  initGame() {
-    this.money.set(100);
-    this.lives.set(100);
-    this.wave.set(0);
-    this.gameOver.set(false);
-    this.enemiesInternal = [];
-    this.projectilesInternal = [];
-    this.enemies.set([]);
-    this.projectiles.set([]);
-    this.isWaveInProgress.set(false);
-    this.enemiesToSpawn = 0;
-    this.stopGameLoop();
-    this.generateMap();
-  }
-
-  resetGame() {
-    this.initGame();
-  }
-
   stopGameLoop() {
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
+  }
+
+  dispose() {
+    this.stopGameLoop();
+    this.enemiesInternal = [];
+    this.projectilesInternal = [];
+    this.enemiesToSpawn = 0;
+    this.currentWaveEnemyCount = 0;
+    this.spawnTimer = 0;
+    this.enemies.set([]);
+    this.projectiles.set([]);
+    this.isWaveInProgress.set(false);
+    this.gameOver.set(false);
+    this.money.set(100);
+    this.lives.set(100);
+    this.wave.set(0);
+    const currentGrid = this.grid();
+    if (currentGrid && currentGrid.length) {
+      const cleared = currentGrid.map(row =>
+        row.map(tile => tile.tower ? { ...tile, tower: null } : tile)
+      );
+      this.grid.set(cleared);
+    }
+  }
+
+  initGame() {
+    this.dispose();
+    this.generateMap();
+  }
+
+  resetGame() {
+    this.initGame();
   }
 
   generateMap() {
@@ -197,6 +210,10 @@ export class TowerDefenseEngineService {
   }
 
   private startGameLoop() {
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
     this.stopGameLoop();
     this.lastUpdateTime = performance.now();
     this.ngZone.runOutsideAngular(() => {

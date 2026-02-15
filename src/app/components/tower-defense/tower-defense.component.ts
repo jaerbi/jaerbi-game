@@ -1,4 +1,4 @@
-import { Component, signal, OnDestroy } from '@angular/core';
+import { Component, signal, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TowerDefenseEngineService, TDTile } from '../../services/tower-defense-engine.service';
@@ -89,7 +89,7 @@ import { Unit } from '../../models/unit.model';
     }
   `]
 })
-export class TowerDefenseComponent implements OnDestroy {
+export class TowerDefenseComponent implements OnInit, OnDestroy {
   selectedTile = signal<TDTile | null>(null);
 
   constructor(
@@ -97,12 +97,16 @@ export class TowerDefenseComponent implements OnDestroy {
     private router: Router
   ) {}
 
+  ngOnInit() {
+    this.tdEngine.initGame();
+  }
+
   ngOnDestroy() {
-    this.tdEngine.stopGameLoop();
+    this.tdEngine.dispose();
   }
 
   goBack() {
-    this.tdEngine.stopGameLoop();
+    this.tdEngine.dispose();
     this.router.navigate(['/']);
   }
 
