@@ -76,13 +76,13 @@ export class TowerDefenseEngineService {
     private spawnInterval = 1000; // ms between spawns
 
     // Costs and Stats
-    towerCosts = [15, 50, 150, 500];
+    towerCosts = [15, 50, 250, 1500];
 
     private tierStats = [
         { damage: 5, range: 2, fireInterval: 500 },
         { damage: 20, range: 3, fireInterval: 1000 },
         { damage: 80, range: 4, fireInterval: 2000 },
-        { damage: 300, range: 6, fireInterval: 1000 }
+        { damage: 300, range: 5, fireInterval: 3000 }
     ];
 
     constructor(private ngZone: NgZone) {
@@ -433,7 +433,20 @@ export class TowerDefenseEngineService {
     }
 
     getUpgradeCost(tower: Tower): number {
-        return Math.floor(tower.baseCost * 0.5);
+        let multiplier = 0.5;
+        switch (tower.level) {
+            case 1:
+                multiplier = 0.5;
+                break;
+            case 2:
+                multiplier = 0.6;
+                break;
+            case 3:
+                multiplier = 0.7;
+                break;
+        }
+
+        return Math.floor(tower.baseCost * multiplier);
     }
 
     sellTower(x: number, y: number) {
