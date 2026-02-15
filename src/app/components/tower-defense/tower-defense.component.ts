@@ -1,4 +1,4 @@
-import { Component, signal, OnDestroy, OnInit } from '@angular/core';
+import { Component, signal, OnDestroy, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TowerDefenseEngineService, TDTile } from '../../services/tower-defense-engine.service';
@@ -7,12 +7,12 @@ import { Unit } from '../../models/unit.model';
 import { SettingsService } from '../../services/settings.service';
 
 @Component({
-  selector: 'app-tower-defense',
-  standalone: true,
-  imports: [CommonModule, UnitsComponent],
-  templateUrl: 'tower-defense.component.html',
-  styleUrls: ['../../app.css'],
-  styles: [`
+    selector: 'app-tower-defense',
+    standalone: true,
+    imports: [CommonModule, UnitsComponent],
+    templateUrl: 'tower-defense.component.html',
+    styleUrls: ['../../app.css'],
+    styles: [`
     :host {
       display: block;
       height: 100vh;
@@ -91,114 +91,130 @@ import { SettingsService } from '../../services/settings.service';
   `]
 })
 export class TowerDefenseComponent implements OnInit, OnDestroy {
-  selectedTile = signal<TDTile | null>(null);
+    selectedTile = signal<TDTile | null>(null);
 
-  constructor(
-    public tdEngine: TowerDefenseEngineService,
-    public settings: SettingsService,
-    private router: Router,
-  ) {}
+    @HostListener('window:keydown', ['$event'])
+    onKeyDown(event: KeyboardEvent) {
+        if (this.tdEngine.isWaveInProgress()) { return; }
 
-  ngOnInit() {
-    this.tdEngine.initGame();
-  }
+        const key = event.key;
 
-  ngOnDestroy() {
-    this.tdEngine.dispose();
-  }
+        if (key === 'Enter') {
+            event.preventDefault();
+            this.tdEngine.startWave();
+            return;
+        }
 
-  goBack() {
-    this.tdEngine.dispose();
-    this.router.navigate(['/']);
-  }
-
-  onRestart() {
-    this.tdEngine.resetGame();
-    this.selectedTile.set(null);
-  }
-
-  onTileClick(tile: TDTile) {
-    if (tile.type === 'buildable' || tile.tower) {
-      this.selectedTile.set(tile);
-    } else {
-      this.selectedTile.set(null);
     }
-  }
+    @HostListener('window:keyup', ['$event'])
+    onKeyUp(event: KeyboardEvent) { }
 
-  buyTower(tier: number) {
-    const tile = this.selectedTile();
-    if (tile) {
-      this.tdEngine.buyTower(tile.x, tile.y, tier);
-      this.selectedTile.set(null);
+    constructor(
+        public tdEngine: TowerDefenseEngineService,
+        public settings: SettingsService,
+        private router: Router,
+    ) { }
+
+    ngOnInit() {
+        this.tdEngine.initGame();
     }
-  }
 
-  upgradeTower() {
-    const tile = this.selectedTile();
-    if (tile && tile.tower) {
-      this.tdEngine.upgradeTower(tile.x, tile.y);
+    ngOnDestroy() {
+        this.tdEngine.dispose();
     }
-  }
 
-  // Helper to convert Tower to Unit for UnitsComponent
-  asUnit(tower: any): Unit {
-    return {
-      ...tower,
-      owner: 'player',
-      points: 0, // Not used by SVG
-      turnsStationary: 0,
-      tier: tower.type
-    } as Unit;
-  }
-
-  getEnemyStyle(enemy: any) {
-    const path = this.tdEngine.path();
-    const current = path[enemy.pathIndex];
-    const next = path[enemy.pathIndex + 1] || current;
-    
-    const x = current.x + (next.x - current.x) * enemy.progress;
-    const y = current.y + (next.y - current.y) * enemy.progress;
-    
-    const hue = enemy.hue ?? ((this.tdEngine.wave() * 40) % 360);
-    const scale = enemy.isBoss ? 1.5 : 1;
-
-    return {
-      left: `${x * 62 + 10}px`,
-      top: `${y * 62 + 10}px`,
-      transform: `scale(${scale})`,
-      background: `hsl(${hue}, 70%, 50%)`
-    };
-  }
-
-  getProjectileStyle(p: any) {
-    const x = p.from.x + (p.to.x - p.from.x) * p.progress;
-    const y = p.from.y + (p.to.y - p.from.y) * p.progress;
-    return {
-      left: `${x * 62 + 28}px`,
-      top: `${y * 62 + 28}px`
-    };
-  }
-
-  getRangeStyle() {
-    const tile = this.selectedTile();
-    if (!tile || !tile.tower) return { display: 'none' };
-    
-    const tower = tile.tower;
-    const size = tower.range * 2 * 62; // range is in tiles
-    return {
-      left: `${tower.position.x * 62 + 30}px`,
-      top: `${tower.position.y * 62 + 30}px`,
-      width: `${size}px`,
-      height: `${size}px`,
-      display: 'block'
-    };
-  }
-
-  sellTower() {
-    const tile = this.selectedTile();
-    if (tile && tile.tower) {
-      this.tdEngine.sellTower(tile.x, tile.y);
-      this.selectedTile.set(null);
+    goBack() {
+        this.tdEngine.dispose();
+        this.router.navigate(['/']);
     }
-  }
+
+    onRestart() {
+        this.tdEngine.resetGame();
+        this.selectedTile.set(null);
+    }
+
+    onTileClick(tile: TDTile) {
+        if (tile.type === 'buildable' || tile.tower) {
+            this.selectedTile.set(tile);
+        } else {
+            this.selectedTile.set(null);
+        }
+    }
+
+    buyTower(tier: number) {
+        const tile = this.selectedTile();
+        if (tile) {
+            this.tdEngine.buyTower(tile.x, tile.y, tier);
+            this.selectedTile.set(null);
+        }
+    }
+
+    upgradeTower() {
+        const tile = this.selectedTile();
+        if (tile && tile.tower) {
+            this.tdEngine.upgradeTower(tile.x, tile.y);
+        }
+    }
+
+    // Helper to convert Tower to Unit for UnitsComponent
+    asUnit(tower: any): Unit {
+        return {
+            ...tower,
+            owner: 'player',
+            points: 0, // Not used by SVG
+            turnsStationary: 0,
+            tier: tower.type
+        } as Unit;
+    }
+
+    getEnemyStyle(enemy: any) {
+        const path = this.tdEngine.path();
+        const current = path[enemy.pathIndex];
+        const next = path[enemy.pathIndex + 1] || current;
+
+        const x = current.x + (next.x - current.x) * enemy.progress;
+        const y = current.y + (next.y - current.y) * enemy.progress;
+
+        const hue = enemy.hue ?? ((this.tdEngine.wave() * 40) % 360);
+        const scale = enemy.isBoss ? 1.5 : 1;
+
+        return {
+            left: `${x * 62 + 10}px`,
+            top: `${y * 62 + 10}px`,
+            transform: `scale(${scale})`,
+            background: `hsl(${hue}, 70%, 50%)`
+        };
+    }
+
+    getProjectileStyle(p: any) {
+        const x = p.from.x + (p.to.x - p.from.x) * p.progress;
+        const y = p.from.y + (p.to.y - p.from.y) * p.progress;
+        return {
+            left: `${x * 62 + 28}px`,
+            top: `${y * 62 + 28}px`
+        };
+    }
+
+    getRangeStyle() {
+        const tile = this.selectedTile();
+        if (!tile || !tile.tower) return { display: 'none' };
+
+        const tower = tile.tower;
+        const size = tower.range * 2 * 62; // range is in tiles
+        return {
+            left: `${tower.position.x * 62 + 30}px`,
+            top: `${tower.position.y * 62 + 30}px`,
+            width: `${size}px`,
+            height: `${size}px`,
+            display: 'block'
+        };
+    }
+
+    sellTower() {
+        const tile = this.selectedTile();
+        if (tile && tile.tower) {
+            this.tdEngine.sellTower(tile.x, tile.y);
+            this.selectedTile.set(null);
+        }
+    }
 }
