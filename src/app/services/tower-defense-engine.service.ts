@@ -10,7 +10,7 @@ import { Subject } from 'rxjs';
 export class TowerDefenseEngineService {
     // Game State
     money = signal(100);
-    lives = signal(20);
+    lives = signal(20);         
     wave = signal(0);
     isWaveInProgress = signal(false);
     gameOver = signal(false);
@@ -18,6 +18,7 @@ export class TowerDefenseEngineService {
     gridSize = 10;
     grid = signal<TDTile[][]>([]);
     path = signal<Position[]>([]);
+    readonly tileSize = 62;
 
     enemies = signal<Enemy[]>([]);
     projectiles = signal<Projectile[]>([]);
@@ -26,6 +27,8 @@ export class TowerDefenseEngineService {
     private enemiesInternal: Enemy[] = [];
     private projectilesInternal: Projectile[] = [];
     private towersInternal: Tower[] = [];
+    private enemyIdCounter = 1;
+    private projectileIdCounter = 1;
 
     readonly uiTick$ = new Subject<void>();
 
@@ -283,7 +286,7 @@ export class TowerDefenseEngineService {
         const speedFinal = boss ? baseSpeed * 0.5 : baseSpeed;
 
         const newEnemy: Enemy = {
-            id: crypto.randomUUID(),
+            id: 'e' + (this.enemyIdCounter++),
             position: { ...this.path()[0] },
             pathIndex: 0,
             hp: hpFinal,
@@ -416,7 +419,7 @@ export class TowerDefenseEngineService {
 
     private fireAt(tower: Tower, enemy: Enemy) {
         const proj: Projectile = {
-            id: crypto.randomUUID(),
+            id: 'p' + (this.projectileIdCounter++),
             from: { ...tower.position },
             to: { ...enemy.position },
             progress: 0
@@ -462,7 +465,7 @@ export class TowerDefenseEngineService {
                 const secondaryDamage = Math.floor(tower.damage * 0.5);
                 for (const s of secondary) {
                     const chainProj: Projectile = {
-                        id: crypto.randomUUID(),
+                        id: 'p' + (this.projectileIdCounter++),
                         from: { ...tower.position },
                         to: { ...s.position },
                         progress: 0
@@ -580,4 +583,11 @@ export class TowerDefenseEngineService {
             return [...grid];
         });
     }
+
+    // Renderer-friendly accessors (return references without allocations)
+    getEnemiesRef(): readonly Enemy[] { return this.enemiesInternal; }
+    getProjectilesRef(): readonly Projectile[] { return this.projectilesInternal; }
+    getTowersRef(): readonly Tower[] { return this.towersInternal; }
+    getPathRef(): readonly Position[] { return this.path(); }
+    getGridRef(): readonly TDTile[][] { return this.grid(); }
 }

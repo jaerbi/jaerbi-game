@@ -122,56 +122,7 @@
     <div
       class="flex-1 relative bg-slate-900 rounded-lg overflow-hidden border border-slate-700 flex items-center justify-center p-4"
     >
-      <div class="td-grid relative">
-        <!-- Range Indicator -->
-        <div class="range-indicator" [ngStyle]="getRangeStyle()"></div>
-        @for (row of tdEngine.grid(); track $index; let y = $index) {
-          @for (tile of row; track $index; let x = $index) {
-            <div
-              class="td-tile unit-svg-wrapper theme-player"
-              [class.tile-path]="tile.type === 'path'"
-              [class.tile-buildable]="tile.type === 'buildable'"
-              [class.tile-void]="tile.type === 'void'"
-              [class.ring-2]="selectedTile() === tile"
-              [class.ring-white]="selectedTile() === tile"
-              (click)="onTileClick(tile)"
-            >
-              @if (tile.tower) {
-                <app-units [isTower]="true" [unit]="asUnit(tile.tower)" class="w-full h-full p-1"></app-units>
-                @if (tile.tower.type === 1 && tile.tower.specialActive) {
-                  <div class="frost-aura-visual"></div>
-                }
-              }
-            </div>
-          }
-        }
-
-        <!-- Enemies -->
-        @for (enemy of tdEngine.enemies(); track enemy.id) {
-          <div
-            class="enemy"
-            [class.enemy-fast]="tdEngine.gameSpeedMultiplier() > 1"
-            [style.left.px]="enemy.displayX"
-            [style.top.px]="enemy.displayY"
-            [style.transform]="'scale(' + (enemy.scale || 1) + ')'"
-            [style.background]="enemy.bg"
-          >
-            <div
-              class="absolute -top-2 left-0 w-full h-1 bg-slate-800 rounded-full overflow-hidden"
-              style="z-index: 100"
-            >
-              <div class="h-full bg-emerald-500" [style.width.%]="(enemy.hp / enemy.maxHp) * 100"></div>
-            </div>
-          </div>
-        }
-
-        <!-- Projectiles -->
-        @if (tdEngine.gameSpeedMultiplier() === 1) {
-          @for (proj of tdEngine.projectiles(); track proj.id) {
-            <div class="projectile" [ngStyle]="getProjectileStyle(proj)"></div>
-          }
-        }
-      </div>
+      <canvas #gameCanvas class="block rounded" (click)="onCanvasClick($event)"></canvas>
     </div>
 
     <!-- Sidebar Controls -->
