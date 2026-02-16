@@ -58,6 +58,10 @@ export interface Enemy {
     speedModifier: number;
     shatterStacks: number;
     isFrozen: boolean;
+    displayX?: number;
+    displayY?: number;
+    bg?: string;
+    scale?: number;
 }
 
 export interface Projectile {

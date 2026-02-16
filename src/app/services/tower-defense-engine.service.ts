@@ -2,6 +2,7 @@ import { Injectable, signal, computed } from '@angular/core';
 import { NgZone } from '@angular/core';
 import { FirebaseService } from './firebase.service';
 import { Enemy, Position, Projectile, TDTile, TileType, Tower } from '../models/unit.model';
+import { Subject } from 'rxjs';
 
 @Injectable({
     providedIn: 'root'
@@ -22,39 +23,11 @@ export class TowerDefenseEngineService {
     projectiles = signal<Projectile[]>([]);
     gameSpeedMultiplier = signal(1);
 
-    frostAuras = computed(() => {
-        const result: { id: string; left: number; top: number; size: number }[] = [];
-        const grid = this.grid();
-        const tileSize = 62;
-        const radiusTiles = 2;
-        const size = radiusTiles * 2 * tileSize;
-        for (const row of grid) {
-            for (const tile of row) {
-                if (tile.tower && tile.tower.specialActive && tile.tower.type === 1) {
-                    const left = tile.tower.position.x * tileSize + 30;
-                    const top = tile.tower.position.y * tileSize + 30;
-                    result.push({ id: tile.tower.id, left, top, size });
-                }
-            }
-        }
-        return result;
-    });
-
     private enemiesInternal: Enemy[] = [];
     private projectilesInternal: Projectile[] = [];
+    private towersInternal: Tower[] = [];
 
-    private enemiesViewVersion = signal(0);
-    private projectilesViewVersion = signal(0);
-
-    enemiesView = computed(() => {
-        this.enemiesViewVersion();
-        return this.enemiesInternal;
-    });
-
-    projectilesView = computed(() => {
-        this.projectilesViewVersion();
-        return this.projectilesInternal;
-    });
+    readonly uiTick$ = new Subject<void>();
 
     private animationFrameId: number | null = null;
     private lastUpdateTime = 0;
@@ -95,17 +68,11 @@ export class TowerDefenseEngineService {
         }
     }
 
-    stopGameLoop() {
-        if (this.animationFrameId !== null) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
-    }
-
     dispose() {
         this.stopGameLoop();
         this.enemiesInternal = [];
         this.projectilesInternal = [];
+        this.towersInternal = [];
         this.enemiesToSpawn = 0;
         this.currentWaveEnemyCount = 0;
         this.spawnTimer = 0;
@@ -145,6 +112,7 @@ export class TowerDefenseEngineService {
         this.path.set(newPath);
 
         const newGrid: TDTile[][] = [];
+        this.towersInternal = [];
         const pathSet = new Set(newPath.map(p => `${p.x},${p.y}`));
 
         for (let y = 0; y < this.gridSize; y++) {
@@ -222,40 +190,36 @@ export class TowerDefenseEngineService {
     }
 
     private startGameLoop() {
-        if (this.animationFrameId) {
+        this.stopGameLoop();
+        this.lastUpdateTime = performance.now();
+
+        this.ngZone.runOutsideAngular(() => {
+            const loop = (currentTime: number) => {
+                if (this.gameOver()) return;
+
+                const dt = (currentTime - this.lastUpdateTime) / 1000;
+                this.lastUpdateTime = currentTime;
+                const cappedDt = Math.min(dt, 0.05);
+                this.updateGame(cappedDt);
+                this.enemies.set([...this.enemiesInternal]);
+                if (this.gameSpeedMultiplier() === 1) {
+                    this.projectiles.set([...this.projectilesInternal]);
+                } else {
+                    this.projectiles.set([]);
+                }
+                this.uiTick$.next();
+                this.animationFrameId = requestAnimationFrame(loop);
+            };
+
+            this.animationFrameId = requestAnimationFrame(loop);
+        });
+    }
+
+    stopGameLoop() {
+        if (this.animationFrameId !== null) {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = null;
         }
-        this.stopGameLoop();
-        this.lastUpdateTime = performance.now();
-        this.lastUiPublishTime = this.lastUpdateTime;
-        this.ngZone.runOutsideAngular(() => {
-            const loop = (currentTime: number) => {
-                const dt = (currentTime - this.lastUpdateTime) / 1000;
-                this.lastUpdateTime = currentTime;
-
-                this.updateGame(dt);
-
-                if (!this.gameOver()) {
-                    const sinceLastUi = currentTime - this.lastUiPublishTime;
-                    if (sinceLastUi >= 16) {
-                        this.lastUiPublishTime = currentTime;
-                        this.ngZone.run(() => {
-                            this.enemiesViewVersion.update(v => v + 1);
-                            this.projectilesViewVersion.update(v => v + 1);
-                        });
-                    }
-                }
-
-                if (this.isWaveInProgress() || this.enemiesInternal.length > 0) {
-                    this.animationFrameId = requestAnimationFrame(loop);
-                } else {
-                    this.ngZone.run(() => this.isWaveInProgress.set(false));
-                    this.animationFrameId = null;
-                }
-            };
-            this.animationFrameId = requestAnimationFrame(loop);
-        });
     }
 
     updateGame(dt: number) {
@@ -273,8 +237,6 @@ export class TowerDefenseEngineService {
             this.ngZone.run(() => {
                 this.enemies.set([]);
                 this.projectiles.set([]);
-                this.enemiesViewVersion.update(v => v + 1);
-                this.projectilesViewVersion.update(v => v + 1);
                 this.isWaveInProgress.set(false);
                 this.gameOver.set(true);
             });
@@ -291,8 +253,6 @@ export class TowerDefenseEngineService {
             this.ngZone.run(() => {
                 this.enemies.set([]);
                 this.projectiles.set([]);
-                this.enemiesViewVersion.update(v => v + 1);
-                this.projectilesViewVersion.update(v => v + 1);
                 this.isWaveInProgress.set(false);
             });
         }
@@ -366,6 +326,18 @@ export class TowerDefenseEngineService {
                 enemy.position = { ...this.path()[enemy.pathIndex] };
             }
 
+            const path = this.path();
+            const current = path[enemy.pathIndex];
+            const next = path[enemy.pathIndex + 1] || current;
+            const x = current.x + (next.x - current.x) * enemy.progress;
+            const y = current.y + (next.y - current.y) * enemy.progress;
+            enemy.displayX = x * 62 + 10;
+            enemy.displayY = y * 62 + 10;
+            const shatter = enemy.shatterStacks ?? 0;
+            const lightness = shatter > 0 ? Math.min(70, 50 + shatter * 4) : 50;
+            enemy.scale = enemy.isBoss ? 1.5 : 1;
+            enemy.bg = enemy.isFrozen ? `hsl(190, 80%, ${lightness}%)` : `hsl(${enemy.hue}, 70%, ${lightness}%)`;
+
             if (enemy.hp <= 0) {
                 this.enemiesInternal.splice(i, 1);
                 this.ngZone.run(() => this.money.update(m => m + 5 + this.wave()));
@@ -374,59 +346,62 @@ export class TowerDefenseEngineService {
     }
 
     private updateTowers(dt: number) {
-        if (this.enemiesInternal.length === 0) return;
-        const gridSnapshot = this.grid();
-        for (const row of gridSnapshot) {
-            for (const tile of row) {
-                if (tile.tower) {
-                    const tower = tile.tower;
-                    tower.cooldown -= dt;
-                    if (tower.cooldown <= 0) {
-                        const target = this.findNearestEnemy(tower, this.enemiesInternal);
-                        if (target) {
-                            this.fireAt(tower, target);
-                            tower.cooldown = tower.fireInterval;
-                        } else {
-                            tower.cooldown = 0;
-                        }
-                    }
+        if (this.enemiesInternal.length === 0 || this.towersInternal.length === 0) return;
+        for (const tower of this.towersInternal) {
+            tower.cooldown -= dt;
+            if (tower.cooldown <= 0) {
+                const target = this.findNearestEnemy(tower, this.enemiesInternal);
+                if (target) {
+                    this.fireAt(tower, target);
+                    tower.cooldown = tower.fireInterval;
+                } else {
+                    tower.cooldown = 0;
                 }
             }
         }
     }
 
     private applyFrostAuras() {
-        const gridSnapshot = this.grid();
-        for (const row of gridSnapshot) {
-            for (const tile of row) {
-                if (tile.tower && tile.tower.specialActive && tile.tower.type === 1) {
-                    const tower = tile.tower;
-                    for (const enemy of this.enemiesInternal) {
-                        const dx = tower.position.x - enemy.position.x;
-                        const dy = tower.position.y - enemy.position.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist <= 2) {
-                            enemy.speedModifier = 0.7;
-                            enemy.isFrozen = true;
-                        }
-                    }
+        if (this.enemiesInternal.length === 0) return;
+
+        const frostTowers = this.towersInternal.filter(t => t.type === 1 && t.specialActive);
+        if (frostTowers.length === 0) return;
+
+        const radiusSq = 4;
+
+        for (const enemy of this.enemiesInternal) {
+            let isSlowed = false;
+
+            for (const tower of frostTowers) {
+                const dx = tower.position.x - enemy.position.x;
+                const dy = tower.position.y - enemy.position.y;
+                if (dx * dx + dy * dy <= radiusSq) {
+                    isSlowed = true;
+                    break;
                 }
+            }
+
+            if (isSlowed) {
+                enemy.speedModifier = 0.7;
+                enemy.isFrozen = true;
             }
         }
     }
 
     private findNearestEnemy(tower: Tower, enemies: Enemy[]): Enemy | null {
         let nearest: Enemy | null = null;
-        let minDist = tower.range;
+        let minDistSq = tower.range * tower.range;
 
         for (const enemy of enemies) {
-            const dx = tower.position.x - (enemy.position.x + (this.path()[enemy.pathIndex + 1]?.x - enemy.position.x) * enemy.progress);
-            const dy = tower.position.y - (enemy.position.y + (this.path()[enemy.pathIndex + 1]?.y - enemy.position.y) * enemy.progress);
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (enemy.displayX && enemy.displayY) {
+                const dx = tower.position.x - (enemy.displayX - 10) / 62;
+                const dy = tower.position.y - (enemy.displayY - 10) / 62;
+                const distSq = dx * dx + dy * dy;
 
-            if (dist < minDist) {
-                minDist = dist;
-                nearest = enemy;
+                if (distSq < minDistSq) {
+                    minDistSq = distSq;
+                    nearest = enemy;
+                }
             }
         }
         return nearest;
@@ -531,6 +506,7 @@ export class TowerDefenseEngineService {
                     cooldown: 0,
                     specialActive: false
                 };
+                this.towersInternal.push(tile.tower);
                 this.money.update(m => m - cost);
             }
             return [...grid];
@@ -595,8 +571,11 @@ export class TowerDefenseEngineService {
             if (tile.tower) {
                 const invested = tile.tower.invested ?? tile.tower.baseCost;
                 const refund = Math.floor(invested * 0.5);
+                const id = tile.tower.id;
                 tile.tower = null;
                 this.money.update(m => m + refund);
+                const idx = this.towersInternal.findIndex(t => t.id === id);
+                if (idx !== -1) this.towersInternal.splice(idx, 1);
             }
             return [...grid];
         });

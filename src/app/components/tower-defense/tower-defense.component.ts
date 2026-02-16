@@ -1,4 +1,4 @@
-import { Component, signal, OnDestroy, OnInit, HostListener, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, OnDestroy, OnInit, HostListener, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TowerDefenseEngineService } from '../../services/tower-defense-engine.service';
@@ -6,6 +6,7 @@ import { UnitsComponent } from '../units/units.component';
 import { TDTile, Unit } from '../../models/unit.model';
 import { SettingsService } from '../../services/settings.service';
 import { FirebaseService } from '../../services/firebase.service';
+import { Subscription } from 'rxjs';
 
 @Component({
     selector: 'app-tower-defense',
@@ -57,6 +58,21 @@ import { FirebaseService } from '../../services/firebase.service';
       transition: all 0.2s ease-out;
     }
 
+    .frost-aura-visual {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 248px; /* 4 клітинки * 62px */
+  height: 248px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  pointer-events: none;
+  z-index: 5;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+}
+
     .enemy {
       position: absolute;
       width: 40px;
@@ -97,6 +113,7 @@ import { FirebaseService } from '../../services/firebase.service';
 })
 export class TowerDefenseComponent implements OnInit, OnDestroy {
     selectedTile = signal<TDTile | null>(null);
+    private uiSub?: Subscription;
 
     @HostListener('window:keydown', ['$event'])
     onKeyDown(event: KeyboardEvent) {
@@ -119,13 +136,18 @@ export class TowerDefenseComponent implements OnInit, OnDestroy {
         public settings: SettingsService,
         public firebase: FirebaseService,
         public router: Router,
+        private cdr: ChangeDetectorRef,
     ) { }
 
     ngOnInit() {
         this.tdEngine.resetEngine();
+        this.uiSub = this.tdEngine.uiTick$.subscribe(() => {
+            this.cdr.detectChanges();
+        });
     }
 
     ngOnDestroy() {
+        this.uiSub?.unsubscribe();
         this.tdEngine.resetEngine();
     }
 
