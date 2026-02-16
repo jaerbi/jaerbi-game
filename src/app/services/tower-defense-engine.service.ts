@@ -1,5 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 import { NgZone } from '@angular/core';
+import { FirebaseService } from './firebase.service';
 
 export interface Position {
     x: number;
@@ -71,6 +72,24 @@ export class TowerDefenseEngineService {
     projectiles = signal<Projectile[]>([]);
     gameSpeedMultiplier = signal(1);
 
+    frostAuras = computed(() => {
+        const result: { id: string; left: number; top: number; size: number }[] = [];
+        const grid = this.grid();
+        const tileSize = 62;
+        const radiusTiles = 2;
+        const size = radiusTiles * 2 * tileSize;
+        for (const row of grid) {
+            for (const tile of row) {
+                if (tile.tower && tile.tower.specialActive && tile.tower.type === 1) {
+                    const left = tile.tower.position.x * tileSize + 30;
+                    const top = tile.tower.position.y * tileSize + 30;
+                    result.push({ id: tile.tower.id, left, top, size });
+                }
+            }
+        }
+        return result;
+    });
+
     private enemiesInternal: Enemy[] = [];
     private projectilesInternal: Projectile[] = [];
 
@@ -80,20 +99,37 @@ export class TowerDefenseEngineService {
     private enemiesToSpawn = 0;
     private currentWaveEnemyCount = 0;
     private spawnTimer = 0;
-    private spawnInterval = 1000; // ms between spawns
+    private spawnInterval = 1000;
 
     // Costs and Stats
     towerCosts = [15, 50, 250, 1500];
 
     private tierStats = [
         { damage: 5, range: 2, fireInterval: 0.5 },
-        { damage: 20, range: 3, fireInterval: 1 },
-        { damage: 80, range: 4, fireInterval: 2 },
-        { damage: 300, range: 5, fireInterval: 3 }
+        { damage: 20, range: 2.5, fireInterval: 1 },
+        { damage: 80, range: 3, fireInterval: 2 },
+        { damage: 300, range: 3.5, fireInterval: 3 }
     ];
 
-    constructor(private ngZone: NgZone) {
+    private savedResult = false;
+
+    constructor(private ngZone: NgZone, private firebase: FirebaseService) {
         this.initGame();
+    }
+
+    private async saveResultIfLoggedIn() {
+        const user = this.firebase.user$();
+        if (!user) return;
+        const payload = {
+            userId: user.uid,
+            displayName: user.displayName || 'Anonymous',
+            maxWave: this.wave(),
+            totalMoney: this.money()
+        };
+        try {
+            await this.firebase.saveTowerDefenseScore(payload);
+        } catch {
+        }
     }
 
     stopGameLoop() {
@@ -114,6 +150,7 @@ export class TowerDefenseEngineService {
         this.projectiles.set([]);
         this.isWaveInProgress.set(false);
         this.gameOver.set(false);
+        this.savedResult = false;
         this.money.set(100);
         this.lives.set(100);
         this.wave.set(0);
@@ -233,7 +270,7 @@ export class TowerDefenseEngineService {
 
                 if (!this.gameOver()) {
                     const sinceLastUi = currentTime - this.lastUiPublishTime;
-                    if (sinceLastUi >= 100) {
+                    if (sinceLastUi >= 16) {
                         this.lastUiPublishTime = currentTime;
                         this.ngZone.run(() => {
                             this.enemies.set([...this.enemiesInternal]);
@@ -271,6 +308,10 @@ export class TowerDefenseEngineService {
                 this.isWaveInProgress.set(false);
                 this.gameOver.set(true);
             });
+            if (!this.savedResult) {
+                this.savedResult = true;
+                this.saveResultIfLoggedIn();
+            }
             return;
         }
 

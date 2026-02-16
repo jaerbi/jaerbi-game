@@ -4,6 +4,7 @@ import { FeedbackComponent } from './components/feedback/feedback.component';
 import { RoadmapComponent } from './components/roadmap/roadmap.component';
 import { LandingPageComponent } from './components/landing-page/landing-page.component';
 import { TowerDefenseComponent } from './components/tower-defense/tower-defense.component';
+import { TowerDefenseLeaderboardComponent } from './components/tower-defense-leaderboard/tower-defense-leaderboard.component';
 
 export const routes: Routes = [
     {
@@ -17,6 +18,10 @@ export const routes: Routes = [
     {
         path: 'tower-defense',
         component: TowerDefenseComponent,
+    },
+    {
+        path: 'tower-defense-leaderboard',
+        component: TowerDefenseLeaderboardComponent,
     },
     {
         path: 'feedback',

@@ -113,14 +113,17 @@
       <div class="td-grid relative">
         <!-- Range Indicator -->
         <div class="range-indicator" [ngStyle]="getRangeStyle()"></div>
-        @for (row of tdEngine.grid(); track $index) {
-          @for (tile of row; track $index) {
-            @if (tile.tower && tile.tower.type === 1 && tile.tower.specialActive) {
-              <div class="range-indicator frost-aura" [ngStyle]="getFrostAuraStyle(tile.tower)"></div>
-            }
+        <div class="absolute inset-0 pointer-events-none">
+          @for (aura of tdEngine.frostAuras(); track aura.id) {
+            <div
+              class="range-indicator"
+              [style.left.px]="aura.left"
+              [style.top.px]="aura.top"
+              [style.width.px]="aura.size"
+              [style.height.px]="aura.size"
+            ></div>
           }
-        }
-
+        </div>
         @for (row of tdEngine.grid(); track $index; let y = $index) {
           @for (tile of row; track $index; let x = $index) {
             <div

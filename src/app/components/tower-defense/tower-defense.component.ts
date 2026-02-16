@@ -215,28 +215,6 @@ export class TowerDefenseComponent implements OnInit, OnDestroy {
         };
     }
 
-    getFrostAuraStyle(tower: any) {
-        const radiusTiles = 2;
-        const tileSize = 62;
-        const size = radiusTiles * 2 * tileSize;
-        const centerX = tower.position.x * tileSize + (tileSize / 2);
-        const centerY = tower.position.y * tileSize + (tileSize / 2);
-
-        return {
-            position: 'absolute',
-            left: `${centerX}px`,
-            top: `${centerY}px`,
-            width: `${size}px`,
-            height: `${size}px`,
-            background: 'rgba(56, 189, 248, 0.03)',
-            border: '1px solid rgba(56, 189, 248, 0.3)',
-            borderRadius: '50%',
-            transform: 'translate(-50%, -50%)',
-            pointerEvents: 'none',
-            zIndex: 5
-        };
-    }
-
     sellTower() {
         const tile = this.selectedTile();
         if (tile && tile.tower) {
