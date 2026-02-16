@@ -1,51 +1,8 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 import { NgZone } from '@angular/core';
-
-export interface Position {
-    x: number;
-    y: number;
-}
-
-export type TileType = 'path' | 'buildable' | 'void';
-
-export interface Tower {
-    id: string;
-    type: number;
-    level: number;
-    position: Position;
-    baseCost: number;
-    invested: number;
-    damage: number;
-    range: number;
-    fireInterval: number;
-    lastFired: number;
-}
-
-export interface Enemy {
-    id: string;
-    position: Position;
-    pathIndex: number;
-    hp: number;
-    maxHp: number;
-    speed: number;
-    progress: number;
-    isBoss?: boolean;
-    hue: number;
-}
-
-export interface Projectile {
-    id: string;
-    from: Position;
-    to: Position;
-    progress: number;
-}
-
-export interface TDTile {
-    x: number;
-    y: number;
-    type: TileType;
-    tower: Tower | null;
-}
+import { FirebaseService } from './firebase.service';
+import { Enemy, Position, Projectile, TDTile, TileType, Tower } from '../models/unit.model';
+import { Subject } from 'rxjs';
 
 @Injectable({
     providedIn: 'root'
@@ -53,7 +10,7 @@ export interface TDTile {
 export class TowerDefenseEngineService {
     // Game State
     money = signal(100);
-    lives = signal(20);
+    lives = signal(20);         
     wave = signal(0);
     isWaveInProgress = signal(false);
     gameOver = signal(false);
@@ -61,38 +18,56 @@ export class TowerDefenseEngineService {
     gridSize = 10;
     grid = signal<TDTile[][]>([]);
     path = signal<Position[]>([]);
+    readonly tileSize = 62;
 
     enemies = signal<Enemy[]>([]);
     projectiles = signal<Projectile[]>([]);
+    gameSpeedMultiplier = signal(1);
 
     private enemiesInternal: Enemy[] = [];
     private projectilesInternal: Projectile[] = [];
+    private towersInternal: Tower[] = [];
+    private enemyIdCounter = 1;
+    private projectileIdCounter = 1;
+
+    readonly uiTick$ = new Subject<void>();
 
     private animationFrameId: number | null = null;
     private lastUpdateTime = 0;
+    private lastUiPublishTime = 0;
     private enemiesToSpawn = 0;
     private currentWaveEnemyCount = 0;
     private spawnTimer = 0;
-    private spawnInterval = 1000; // ms between spawns
+    private spawnInterval = 1000;
 
     // Costs and Stats
-    towerCosts = [15, 50, 150, 500];
+    towerCosts = [15, 50, 250, 1500];
 
     private tierStats = [
-        { damage: 5, range: 2, fireInterval: 500 },
-        { damage: 20, range: 3, fireInterval: 1000 },
-        { damage: 80, range: 4, fireInterval: 2000 },
-        { damage: 300, range: 6, fireInterval: 1000 }
+        { damage: 5, range: 2, fireInterval: 0.5 },
+        { damage: 20, range: 2.5, fireInterval: 1 },
+        { damage: 80, range: 3, fireInterval: 2 },
+        { damage: 300, range: 3.5, fireInterval: 3 }
     ];
 
-    constructor(private ngZone: NgZone) {
+    private savedResult = false;
+
+    constructor(private ngZone: NgZone, private firebase: FirebaseService) {
         this.initGame();
     }
 
-    stopGameLoop() {
-        if (this.animationFrameId !== null) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
+    private async saveResultIfLoggedIn() {
+        const user = this.firebase.user$();
+        if (!user) return;
+        const payload = {
+            userId: user.uid,
+            displayName: user.displayName || 'Anonymous',
+            maxWave: this.wave(),
+            totalMoney: this.money()
+        };
+        try {
+            await this.firebase.saveTowerDefenseScore(payload);
+        } catch {
         }
     }
 
@@ -100,6 +75,7 @@ export class TowerDefenseEngineService {
         this.stopGameLoop();
         this.enemiesInternal = [];
         this.projectilesInternal = [];
+        this.towersInternal = [];
         this.enemiesToSpawn = 0;
         this.currentWaveEnemyCount = 0;
         this.spawnTimer = 0;
@@ -107,6 +83,7 @@ export class TowerDefenseEngineService {
         this.projectiles.set([]);
         this.isWaveInProgress.set(false);
         this.gameOver.set(false);
+        this.savedResult = false;
         this.money.set(100);
         this.lives.set(100);
         this.wave.set(0);
@@ -117,6 +94,11 @@ export class TowerDefenseEngineService {
             );
             this.grid.set(cleared);
         }
+    }
+
+    resetEngine() {
+        this.dispose();
+        this.generateMap();
     }
 
     initGame() {
@@ -133,6 +115,7 @@ export class TowerDefenseEngineService {
         this.path.set(newPath);
 
         const newGrid: TDTile[][] = [];
+        this.towersInternal = [];
         const pathSet = new Set(newPath.map(p => `${p.x},${p.y}`));
 
         for (let y = 0; y < this.gridSize; y++) {
@@ -210,41 +193,44 @@ export class TowerDefenseEngineService {
     }
 
     private startGameLoop() {
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
         this.stopGameLoop();
         this.lastUpdateTime = performance.now();
+
         this.ngZone.runOutsideAngular(() => {
             const loop = (currentTime: number) => {
-                const dt = (currentTime - this.lastUpdateTime) / 1000; // seconds
+                if (this.gameOver()) return;
+
+                const dt = (currentTime - this.lastUpdateTime) / 1000;
                 this.lastUpdateTime = currentTime;
-
-                this.updateGame(dt);
-                // Publish a minimal snapshot once per frame
-                this.ngZone.run(() => {
-                    // Spread to ensure signal change detection with minimal work
-                    this.enemies.set([...this.enemiesInternal]);
+                const cappedDt = Math.min(dt, 0.05);
+                this.updateGame(cappedDt);
+                this.enemies.set([...this.enemiesInternal]);
+                if (this.gameSpeedMultiplier() === 1) {
                     this.projectiles.set([...this.projectilesInternal]);
-                });
-
-                if (this.isWaveInProgress() || this.enemiesInternal.length > 0) {
-                    this.animationFrameId = requestAnimationFrame(loop);
                 } else {
-                    this.ngZone.run(() => this.isWaveInProgress.set(false));
-                    this.animationFrameId = null;
+                    this.projectiles.set([]);
                 }
+                this.uiTick$.next();
+                this.animationFrameId = requestAnimationFrame(loop);
             };
+
             this.animationFrameId = requestAnimationFrame(loop);
         });
     }
 
+    stopGameLoop() {
+        if (this.animationFrameId !== null) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+    }
+
     updateGame(dt: number) {
-        this.handleSpawning(dt);
-        this.updateEnemies(dt);
-        this.updateTowers(dt);
-        this.updateProjectiles(dt);
+        const effectiveDt = dt * this.gameSpeedMultiplier();
+        this.handleSpawning(effectiveDt);
+        this.updateEnemies(effectiveDt);
+        this.updateTowers(effectiveDt);
+        this.updateProjectiles(effectiveDt);
 
         if (this.lives() <= 0 && !this.gameOver()) {
             this.enemiesInternal = [];
@@ -257,11 +243,21 @@ export class TowerDefenseEngineService {
                 this.isWaveInProgress.set(false);
                 this.gameOver.set(true);
             });
+            if (!this.savedResult) {
+                this.savedResult = true;
+                this.saveResultIfLoggedIn();
+            }
             return;
         }
 
         if (this.enemiesInternal.length === 0 && this.enemiesToSpawn === 0 && this.isWaveInProgress()) {
-            this.ngZone.run(() => this.isWaveInProgress.set(false));
+            this.enemiesInternal = [];
+            this.projectilesInternal = [];
+            this.ngZone.run(() => {
+                this.enemies.set([]);
+                this.projectiles.set([]);
+                this.isWaveInProgress.set(false);
+            });
         }
     }
 
@@ -290,7 +286,7 @@ export class TowerDefenseEngineService {
         const speedFinal = boss ? baseSpeed * 0.5 : baseSpeed;
 
         const newEnemy: Enemy = {
-            id: crypto.randomUUID(),
+            id: 'e' + (this.enemyIdCounter++),
             position: { ...this.path()[0] },
             pathIndex: 0,
             hp: hpFinal,
@@ -298,16 +294,28 @@ export class TowerDefenseEngineService {
             speed: speedFinal,
             progress: 0,
             isBoss: boss,
-            hue
+            hue,
+            baseSpeed,
+            speedModifier: 1,
+            shatterStacks: 0,
+            isFrozen: false
         };
         this.enemiesInternal.push(newEnemy);
     }
 
     private updateEnemies(dt: number) {
-        // In-place update; remove dead or escaped enemies
         for (let i = this.enemiesInternal.length - 1; i >= 0; i--) {
             const enemy = this.enemiesInternal[i];
-            enemy.progress += enemy.speed * dt;
+            enemy.speedModifier = 1;
+            enemy.isFrozen = false;
+        }
+
+        this.applyFrostAuras();
+
+        for (let i = this.enemiesInternal.length - 1; i >= 0; i--) {
+            const enemy = this.enemiesInternal[i];
+            const moveSpeed = enemy.baseSpeed * enemy.speedModifier;
+            enemy.progress += moveSpeed * dt;
 
             if (enemy.progress >= 1) {
                 enemy.pathIndex++;
@@ -321,6 +329,18 @@ export class TowerDefenseEngineService {
                 enemy.position = { ...this.path()[enemy.pathIndex] };
             }
 
+            const path = this.path();
+            const current = path[enemy.pathIndex];
+            const next = path[enemy.pathIndex + 1] || current;
+            const x = current.x + (next.x - current.x) * enemy.progress;
+            const y = current.y + (next.y - current.y) * enemy.progress;
+            enemy.displayX = x * 62 + 10;
+            enemy.displayY = y * 62 + 10;
+            const shatter = enemy.shatterStacks ?? 0;
+            const lightness = shatter > 0 ? Math.min(70, 50 + shatter * 4) : 50;
+            enemy.scale = enemy.isBoss ? 1.5 : 1;
+            enemy.bg = enemy.isFrozen ? `hsl(190, 80%, ${lightness}%)` : `hsl(${enemy.hue}, 70%, ${lightness}%)`;
+
             if (enemy.hp <= 0) {
                 this.enemiesInternal.splice(i, 1);
                 this.ngZone.run(() => this.money.update(m => m + 5 + this.wave()));
@@ -329,53 +349,132 @@ export class TowerDefenseEngineService {
     }
 
     private updateTowers(dt: number) {
-        const now = Date.now();
-        if (this.enemiesInternal.length === 0) return;
-        const gridSnapshot = this.grid();
-        for (const row of gridSnapshot) {
-            for (const tile of row) {
-                if (tile.tower) {
-                    const tower = tile.tower;
-                    if (now - tower.lastFired > tower.fireInterval) {
-                        const target = this.findNearestEnemy(tower, this.enemiesInternal);
-                        if (target) {
-                            this.fireAt(tower, target);
-                            tower.lastFired = now;
-                        }
-                    }
+        if (this.enemiesInternal.length === 0 || this.towersInternal.length === 0) return;
+        for (const tower of this.towersInternal) {
+            tower.cooldown -= dt;
+            if (tower.cooldown <= 0) {
+                const target = this.findNearestEnemy(tower, this.enemiesInternal);
+                if (target) {
+                    this.fireAt(tower, target);
+                    tower.cooldown = tower.fireInterval;
+                } else {
+                    tower.cooldown = 0;
                 }
+            }
+        }
+    }
+
+    private applyFrostAuras() {
+        if (this.enemiesInternal.length === 0) return;
+
+        const frostTowers = this.towersInternal.filter(t => t.type === 1 && t.specialActive);
+        if (frostTowers.length === 0) return;
+
+        const radiusSq = 4;
+
+        for (const enemy of this.enemiesInternal) {
+            let isSlowed = false;
+
+            for (const tower of frostTowers) {
+                const dx = tower.position.x - enemy.position.x;
+                const dy = tower.position.y - enemy.position.y;
+                if (dx * dx + dy * dy <= radiusSq) {
+                    isSlowed = true;
+                    break;
+                }
+            }
+
+            if (isSlowed) {
+                enemy.speedModifier = 0.7;
+                enemy.isFrozen = true;
             }
         }
     }
 
     private findNearestEnemy(tower: Tower, enemies: Enemy[]): Enemy | null {
         let nearest: Enemy | null = null;
-        let minDist = tower.range;
+        let minDistSq = tower.range * tower.range;
 
         for (const enemy of enemies) {
-            const dx = tower.position.x - (enemy.position.x + (this.path()[enemy.pathIndex + 1]?.x - enemy.position.x) * enemy.progress);
-            const dy = tower.position.y - (enemy.position.y + (this.path()[enemy.pathIndex + 1]?.y - enemy.position.y) * enemy.progress);
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (enemy.displayX && enemy.displayY) {
+                const dx = tower.position.x - (enemy.displayX - 10) / 62;
+                const dy = tower.position.y - (enemy.displayY - 10) / 62;
+                const distSq = dx * dx + dy * dy;
 
-            if (dist < minDist) {
-                minDist = dist;
-                nearest = enemy;
+                if (distSq < minDistSq) {
+                    minDistSq = distSq;
+                    nearest = enemy;
+                }
             }
         }
         return nearest;
     }
 
+    private pushProjectile(p: Projectile) {
+        if (this.projectilesInternal.length >= 100) {
+            this.projectilesInternal.shift();
+        }
+        this.projectilesInternal.push(p);
+    }
+
     private fireAt(tower: Tower, enemy: Enemy) {
         const proj: Projectile = {
-            id: crypto.randomUUID(),
+            id: 'p' + (this.projectileIdCounter++),
             from: { ...tower.position },
             to: { ...enemy.position },
             progress: 0
         };
-        this.projectilesInternal.push(proj);
+        this.pushProjectile(proj);
 
-        // Immediate damage for MVP simplicity
-        enemy.hp -= tower.damage;
+        let damage = tower.damage;
+
+        if (tower.specialActive && tower.type === 4) {
+            const ratio = enemy.hp / enemy.maxHp;
+            if (ratio < 0.15) {
+                if (enemy.isBoss) {
+                    damage = tower.damage * 3;
+                } else {
+                    enemy.hp = 0;
+                    return;
+                }
+            }
+        }
+
+        if (tower.specialActive && tower.type === 3) {
+            const nextStacks = Math.min(5, enemy.shatterStacks + 1);
+            enemy.shatterStacks = nextStacks;
+            const multiplier = 1 + nextStacks * 0.1;
+            damage = Math.floor(damage * multiplier);
+        }
+
+        enemy.hp -= damage;
+
+        if (tower.specialActive && tower.type === 2) {
+            if (Math.random() < 0.25) {
+                const secondary: Enemy[] = [];
+                for (const other of this.enemiesInternal) {
+                    if (other.id === enemy.id) continue;
+                    const dx = enemy.position.x - other.position.x;
+                    const dy = enemy.position.y - other.position.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist <= 3) {
+                        secondary.push(other);
+                        if (secondary.length >= 2) break;
+                    }
+                }
+                const secondaryDamage = Math.floor(tower.damage * 0.5);
+                for (const s of secondary) {
+                    const chainProj: Projectile = {
+                        id: 'p' + (this.projectileIdCounter++),
+                        from: { ...tower.position },
+                        to: { ...s.position },
+                        progress: 0
+                    };
+                    this.pushProjectile(chainProj);
+                    s.hp -= secondaryDamage;
+                }
+            }
+        }
     }
 
     private updateProjectiles(dt: number) {
@@ -407,8 +506,10 @@ export class TowerDefenseEngineService {
                     damage: stats.damage,
                     range: stats.range,
                     fireInterval: stats.fireInterval,
-                    lastFired: 0
+                    cooldown: 0,
+                    specialActive: false
                 };
+                this.towersInternal.push(tile.tower);
                 this.money.update(m => m - cost);
             }
             return [...grid];
@@ -433,7 +534,38 @@ export class TowerDefenseEngineService {
     }
 
     getUpgradeCost(tower: Tower): number {
-        return Math.floor(tower.baseCost * 0.5);
+        let multiplier = 0.5;
+        switch (tower.level) {
+            case 1:
+                multiplier = 0.5;
+                break;
+            case 2:
+                multiplier = 0.6;
+                break;
+            case 3:
+                multiplier = 0.7;
+                break;
+        }
+        return Math.floor(tower.baseCost * multiplier);
+    }
+
+    getSpecialCost(tower: Tower): number {
+        return tower.baseCost * 4;
+    }
+
+    buyAbility(x: number, y: number) {
+        this.grid.update(grid => {
+            const tile = grid[y][x];
+            if (tile.tower && tile.tower.level === 4 && !tile.tower.specialActive) {
+                const cost = this.getSpecialCost(tile.tower);
+                if (this.money() >= cost) {
+                    tile.tower.specialActive = true;
+                    tile.tower.invested += cost;
+                    this.money.update(m => m - cost);
+                }
+            }
+            return [...grid.map(row => [...row])];
+        });
     }
 
     sellTower(x: number, y: number) {
@@ -442,10 +574,20 @@ export class TowerDefenseEngineService {
             if (tile.tower) {
                 const invested = tile.tower.invested ?? tile.tower.baseCost;
                 const refund = Math.floor(invested * 0.5);
+                const id = tile.tower.id;
                 tile.tower = null;
                 this.money.update(m => m + refund);
+                const idx = this.towersInternal.findIndex(t => t.id === id);
+                if (idx !== -1) this.towersInternal.splice(idx, 1);
             }
             return [...grid];
         });
     }
+
+    // Renderer-friendly accessors (return references without allocations)
+    getEnemiesRef(): readonly Enemy[] { return this.enemiesInternal; }
+    getProjectilesRef(): readonly Projectile[] { return this.projectilesInternal; }
+    getTowersRef(): readonly Tower[] { return this.towersInternal; }
+    getPathRef(): readonly Position[] { return this.path(); }
+    getGridRef(): readonly TDTile[][] { return this.grid(); }
 }

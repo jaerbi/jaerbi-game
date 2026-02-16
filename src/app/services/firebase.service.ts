@@ -1,7 +1,7 @@
 import { Injectable, signal, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, Firestore } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, Firestore, serverTimestamp } from 'firebase/firestore';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User, Auth } from 'firebase/auth';
 import { environmentFirebase } from '../../environments/environment.firebase';
 import { Difficulty, MapSize } from './settings.service';
@@ -17,6 +17,14 @@ export interface ScoreEntry {
   victory: boolean;
   userId?: string;
   userPhoto?: string;
+}
+
+export interface TowerDefenseScore {
+  userId: string;
+  displayName: string;
+  maxWave: number;
+  totalMoney: number;
+  timestamp?: any;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -106,6 +114,36 @@ export class FirebaseService {
       return querySnapshot.docs.map(doc => doc.data() as ScoreEntry);
     } catch (e) {
       console.error('Error fetching user scores: ', e);
+      return [];
+    }
+  }
+
+  async saveTowerDefenseScore(entry: TowerDefenseScore): Promise<void> {
+    if (!this.db) return;
+    try {
+      const payload = {
+        ...entry,
+        timestamp: serverTimestamp()
+      };
+      await addDoc(collection(this.db, 'towerDefenseLeaderboards'), payload);
+    } catch (e) {
+      console.error('Error adding TD score: ', e);
+    }
+  }
+
+  async getTopTowerDefenseScores(limitCount: number): Promise<TowerDefenseScore[]> {
+    if (!this.db) return [];
+    try {
+      const q = query(
+        collection(this.db, 'towerDefenseLeaderboards'),
+        orderBy('maxWave', 'desc'),
+        orderBy('timestamp', 'desc'),
+        limit(limitCount)
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => doc.data() as TowerDefenseScore);
+    } catch (e) {
+      console.error('Error fetching TD scores: ', e);
       return [];
     }
   }

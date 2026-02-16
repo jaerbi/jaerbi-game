@@ -1,10 +1,12 @@
-import { Component, signal, OnDestroy, OnInit, HostListener } from '@angular/core';
+import { Component, signal, OnDestroy, OnInit, HostListener, ChangeDetectionStrategy, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { TowerDefenseEngineService, TDTile } from '../../services/tower-defense-engine.service';
+import { TowerDefenseEngineService } from '../../services/tower-defense-engine.service';
 import { UnitsComponent } from '../units/units.component';
-import { Unit } from '../../models/unit.model';
+import { TDTile, Unit } from '../../models/unit.model';
 import { SettingsService } from '../../services/settings.service';
+import { FirebaseService } from '../../services/firebase.service';
+import { Subscription } from 'rxjs';
 
 @Component({
     selector: 'app-tower-defense',
@@ -12,6 +14,7 @@ import { SettingsService } from '../../services/settings.service';
     imports: [CommonModule, UnitsComponent],
     templateUrl: 'tower-defense.component.html',
     styleUrls: ['../../app.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     styles: [`
     :host {
       display: block;
@@ -50,10 +53,25 @@ import { SettingsService } from '../../services/settings.service';
       border: 2px solid rgba(56, 189, 248, 0.5);
       border-radius: 50%;
       pointer-events: none;
-      z-index: 5;
+      z-index: 50;
       transform: translate(-50%, -50%);
       transition: all 0.2s ease-out;
     }
+
+    .frost-aura-visual {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 248px; /* 4 клітинки * 62px */
+  height: 248px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  pointer-events: none;
+  z-index: 5;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+}
 
     .enemy {
       position: absolute;
@@ -66,6 +84,9 @@ import { SettingsService } from '../../services/settings.service';
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+    .enemy-fast {
+      box-shadow: none;
     }
     
     .projectile {
@@ -90,8 +111,13 @@ import { SettingsService } from '../../services/settings.service';
     }
   `]
 })
-export class TowerDefenseComponent implements OnInit, OnDestroy {
+export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     selectedTile = signal<TDTile | null>(null);
+    private uiSub?: Subscription;
+    @ViewChild('gameCanvas', { static: false }) gameCanvas?: ElementRef<HTMLCanvasElement>;
+    private ctx?: CanvasRenderingContext2D | null;
+    private rafId: number | null = null;
+    private readonly isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
 
     @HostListener('window:keydown', ['$event'])
     onKeyDown(event: KeyboardEvent) {
@@ -112,19 +138,39 @@ export class TowerDefenseComponent implements OnInit, OnDestroy {
     constructor(
         public tdEngine: TowerDefenseEngineService,
         public settings: SettingsService,
-        private router: Router,
+        public firebase: FirebaseService,
+        public router: Router,
+        private cdr: ChangeDetectorRef,
     ) { }
 
     ngOnInit() {
-        this.tdEngine.initGame();
+        this.tdEngine.resetEngine();
+        this.uiSub = this.tdEngine.uiTick$.subscribe(() => {
+            this.cdr.detectChanges();
+        });
+    }
+
+    ngAfterViewInit() {
+        if (!this.isBrowser) return;
+        this.initCanvas();
+        this.startCanvasLoop();
+        window.addEventListener('resize', this.resizeCanvas);
     }
 
     ngOnDestroy() {
-        this.tdEngine.dispose();
+        this.uiSub?.unsubscribe();
+        if (this.rafId !== null) {
+            cancelAnimationFrame(this.rafId);
+            this.rafId = null;
+        }
+        if (this.isBrowser) {
+            window.removeEventListener('resize', this.resizeCanvas);
+        }
+        this.tdEngine.resetEngine();
     }
 
     goBack() {
-        this.tdEngine.dispose();
+        this.tdEngine.resetEngine();
         this.router.navigate(['/']);
     }
 
@@ -177,12 +223,17 @@ export class TowerDefenseComponent implements OnInit, OnDestroy {
 
         const hue = enemy.hue ?? ((this.tdEngine.wave() * 40) % 360);
         const scale = enemy.isBoss ? 1.5 : 1;
+        const shatter = enemy.shatterStacks ?? 0;
+        const lightness = shatter > 0 ? Math.min(70, 50 + shatter * 4) : 50;
+        const color = enemy.isFrozen
+            ? `hsl(190, 80%, ${lightness}%)`
+            : `hsl(${hue}, 70%, ${lightness}%)`;
 
         return {
             left: `${x * 62 + 10}px`,
             top: `${y * 62 + 10}px`,
             transform: `scale(${scale})`,
-            background: `hsl(${hue}, 70%, 50%)`
+            background: color
         };
     }
 
@@ -215,6 +266,194 @@ export class TowerDefenseComponent implements OnInit, OnDestroy {
         if (tile && tile.tower) {
             this.tdEngine.sellTower(tile.x, tile.y);
             this.selectedTile.set(null);
+        }
+    }
+
+    buyAbility() {
+        const tile = this.selectedTile();
+        if (tile && tile.tower && tile.tower.level === 4 && !tile.tower.specialActive) {
+            this.tdEngine.buyAbility(tile.x, tile.y);
+        }
+    }
+
+    setSpeed(multiplier: number) {
+        this.tdEngine.gameSpeedMultiplier.set(multiplier);
+    }
+
+    onLoginClick() {
+        const user = this.firebase.user$();
+        if (user) return;
+        try {
+            this.firebase.loginWithGoogle();
+        } catch { }
+    }
+
+    private initCanvas = () => {
+        const canvas = this.gameCanvas?.nativeElement;
+        if (!canvas) return;
+        this.ctx = canvas.getContext('2d');
+        this.resizeCanvas();
+    };
+
+    private resizeCanvas = () => {
+        const canvas = this.gameCanvas?.nativeElement;
+        if (!canvas) return;
+        const tile = this.tdEngine.tileSize;
+        const size = this.tdEngine.gridSize * tile;
+        // Style size
+        canvas.style.width = `${size}px`;
+        canvas.style.height = `${size}px`;
+        // Device pixel ratio scaling
+        const dpr = Math.max(1, window.devicePixelRatio || 1);
+        canvas.width = Math.floor(size * dpr);
+        canvas.height = Math.floor(size * dpr);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        this.ctx = ctx;
+    };
+
+    private startCanvasLoop() {
+        const step = () => {
+            this.drawFrame();
+            this.rafId = requestAnimationFrame(step);
+        };
+        this.rafId = requestAnimationFrame(step);
+    }
+
+    private clearCanvas(ctx: CanvasRenderingContext2D, size: number) {
+        ctx.clearRect(0, 0, size, size);
+    }
+
+    private drawFrame() {
+        const canvas = this.gameCanvas?.nativeElement;
+        const ctx = this.ctx;
+        if (!canvas || !ctx) return;
+        const tile = this.tdEngine.tileSize;
+        const size = this.tdEngine.gridSize * tile;
+        this.clearCanvas(ctx, size);
+        this.drawGrid(ctx, tile);
+        this.drawFrostAuras(ctx, tile);
+        this.drawTowers(ctx, tile);
+        this.drawEnemies(ctx, tile);
+        if (this.tdEngine.gameSpeedMultiplier() === 1) {
+            this.drawProjectiles(ctx, tile);
+        }
+        this.drawRangeIndicator(ctx, tile);
+    }
+
+    private drawGrid(ctx: CanvasRenderingContext2D, tile: number) {
+        const grid = this.tdEngine.getGridRef();
+        for (let y = 0; y < grid.length; y++) {
+            const row = grid[y];
+            for (let x = 0; x < row.length; x++) {
+                const t = row[x];
+                if (t.type === 'path') ctx.fillStyle = '#475569';
+                else if (t.type === 'buildable') ctx.fillStyle = '#1e293b';
+                else ctx.fillStyle = 'rgba(255,255,255,0.06)';
+                ctx.fillRect(x * tile, y * tile, tile - 2, tile - 2);
+            }
+        }
+    }
+
+    private drawTowers(ctx: CanvasRenderingContext2D, tile: number) {
+        const towers = this.tdEngine.getTowersRef();
+        for (const t of towers) {
+            const x = t.position.x * tile;
+            const y = t.position.y * tile;
+            // Simple high-contrast tower glyph
+            ctx.fillStyle = '#0ea5e9';
+            if (t.type === 2) ctx.fillStyle = '#a78bfa';
+            if (t.type === 3) ctx.fillStyle = '#f59e0b';
+            if (t.type === 4) ctx.fillStyle = '#ef4444';
+            const pad = 6;
+            ctx.fillRect(x + pad, y + pad, tile - pad * 2, tile - pad * 2);
+        }
+    }
+
+    private drawFrostAuras(ctx: CanvasRenderingContext2D, tile: number) {
+        const towers = this.tdEngine.getTowersRef();
+        for (const t of towers) {
+            if (t.type === 1 && t.specialActive) {
+                const cx = t.position.x * tile + tile / 2;
+                const cy = t.position.y * tile + tile / 2;
+                const radius = 2 * tile;
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+                ctx.stroke();
+            }
+        }
+    }
+
+    private drawEnemies(ctx: CanvasRenderingContext2D, tile: number) {
+        const enemies = this.tdEngine.getEnemiesRef();
+        for (const e of enemies) {
+            const size = (e.isBoss ? 1.5 : 1) * (tile * 0.65);
+            const r = size / 2;
+            const x = (e.displayX ?? (e.position.x * tile + 10)) + r - tile * 0.35;
+            const y = (e.displayY ?? (e.position.y * tile + 10)) + r - tile * 0.35;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fillStyle = e.bg || (e.isFrozen ? '#7dd3fc' : '#ef4444');
+            ctx.shadowColor = (this.tdEngine.gameSpeedMultiplier() > 1) ? 'transparent' : ctx.fillStyle;
+            ctx.shadowBlur = (this.tdEngine.gameSpeedMultiplier() > 1) ? 0 : 10;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            // Health bar
+            const barW = size;
+            const barH = 6;
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(x - r, y - r - 10, barW, barH);
+            ctx.fillStyle = '#10b981';
+            const pct = Math.max(0, Math.min(1, e.hp / e.maxHp));
+            ctx.fillRect(x - r, y - r - 10, barW * pct, barH);
+        }
+    }
+
+    private drawProjectiles(ctx: CanvasRenderingContext2D, tile: number) {
+        const projs = this.tdEngine.getProjectilesRef();
+        ctx.fillStyle = '#fbbf24';
+        for (const p of projs) {
+            const x = p.from.x + (p.to.x - p.from.x) * p.progress;
+            const y = p.from.y + (p.to.y - p.from.y) * p.progress;
+            ctx.beginPath();
+            ctx.arc(x * tile + tile / 2, y * tile + tile / 2, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    private drawRangeIndicator(ctx: CanvasRenderingContext2D, tile: number) {
+        const tileSel = this.selectedTile();
+        if (!tileSel || !tileSel.tower) return;
+        const t = tileSel.tower;
+        const cx = t.position.x * tile + tile / 2;
+        const cy = t.position.y * tile + tile / 2;
+        const radius = t.range * tile;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.12)';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+        ctx.stroke();
+    }
+
+    onCanvasClick(evt: MouseEvent) {
+        const canvas = this.gameCanvas?.nativeElement;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const xCss = evt.clientX - rect.left;
+        const yCss = evt.clientY - rect.top;
+        const tile = this.tdEngine.tileSize;
+        const gx = Math.floor(xCss / tile);
+        const gy = Math.floor(yCss / tile);
+        const grid = this.tdEngine.getGridRef();
+        if (gy >= 0 && gy < grid.length && gx >= 0 && gx < grid[0].length) {
+            this.onTileClick(grid[gy][gx]);
         }
     }
 }

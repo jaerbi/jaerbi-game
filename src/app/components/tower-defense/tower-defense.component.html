@@ -31,42 +31,89 @@
     </defs>
   </svg>
   <!-- Style for Units END -->
-  <!-- Top HUD -->
-  <div class="flex items-center justify-between mb-4 bg-slate-800 p-3 rounded-lg border border-slate-700">
-    <!-- Left: Exit -->
-    <div class="flex items-center">
-      <button
-        (click)="goBack()"
-        class="cursor-pointer px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm font-bold transition-colors"
-      >
-        {{ settings.t('EXIT_GAME') }}
-      </button>
-    </div>
-    <!-- Center: Stats -->
-    <div class="flex items-baseline gap-6 font-black tracking-wide">
-      <div class="text-emerald-400 text-lg font-mono">{{ settings.t('MONEY') }}: ${{ tdEngine.money() }}</div>
-      <div class="text-rose-400 text-lg font-mono">{{ settings.t('LIVES') }}: {{ tdEngine.lives() }}</div>
-      <div class="text-sky-400 text-lg font-mono">{{ settings.t('WAVE') }}: {{ tdEngine.wave() }}</div>
-    </div>
-    <!-- Right: Actions -->
-    <div class="flex items-center gap-3">
-      <button
-        (click)="onRestart()"
-        class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded transition-colors uppercase tracking-wider"
-      >
-        {{ settings.t('RESTART_GAME') }}
-      </button>
-      <button
-        (click)="tdEngine.startWave()"
-        [disabled]="tdEngine.isWaveInProgress()"
-        class="cursor-pointer px-4 py-2 rounded text-sm font-black transition-all"
-        [class.bg-sky-600]="!tdEngine.isWaveInProgress()"
-        [class.hover:bg-sky-500]="!tdEngine.isWaveInProgress()"
-        [class.bg-slate-700]="tdEngine.isWaveInProgress()"
-        [class.text-slate-500]="tdEngine.isWaveInProgress()"
-      >
-        {{ tdEngine.isWaveInProgress() ? settings.t('WAVE_IN_PROGRESS') : settings.t('START_WAVE') }}
-      </button>
+  <div class="relative">
+    <div class="hud-overlay">
+      <div class="flex items-center justify-between mb-4 bg-slate-800 p-3 rounded-lg border border-slate-700">
+        <div class="flex items-center gap-3">
+          <button
+            (click)="goBack()"
+            class="cursor-pointer px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm font-bold transition-colors"
+          >
+            {{ settings.t('EXIT_GAME') }}
+          </button>
+          <button
+            (click)="router.navigate(['/tower-defense-leaderboard'])"
+            class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded transition-colors uppercase tracking-wider"
+          >
+            {{ settings.t('RANKING') }}
+          </button>
+        </div>
+        <div class="flex flex-col items-center gap-1 font-black tracking-wide">
+          <div class="flex items-baseline gap-6">
+            <div class="text-emerald-400 text-lg font-mono">{{ settings.t('MONEY') }}: ${{ tdEngine.money() }}</div>
+            <div class="text-rose-400 text-lg font-mono">{{ settings.t('LIVES') }}: {{ tdEngine.lives() }}</div>
+            <div class="text-sky-400 text-lg font-mono">{{ settings.t('WAVE') }}: {{ tdEngine.wave() }}</div>
+          </div>
+          <div class="flex items-center gap-1 text-xs">
+            <span class="text-slate-400 mr-1">Speed:</span>
+            <button
+              (click)="setSpeed(1)"
+              class="px-2 py-0.5 rounded border text-[10px] font-bold"
+              [class.bg-slate-200]="tdEngine.gameSpeedMultiplier() === 1"
+              [class.text-slate-900]="tdEngine.gameSpeedMultiplier() === 1"
+              [class.bg-slate-800]="tdEngine.gameSpeedMultiplier() !== 1"
+              [class.text-slate-300]="tdEngine.gameSpeedMultiplier() !== 1"
+            >
+              1x
+            </button>
+            <button
+              (click)="setSpeed(2)"
+              class="px-2 py-0.5 rounded border text-[10px] font-bold"
+              [class.bg-slate-200]="tdEngine.gameSpeedMultiplier() === 2"
+              [class.text-slate-900]="tdEngine.gameSpeedMultiplier() === 2"
+              [class.bg-slate-800]="tdEngine.gameSpeedMultiplier() !== 2"
+              [class.text-slate-300]="tdEngine.gameSpeedMultiplier() !== 2"
+            >
+              2x
+            </button>
+            <button
+              (click)="setSpeed(4)"
+              class="px-2 py-0.5 rounded border text-[10px] font-bold"
+              [class.bg-slate-200]="tdEngine.gameSpeedMultiplier() === 4"
+              [class.text-slate-900]="tdEngine.gameSpeedMultiplier() === 4"
+              [class.bg-slate-800]="tdEngine.gameSpeedMultiplier() !== 4"
+              [class.text-slate-300]="tdEngine.gameSpeedMultiplier() !== 4"
+            >
+              4x
+            </button>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            (click)="onLoginClick()"
+            class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded transition-colors uppercase tracking-wider"
+          >
+            {{ firebase.user$() ? firebase.user$()?.displayName || 'Account' : 'Login to Save Score' }}
+          </button>
+          <button
+            (click)="onRestart()"
+            class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded transition-colors uppercase tracking-wider"
+          >
+            {{ settings.t('RESTART_GAME') }}
+          </button>
+          <button
+            (click)="tdEngine.startWave()"
+            [disabled]="tdEngine.isWaveInProgress()"
+            class="cursor-pointer px-4 py-2 rounded text-sm font-black transition-all"
+            [class.bg-sky-600]="!tdEngine.isWaveInProgress()"
+            [class.hover:bg-sky-500]="!tdEngine.isWaveInProgress()"
+            [class.bg-slate-700]="tdEngine.isWaveInProgress()"
+            [class.text-slate-500]="tdEngine.isWaveInProgress()"
+          >
+            {{ tdEngine.isWaveInProgress() ? settings.t('WAVE_IN_PROGRESS') : settings.t('START_WAVE') }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -75,45 +122,7 @@
     <div
       class="flex-1 relative bg-slate-900 rounded-lg overflow-hidden border border-slate-700 flex items-center justify-center p-4"
     >
-      <div class="td-grid relative">
-        <!-- Range Indicator -->
-        <div class="range-indicator" [ngStyle]="getRangeStyle()"></div>
-
-        @for (row of tdEngine.grid(); track $index; let y = $index) {
-          @for (tile of row; track $index; let x = $index) {
-            <div
-              class="td-tile unit-svg-wrapper theme-player"
-              [class.tile-path]="tile.type === 'path'"
-              [class.tile-buildable]="tile.type === 'buildable'"
-              [class.tile-void]="tile.type === 'void'"
-              [class.ring-2]="selectedTile() === tile"
-              [class.ring-white]="selectedTile() === tile"
-              (click)="onTileClick(tile)"
-            >
-              @if (tile.tower) {
-                <app-units [unit]="asUnit(tile.tower)" class="w-full h-full p-1"></app-units>
-              }
-            </div>
-          }
-        }
-
-        <!-- Enemies -->
-        @for (enemy of tdEngine.enemies(); track enemy.id) {
-          <div class="enemy" [ngStyle]="getEnemyStyle(enemy)">
-            <div
-              class="absolute -top-2 left-0 w-full h-1 bg-slate-800 rounded-full overflow-hidden"
-              style="z-index: 100"
-            >
-              <div class="h-full bg-emerald-500" [style.width.%]="(enemy.hp / enemy.maxHp) * 100"></div>
-            </div>
-          </div>
-        }
-
-        <!-- Projectiles -->
-        @for (proj of tdEngine.projectiles(); track proj.id) {
-          <div class="projectile" [ngStyle]="getProjectileStyle(proj)"></div>
-        }
-      </div>
+      <canvas #gameCanvas class="block rounded" (click)="onCanvasClick($event)"></canvas>
     </div>
 
     <!-- Sidebar Controls -->
@@ -122,7 +131,9 @@
       <div class="flex-1 bg-slate-800 rounded-lg border border-slate-700 p-4 overflow-y-auto">
         @if (selectedTile(); as tile) {
           @if (!tile.tower) {
-            <h3 class="text-sm font-bold text-slate-400 mb-4 uppercase tracking-wider">{{ settings.t('BUY_DEFENDER') }}</h3>
+            <h3 class="text-sm font-bold text-slate-400 mb-4 uppercase tracking-wider">
+              {{ settings.t('BUY_DEFENDER') }}
+            </h3>
             <div class="flex flex-col gap-3">
               @for (cost of tdEngine.towerCosts; track $index) {
                 @let tier = $index + 1;
@@ -143,7 +154,9 @@
               }
             </div>
           } @else {
-            <h3 class="text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider">{{ settings.t('DEFENDER_INFO') }}</h3>
+            <h3 class="text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider">
+              {{ settings.t('DEFENDER_INFO') }}
+            </h3>
             <div class="bg-slate-900 rounded p-3 mb-4">
               <div class="flex justify-between mb-1">
                 <span class="text-xs text-slate-500">{{ settings.t('TIER') }}</span>
@@ -177,15 +190,38 @@
                 <div
                   class="w-full py-3 bg-slate-900 text-slate-500 rounded text-center font-bold border border-slate-700"
                 >
-                 {{ settings.t('MAX_LEVEL') }}
+                  {{ settings.t('MAX_LEVEL') }}
                 </div>
               }
               <button
                 (click)="sellTower()"
                 class="w-full py-3 bg-rose-700 hover:bg-rose-600 rounded font-bold transition-all flex justify-center items-center text-sm"
               >
-               {{ settings.t('SELL') }} (50% REFUND)
+                {{ settings.t('SELL') }} (50% REFUND)
               </button>
+              @if (tile.tower.level === 4) {
+                <button
+                  (click)="buyAbility()"
+                  [disabled]="tile.tower.specialActive || tdEngine.money() < tdEngine.getSpecialCost(tile.tower)"
+                  class="w-full py-3 rounded font-bold transition-all flex justify-between px-4 items-center"
+                  [class.bg-purple-600]="
+                    !tile.tower.specialActive && tdEngine.money() >= tdEngine.getSpecialCost(tile.tower)
+                  "
+                  [class.hover:bg-purple-500]="
+                    !tile.tower.specialActive && tdEngine.money() >= tdEngine.getSpecialCost(tile.tower)
+                  "
+                  [class.bg-slate-700]="
+                    tile.tower.specialActive || tdEngine.money() < tdEngine.getSpecialCost(tile.tower)
+                  "
+                >
+                  <span>
+                    {{ tile.tower.specialActive ? 'Ability Active' : 'Buy Ability' }}
+                  </span>
+                  <span class="font-mono" *ngIf="!tile.tower.specialActive">
+                    ${{ tdEngine.getSpecialCost(tile.tower) }}
+                  </span>
+                </button>
+              }
             </div>
           }
         } @else {
@@ -205,9 +241,9 @@
               />
             </svg>
             <p class="text-sm">
-               {{ settings.t('SELECT_BUILD_TILE') }}
+              {{ settings.t('SELECT_BUILD_TILE') }}
               <br />
-               {{ settings.t('TO_PLACE_DEFENDER') }}
+              {{ settings.t('TO_PLACE_DEFENDER') }}
             </p>
           </div>
         }
@@ -219,7 +255,9 @@
     <div class="fixed inset-0 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm z-[200]">
       <div class="bg-slate-900 border border-slate-700 rounded-lg px-8 py-6 text-center shadow-xl">
         <h2 class="text-2xl font-black text-rose-400 mb-2">{{ settings.t('GAME_OVER') }}</h2>
-        <p class="text-slate-300 mb-4">{{ settings.t('YOU_SURVIVED') }} {{ tdEngine.wave() }} {{ settings.t('WAVES') }}</p>
+        <p class="text-slate-300 mb-4">
+          {{ settings.t('YOU_SURVIVED') }} {{ tdEngine.wave() }} {{ settings.t('WAVES') }}
+        </p>
         <button
           (click)="onRestart()"
           class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2 rounded"

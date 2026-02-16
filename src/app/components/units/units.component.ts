@@ -14,6 +14,7 @@ import { Unit } from '../../models/unit.model';
 export class UnitsComponent {
 
     @Input({ required: true }) unit!: Unit;
+    @Input() isTower: boolean = false;
 
     constructor(public gameEngine: GameEngineService, public settings: SettingsService) { }
 }
