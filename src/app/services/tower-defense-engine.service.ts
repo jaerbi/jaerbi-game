@@ -18,7 +18,8 @@ export interface Tower {
     damage: number;
     range: number;
     fireInterval: number;
-    lastFired: number;
+    cooldown: number;
+    specialActive: boolean;
 }
 
 export interface Enemy {
@@ -31,6 +32,10 @@ export interface Enemy {
     progress: number;
     isBoss?: boolean;
     hue: number;
+    baseSpeed: number;
+    speedModifier: number;
+    shatterStacks: number;
+    isFrozen: boolean;
 }
 
 export interface Projectile {
@@ -64,12 +69,14 @@ export class TowerDefenseEngineService {
 
     enemies = signal<Enemy[]>([]);
     projectiles = signal<Projectile[]>([]);
+    gameSpeedMultiplier = signal(1);
 
     private enemiesInternal: Enemy[] = [];
     private projectilesInternal: Projectile[] = [];
 
     private animationFrameId: number | null = null;
     private lastUpdateTime = 0;
+    private lastUiPublishTime = 0;
     private enemiesToSpawn = 0;
     private currentWaveEnemyCount = 0;
     private spawnTimer = 0;
@@ -79,10 +86,10 @@ export class TowerDefenseEngineService {
     towerCosts = [15, 50, 250, 1500];
 
     private tierStats = [
-        { damage: 5, range: 2, fireInterval: 500 },
-        { damage: 20, range: 3, fireInterval: 1000 },
-        { damage: 80, range: 4, fireInterval: 2000 },
-        { damage: 300, range: 5, fireInterval: 3000 }
+        { damage: 5, range: 2, fireInterval: 0.5 },
+        { damage: 20, range: 3, fireInterval: 1 },
+        { damage: 80, range: 4, fireInterval: 2 },
+        { damage: 300, range: 5, fireInterval: 3 }
     ];
 
     constructor(private ngZone: NgZone) {
@@ -216,18 +223,24 @@ export class TowerDefenseEngineService {
         }
         this.stopGameLoop();
         this.lastUpdateTime = performance.now();
+        this.lastUiPublishTime = this.lastUpdateTime;
         this.ngZone.runOutsideAngular(() => {
             const loop = (currentTime: number) => {
                 const dt = (currentTime - this.lastUpdateTime) / 1000; // seconds
                 this.lastUpdateTime = currentTime;
 
                 this.updateGame(dt);
-                // Publish a minimal snapshot once per frame
-                this.ngZone.run(() => {
-                    // Spread to ensure signal change detection with minimal work
-                    this.enemies.set([...this.enemiesInternal]);
-                    this.projectiles.set([...this.projectilesInternal]);
-                });
+
+                if (!this.gameOver()) {
+                    const sinceLastUi = currentTime - this.lastUiPublishTime;
+                    if (sinceLastUi >= 100) {
+                        this.lastUiPublishTime = currentTime;
+                        this.ngZone.run(() => {
+                            this.enemies.set([...this.enemiesInternal]);
+                            this.projectiles.set([...this.projectilesInternal]);
+                        });
+                    }
+                }
 
                 if (this.isWaveInProgress() || this.enemiesInternal.length > 0) {
                     this.animationFrameId = requestAnimationFrame(loop);
@@ -241,10 +254,11 @@ export class TowerDefenseEngineService {
     }
 
     updateGame(dt: number) {
-        this.handleSpawning(dt);
-        this.updateEnemies(dt);
-        this.updateTowers(dt);
-        this.updateProjectiles(dt);
+        const effectiveDt = dt * this.gameSpeedMultiplier();
+        this.handleSpawning(effectiveDt);
+        this.updateEnemies(effectiveDt);
+        this.updateTowers(effectiveDt);
+        this.updateProjectiles(effectiveDt);
 
         if (this.lives() <= 0 && !this.gameOver()) {
             this.enemiesInternal = [];
@@ -298,16 +312,28 @@ export class TowerDefenseEngineService {
             speed: speedFinal,
             progress: 0,
             isBoss: boss,
-            hue
+            hue,
+            baseSpeed,
+            speedModifier: 1,
+            shatterStacks: 0,
+            isFrozen: false
         };
         this.enemiesInternal.push(newEnemy);
     }
 
     private updateEnemies(dt: number) {
-        // In-place update; remove dead or escaped enemies
         for (let i = this.enemiesInternal.length - 1; i >= 0; i--) {
             const enemy = this.enemiesInternal[i];
-            enemy.progress += enemy.speed * dt;
+            enemy.speedModifier = 1;
+            enemy.isFrozen = false;
+        }
+
+        this.applyFrostAuras();
+
+        for (let i = this.enemiesInternal.length - 1; i >= 0; i--) {
+            const enemy = this.enemiesInternal[i];
+            const moveSpeed = enemy.baseSpeed * enemy.speedModifier;
+            enemy.progress += moveSpeed * dt;
 
             if (enemy.progress >= 1) {
                 enemy.pathIndex++;
@@ -329,18 +355,40 @@ export class TowerDefenseEngineService {
     }
 
     private updateTowers(dt: number) {
-        const now = Date.now();
         if (this.enemiesInternal.length === 0) return;
         const gridSnapshot = this.grid();
         for (const row of gridSnapshot) {
             for (const tile of row) {
                 if (tile.tower) {
                     const tower = tile.tower;
-                    if (now - tower.lastFired > tower.fireInterval) {
+                    tower.cooldown -= dt;
+                    if (tower.cooldown <= 0) {
                         const target = this.findNearestEnemy(tower, this.enemiesInternal);
                         if (target) {
                             this.fireAt(tower, target);
-                            tower.lastFired = now;
+                            tower.cooldown = tower.fireInterval;
+                        } else {
+                            tower.cooldown = 0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private applyFrostAuras() {
+        const gridSnapshot = this.grid();
+        for (const row of gridSnapshot) {
+            for (const tile of row) {
+                if (tile.tower && tile.tower.specialActive && tile.tower.type === 1) {
+                    const tower = tile.tower;
+                    for (const enemy of this.enemiesInternal) {
+                        const dx = tower.position.x - enemy.position.x;
+                        const dy = tower.position.y - enemy.position.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist <= 2) {
+                            enemy.speedModifier = 0.7;
+                            enemy.isFrozen = true;
                         }
                     }
                 }
@@ -365,6 +413,13 @@ export class TowerDefenseEngineService {
         return nearest;
     }
 
+    private pushProjectile(p: Projectile) {
+        if (this.projectilesInternal.length >= 200) {
+            this.projectilesInternal.shift();
+        }
+        this.projectilesInternal.push(p);
+    }
+
     private fireAt(tower: Tower, enemy: Enemy) {
         const proj: Projectile = {
             id: crypto.randomUUID(),
@@ -372,10 +427,57 @@ export class TowerDefenseEngineService {
             to: { ...enemy.position },
             progress: 0
         };
-        this.projectilesInternal.push(proj);
+        this.pushProjectile(proj);
 
-        // Immediate damage for MVP simplicity
-        enemy.hp -= tower.damage;
+        let damage = tower.damage;
+
+        if (tower.specialActive && tower.type === 4) {
+            const ratio = enemy.hp / enemy.maxHp;
+            if (ratio < 0.15) {
+                if (enemy.isBoss) {
+                    damage = tower.damage * 3;
+                } else {
+                    enemy.hp = 0;
+                    return;
+                }
+            }
+        }
+
+        if (tower.specialActive && tower.type === 3) {
+            const nextStacks = Math.min(5, enemy.shatterStacks + 1);
+            enemy.shatterStacks = nextStacks;
+            const multiplier = 1 + nextStacks * 0.1;
+            damage = Math.floor(damage * multiplier);
+        }
+
+        enemy.hp -= damage;
+
+        if (tower.specialActive && tower.type === 2) {
+            if (Math.random() < 0.25) {
+                const secondary: Enemy[] = [];
+                for (const other of this.enemiesInternal) {
+                    if (other.id === enemy.id) continue;
+                    const dx = enemy.position.x - other.position.x;
+                    const dy = enemy.position.y - other.position.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist <= 3) {
+                        secondary.push(other);
+                        if (secondary.length >= 2) break;
+                    }
+                }
+                const secondaryDamage = Math.floor(tower.damage * 0.5);
+                for (const s of secondary) {
+                    const chainProj: Projectile = {
+                        id: crypto.randomUUID(),
+                        from: { ...tower.position },
+                        to: { ...s.position },
+                        progress: 0
+                    };
+                    this.pushProjectile(chainProj);
+                    s.hp -= secondaryDamage;
+                }
+            }
+        }
     }
 
     private updateProjectiles(dt: number) {
@@ -407,7 +509,8 @@ export class TowerDefenseEngineService {
                     damage: stats.damage,
                     range: stats.range,
                     fireInterval: stats.fireInterval,
-                    lastFired: 0
+                    cooldown: 0,
+                    specialActive: false
                 };
                 this.money.update(m => m - cost);
             }
@@ -445,8 +548,26 @@ export class TowerDefenseEngineService {
                 multiplier = 0.7;
                 break;
         }
-
         return Math.floor(tower.baseCost * multiplier);
+    }
+
+    getSpecialCost(tower: Tower): number {
+        return tower.baseCost * 4;
+    }
+
+    buyAbility(x: number, y: number) {
+        this.grid.update(grid => {
+            const tile = grid[y][x];
+            if (tile.tower && tile.tower.level === 4 && !tile.tower.specialActive) {
+                const cost = this.getSpecialCost(tile.tower);
+                if (this.money() >= cost) {
+                    tile.tower.specialActive = true;
+                    tile.tower.invested += cost;
+                    this.money.update(m => m - cost);
+                }
+            }
+            return [...grid.map(row => [...row])];
+        });
     }
 
     sellTower(x: number, y: number) {

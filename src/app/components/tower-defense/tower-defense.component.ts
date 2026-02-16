@@ -50,7 +50,7 @@ import { SettingsService } from '../../services/settings.service';
       border: 2px solid rgba(56, 189, 248, 0.5);
       border-radius: 50%;
       pointer-events: none;
-      z-index: 5;
+      z-index: 50;
       transform: translate(-50%, -50%);
       transition: all 0.2s ease-out;
     }
@@ -177,12 +177,17 @@ export class TowerDefenseComponent implements OnInit, OnDestroy {
 
         const hue = enemy.hue ?? ((this.tdEngine.wave() * 40) % 360);
         const scale = enemy.isBoss ? 1.5 : 1;
+        const shatter = enemy.shatterStacks ?? 0;
+        const lightness = shatter > 0 ? Math.min(70, 50 + shatter * 4) : 50;
+        const color = enemy.isFrozen
+            ? `hsl(190, 80%, ${lightness}%)`
+            : `hsl(${hue}, 70%, ${lightness}%)`;
 
         return {
             left: `${x * 62 + 10}px`,
             top: `${y * 62 + 10}px`,
             transform: `scale(${scale})`,
-            background: `hsl(${hue}, 70%, 50%)`
+            background: color
         };
     }
 
@@ -210,11 +215,44 @@ export class TowerDefenseComponent implements OnInit, OnDestroy {
         };
     }
 
+    getFrostAuraStyle(tower: any) {
+        const radiusTiles = 2;
+        const tileSize = 62;
+        const size = radiusTiles * 2 * tileSize;
+        const centerX = tower.position.x * tileSize + (tileSize / 2);
+        const centerY = tower.position.y * tileSize + (tileSize / 2);
+
+        return {
+            position: 'absolute',
+            left: `${centerX}px`,
+            top: `${centerY}px`,
+            width: `${size}px`,
+            height: `${size}px`,
+            background: 'rgba(56, 189, 248, 0.03)',
+            border: '1px solid rgba(56, 189, 248, 0.3)',
+            borderRadius: '50%',
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+            zIndex: 5
+        };
+    }
+
     sellTower() {
         const tile = this.selectedTile();
         if (tile && tile.tower) {
             this.tdEngine.sellTower(tile.x, tile.y);
             this.selectedTile.set(null);
         }
+    }
+
+    buyAbility() {
+        const tile = this.selectedTile();
+        if (tile && tile.tower && tile.tower.level === 4 && !tile.tower.specialActive) {
+            this.tdEngine.buyAbility(tile.x, tile.y);
+        }
+    }
+
+    setSpeed(multiplier: number) {
+        this.tdEngine.gameSpeedMultiplier.set(multiplier);
     }
 }
