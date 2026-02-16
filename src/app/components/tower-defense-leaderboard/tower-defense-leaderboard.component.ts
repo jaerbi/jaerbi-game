@@ -1,15 +1,18 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FirebaseService, TowerDefenseScore } from '../../services/firebase.service';
+import { RouterLink } from '@angular/router';
+import { SettingsService } from '../../services/settings.service';
 
 @Component({
     selector: 'app-tower-defense-leaderboard',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, RouterLink],
     template: `
     <div class="min-h-screen bg-slate-900 text-white flex flex-col items-center py-10 px-4">
       <div class="w-full max-w-3xl bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6">
-        <div class="flex items-center justify-between mb-4">
+          <a routerLink="/tower-defense" class="cursor-pointer px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm font-bold transition-colors">{{ settings.t('RETURN_TO_MAP') }}</a>
+        <div class="flex items-center justify-between mb-4 mt-4">
           <h1 class="text-2xl font-black tracking-wide">Tower Defense Leaderboard</h1>
         </div>
 
@@ -63,7 +66,9 @@ export class TowerDefenseLeaderboardComponent implements OnInit {
     loading = signal<boolean>(true);
     scores = signal<TowerDefenseScore[]>([]);
 
-    constructor(private firebase: FirebaseService) { }
+    constructor(private firebase: FirebaseService,
+        public settings: SettingsService,
+    ) { }
 
     ngOnInit() {
         this.loadScores();

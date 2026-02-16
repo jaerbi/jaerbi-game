@@ -17,7 +17,7 @@
       >
         {{ unit.level }}
       </text>
-      @if (gameEngine.hasDefenseBonus(unit)) {
+      @if (gameEngine.hasDefenseBonus(unit) && !isTower) {
         <g>
           <path d="M0,0 L12,0 L12,8 C12,12 6,16 6,16 C6,16 0,12 0,8 Z" fill="var(--u-light)" opacity="0.9" />
           <path d="M6,2 V12" stroke="var(--u-fill)" stroke-width="1" opacity="0.9" />

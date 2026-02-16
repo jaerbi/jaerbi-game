@@ -34,12 +34,18 @@
   <!-- Top HUD -->
   <div class="flex items-center justify-between mb-4 bg-slate-800 p-3 rounded-lg border border-slate-700">
     <!-- Left: Exit -->
-    <div class="flex items-center">
+    <div class="flex items-center gap-3">
       <button
         (click)="goBack()"
         class="cursor-pointer px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm font-bold transition-colors"
       >
         {{ settings.t('EXIT_GAME') }}
+      </button>
+      <button
+        (click)="router.navigate(['/tower-defense-leaderboard'])"
+        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded transition-colors uppercase tracking-wider"
+      >
+        {{ settings.t('RANKING') }}
       </button>
     </div>
     <!-- Center: Stats + Speed -->
@@ -85,6 +91,12 @@
     </div>
     <!-- Right: Actions -->
     <div class="flex items-center gap-3">
+      <button
+        (click)="onLoginClick()"
+        class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded transition-colors uppercase tracking-wider"
+      >
+        {{ firebase.user$() ? firebase.user$()?.displayName || 'Account' : 'Login to Save Score' }}
+      </button>
       <button
         (click)="onRestart()"
         class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded transition-colors uppercase tracking-wider"
@@ -136,15 +148,15 @@
               (click)="onTileClick(tile)"
             >
               @if (tile.tower) {
-                <app-units [unit]="asUnit(tile.tower)" class="w-full h-full p-1"></app-units>
+                <app-units [isTower]="true" [unit]="asUnit(tile.tower)" class="w-full h-full p-1"></app-units>
               }
             </div>
           }
         }
 
         <!-- Enemies -->
-        @for (enemy of tdEngine.enemies(); track enemy.id) {
-          <div class="enemy" [ngStyle]="getEnemyStyle(enemy)">
+        @for (enemy of tdEngine.enemiesView(); track enemy.id) {
+          <div class="enemy" [class.enemy-fast]="tdEngine.gameSpeedMultiplier() > 1" [ngStyle]="getEnemyStyle(enemy)">
             <div
               class="absolute -top-2 left-0 w-full h-1 bg-slate-800 rounded-full overflow-hidden"
               style="z-index: 100"
@@ -155,8 +167,10 @@
         }
 
         <!-- Projectiles -->
-        @for (proj of tdEngine.projectiles(); track proj.id) {
-          <div class="projectile" [ngStyle]="getProjectileStyle(proj)"></div>
+        @if (tdEngine.gameSpeedMultiplier() === 1) {
+          @for (proj of tdEngine.projectilesView(); track proj.id) {
+            <div class="projectile" [ngStyle]="getProjectileStyle(proj)"></div>
+          }
         }
       </div>
     </div>

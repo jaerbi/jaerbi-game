@@ -1,57 +1,7 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { NgZone } from '@angular/core';
 import { FirebaseService } from './firebase.service';
-
-export interface Position {
-    x: number;
-    y: number;
-}
-
-export type TileType = 'path' | 'buildable' | 'void';
-
-export interface Tower {
-    id: string;
-    type: number;
-    level: number;
-    position: Position;
-    baseCost: number;
-    invested: number;
-    damage: number;
-    range: number;
-    fireInterval: number;
-    cooldown: number;
-    specialActive: boolean;
-}
-
-export interface Enemy {
-    id: string;
-    position: Position;
-    pathIndex: number;
-    hp: number;
-    maxHp: number;
-    speed: number;
-    progress: number;
-    isBoss?: boolean;
-    hue: number;
-    baseSpeed: number;
-    speedModifier: number;
-    shatterStacks: number;
-    isFrozen: boolean;
-}
-
-export interface Projectile {
-    id: string;
-    from: Position;
-    to: Position;
-    progress: number;
-}
-
-export interface TDTile {
-    x: number;
-    y: number;
-    type: TileType;
-    tower: Tower | null;
-}
+import { Enemy, Position, Projectile, TDTile, TileType, Tower } from '../models/unit.model';
 
 @Injectable({
     providedIn: 'root'
@@ -92,6 +42,19 @@ export class TowerDefenseEngineService {
 
     private enemiesInternal: Enemy[] = [];
     private projectilesInternal: Projectile[] = [];
+
+    private enemiesViewVersion = signal(0);
+    private projectilesViewVersion = signal(0);
+
+    enemiesView = computed(() => {
+        this.enemiesViewVersion();
+        return this.enemiesInternal;
+    });
+
+    projectilesView = computed(() => {
+        this.projectilesViewVersion();
+        return this.projectilesInternal;
+    });
 
     private animationFrameId: number | null = null;
     private lastUpdateTime = 0;
@@ -161,6 +124,11 @@ export class TowerDefenseEngineService {
             );
             this.grid.set(cleared);
         }
+    }
+
+    resetEngine() {
+        this.dispose();
+        this.generateMap();
     }
 
     initGame() {
@@ -263,7 +231,7 @@ export class TowerDefenseEngineService {
         this.lastUiPublishTime = this.lastUpdateTime;
         this.ngZone.runOutsideAngular(() => {
             const loop = (currentTime: number) => {
-                const dt = (currentTime - this.lastUpdateTime) / 1000; // seconds
+                const dt = (currentTime - this.lastUpdateTime) / 1000;
                 this.lastUpdateTime = currentTime;
 
                 this.updateGame(dt);
@@ -273,8 +241,8 @@ export class TowerDefenseEngineService {
                     if (sinceLastUi >= 16) {
                         this.lastUiPublishTime = currentTime;
                         this.ngZone.run(() => {
-                            this.enemies.set([...this.enemiesInternal]);
-                            this.projectiles.set([...this.projectilesInternal]);
+                            this.enemiesViewVersion.update(v => v + 1);
+                            this.projectilesViewVersion.update(v => v + 1);
                         });
                     }
                 }
@@ -305,6 +273,8 @@ export class TowerDefenseEngineService {
             this.ngZone.run(() => {
                 this.enemies.set([]);
                 this.projectiles.set([]);
+                this.enemiesViewVersion.update(v => v + 1);
+                this.projectilesViewVersion.update(v => v + 1);
                 this.isWaveInProgress.set(false);
                 this.gameOver.set(true);
             });
@@ -316,7 +286,15 @@ export class TowerDefenseEngineService {
         }
 
         if (this.enemiesInternal.length === 0 && this.enemiesToSpawn === 0 && this.isWaveInProgress()) {
-            this.ngZone.run(() => this.isWaveInProgress.set(false));
+            this.enemiesInternal = [];
+            this.projectilesInternal = [];
+            this.ngZone.run(() => {
+                this.enemies.set([]);
+                this.projectiles.set([]);
+                this.enemiesViewVersion.update(v => v + 1);
+                this.projectilesViewVersion.update(v => v + 1);
+                this.isWaveInProgress.set(false);
+            });
         }
     }
 
@@ -455,7 +433,7 @@ export class TowerDefenseEngineService {
     }
 
     private pushProjectile(p: Projectile) {
-        if (this.projectilesInternal.length >= 200) {
+        if (this.projectilesInternal.length >= 100) {
             this.projectilesInternal.shift();
         }
         this.projectilesInternal.push(p);

@@ -1,10 +1,11 @@
-import { Component, signal, OnDestroy, OnInit, HostListener } from '@angular/core';
+import { Component, signal, OnDestroy, OnInit, HostListener, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { TowerDefenseEngineService, TDTile } from '../../services/tower-defense-engine.service';
+import { TowerDefenseEngineService } from '../../services/tower-defense-engine.service';
 import { UnitsComponent } from '../units/units.component';
-import { Unit } from '../../models/unit.model';
+import { TDTile, Unit } from '../../models/unit.model';
 import { SettingsService } from '../../services/settings.service';
+import { FirebaseService } from '../../services/firebase.service';
 
 @Component({
     selector: 'app-tower-defense',
@@ -12,6 +13,7 @@ import { SettingsService } from '../../services/settings.service';
     imports: [CommonModule, UnitsComponent],
     templateUrl: 'tower-defense.component.html',
     styleUrls: ['../../app.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     styles: [`
     :host {
       display: block;
@@ -67,6 +69,9 @@ import { SettingsService } from '../../services/settings.service';
       align-items: center;
       justify-content: center;
     }
+    .enemy-fast {
+      box-shadow: none;
+    }
     
     .projectile {
       position: absolute;
@@ -112,19 +117,20 @@ export class TowerDefenseComponent implements OnInit, OnDestroy {
     constructor(
         public tdEngine: TowerDefenseEngineService,
         public settings: SettingsService,
-        private router: Router,
+        public firebase: FirebaseService,
+        public router: Router,
     ) { }
 
     ngOnInit() {
-        this.tdEngine.initGame();
+        this.tdEngine.resetEngine();
     }
 
     ngOnDestroy() {
-        this.tdEngine.dispose();
+        this.tdEngine.resetEngine();
     }
 
     goBack() {
-        this.tdEngine.dispose();
+        this.tdEngine.resetEngine();
         this.router.navigate(['/']);
     }
 
@@ -232,5 +238,13 @@ export class TowerDefenseComponent implements OnInit, OnDestroy {
 
     setSpeed(multiplier: number) {
         this.tdEngine.gameSpeedMultiplier.set(multiplier);
+    }
+
+    onLoginClick() {
+        const user = this.firebase.user$();
+        if (user) return;
+        try {
+            this.firebase.loginWithGoogle();
+        } catch { }
     }
 }
