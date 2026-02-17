@@ -127,9 +127,59 @@ export type TranslationKey =
   | 'GAME_OVER'
   | 'YOU_SURVIVED'
   | 'TRY_AGAIN'
+  | 'ABILITY_ACTIVE'
+  | 'BUY_ABILITY'
+  | 'FROST_AURA'
+  | 'FROST_AURA_INFO'
+  | 'CHAIN_LIGHTNING'
+  | 'CHAIN_LIGHTNING_INFO'
+  | 'SHATTER_INFO'
+  | 'SHATTER'
+  | 'FINAL_STRIKE'
+  | 'FINAL_STRIKE_INFO'
   | 'INFO';
 
   export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    FINAL_STRIKE_INFO: {
+      en: 'If (Current HP / Max HP) < 0.15: Normal Enemy: Instant Kill. Boss: Deal 300% normal damage (Bosses are resistant to instant death).',
+      uk: `Якщо (Поточні HP / Макс. HP) < 0.15: Звичайний ворог: Миттєве вбивство. Бос: Завдає 300% звичайної шкоди (Боси стійкі до миттєвої смерті).`,
+    },
+    FINAL_STRIKE: {
+      en: 'Final Strike',
+      uk: `Останній удар`,
+    },
+    SHATTER_INFO: {
+      en: 'Each hit adds 1 stack (Max 5). Incoming damage is multiplied by (1 + (shatterStacks * 0.10)). (Max +50% damage taken).',
+      uk: `Кожен удар додає 1 заряд (максимум 5). Вхідна шкода множиться на (1 + (розбиті заряди * 0.10)). (Максимум +50% отриманої шкоди).`,
+    },
+    SHATTER: {
+      en: 'Shatter',
+      uk: `Розколоти`,
+    },
+    CHAIN_LIGHTNING_INFO: {
+      en: '25% chance to deal 50% damage to two adjacent targets',
+      uk: `Шанс 25% нанести двом сусіднім цілям 50% урону`,
+    },
+    CHAIN_LIGHTNING: {
+      en: 'Chain Lightning',
+      uk: `Ланцюгова блискавка`,
+    },
+    FROST_AURA_INFO: {
+      en: 'Apply 30% slow to enemies in range.',
+      uk: `Уповільнює ворогів у радіусі дії на 30%.`,
+    },
+    FROST_AURA: {
+      en: 'Frost Aura',
+      uk: `Морозна аура`,
+    },
+    BUY_ABILITY: {
+      en: 'Buy Ability',
+      uk: `Купити Здібність`,
+    },
+    ABILITY_ACTIVE: {
+      en: 'Ability Active',
+      uk: `Активна здатність`,
+    },
     TRY_AGAIN: {
       en: 'TRY AGAIN',
       uk: `СПРОБУЙТЕ ЗНОВУ`,
