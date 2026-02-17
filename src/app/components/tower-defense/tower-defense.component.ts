@@ -415,10 +415,10 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 const radius = 2 * tile;
                 ctx.beginPath();
                 ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
                 ctx.fill();
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+                ctx.lineWidth = 1
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
                 ctx.stroke();
             }
         }
