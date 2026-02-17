@@ -171,7 +171,7 @@
                 <button
                   (click)="buyAbility()"
                   [disabled]="tile.tower.specialActive || tdEngine.money() < tdEngine.getSpecialCost(tile.tower)"
-                  class="w-full py-3 rounded font-bold transition-all flex justify-between px-4 items-center"
+                  class="cursor-pointer w-full py-3 rounded font-bold transition-all flex justify-between px-4 items-center"
                   [class.bg-purple-600]="
                     !tile.tower.specialActive && tdEngine.money() >= tdEngine.getSpecialCost(tile.tower)
                   "
@@ -183,12 +183,49 @@
                   "
                 >
                   <span>
-                    {{ tile.tower.specialActive ? 'Ability Active' : 'Buy Ability' }}
+                    {{ tile.tower.specialActive ? settings.t('ABILITY_ACTIVE') : settings.t('BUY_ABILITY') }}
                   </span>
-                  <span class="font-mono" *ngIf="!tile.tower.specialActive">
-                    ${{ tdEngine.getSpecialCost(tile.tower) }}
-                  </span>
+                  @if (!tile.tower.specialActive) {
+                    <span class="font-mono">${{ tdEngine.getSpecialCost(tile.tower) }}</span>
+                  }
                 </button>
+                <div class="mt-4 pt-4 border-t border-white/10 space-y-2">
+                  @if (tile.tower.type === 1) {
+                    <div class="text-blue-400 font-bold tracking-wide uppercase text-sm">
+                      {{ settings.t('FROST_AURA') }}
+                    </div>
+                    <div class="text-gray-400 text-sm leading-relaxed">
+                      {{ settings.t('FROST_AURA_INFO') }}
+                    </div>
+                  }
+
+                  @if (tile.tower.type === 2) {
+                    <div class="text-yellow-400 font-bold tracking-wide uppercase text-sm">
+                      {{ settings.t('CHAIN_LIGHTNING') }}
+                    </div>
+                    <div class="text-gray-400 text-sm leading-relaxed">
+                      {{ settings.t('CHAIN_LIGHTNING_INFO') }}
+                    </div>
+                  }
+
+                  @if (tile.tower.type === 3) {
+                    <div class="text-red-400 font-bold tracking-wide uppercase text-sm">
+                      {{ settings.t('SHATTER') }}
+                    </div>
+                    <div class="text-gray-400 text-sm leading-relaxed">
+                      {{ settings.t('SHATTER_INFO') }}
+                    </div>
+                  }
+
+                  @if (tile.tower.type === 4) {
+                    <div class="text-purple-400 font-bold tracking-wide uppercase text-sm">
+                      {{ settings.t('FINAL_STRIKE') }}
+                    </div>
+                    <div class="text-gray-400 text-sm leading-relaxed">
+                      {{ settings.t('FINAL_STRIKE_INFO') }}
+                    </div>
+                  }
+                </div>
               }
             </div>
           }
