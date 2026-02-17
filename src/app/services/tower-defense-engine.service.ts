@@ -251,6 +251,10 @@ export class TowerDefenseEngineService {
             if (!this.savedResult) {
                 this.savedResult = true;
                 this.saveResultIfLoggedIn();
+                const xp = this.wave() * 10;
+                if (xp > 0) {
+                    this.firebase.awardTowerDefenseXp(xp);
+                }
             }
             return;
         }
@@ -264,6 +268,22 @@ export class TowerDefenseEngineService {
                 this.isWaveInProgress.set(false);
             });
         }
+    }
+
+    private getUpgradeLevel(tier: number, kind: 'damage' | 'range' | 'golden'): number {
+        const profile = this.firebase.masteryProfile();
+        if (!profile) return 0;
+        const key = `t${tier}_${kind}`;
+        const v = profile.upgrades?.[key];
+        return typeof v === 'number' ? v : 0;
+    }
+
+    private getProjectileSpeedMultiplierForTower(tower: Tower): number {
+        if (tower.type === 2) {
+            const golden = this.getUpgradeLevel(2, 'golden');
+            if (golden > 0) return 1 + 0.2 * golden;
+        }
+        return 1;
     }
 
     private handleSpawning(dt: number) {
@@ -313,6 +333,9 @@ export class TowerDefenseEngineService {
             const enemy = this.enemiesInternal[i];
             enemy.speedModifier = 1;
             enemy.isFrozen = false;
+            if (enemy.stunTime && enemy.stunTime > 0) {
+                enemy.stunTime = Math.max(0, enemy.stunTime - dt);
+            }
         }
 
         this.applyFrostAuras();
@@ -321,6 +344,16 @@ export class TowerDefenseEngineService {
 
         for (let i = this.enemiesInternal.length - 1; i >= 0; i--) {
             const enemy = this.enemiesInternal[i];
+            if (enemy.stunTime && enemy.stunTime > 0) {
+                const path = this.path();
+                const current = path[enemy.pathIndex];
+                const next = path[enemy.pathIndex + 1] || current;
+                const ix = current.x + (next.x - current.x) * enemy.progress;
+                const iy = current.y + (next.y - current.y) * enemy.progress;
+                enemy.displayX = (ix + 0.5) * tile;
+                enemy.displayY = (iy + 0.5) * tile;
+                continue;
+            }
             const moveSpeed = enemy.baseSpeed * enemy.speedModifier;
             enemy.progress += moveSpeed * dt;
 
@@ -377,7 +410,12 @@ export class TowerDefenseEngineService {
         const frostTowers = this.towersInternal.filter(t => t.type === 1 && t.specialActive);
         if (frostTowers.length === 0) return;
 
-        const radiusSq = 4;
+        const golden = this.getUpgradeLevel(1, 'golden');
+        const baseRadius = 2;
+        const bonusRadius = golden > 0 ? 0.1 : 0;
+        const radius = baseRadius + bonusRadius;
+        const radiusSq = radius * radius;
+        const slowMultiplier = golden > 0 ? 0.6 : 0.7;
 
         for (const enemy of this.enemiesInternal) {
             let isSlowed = false;
@@ -392,7 +430,7 @@ export class TowerDefenseEngineService {
             }
 
             if (isSlowed) {
-                enemy.speedModifier = 0.7;
+                enemy.speedModifier = slowMultiplier;
                 enemy.isFrozen = true;
             }
         }
@@ -427,11 +465,22 @@ export class TowerDefenseEngineService {
             id: 'p' + (this.projectileIdCounter++),
             from: { ...tower.position },
             to: { ...enemy.position },
-            progress: 0
+            progress: 0,
+            speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
         };
         this.pushProjectile(proj);
 
         let damage = tower.damage;
+
+        if (tower.type === 2) {
+            const golden = this.getUpgradeLevel(2, 'golden');
+            if (golden > 0) {
+                const critChance = 0.1 * golden;
+                if (Math.random() < critChance) {
+                    damage = Math.floor(damage * 2);
+                }
+            }
+        }
 
         if (tower.specialActive && tower.type === 4) {
             const ratio = enemy.hp / enemy.maxHp;
@@ -454,6 +503,16 @@ export class TowerDefenseEngineService {
 
         enemy.hp -= damage;
 
+        if (tower.type === 3) {
+            const golden = this.getUpgradeLevel(3, 'golden');
+            if (golden > 0) {
+                const stunChance = 0.05 * golden;
+                if (Math.random() < stunChance) {
+                    enemy.stunTime = Math.max(enemy.stunTime ?? 0, 0.5);
+                }
+            }
+        }
+
         if (tower.specialActive && tower.type === 2) {
             if (Math.random() < 0.25) {
                 const secondary: Enemy[] = [];
@@ -473,10 +532,41 @@ export class TowerDefenseEngineService {
                         id: 'p' + (this.projectileIdCounter++),
                         from: { ...tower.position },
                         to: { ...s.position },
-                        progress: 0
+                        progress: 0,
+                        speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
                     };
                     this.pushProjectile(chainProj);
                     s.hp -= secondaryDamage;
+                }
+            }
+        }
+
+        if (tower.type === 4) {
+            const golden = this.getUpgradeLevel(4, 'golden');
+            if (golden > 0) {
+                let closest: Enemy | null = null;
+                let minDist = Infinity;
+                for (const other of this.enemiesInternal) {
+                    if (other.id === enemy.id) continue;
+                    const dx = enemy.position.x - other.position.x;
+                    const dy = enemy.position.y - other.position.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist <= 3 && dist < minDist) {
+                        minDist = dist;
+                        closest = other;
+                    }
+                }
+                if (closest) {
+                    const chainProj: Projectile = {
+                        id: 'p' + (this.projectileIdCounter++),
+                        from: { ...tower.position },
+                        to: { ...closest.position },
+                        progress: 0,
+                        speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
+                    };
+                    this.pushProjectile(chainProj);
+                    const secondaryDamage = Math.floor(damage * 0.5);
+                    closest.hp -= secondaryDamage;
                 }
             }
         }
@@ -486,7 +576,8 @@ export class TowerDefenseEngineService {
         // Advance and cleanup projectiles immediately when they finish
         for (let i = this.projectilesInternal.length - 1; i >= 0; i--) {
             const p = this.projectilesInternal[i];
-            p.progress += 5 * dt;
+            const speedMultiplier = p.speedMultiplier ?? 1;
+            p.progress += 5 * speedMultiplier * dt;
             if (p.progress >= 1) {
                 this.projectilesInternal.splice(i, 1);
             }
@@ -501,6 +592,10 @@ export class TowerDefenseEngineService {
             const tile = grid[y][x];
             if (tile.type === 'buildable' && !tile.tower) {
                 const stats = this.tierStats[tier - 1];
+                const dmgLevel = this.getUpgradeLevel(tier, 'damage');
+                const rangeLevel = this.getUpgradeLevel(tier, 'range');
+                const damageMultiplier = 1 + dmgLevel * 0.05;
+                const rangeBonus = rangeLevel * 0.1;
                 tile.tower = {
                     id: crypto.randomUUID(),
                     type: tier,
@@ -508,8 +603,8 @@ export class TowerDefenseEngineService {
                     position: { x, y },
                     baseCost: cost,
                     invested: cost,
-                    damage: stats.damage,
-                    range: stats.range,
+                    damage: Math.floor(stats.damage * damageMultiplier),
+                    range: stats.range + rangeBonus,
                     fireInterval: stats.fireInterval,
                     cooldown: 0,
                     specialActive: false

@@ -62,6 +62,7 @@ export interface Enemy {
     displayY?: number;
     bg?: string;
     scale?: number;
+    stunTime?: number;
 }
 
 export interface Projectile {
@@ -69,6 +70,7 @@ export interface Projectile {
     from: Position;
     to: Position;
     progress: number;
+    speedMultiplier?: number;
 }
 
 export interface TDTile {

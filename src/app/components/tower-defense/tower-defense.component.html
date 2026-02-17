@@ -22,38 +22,63 @@
             <div class="text-rose-400 text-lg font-mono">{{ settings.t('LIVES') }}: {{ tdEngine.lives() }}</div>
             <div class="text-sky-400 text-lg font-mono">{{ settings.t('WAVE') }}: {{ tdEngine.wave() }}</div>
           </div>
-          <div class="flex items-center gap-1 text-xs">
-            <span class="text-slate-400 mr-1">Speed:</span>
-            <button
-              (click)="setSpeed(1)"
-              class="px-2 py-0.5 rounded border text-[10px] font-bold"
-              [class.bg-slate-200]="tdEngine.gameSpeedMultiplier() === 1"
-              [class.text-slate-900]="tdEngine.gameSpeedMultiplier() === 1"
-              [class.bg-slate-800]="tdEngine.gameSpeedMultiplier() !== 1"
-              [class.text-slate-300]="tdEngine.gameSpeedMultiplier() !== 1"
-            >
-              1x
-            </button>
-            <button
-              (click)="setSpeed(2)"
-              class="px-2 py-0.5 rounded border text-[10px] font-bold"
-              [class.bg-slate-200]="tdEngine.gameSpeedMultiplier() === 2"
-              [class.text-slate-900]="tdEngine.gameSpeedMultiplier() === 2"
-              [class.bg-slate-800]="tdEngine.gameSpeedMultiplier() !== 2"
-              [class.text-slate-300]="tdEngine.gameSpeedMultiplier() !== 2"
-            >
-              2x
-            </button>
-            <button
-              (click)="setSpeed(4)"
-              class="px-2 py-0.5 rounded border text-[10px] font-bold"
-              [class.bg-slate-200]="tdEngine.gameSpeedMultiplier() === 4"
-              [class.text-slate-900]="tdEngine.gameSpeedMultiplier() === 4"
-              [class.bg-slate-800]="tdEngine.gameSpeedMultiplier() !== 4"
-              [class.text-slate-300]="tdEngine.gameSpeedMultiplier() !== 4"
-            >
-              4x
-            </button>
+          <div class="flex items-center gap-4 text-xs">
+            <div class="flex items-center gap-1">
+              <span class="text-slate-400 mr-1">Speed:</span>
+              <button
+                (click)="setSpeed(1)"
+                class="px-2 py-0.5 rounded border text-[10px] font-bold"
+                [class.bg-slate-200]="tdEngine.gameSpeedMultiplier() === 1"
+                [class.text-slate-900]="tdEngine.gameSpeedMultiplier() === 1"
+                [class.bg-slate-800]="tdEngine.gameSpeedMultiplier() !== 1"
+                [class.text-slate-300]="tdEngine.gameSpeedMultiplier() !== 1"
+              >
+                1x
+              </button>
+              <button
+                (click)="setSpeed(2)"
+                class="px-2 py-0.5 rounded border text-[10px] font-bold"
+                [class.bg-slate-200]="tdEngine.gameSpeedMultiplier() === 2"
+                [class.text-slate-900]="tdEngine.gameSpeedMultiplier() === 2"
+                [class.bg-slate-800]="tdEngine.gameSpeedMultiplier() !== 2"
+                [class.text-slate-300]="tdEngine.gameSpeedMultiplier() !== 2"
+              >
+                2x
+              </button>
+              <button
+                (click)="setSpeed(4)"
+                class="px-2 py-0.5 rounded border text-[10px] font-bold"
+                [class.bg-slate-200]="tdEngine.gameSpeedMultiplier() === 4"
+                [class.text-slate-900]="tdEngine.gameSpeedMultiplier() === 4"
+                [class.bg-slate-800]="tdEngine.gameSpeedMultiplier() !== 4"
+                [class.text-slate-300]="tdEngine.gameSpeedMultiplier() !== 4"
+              >
+                4x
+              </button>
+            </div>
+            <div class="flex items-center gap-1">
+              <span class="text-slate-400 mr-1">Map Size:</span>
+              <button
+                (click)="onMapSizeChange(1)"
+                class="px-2 py-0.5 rounded border text-[10px] font-bold"
+                [class.bg-slate-200]="mapLevel() === 1"
+                [class.text-slate-900]="mapLevel() === 1"
+                [class.bg-slate-800]="mapLevel() !== 1"
+                [class.text-slate-300]="mapLevel() !== 1"
+              >
+                Small (10x10)
+              </button>
+              <button
+                (click)="onMapSizeChange(2)"
+                class="px-2 py-0.5 rounded border text-[10px] font-bold"
+                [class.bg-slate-200]="mapLevel() === 2"
+                [class.text-slate-900]="mapLevel() === 2"
+                [class.bg-slate-800]="mapLevel() !== 2"
+                [class.text-slate-300]="mapLevel() !== 2"
+              >
+                Large (20x20)
+              </button>
+            </div>
           </div>
         </div>
         <div class="flex items-center gap-3">
@@ -62,6 +87,12 @@
             class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded transition-colors uppercase tracking-wider"
           >
             {{ firebase.user$() ? firebase.user$()?.displayName || 'Account' : 'Login to Save Score' }}
+          </button>
+          <button
+            (click)="router.navigate(['/masteries'])"
+            class="px-3 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-bold rounded transition-colors uppercase tracking-wider"
+          >
+            Masteries
           </button>
           <button
             (click)="onRestart()"

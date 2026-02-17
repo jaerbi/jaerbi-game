@@ -112,6 +112,7 @@ import { Subscription } from 'rxjs';
 })
 export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     selectedTile = signal<TDTile | null>(null);
+    mapLevel = signal(1);
     private uiSub?: Subscription;
     @ViewChild('gameCanvas', { static: false }) gameCanvas?: ElementRef<HTMLCanvasElement>;
     private ctx?: CanvasRenderingContext2D | null;
@@ -143,7 +144,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     ) { }
 
     ngOnInit() {
-        this.tdEngine.resetEngine();
+        this.tdEngine.initializeGame(this.mapLevel());
         this.uiSub = this.tdEngine.uiTick$.subscribe(() => {
             this.cdr.detectChanges();
         });
@@ -174,7 +175,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     onRestart() {
-        this.tdEngine.resetGame();
+        this.tdEngine.initializeGame(this.mapLevel());
         this.selectedTile.set(null);
     }
 
@@ -233,6 +234,16 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     setSpeed(multiplier: number) {
         this.tdEngine.gameSpeedMultiplier.set(multiplier);
+    }
+
+    onMapSizeChange(level: number) {
+        if (level === this.mapLevel()) return;
+        this.mapLevel.set(level);
+        this.tdEngine.initializeGame(level);
+        this.selectedTile.set(null);
+        if (this.isBrowser) {
+            this.resizeCanvas();
+        }
     }
 
     onLoginClick() {
