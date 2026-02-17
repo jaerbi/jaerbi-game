@@ -97,17 +97,15 @@ export class TowerDefenseEngineService {
     }
 
     resetEngine() {
-        this.dispose();
-        this.generateMap();
+        this.initializeGame(1);
     }
 
     initGame() {
-        this.dispose();
-        this.generateMap();
+        this.initializeGame(1);
     }
 
     resetGame() {
-        this.initGame();
+        this.initializeGame(1);
     }
 
     generateMap() {
@@ -141,10 +139,17 @@ export class TowerDefenseEngineService {
         this.grid.set(newGrid);
     }
 
+    initializeGame(level: number) {
+        this.gridSize = level === 2 ? 20 : 10;
+        this.dispose();
+        this.generateMap();
+    }
+
     private generateRandomPath(): Position[] {
+        const maxIndex = this.gridSize - 1;
         const path: Position[] = [{ x: 0, y: 0 }];
         let current = { x: 0, y: 0 };
-        const target = { x: 9, y: 9 };
+        const target = { x: maxIndex, y: maxIndex };
 
         // Improved path generation with turns
         while (current.x !== target.x || current.y !== target.y) {
@@ -312,6 +317,8 @@ export class TowerDefenseEngineService {
 
         this.applyFrostAuras();
 
+        const tile = this.tileSize;
+
         for (let i = this.enemiesInternal.length - 1; i >= 0; i--) {
             const enemy = this.enemiesInternal[i];
             const moveSpeed = enemy.baseSpeed * enemy.speedModifier;
@@ -332,10 +339,10 @@ export class TowerDefenseEngineService {
             const path = this.path();
             const current = path[enemy.pathIndex];
             const next = path[enemy.pathIndex + 1] || current;
-            const x = current.x + (next.x - current.x) * enemy.progress;
-            const y = current.y + (next.y - current.y) * enemy.progress;
-            enemy.displayX = x * 62 + 10;
-            enemy.displayY = y * 62 + 10;
+            const ix = current.x + (next.x - current.x) * enemy.progress;
+            const iy = current.y + (next.y - current.y) * enemy.progress;
+            enemy.displayX = (ix + 0.5) * tile;
+            enemy.displayY = (iy + 0.5) * tile;
             const shatter = enemy.shatterStacks ?? 0;
             const lightness = shatter > 0 ? Math.min(70, 50 + shatter * 4) : 50;
             enemy.scale = enemy.isBoss ? 1.5 : 1;
@@ -396,15 +403,13 @@ export class TowerDefenseEngineService {
         let minDistSq = tower.range * tower.range;
 
         for (const enemy of enemies) {
-            if (enemy.displayX && enemy.displayY) {
-                const dx = tower.position.x - (enemy.displayX - 10) / 62;
-                const dy = tower.position.y - (enemy.displayY - 10) / 62;
-                const distSq = dx * dx + dy * dy;
+            const dx = tower.position.x - enemy.position.x;
+            const dy = tower.position.y - enemy.position.y;
+            const distSq = dx * dx + dy * dy;
 
-                if (distSq < minDistSq) {
-                    minDistSq = distSq;
-                    nearest = enemy;
-                }
+            if (distSq <= minDistSq) {
+                minDistSq = distSq;
+                nearest = enemy;
             }
         }
         return nearest;

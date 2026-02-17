@@ -2,8 +2,7 @@ import { Component, signal, OnDestroy, OnInit, HostListener, ChangeDetectionStra
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TowerDefenseEngineService } from '../../services/tower-defense-engine.service';
-import { UnitsComponent } from '../units/units.component';
-import { TDTile, Unit } from '../../models/unit.model';
+import { TDTile } from '../../models/unit.model';
 import { SettingsService } from '../../services/settings.service';
 import { FirebaseService } from '../../services/firebase.service';
 import { Subscription } from 'rxjs';
@@ -11,7 +10,7 @@ import { Subscription } from 'rxjs';
 @Component({
     selector: 'app-tower-defense',
     standalone: true,
-    imports: [CommonModule, UnitsComponent],
+    imports: [CommonModule],
     templateUrl: 'tower-defense.component.html',
     styleUrls: ['../../app.css'],
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -202,50 +201,6 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         }
     }
 
-    // Helper to convert Tower to Unit for UnitsComponent
-    asUnit(tower: any): Unit {
-        return {
-            ...tower,
-            owner: 'player',
-            points: 0, // Not used by SVG
-            turnsStationary: 0,
-            tier: tower.type
-        } as Unit;
-    }
-
-    getEnemyStyle(enemy: any) {
-        const path = this.tdEngine.path();
-        const current = path[enemy.pathIndex];
-        const next = path[enemy.pathIndex + 1] || current;
-
-        const x = current.x + (next.x - current.x) * enemy.progress;
-        const y = current.y + (next.y - current.y) * enemy.progress;
-
-        const hue = enemy.hue ?? ((this.tdEngine.wave() * 40) % 360);
-        const scale = enemy.isBoss ? 1.5 : 1;
-        const shatter = enemy.shatterStacks ?? 0;
-        const lightness = shatter > 0 ? Math.min(70, 50 + shatter * 4) : 50;
-        const color = enemy.isFrozen
-            ? `hsl(190, 80%, ${lightness}%)`
-            : `hsl(${hue}, 70%, ${lightness}%)`;
-
-        return {
-            left: `${x * 62 + 10}px`,
-            top: `${y * 62 + 10}px`,
-            transform: `scale(${scale})`,
-            background: color
-        };
-    }
-
-    getProjectileStyle(p: any) {
-        const x = p.from.x + (p.to.x - p.from.x) * p.progress;
-        const y = p.from.y + (p.to.y - p.from.y) * p.progress;
-        return {
-            left: `${x * 62 + 28}px`,
-            top: `${y * 62 + 28}px`
-        };
-    }
-
     getRangeStyle() {
         const tile = this.selectedTile();
         if (!tile || !tile.tower) return { display: 'none' };
@@ -333,6 +288,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const size = this.tdEngine.gridSize * tile;
         this.clearCanvas(ctx, size);
         this.drawGrid(ctx, tile);
+        this.drawSelection(ctx, tile);
         this.drawFrostAuras(ctx, tile);
         this.drawTowers(ctx, tile);
         this.drawEnemies(ctx, tile);
@@ -359,16 +315,84 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     private drawTowers(ctx: CanvasRenderingContext2D, tile: number) {
         const towers = this.tdEngine.getTowersRef();
         for (const t of towers) {
-            const x = t.position.x * tile;
-            const y = t.position.y * tile;
-            // Simple high-contrast tower glyph
-            ctx.fillStyle = '#0ea5e9';
-            if (t.type === 2) ctx.fillStyle = '#a78bfa';
-            if (t.type === 3) ctx.fillStyle = '#f59e0b';
-            if (t.type === 4) ctx.fillStyle = '#ef4444';
-            const pad = 6;
-            ctx.fillRect(x + pad, y + pad, tile - pad * 2, tile - pad * 2);
+            const cx = t.position.x * tile + tile / 2;
+            const cy = t.position.y * tile + tile / 2;
+            this.drawTowerShape(ctx, cx, cy, t.type, t.level, tile);
         }
+    }
+
+    private drawTowerShape(ctx: CanvasRenderingContext2D, cx: number, cy: number, type: number, level: number, tile: number) {
+        const baseSize = tile * 0.5;
+        const half = baseSize / 2;
+        const color =
+            type === 1 ? '#0ea5e9' :
+                type === 2 ? '#a855f7' :
+                    type === 3 ? '#f59e0b' :
+                        '#ef4444';
+        const lineWidth = 2.5;
+        const lv = Math.max(1, Math.min(4, level || 1));
+
+        ctx.save();
+        ctx.lineWidth = lineWidth;
+        ctx.strokeStyle = color;
+
+        if (lv >= 4) {
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 16;
+        }
+
+        ctx.beginPath();
+        if (type === 1) {
+            const r = baseSize * 0.5;
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        } else if (type === 2) {
+            const h = baseSize * 0.9;
+            const w = baseSize * 0.9;
+            ctx.moveTo(cx, cy - h / 2);
+            ctx.lineTo(cx - w / 2, cy + h / 2);
+            ctx.lineTo(cx + w / 2, cy + h / 2);
+            ctx.closePath();
+        } else if (type === 3) {
+            ctx.rect(cx - half, cy - half, baseSize, baseSize);
+        } else {
+            const r = baseSize * 0.5;
+            for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI / 3) * i - Math.PI / 2;
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+        }
+
+        if (lv >= 2) {
+            ctx.fillStyle = color;
+            ctx.globalAlpha = lv === 2 ? 0.7 : 0.9;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+
+        ctx.stroke();
+
+        if (lv >= 3) {
+            ctx.beginPath();
+            const innerR = baseSize * 0.18;
+            ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+            ctx.fillStyle = '#0f172a';
+            ctx.fill();
+        }
+
+        if (lv >= 4) {
+            ctx.beginPath();
+            const outerR = baseSize * 0.7;
+            ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = 0.4;
+            ctx.stroke();
+        }
+
+        ctx.restore();
     }
 
     private drawFrostAuras(ctx: CanvasRenderingContext2D, tile: number) {
@@ -394,24 +418,44 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         for (const e of enemies) {
             const size = (e.isBoss ? 1.5 : 1) * (tile * 0.65);
             const r = size / 2;
-            const x = (e.displayX ?? (e.position.x * tile + 10)) + r - tile * 0.35;
-            const y = (e.displayY ?? (e.position.y * tile + 10)) + r - tile * 0.35;
+            const cx = e.displayX ?? ((e.position.x + 0.5) * tile);
+            const cy = e.displayY ?? ((e.position.y + 0.5) * tile);
             ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
             ctx.fillStyle = e.bg || (e.isFrozen ? '#7dd3fc' : '#ef4444');
             ctx.shadowColor = (this.tdEngine.gameSpeedMultiplier() > 1) ? 'transparent' : ctx.fillStyle;
             ctx.shadowBlur = (this.tdEngine.gameSpeedMultiplier() > 1) ? 0 : 10;
             ctx.fill();
             ctx.shadowBlur = 0;
-            // Health bar
+        }
+
+        for (const e of enemies) {
+            const size = (e.isBoss ? 1.5 : 1) * (tile * 0.65);
+            const r = size / 2;
+            const cx = e.displayX ?? ((e.position.x + 0.5) * tile);
+            const cy = e.displayY ?? ((e.position.y + 0.5) * tile);
             const barW = size;
             const barH = 6;
             ctx.fillStyle = '#0f172a';
-            ctx.fillRect(x - r, y - r - 10, barW, barH);
+            ctx.fillRect(cx - r, cy - r - 10, barW, barH);
             ctx.fillStyle = '#10b981';
             const pct = Math.max(0, Math.min(1, e.hp / e.maxHp));
-            ctx.fillRect(x - r, y - r - 10, barW * pct, barH);
+            ctx.fillRect(cx - r, cy - r - 10, barW * pct, barH);
         }
+    }
+
+    private drawSelection(ctx: CanvasRenderingContext2D, tile: number) {
+        const tileSel = this.selectedTile();
+        if (!tileSel) return;
+        const x = tileSel.x * tile;
+        const y = tileSel.y * tile;
+        ctx.save();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.95)';
+        ctx.shadowColor = 'rgba(56, 189, 248, 0.9)';
+        ctx.shadowBlur = 14;
+        ctx.strokeRect(x + 1.5, y + 1.5, tile - 3, tile - 3);
+        ctx.restore();
     }
 
     private drawProjectiles(ctx: CanvasRenderingContext2D, tile: number) {
