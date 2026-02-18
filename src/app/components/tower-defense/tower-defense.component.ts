@@ -327,7 +327,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 const t = row[x];
                 if (t.type === 'path') ctx.fillStyle = '#475569';
                 else if (t.type === 'buildable') ctx.fillStyle = '#1e293b';
-                else ctx.fillStyle = 'rgba(255,255,255,0.06)';
+                else ctx.fillStyle = 'rgba(203, 23, 23, 0.01)';
                 ctx.fillRect(x * tile, y * tile, tile - 2, tile - 2);
             }
         }
