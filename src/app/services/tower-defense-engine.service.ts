@@ -47,7 +47,7 @@ export class TowerDefenseEngineService {
     private tierStats = [
         { damage: 5, range: 2, fireInterval: 0.5 },
         { damage: 20, range: 2.5, fireInterval: 1 },
-        { damage: 80, range: 3, fireInterval: 1.5 },
+        { damage: 80, range: 3, fireInterval: 1.2 },
         { damage: 300, range: 3.5, fireInterval: 2 }
     ];
 
@@ -148,15 +148,15 @@ export class TowerDefenseEngineService {
     }
 
     private determineWaveType(wave: number): 'tank' | 'scout' | 'standard' {
-        if (wave <= 3) {
+        if (wave <= 2) {
             return 'standard';
         }
         if (wave <= 8) {
             return Math.random() < 0.5 ? 'scout' : 'standard';
         }
         const roll = Math.random();
-        if (roll < 0.33) return 'tank';
-        if (roll < 0.66) return 'scout';
+        if (roll < 0.23) return 'tank';
+        if (roll < 0.56) return 'scout';
         return 'standard';
     }
 
