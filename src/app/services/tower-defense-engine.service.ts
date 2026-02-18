@@ -52,6 +52,7 @@ export class TowerDefenseEngineService {
     ];
 
     private savedResult = false;
+    private gameEndedHard = false;
 
     constructor(private ngZone: NgZone, private firebase: FirebaseService) {
         this.initGame();
@@ -85,6 +86,7 @@ export class TowerDefenseEngineService {
         this.isWaveInProgress.set(false);
         this.gameOver.set(false);
         this.savedResult = false;
+        this.gameEndedHard = false;
         this.money.set(100);
         this.lives.set(100);
         this.wave.set(0);
@@ -327,6 +329,9 @@ export class TowerDefenseEngineService {
     }
 
     updateGame(dt: number) {
+        if (this.gameEndedHard) {
+            return;
+        }
         const effectiveDt = dt * this.gameSpeedMultiplier();
         this.handleSpawning(effectiveDt);
         this.updateEnemies(effectiveDt);
@@ -358,6 +363,7 @@ export class TowerDefenseEngineService {
                     this.firebase.awardTowerDefenseXp(xp);
                 }
             }
+            this.gameEndedHard = true;
             return;
         }
 

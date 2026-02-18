@@ -38,6 +38,7 @@ export interface MasteryProfile {
 export class FirebaseService {
   private db: Firestore | null = null;
   private auth: Auth | null = null;
+  private loadedMasteriesUserId: string | null = null;
   
   user$ = signal<User | null>(null);
   masteryProfile = signal<MasteryProfile | null>(null);
@@ -58,9 +59,12 @@ export class FirebaseService {
         onAuthStateChanged(this.auth, (user) => {
           this.user$.set(user);
           if (user) {
-            this.loadTowerDefenseMasteries(user.uid);
+            if (this.loadedMasteriesUserId !== user.uid || !this.masteryProfile()) {
+              this.loadTowerDefenseMasteries(user.uid);
+            }
           } else {
             this.masteryProfile.set(null);
+            this.loadedMasteriesUserId = null;
           }
         });
       } catch (e) {
@@ -134,6 +138,7 @@ export class FirebaseService {
   async saveTowerDefenseScore(entry: TowerDefenseScore): Promise<void> {
     if (!this.db) return;
     try {
+      console.count('FIREBASE_CALL: saveTowerDefenseScore');
       let userTotalXp: number | undefined = undefined;
       if (entry.userId) {
         try {
@@ -178,9 +183,9 @@ export class FirebaseService {
 
   private async loadTowerDefenseMasteries(userId: string): Promise<void> {
     if (!this.db) return;
-    const cached = this.masteryProfile();
-    if (cached) return;
+    if (this.loadedMasteriesUserId === userId && this.masteryProfile()) return;
     try {
+      console.count('FIREBASE_CALL: loadTowerDefenseMasteries');
       const ref = doc(this.db, 'towerDefenseMasteries', userId);
       const snap = await getDoc(ref);
       if (snap.exists()) {
@@ -196,6 +201,7 @@ export class FirebaseService {
         await setDoc(ref, { userId, ...profile });
         this.masteryProfile.set(profile);
       }
+      this.loadedMasteriesUserId = userId;
     } catch (e) {
       console.error('Error loading TD mastery profile: ', e);
     }
@@ -211,6 +217,7 @@ export class FirebaseService {
     const profile = this.masteryProfile();
     if (!user || !profile) return;
     try {
+      console.count('FIREBASE_CALL: saveTowerDefenseMasteries');
       const ref = doc(this.db, 'towerDefenseMasteries', user.uid);
       await setDoc(ref, { userId: user.uid, ...profile }, { merge: true });
     } catch (e) {
@@ -224,6 +231,7 @@ export class FirebaseService {
     const user = this.user$();
     if (!user) return;
     try {
+      console.count('FIREBASE_CALL: awardTowerDefenseXp');
       const current = this.masteryProfile() ?? { totalXp: 0, usedPoints: 0, upgrades: {} };
       const next: MasteryProfile = {
         totalXp: current.totalXp + xp,
