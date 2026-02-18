@@ -63,6 +63,7 @@ export interface Enemy {
     bg?: string;
     scale?: number;
     stunTime?: number;
+    type?: 'tank' | 'scout' | 'standard' | 'boss';
 }
 
 export interface Projectile {

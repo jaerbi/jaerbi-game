@@ -111,6 +111,23 @@
           >
             {{ tdEngine.isWaveInProgress() ? settings.t('WAVE_IN_PROGRESS') : settings.t('START_WAVE') }}
           </button>
+          <div class="flex items-center gap-2 px-3 py-2 rounded bg-white/5 border border-white/10">
+            <span class="text-xs text-slate-300">Next:</span>
+            <span class="text-xs font-bold text-slate-100 capitalize">{{ tdEngine.nextWaveEnemyType() }}</span>
+            <span
+              class="shape-preview"
+              [ngClass]="{
+                'shape-circle': tdEngine.nextWaveEnemyType() === 'tank',
+                'shape-triangle': tdEngine.nextWaveEnemyType() === 'scout',
+                'shape-square': tdEngine.nextWaveEnemyType() === 'standard'
+              }"
+              [style.background]="
+                tdEngine.nextWaveEnemyType() === 'tank' ? 'hsl(330,70%,60%)' :
+                tdEngine.nextWaveEnemyType() === 'scout' ? 'hsl(50,90%,60%)' :
+                'hsl(200,70%,60%)'
+              "
+            ></span>
+          </div>
         </div>
       </div>
     </div>

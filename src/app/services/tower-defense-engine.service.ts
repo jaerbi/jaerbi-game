@@ -23,6 +23,7 @@ export class TowerDefenseEngineService {
     enemies = signal<Enemy[]>([]);
     projectiles = signal<Projectile[]>([]);
     gameSpeedMultiplier = signal(1);
+    nextWaveEnemyType = signal<'tank' | 'scout' | 'standard'>('standard');
 
     private enemiesInternal: Enemy[] = [];
     private projectilesInternal: Projectile[] = [];
@@ -34,11 +35,11 @@ export class TowerDefenseEngineService {
 
     private animationFrameId: number | null = null;
     private lastUpdateTime = 0;
-    private lastUiPublishTime = 0;
     private enemiesToSpawn = 0;
     private currentWaveEnemyCount = 0;
     private spawnTimer = 0;
     private spawnInterval = 1000;
+    private currentWaveType: 'tank' | 'scout' | 'standard' | 'boss' = 'standard';
 
     // Costs and Stats
     towerCosts = [15, 50, 250, 1500];
@@ -46,8 +47,8 @@ export class TowerDefenseEngineService {
     private tierStats = [
         { damage: 5, range: 2, fireInterval: 0.5 },
         { damage: 20, range: 2.5, fireInterval: 1 },
-        { damage: 80, range: 3, fireInterval: 2 },
-        { damage: 300, range: 3.5, fireInterval: 3 }
+        { damage: 80, range: 3, fireInterval: 1.5 },
+        { damage: 300, range: 3.5, fireInterval: 2 }
     ];
 
     private savedResult = false;
@@ -143,42 +144,135 @@ export class TowerDefenseEngineService {
         this.gridSize = level === 2 ? 20 : 10;
         this.dispose();
         this.generateMap();
+        this.nextWaveEnemyType.set(this.determineWaveType(1));
+    }
+
+    private determineWaveType(wave: number): 'tank' | 'scout' | 'standard' {
+        if (wave <= 3) {
+            return 'standard';
+        }
+        if (wave <= 8) {
+            return Math.random() < 0.5 ? 'scout' : 'standard';
+        }
+        const roll = Math.random();
+        if (roll < 0.33) return 'tank';
+        if (roll < 0.66) return 'scout';
+        return 'standard';
     }
 
     private generateRandomPath(): Position[] {
         const maxIndex = this.gridSize - 1;
-        const path: Position[] = [{ x: 0, y: 0 }];
-        let current = { x: 0, y: 0 };
-        const target = { x: maxIndex, y: maxIndex };
+        const start: Position = { x: 0, y: 0 };
+        const target: Position = { x: maxIndex, y: maxIndex };
+        const path: Position[] = [start];
+        const visited = new Set<string>([`${start.x},${start.y}`]);
 
-        // Improved path generation with turns
-        while (current.x !== target.x || current.y !== target.y) {
-            const possible: Position[] = [];
+        const encode = (p: Position) => `${p.x},${p.y}`;
+        const dirs: Position[] = [
+            { x: 1, y: 0 },
+            { x: -1, y: 0 },
+            { x: 0, y: 1 },
+            { x: 0, y: -1 },
+        ];
 
-            // Move toward target but allow some deviation
-            if (current.x < target.x) possible.push({ x: current.x + 1, y: current.y });
-            if (current.y < target.y) possible.push({ x: current.x, y: current.y + 1 });
+        let current: Position = { ...start };
+        let safety = this.gridSize * this.gridSize * 5;
 
-            // Add more weight to one direction to create "segments"
-            let next;
-            if (possible.length > 1) {
-                // 80% chance to continue in same direction if possible
-                const last = path.length > 1 ? path[path.length - 2] : null;
-                const dx = last ? current.x - last.x : 1;
-                const dy = last ? current.y - last.y : 0;
+        const manhattan = (a: Position, b: Position) =>
+            Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 
-                const preferred = possible.find(p => p.x - current.x === dx && p.y - current.y === dy);
-                if (preferred && Math.random() < 0.8) {
-                    next = preferred;
-                } else {
-                    next = possible[Math.floor(Math.random() * possible.length)];
-                }
+        while ((current.x !== target.x || current.y !== target.y) && safety-- > 0) {
+            const candidates: Position[] = [];
+
+            for (const d of dirs) {
+                const nx = current.x + d.x;
+                const ny = current.y + d.y;
+                if (nx < 0 || ny < 0 || nx > maxIndex || ny > maxIndex) continue;
+                const key = `${nx},${ny}`;
+                if (visited.has(key)) continue;
+                candidates.push({ x: nx, y: ny });
+            }
+
+            if (candidates.length === 0) {
+                if (path.length <= 1) break;
+                path.pop();
+                current = { ...path[path.length - 1] };
+                continue;
+            }
+
+            candidates.sort((a, b) => manhattan(a, target) - manhattan(b, target));
+
+            let next: Position;
+            const forward = candidates[0];
+            if (candidates.length === 1) {
+                next = forward;
             } else {
-                next = possible[0];
+                const sideways = candidates.slice(1);
+                const useSideways = Math.random() < 0.35;
+                if (useSideways) {
+                    next = sideways[Math.floor(Math.random() * sideways.length)];
+                } else {
+                    next = forward;
+                }
+            }
+
+            const last = path[path.length - 1];
+            const prev = path.length > 1 ? path[path.length - 2] : null;
+            if (prev) {
+                const dx1 = last.x - prev.x;
+                const dy1 = last.y - prev.y;
+                const dx2 = next.x - last.x;
+                const dy2 = next.y - last.y;
+                const isTurn = dx1 !== dx2 || dy1 !== dy2;
+                if (isTurn && path.length < 3 && Math.random() < 0.5) {
+                    next = forward;
+                }
             }
 
             path.push(next);
+            visited.add(encode(next));
             current = next;
+        }
+
+        let turns = 0;
+        for (let i = 2; i < path.length; i++) {
+            const a = path[i - 2];
+            const b = path[i - 1];
+            const c = path[i];
+            const dx1 = b.x - a.x;
+            const dy1 = b.y - a.y;
+            const dx2 = c.x - b.x;
+            const dy2 = c.y - b.y;
+            if (dx1 !== dx2 || dy1 !== dy2) turns++;
+        }
+
+        if (turns < 4 && path.length > 2) {
+            for (let i = 2; i < path.length - 1 && turns < 4; i++) {
+                const a = path[i - 2];
+                const b = path[i - 1];
+                const c = path[i];
+                const dx1 = b.x - a.x;
+                const dy1 = b.y - a.y;
+                const dx2 = c.x - b.x;
+                const dy2 = c.y - b.y;
+                const isStraight = dx1 === dx2 && dy1 === dy2;
+                if (!isStraight) continue;
+
+                const options: Position[] = [];
+                for (const d of dirs) {
+                    const nx = b.x + d.x;
+                    const ny = b.y + d.y;
+                    if (nx < 0 || ny < 0 || nx > maxIndex || ny > maxIndex) continue;
+                    const key = `${nx},${ny}`;
+                    if (visited.has(key)) continue;
+                    options.push({ x: nx, y: ny });
+                }
+                if (options.length === 0) continue;
+                const alt = options[Math.floor(Math.random() * options.length)];
+                path.splice(i, 0, alt);
+                visited.add(encode(alt));
+                turns++;
+            }
         }
 
         return path;
@@ -188,6 +282,8 @@ export class TowerDefenseEngineService {
         if (this.isWaveInProgress() || this.gameOver()) return;
         this.wave.update(w => w + 1);
         this.isWaveInProgress.set(true);
+        this.currentWaveType = this.nextWaveEnemyType();
+        this.nextWaveEnemyType.set(this.determineWaveType(this.wave() + 1));
 
         const enemyCount = 5 + this.wave() * 2;
         this.enemiesToSpawn = enemyCount;
@@ -273,6 +369,9 @@ export class TowerDefenseEngineService {
                 this.projectiles.set([]);
                 this.isWaveInProgress.set(false);
             });
+            // Prepare next wave preview
+            const upcoming = this.determineWaveType(this.wave() + 1);
+            this.nextWaveEnemyType.set(upcoming);
         }
     }
 
@@ -313,8 +412,23 @@ export class TowerDefenseEngineService {
         const boss = isBossWave && isLastOfWave;
         const hue = (this.wave() * 40) % 360;
 
-        const hpFinal = boss ? hp * 3 : hp;
-        const speedFinal = boss ? baseSpeed * 0.5 : baseSpeed;
+        let enemyType: 'tank' | 'scout' | 'standard' | 'boss' = this.currentWaveType;
+        if (boss) {
+            enemyType = 'boss';
+        }
+
+        let hpFinal = hp;
+        let speedFinal = baseSpeed;
+        if (enemyType === 'tank') {
+            hpFinal = hp * 2;
+            speedFinal = baseSpeed * 0.5;
+        } else if (enemyType === 'scout') {
+            hpFinal = hp * 0.4;
+            speedFinal = baseSpeed * 2.0;
+        } else if (enemyType === 'boss') {
+            hpFinal = hp * 3;
+            speedFinal = baseSpeed * 0.5;
+        }
 
         const newEnemy: Enemy = {
             id: 'e' + (this.enemyIdCounter++),
@@ -329,7 +443,8 @@ export class TowerDefenseEngineService {
             baseSpeed,
             speedModifier: 1,
             shatterStacks: 0,
-            isFrozen: false
+            isFrozen: false,
+            type: enemyType
         };
         this.enemiesInternal.push(newEnemy);
     }
@@ -360,7 +475,12 @@ export class TowerDefenseEngineService {
                 enemy.displayY = (iy + 0.5) * tile;
                 continue;
             }
-            const moveSpeed = enemy.baseSpeed * enemy.speedModifier;
+            const base = enemy.baseSpeed;
+            const archetypeMultiplier =
+                enemy.type === 'tank' ? 0.5 :
+                enemy.type === 'scout' ? 2.0 :
+                enemy.type === 'boss' ? 0.5 : 1;
+            const moveSpeed = base * archetypeMultiplier * enemy.speedModifier;
             enemy.progress += moveSpeed * dt;
 
             if (enemy.progress >= 1) {
@@ -370,6 +490,9 @@ export class TowerDefenseEngineService {
                 if (enemy.pathIndex >= this.path().length - 1) {
                     this.enemiesInternal.splice(i, 1);
                     this.ngZone.run(() => this.lives.update(l => Math.max(0, l - 1)));
+                    if (this.enemiesInternal.length === 0 && this.enemiesToSpawn === 0) {
+                        this.currentWaveType = 'standard';
+                    }
                     continue;
                 }
                 enemy.position = { ...this.path()[enemy.pathIndex] };
@@ -384,8 +507,22 @@ export class TowerDefenseEngineService {
             enemy.displayY = (iy + 0.5) * tile;
             const shatter = enemy.shatterStacks ?? 0;
             const lightness = shatter > 0 ? Math.min(70, 50 + shatter * 4) : 50;
-            enemy.scale = enemy.isBoss ? 1.5 : 1;
-            enemy.bg = enemy.isFrozen ? `hsl(190, 80%, ${lightness}%)` : `hsl(${enemy.hue}, 70%, ${lightness}%)`;
+            let scale = 1;
+            if (enemy.type === 'tank') scale = 1.2;
+            else if (enemy.type === 'scout') scale = 0.9;
+            else if (enemy.type === 'boss') scale = 1.6;
+            enemy.scale = scale;
+            if (enemy.isFrozen) {
+                enemy.bg = `hsl(190, 80%, ${lightness}%)`;
+            } else if (enemy.type === 'tank') {
+                enemy.bg = `hsl(330, 70%, ${lightness}%)`;
+            } else if (enemy.type === 'scout') {
+                enemy.bg = `hsl(50, 90%, ${lightness}%)`;
+            } else if (enemy.type === 'boss') {
+                enemy.bg = `hsl(${enemy.hue}, 90%, ${Math.min(80, lightness + 10)}%)`;
+            } else {
+                enemy.bg = `hsl(${enemy.hue}, 70%, ${lightness}%)`;
+            }
 
             if (enemy.hp <= 0) {
                 this.enemiesInternal.splice(i, 1);

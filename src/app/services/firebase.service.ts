@@ -178,6 +178,8 @@ export class FirebaseService {
 
   private async loadTowerDefenseMasteries(userId: string): Promise<void> {
     if (!this.db) return;
+    const cached = this.masteryProfile();
+    if (cached) return;
     try {
       const ref = doc(this.db, 'towerDefenseMasteries', userId);
       const snap = await getDoc(ref);
@@ -222,24 +224,13 @@ export class FirebaseService {
     const user = this.user$();
     if (!user) return;
     try {
-      const ref = doc(this.db, 'towerDefenseMasteries', user.uid);
-      const snap = await getDoc(ref);
-      let current: MasteryProfile;
-      if (snap.exists()) {
-        const data = snap.data() as any;
-        current = {
-          totalXp: typeof data.totalXp === 'number' ? data.totalXp : 0,
-          usedPoints: typeof data.usedPoints === 'number' ? data.usedPoints : 0,
-          upgrades: data.upgrades && typeof data.upgrades === 'object' ? data.upgrades as { [key: string]: number } : {}
-        };
-      } else {
-        current = { totalXp: 0, usedPoints: 0, upgrades: {} };
-      }
+      const current = this.masteryProfile() ?? { totalXp: 0, usedPoints: 0, upgrades: {} };
       const next: MasteryProfile = {
         totalXp: current.totalXp + xp,
         usedPoints: current.usedPoints,
         upgrades: current.upgrades
       };
+      const ref = doc(this.db, 'towerDefenseMasteries', user.uid);
       await setDoc(ref, { userId: user.uid, ...next }, { merge: true });
       this.masteryProfile.set(next);
     } catch (e) {
