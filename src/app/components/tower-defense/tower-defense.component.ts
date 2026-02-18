@@ -108,10 +108,21 @@ import { Subscription } from 'rxjs';
       opacity: 0.5;
       cursor: not-allowed;
     }
+    .shape-preview {
+      width: 18px;
+      height: 18px;
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+    }
+    .shape-square { border-radius: 4px; }
+    .shape-circle { border-radius: 50%; }
+    .shape-triangle { clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
+    .shape-hexagon { clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%); }
   `]
 })
 export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     selectedTile = signal<TDTile | null>(null);
+    mapLevel = signal(1);
     private uiSub?: Subscription;
     @ViewChild('gameCanvas', { static: false }) gameCanvas?: ElementRef<HTMLCanvasElement>;
     private ctx?: CanvasRenderingContext2D | null;
@@ -143,7 +154,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     ) { }
 
     ngOnInit() {
-        this.tdEngine.resetEngine();
+        this.tdEngine.initializeGame(this.mapLevel());
         this.uiSub = this.tdEngine.uiTick$.subscribe(() => {
             this.cdr.detectChanges();
         });
@@ -174,7 +185,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     onRestart() {
-        this.tdEngine.resetGame();
+        this.tdEngine.initializeGame(this.mapLevel());
         this.selectedTile.set(null);
     }
 
@@ -233,6 +244,16 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     setSpeed(multiplier: number) {
         this.tdEngine.gameSpeedMultiplier.set(multiplier);
+    }
+
+    onMapSizeChange(level: number) {
+        if (level === this.mapLevel()) return;
+        this.mapLevel.set(level);
+        this.tdEngine.initializeGame(level);
+        this.selectedTile.set(null);
+        if (this.isBrowser) {
+            this.resizeCanvas();
+        }
     }
 
     onLoginClick() {
@@ -404,10 +425,10 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 const radius = 2 * tile;
                 ctx.beginPath();
                 ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
                 ctx.fill();
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+                ctx.lineWidth = 1
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
                 ctx.stroke();
             }
         }
@@ -416,15 +437,34 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     private drawEnemies(ctx: CanvasRenderingContext2D, tile: number) {
         const enemies = this.tdEngine.getEnemiesRef();
         for (const e of enemies) {
-            const size = (e.isBoss ? 1.5 : 1) * (tile * 0.65);
+            const scale = e.scale ?? 1;
+            const size = scale * (tile * 0.65);
             const r = size / 2;
             const cx = e.displayX ?? ((e.position.x + 0.5) * tile);
             const cy = e.displayY ?? ((e.position.y + 0.5) * tile);
-            ctx.beginPath();
-            ctx.arc(cx, cy, r, 0, Math.PI * 2);
             ctx.fillStyle = e.bg || (e.isFrozen ? '#7dd3fc' : '#ef4444');
             ctx.shadowColor = (this.tdEngine.gameSpeedMultiplier() > 1) ? 'transparent' : ctx.fillStyle;
             ctx.shadowBlur = (this.tdEngine.gameSpeedMultiplier() > 1) ? 0 : 10;
+            ctx.beginPath();
+            if (e.type === 'tank') {
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            } else if (e.type === 'scout') {
+                ctx.moveTo(cx, cy - r);
+                ctx.lineTo(cx - r, cy + r);
+                ctx.lineTo(cx + r, cy + r);
+                ctx.closePath();
+            } else if (e.type === 'boss') {
+                const points = 6;
+                for (let i = 0; i < points; i++) {
+                    const angle = (Math.PI * 2 * i) / points - Math.PI / 2;
+                    const px = cx + r * Math.cos(angle);
+                    const py = cy + r * Math.sin(angle);
+                    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+            } else {
+                ctx.rect(cx - r, cy - r, size, size);
+            }
             ctx.fill();
             ctx.shadowBlur = 0;
         }

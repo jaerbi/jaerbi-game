@@ -62,6 +62,8 @@ export interface Enemy {
     displayY?: number;
     bg?: string;
     scale?: number;
+    stunTime?: number;
+    type?: 'tank' | 'scout' | 'standard' | 'boss';
 }
 
 export interface Projectile {
@@ -69,6 +71,7 @@ export interface Projectile {
     from: Position;
     to: Position;
     progress: number;
+    speedMultiplier?: number;
 }
 
 export interface TDTile {
