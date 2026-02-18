@@ -251,7 +251,13 @@ export class TowerDefenseEngineService {
             if (!this.savedResult) {
                 this.savedResult = true;
                 this.saveResultIfLoggedIn();
-                const xp = this.wave() * 10;
+                const wavesCleared = this.wave();
+                let xp = 0;
+                if (wavesCleared >= 5) {
+                    const base = wavesCleared * 1.5;
+                    const bonus = wavesCleared > 20 ? (wavesCleared - 20) * 2 : 0;
+                    xp = Math.floor(base + bonus);
+                }
                 if (xp > 0) {
                     this.firebase.awardTowerDefenseXp(xp);
                 }

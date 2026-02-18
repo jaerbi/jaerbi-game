@@ -32,6 +32,15 @@
             <span class="text-[10px] uppercase font-bold text-slate-500">{{ settings.t('AVAILABLE') }}</span>
             <span class="font-mono text-lg text-sky-400 leading-none">{{ availablePoints() }}</span>
           </div>
+          <div
+            *ngIf="isSaved() && !saving()"
+            class="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-xl border border-emerald-500/30"
+          >
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-[10px] font-bold uppercase tracking-wide text-emerald-300">
+              {{ settings.t('SAVED') }}
+            </span>
+          </div>
         </div>
 
         <ng-template #noProfile>
@@ -96,11 +105,24 @@
                         <div class="text-[10px] text-slate-500">+5% {{ settings.t('PER_LEVEL') }}</div>
                       </div>
                       <div class="flex items-center gap-3">
-                        <span
-                          class="font-mono text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20"
-                        >
-                          {{ getUpgradeLevel(tier.id, 'damage') }}
-                        </span>
+                        <div class="flex flex-col items-end gap-1">
+                          <span
+                            class="font-mono text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20"
+                          >
+                            {{ getUpgradeLevel(tier.id, 'damage') }}
+                          </span>
+                          <span
+                            *ngIf="getUpgradeLevel(tier.id, 'damage') < 10; else dmgMaxed"
+                            class="text-[10px] text-slate-400"
+                          >
+                            {{ settings.t('COST') }}: {{ getNextLevelCost(tier.id, 'damage') }} XP
+                          </span>
+                          <ng-template #dmgMaxed>
+                            <span class="text-[10px] text-amber-400 font-bold uppercase">
+                              {{ settings.t('MAXED') }}
+                            </span>
+                          </ng-template>
+                        </div>
                         <button
                           (click)="increaseBasic(tier.id, 'damage')"
                           [disabled]="!canIncreaseBasic(tier.id, 'damage')"
@@ -121,11 +143,24 @@
                         <div class="text-[10px] text-slate-500">+0.1 {{ settings.t('PER_LEVEL') }}</div>
                       </div>
                       <div class="flex items-center gap-3">
-                        <span
-                          class="font-mono text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20"
-                        >
-                          {{ getUpgradeLevel(tier.id, 'range') }}
-                        </span>
+                        <div class="flex flex-col items-end gap-1">
+                          <span
+                            class="font-mono text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20"
+                          >
+                            {{ getUpgradeLevel(tier.id, 'range') }}
+                          </span>
+                          <span
+                            *ngIf="getUpgradeLevel(tier.id, 'range') < 10; else rangeMaxed"
+                            class="text-[10px] text-slate-400"
+                          >
+                            {{ settings.t('COST') }}: {{ getNextLevelCost(tier.id, 'range') }} XP
+                          </span>
+                          <ng-template #rangeMaxed>
+                            <span class="text-[10px] text-amber-400 font-bold uppercase">
+                              {{ settings.t('MAXED') }}
+                            </span>
+                          </ng-template>
+                        </div>
                         <button
                           (click)="increaseBasic(tier.id, 'range')"
                           [disabled]="!canIncreaseBasic(tier.id, 'range')"
@@ -163,7 +198,22 @@
                       </div>
                     </div>
                     <div class="flex flex-col items-center gap-2">
-                      <span class="font-mono text-xs text-amber-400">{{ getUpgradeLevel(tier.id, 'golden') }} / 1</span>
+                      <div class="flex flex-col items-center gap-1">
+                        <span class="font-mono text-xs text-amber-400">
+                          {{ getUpgradeLevel(tier.id, 'golden') }} / 1
+                        </span>
+                        <span
+                          *ngIf="getUpgradeLevel(tier.id, 'golden') < 1; else goldenMaxed"
+                          class="text-[10px] text-amber-200"
+                        >
+                          {{ settings.t('COST') }}: {{ getNextLevelCost(tier.id, 'golden') }} XP
+                        </span>
+                        <ng-template #goldenMaxed>
+                          <span class="text-[10px] text-amber-400 font-bold uppercase">
+                            {{ settings.t('MAXED') }}
+                          </span>
+                        </ng-template>
+                      </div>
                       <button
                         (click)="increaseGolden(tier.id)"
                         [disabled]="!canIncreaseGolden(tier.id)"
@@ -192,7 +242,7 @@
 
             <button
               (click)="save()"
-              [disabled]="!profile() || saving()"
+              [disabled]="!profile() || saving() || isSaved()"
               class="group relative px-10 py-4 rounded-2xl font-black uppercase tracking-widest transition-all overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
               [class.bg-emerald-600]="profile() && !saving()"
               [class.text-white]="profile() && !saving()"
@@ -200,10 +250,11 @@
               [class.bg-slate-700]="!profile() || saving()"
             >
               <span class="relative z-10 flex items-center gap-2">
-                <span
-                  *ngIf="saving()"
-                  class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"
-                ></span>
+                @if (saving()) {
+                    <span
+                      class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"
+                    ></span>
+                }
                 {{ saving() ? settings.t('SAVING') : settings.t('SAVE_CHANGES') }}
               </span>
               <div

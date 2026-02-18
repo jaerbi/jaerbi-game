@@ -24,6 +24,7 @@ export interface TowerDefenseScore {
   displayName: string;
   maxWave: number;
   totalMoney: number;
+  userTotalXp?: number;
   timestamp?: any;
 }
 
@@ -133,8 +134,23 @@ export class FirebaseService {
   async saveTowerDefenseScore(entry: TowerDefenseScore): Promise<void> {
     if (!this.db) return;
     try {
+      let userTotalXp: number | undefined = undefined;
+      if (entry.userId) {
+        try {
+          const ref = doc(this.db, 'towerDefenseMasteries', entry.userId);
+          const snap = await getDoc(ref);
+          if (snap.exists()) {
+            const data = snap.data() as any;
+            const xp = data && typeof data.totalXp === 'number' ? data.totalXp : 0;
+            userTotalXp = xp;
+          }
+        } catch {
+          userTotalXp = undefined;
+        }
+      }
       const payload = {
         ...entry,
+        userTotalXp,
         timestamp: serverTimestamp()
       };
       await addDoc(collection(this.db, 'towerDefenseLeaderboards'), payload);

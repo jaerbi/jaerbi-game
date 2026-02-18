@@ -150,6 +150,9 @@ export type TranslationKey =
     | 'REQUIRES_5_POINTS'
     | 'SAVE_CHANGES'
     | 'SAVING'
+    | 'SAVED'
+    | 'COST'
+    | 'MAXED'
     | 'LOCAL_STORAGE_MSG'
     | 'T1_NAME'
     | 'T1_GOLDEN_TITLE'
@@ -178,9 +181,12 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     DAMAGE: { en: 'Damage', uk: 'Шкода' },
     RANGE: { en: 'Range', uk: 'Дальність' },
     PER_LEVEL: { en: 'per level', uk: 'за рівень' },
-    REQUIRES_5_POINTS: { en: 'Requires at least 5 points in Damage or Range.', uk: 'Потрібно мінімум 5 очок у Шкоді або Дальності.' },
+    REQUIRES_5_POINTS: { en: 'Requires 5 points in tier.', uk: 'Потрібно 5 очок в тирі' },
     SAVE_CHANGES: { en: 'Save Changes', uk: 'Зберегти зміни' },
     SAVING: { en: 'Saving...', uk: 'Збереження...' },
+    SAVED: { en: 'Saved', uk: 'Збережено' },
+    COST: { en: 'Cost', uk: 'Вартість' },
+    MAXED: { en: 'MAXED', uk: 'МАКС' },
     LOCAL_STORAGE_MSG: { en: 'Changes are stored locally until you save.', uk: 'Зміни зберігаються локально, поки ви їх не збережете.' },
     // Ключі для описів тирів
     T1_NAME: { en: 'Tier 1 – Frost', uk: 'Тир 1 – Мороз' },
@@ -225,7 +231,7 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     },
     T4_GOLDEN_DESC: {
         en: 'Attacks can jump to extra enemies with higher frequency.',
-        uk: 'Атаки можуть перескакувати на додаткових ворогів частіше.',
+        uk: 'Атаки можуть перескакувати на додаткових ворогів.',
     },
     FINAL_STRIKE_INFO: {
         en: 'If (Current HP / Max HP) < 0.15: Normal Enemy: Instant Kill. Boss: Deal 300% normal damage (Bosses are resistant to instant death).',

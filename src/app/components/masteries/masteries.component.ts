@@ -20,6 +20,9 @@ interface TierMeta {
   templateUrl: 'masteries.component.html',
 })
 export class MasteriesComponent implements OnInit {
+  private static readonly BASIC_COST_MULTIPLIER = 5;
+  private static readonly GOLDEN_COST = 150;
+
   tiers: TierMeta[] = [
     {
       id: 1,
@@ -52,6 +55,7 @@ export class MasteriesComponent implements OnInit {
   ];
 
   saving = signal(false);
+  isSaved = signal(false);
 
   constructor(public firebase: FirebaseService, public settings: SettingsService) { }
 
@@ -84,14 +88,22 @@ export class MasteriesComponent implements OnInit {
     return typeof v === 'number' ? v : 0;
   }
 
-  private canSpendPoint(): boolean {
-    return this.availablePoints() > 0;
+  getNextLevelCost(tierId: number, kind: 'damage' | 'range' | 'golden'): number {
+    if (kind === 'golden') {
+      return MasteriesComponent.GOLDEN_COST;
+    }
+    const current = this.getUpgradeLevel(tierId, kind);
+    if (current >= 10) return 0;
+    return (current + 1) * MasteriesComponent.BASIC_COST_MULTIPLIER;
   }
 
   canIncreaseBasic(tierId: number, kind: 'damage' | 'range'): boolean {
     const current = this.getUpgradeLevel(tierId, kind);
     if (current >= 10) return false;
-    if (!this.canSpendPoint()) return false;
+    const cost = this.getNextLevelCost(tierId, kind);
+    if (cost <= 0) return false;
+    if (!this.profile()) return false;
+    if (this.availablePoints() < cost) return false;
     return !!this.profile();
   }
 
@@ -104,16 +116,19 @@ export class MasteriesComponent implements OnInit {
 
   increaseBasic(tierId: number, kind: 'damage' | 'range') {
     if (!this.canIncreaseBasic(tierId, kind)) return;
+    const cost = this.getNextLevelCost(tierId, kind);
+    if (cost <= 0) return;
     this.updateProfile(p => {
       const key = this.keyFor(tierId, kind);
       const current = p.upgrades?.[key] ?? 0;
       const upgrades = { ...p.upgrades, [key]: current + 1 };
       return {
         ...p,
-        usedPoints: p.usedPoints + 1,
+        usedPoints: p.usedPoints + cost,
         upgrades
       };
     });
+    this.isSaved.set(false);
   }
 
   canUnlockGolden(tierId: number): boolean {
@@ -124,25 +139,29 @@ export class MasteriesComponent implements OnInit {
 
   canIncreaseGolden(tierId: number): boolean {
     if (!this.profile()) return false;
-    if (!this.canSpendPoint()) return false;
     if (!this.canUnlockGolden(tierId)) return false;
     const current = this.getUpgradeLevel(tierId, 'golden');
     if (current >= 1) return false;
+    const cost = this.getNextLevelCost(tierId, 'golden');
+    if (this.availablePoints() < cost) return false;
     return true;
   }
 
   increaseGolden(tierId: number) {
     if (!this.canIncreaseGolden(tierId)) return;
+    const cost = this.getNextLevelCost(tierId, 'golden');
+    if (cost <= 0) return;
     this.updateProfile(p => {
       const key = this.keyFor(tierId, 'golden');
       const current = p.upgrades?.[key] ?? 0;
       const upgrades = { ...p.upgrades, [key]: current + 1 };
       return {
         ...p,
-        usedPoints: p.usedPoints + 1,
+        usedPoints: p.usedPoints + cost,
         upgrades
       };
     });
+    this.isSaved.set(false);
   }
 
   async save() {
@@ -153,6 +172,7 @@ export class MasteriesComponent implements OnInit {
     } catch {
     } finally {
       this.saving.set(false);
+      this.isSaved.set(true);
     }
   }
 
@@ -160,4 +180,3 @@ export class MasteriesComponent implements OnInit {
     this.firebase.loginWithGoogle();
   }
 }
-

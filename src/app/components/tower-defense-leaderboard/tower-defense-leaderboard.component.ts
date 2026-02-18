@@ -34,6 +34,7 @@ import { SettingsService } from '../../services/settings.service';
                 <th class="text-left py-2 px-2 border-b border-slate-700">Rank</th>
                 <th class="text-left py-2 px-2 border-b border-slate-700">Name</th>
                 <th class="text-left py-2 px-2 border-b border-slate-700">Wave</th>
+                <th class="text-left py-2 px-2 border-b border-slate-700">Mastery XP</th>
                 <th class="text-left py-2 px-2 border-b border-slate-700">Date</th>
               </tr>
             </thead>
@@ -46,12 +47,15 @@ import { SettingsService } from '../../services/settings.service';
                 <td class="py-2 px-2 border-b border-slate-800 font-mono text-emerald-400">
                   {{ s.maxWave }}
                 </td>
+                <td class="py-2 px-2 border-b border-slate-800 font-mono text-sky-300">
+                  {{ s.userTotalXp ?? 0 }}
+                </td>
                 <td class="py-2 px-2 border-b border-slate-800 text-slate-300">
                   {{ s.timestamp?.toDate ? (s.timestamp.toDate() | date:'mediumDate') : (s.timestamp | date:'mediumDate') }}
                 </td>
               </tr>
               <tr *ngIf="scores().length === 0">
-                <td colspan="4" class="py-8 text-center text-slate-400 italic">
+                <td colspan="5" class="py-8 text-center text-slate-400 italic">
                   No runs recorded yet. Finish a game while logged in to appear here.
                 </td>
               </tr>
@@ -86,4 +90,3 @@ export class TowerDefenseLeaderboardComponent implements OnInit {
         }
     }
 }
-
