@@ -24,6 +24,7 @@ export class TowerDefenseEngineService {
     projectiles = signal<Projectile[]>([]);
     gameSpeedMultiplier = signal(1);
     nextWaveEnemyType = signal<'tank' | 'scout' | 'standard'>('standard');
+    isHardMode = signal(false);
 
     private enemiesInternal: Enemy[] = [];
     private projectilesInternal: Projectile[] = [];
@@ -42,16 +43,17 @@ export class TowerDefenseEngineService {
     private currentWaveType: 'tank' | 'scout' | 'standard' | 'boss' = 'standard';
 
     // Costs and Stats
-    towerCosts = [15, 50, 250, 1500];
+    towerCosts = [15, 50, 250, 1200];
 
     private tierStats = [
         { damage: 5, range: 2, fireInterval: 0.5 },
         { damage: 20, range: 2.5, fireInterval: 1 },
         { damage: 80, range: 3, fireInterval: 1.2 },
-        { damage: 300, range: 3.5, fireInterval: 2 }
+        { damage: 300, range: 3.5, fireInterval: 1.5 }
     ];
 
     private savedResult = false;
+    private gameEndedHard = false;
 
     constructor(private ngZone: NgZone, private firebase: FirebaseService) {
         this.initGame();
@@ -64,10 +66,14 @@ export class TowerDefenseEngineService {
             userId: user.uid,
             displayName: user.displayName || 'Anonymous',
             maxWave: this.wave(),
-            totalMoney: this.money()
+            totalMoney: this.money(),
+            hardMode: this.isHardMode()
         };
         try {
             await this.firebase.saveTowerDefenseScore(payload);
+            if (this.isHardMode()) {
+                await this.firebase.updateHardModeScore(payload);
+            }
         } catch {
         }
     }
@@ -85,6 +91,7 @@ export class TowerDefenseEngineService {
         this.isWaveInProgress.set(false);
         this.gameOver.set(false);
         this.savedResult = false;
+        this.gameEndedHard = false;
         this.money.set(100);
         this.lives.set(100);
         this.wave.set(0);
@@ -145,6 +152,11 @@ export class TowerDefenseEngineService {
         this.dispose();
         this.generateMap();
         this.nextWaveEnemyType.set(this.determineWaveType(1));
+        const goldLevel = this.getGoldMasteryLevel();
+        if (goldLevel >= 8) {
+            const bonus = (goldLevel - 7) * 20;
+            this.money.set(100 + bonus);
+        }
     }
 
     private determineWaveType(wave: number): 'tank' | 'scout' | 'standard' {
@@ -158,6 +170,22 @@ export class TowerDefenseEngineService {
         if (roll < 0.23) return 'tank';
         if (roll < 0.56) return 'scout';
         return 'standard';
+    }
+
+    private getGoldMasteryLevel(): number {
+        const profile = this.firebase.masteryProfile();
+        const v = profile && profile.upgrades ? profile.upgrades['gold_mastery'] : 0;
+        return typeof v === 'number' ? v : 0;
+    }
+
+    private getGoldKillMultiplier(): number {
+        const level = this.getGoldMasteryLevel();
+        if (level <= 0) return 1;
+        const stage1 = Math.min(level, 7);
+        const stage2 = Math.max(0, Math.min(level - 7, 7));
+        const stage3 = Math.max(0, level - 14);
+        const bonus = stage1 * 0.05 + stage2 * 0.1 + stage3 * 0.15;
+        return 1 + bonus;
     }
 
     private generateRandomPath(): Position[] {
@@ -327,6 +355,9 @@ export class TowerDefenseEngineService {
     }
 
     updateGame(dt: number) {
+        if (this.gameEndedHard) {
+            return;
+        }
         const effectiveDt = dt * this.gameSpeedMultiplier();
         this.handleSpawning(effectiveDt);
         this.updateEnemies(effectiveDt);
@@ -358,6 +389,7 @@ export class TowerDefenseEngineService {
                     this.firebase.awardTowerDefenseXp(xp);
                 }
             }
+            this.gameEndedHard = true;
             return;
         }
 
@@ -369,7 +401,11 @@ export class TowerDefenseEngineService {
                 this.projectiles.set([]);
                 this.isWaveInProgress.set(false);
             });
-            // Prepare next wave preview
+            const goldLevel = this.getGoldMasteryLevel();
+            if (goldLevel >= 15) {
+                const bonus = (goldLevel - 14) * 5;
+                this.money.update(m => m + bonus);
+            }
             const upcoming = this.determineWaveType(this.wave() + 1);
             this.nextWaveEnemyType.set(upcoming);
         }
@@ -428,6 +464,10 @@ export class TowerDefenseEngineService {
         } else if (enemyType === 'boss') {
             hpFinal = hp * 3;
             speedFinal = baseSpeed * 0.5;
+        }
+        if (this.isHardMode()) {
+            hpFinal *= 1.5;
+            speedFinal *= 1.1;
         }
 
         const newEnemy: Enemy = {
@@ -526,7 +566,13 @@ export class TowerDefenseEngineService {
 
             if (enemy.hp <= 0) {
                 this.enemiesInternal.splice(i, 1);
-                this.ngZone.run(() => this.money.update(m => m + 5 + this.wave()));
+                const baseReward = 5 + this.wave();
+                const goldMultiplier = this.getGoldKillMultiplier();
+                let reward = Math.floor(baseReward * goldMultiplier);
+                if (this.isHardMode()) {
+                    reward = Math.floor(reward * 0.8);
+                }
+                this.ngZone.run(() => this.money.update(m => m + reward));
             }
         }
     }
