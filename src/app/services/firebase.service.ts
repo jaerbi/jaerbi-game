@@ -26,6 +26,7 @@ export interface TowerDefenseScore {
   totalMoney: number;
   userTotalXp?: number;
   timestamp?: any;
+  hardMode?: boolean;
 }
 
 export interface MasteryProfile {
@@ -243,6 +244,14 @@ export class FirebaseService {
       this.masteryProfile.set(next);
     } catch (e) {
       console.error('Error awarding TD XP: ', e);
+    }
+  }
+
+  async updateHardModeScore(entry: TowerDefenseScore): Promise<void> {
+    if (!this.db) return;
+    try {
+      console.count('FIREBASE_CALL: updateHardModeScore');
+    } catch {
     }
   }
 }

@@ -256,6 +256,11 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         }
     }
 
+    setHardMode(enabled: boolean) {
+        if (this.tdEngine.isWaveInProgress()) return;
+        this.tdEngine.isHardMode.set(enabled);
+    }
+
     onLoginClick() {
         const user = this.firebase.user$();
         if (user) return;
@@ -309,6 +314,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const size = this.tdEngine.gridSize * tile;
         this.clearCanvas(ctx, size);
         this.drawGrid(ctx, tile);
+        this.drawPathOverlay(ctx, tile);
         this.drawSelection(ctx, tile);
         this.drawFrostAuras(ctx, tile);
         this.drawTowers(ctx, tile);
@@ -317,6 +323,48 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             this.drawProjectiles(ctx, tile);
         }
         this.drawRangeIndicator(ctx, tile);
+    }
+
+    private drawPathOverlay(ctx: CanvasRenderingContext2D, tile: number) {
+        const path = this.tdEngine.getPathRef();
+        if (!path || path.length < 2) return;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.setLineDash([10, 10]);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < path.length; i++) {
+            const p = path[i];
+            const x = p.x * tile + tile / 2;
+            const y = p.y * tile + tile / 2;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const start = path[0];
+        const end = path[path.length - 1];
+        const sx = start.x * tile + tile / 2;
+        const sy = start.y * tile + tile / 2;
+        const ex = end.x * tile + tile / 2;
+        const ey = end.y * tile + tile / 2;
+
+        ctx.fillStyle = 'rgba(56,189,248,0.7)';
+        ctx.beginPath();
+        ctx.arc(sx, sy, tile * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(248,113,113,0.9)';
+        ctx.beginPath();
+        const r = tile * 0.28;
+        ctx.moveTo(ex, ey - r);
+        ctx.lineTo(ex - r * 0.8, ey + r * 0.4);
+        ctx.lineTo(ex + r * 0.8, ey + r * 0.4);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
     }
 
     private drawGrid(ctx: CanvasRenderingContext2D, tile: number) {

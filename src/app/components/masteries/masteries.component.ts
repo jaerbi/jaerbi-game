@@ -93,18 +93,58 @@ export class MasteriesComponent implements OnInit {
       return MasteriesComponent.GOLDEN_COST;
     }
     const current = this.getUpgradeLevel(tierId, kind);
-    if (current >= 10) return 0;
+    if (current >= 20) return 0;
     return (current + 1) * MasteriesComponent.BASIC_COST_MULTIPLIER;
   }
 
   canIncreaseBasic(tierId: number, kind: 'damage' | 'range'): boolean {
     const current = this.getUpgradeLevel(tierId, kind);
-    if (current >= 10) return false;
+    if (current >= 20) return false;
     const cost = this.getNextLevelCost(tierId, kind);
     if (cost <= 0) return false;
     if (!this.profile()) return false;
     if (this.availablePoints() < cost) return false;
     return !!this.profile();
+  }
+
+  getGoldMasteryLevel(): number {
+    const p = this.firebase.masteryProfile();
+    if (!p || !p.upgrades) return 0;
+    const v = p.upgrades['gold_mastery'];
+    return typeof v === 'number' ? v : 0;
+  }
+
+  getGoldNextLevelCost(): number {
+    const current = this.getGoldMasteryLevel();
+    if (current >= 20) return 0;
+    return (current + 1) * MasteriesComponent.BASIC_COST_MULTIPLIER;
+  }
+
+  canIncreaseGold(): boolean {
+    const current = this.getGoldMasteryLevel();
+    if (current >= 20) return false;
+    if (!this.profile()) return false;
+    const cost = this.getGoldNextLevelCost();
+    if (cost <= 0) return false;
+    if (this.availablePoints() < cost) return false;
+    return true;
+  }
+
+  increaseGold() {
+    if (!this.canIncreaseGold()) return;
+    const cost = this.getGoldNextLevelCost();
+    if (cost <= 0) return;
+    this.updateProfile(p => {
+      const current = typeof p.upgrades?.['gold_mastery'] === 'number' ? p.upgrades['gold_mastery'] : 0;
+      const level = current + 1;
+      const upgrades = { ...p.upgrades, gold_mastery: level };
+      return {
+        ...p,
+        usedPoints: p.usedPoints + cost,
+        upgrades
+      };
+    });
+    this.isSaved.set(false);
   }
 
   private updateProfile(mutator: (p: MasteryProfile) => MasteryProfile) {
