@@ -166,10 +166,14 @@ export type TranslationKey =
     | 'T4_NAME'
     | 'T4_GOLDEN_TITLE'
     | 'T4_GOLDEN_DESC'
+    | 'GOLD_MASTERY'
+    | 'GOLD_MASTERY_INFO'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     MASTERIES: { en: 'Masteries', uk: 'Майстерність' },
+    GOLD_MASTERY: { en: 'Gold Mastery', uk: 'Золота майстерність' },
+    GOLD_MASTERY_INFO: { en: 'Lv 1-7: +5% gold per kill. Lv 8-14: +10% per kill and extra starting gold. Lv 15-20: higher gold and bonus after each wave.', uk: 'Рівні 1-7: +5% золота за вбивство. Рівні 8-14: +10% за вбивство та додаткове початкове золото. Рівні 15-20: більше золота та бонус після кожної хвилі.' },
     BACK_TO_DEFENSE: { en: 'Back to Defense', uk: 'Назад до захисту' },
     TOTAL_XP: { en: 'XP', uk: 'Досвід' },
     SPENT: { en: 'Spent', uk: 'Витрачено' },
@@ -181,7 +185,7 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     DAMAGE: { en: 'Damage', uk: 'Шкода' },
     RANGE: { en: 'Range', uk: 'Дальність' },
     PER_LEVEL: { en: 'per level', uk: 'за рівень' },
-    REQUIRES_5_POINTS: { en: 'Requires 5 points in tier.', uk: 'Потрібно 5 очок в тирі' },
+    REQUIRES_5_POINTS: { en: 'Requires 200 points in tier.', uk: 'Потрібно 200 очок в тирі' },
     SAVE_CHANGES: { en: 'Save Changes', uk: 'Зберегти зміни' },
     SAVING: { en: 'Saving...', uk: 'Збереження...' },
     SAVED: { en: 'Saved', uk: 'Збережено' },
