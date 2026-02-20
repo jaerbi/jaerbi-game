@@ -43,13 +43,13 @@ export class TowerDefenseEngineService {
     private currentWaveType: 'tank' | 'scout' | 'standard' | 'boss' = 'standard';
 
     // Costs and Stats
-    towerCosts = [15, 50, 250, 1200];
+    towerCosts = [15, 50, 250, 1000];
 
     private tierStats = [
         { damage: 5, range: 2, fireInterval: 0.5 },
-        { damage: 20, range: 2.5, fireInterval: 1 },
-        { damage: 80, range: 3, fireInterval: 1.2 },
-        { damage: 300, range: 3.5, fireInterval: 1.5 }
+        { damage: 20, range: 2.5, fireInterval: 0.8 },
+        { damage: 80, range: 3, fireInterval: 1 },
+        { damage: 300, range: 3.5, fireInterval: 1.2 }
     ];
 
     private savedResult = false;
@@ -440,8 +440,6 @@ export class TowerDefenseEngineService {
                 const bonus = (goldLevel - 14) * 5;
                 this.money.update(m => m + bonus);
             }
-            const upcoming = this.determineWaveType(this.wave() + 1);
-            this.nextWaveEnemyType.set(upcoming);
         }
     }
 
@@ -580,7 +578,8 @@ export class TowerDefenseEngineService {
             enemy.displayX = (ix + 0.5) * tile;
             enemy.displayY = (iy + 0.5) * tile;
             const shatter = enemy.shatterStacks ?? 0;
-            const lightness = shatter > 0 ? Math.min(70, 50 + shatter * 4) : 50;
+            const baseLight = 60;
+            const lightness = baseLight; 
             let scale = 1;
             if (enemy.type === 'tank') scale = 1.2;
             else if (enemy.type === 'scout') scale = 0.9;
@@ -589,13 +588,13 @@ export class TowerDefenseEngineService {
             if (enemy.isFrozen) {
                 enemy.bg = `hsl(190, 80%, ${lightness}%)`;
             } else if (enemy.type === 'tank') {
-                enemy.bg = `hsl(330, 70%, ${lightness}%)`;
+                enemy.bg = `hsl(330, 70%, 60%)`;
             } else if (enemy.type === 'scout') {
-                enemy.bg = `hsl(50, 90%, ${lightness}%)`;
+                enemy.bg = `hsl(50, 90%, 60%)`;
             } else if (enemy.type === 'boss') {
-                enemy.bg = `hsl(${enemy.hue}, 90%, ${Math.min(80, lightness + 10)}%)`;
+                enemy.bg = `hsl(${enemy.hue}, 90%, 65%)`;
             } else {
-                enemy.bg = `hsl(${enemy.hue}, 70%, ${lightness}%)`;
+                enemy.bg = `hsl(200, 70%, 60%)`;
             }
 
             if (enemy.hp <= 0) {

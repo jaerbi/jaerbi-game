@@ -174,9 +174,11 @@ export type TranslationKey =
     | 'SUPPORT_COMMUNITY'
     | 'MONOBANK_JAR'
     | 'SOCIAL_FEEDBACK'
+    | 'SPEED'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    SPEED: { en: 'Speed', uk: `Швидкість` },
     SOCIAL_FEEDBACK: { en: 'Social & Feedback', uk: `Соціальні мережі та зворотний зв'язок` },
     MONOBANK_JAR: { en: 'Monobank Jar', uk: 'Банка Monobank' },
     SUPPORT_COMMUNITY: { en: 'Support & Community', uk: 'Підтримка та спільнота' },
