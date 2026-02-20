@@ -166,22 +166,38 @@ export type TranslationKey =
     | 'T4_NAME'
     | 'T4_GOLDEN_TITLE'
     | 'T4_GOLDEN_DESC'
+    | 'GOLD_MASTERY'
+    | 'GOLD_MASTERY_INFO'
+    | 'THANK_SUPPORTING'
+    | 'OPEN_LINK'
+    | 'COPY_LINK'
+    | 'SUPPORT_COMMUNITY'
+    | 'MONOBANK_JAR'
+    | 'SOCIAL_FEEDBACK'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
-    MASTERIES: { en: 'Masteries', uk: 'Майстерність' },
+    SOCIAL_FEEDBACK: { en: 'Social & Feedback', uk: `Соціальні мережі та зворотний зв'язок` },
+    MONOBANK_JAR: { en: 'Monobank Jar', uk: 'Банка Monobank' },
+    SUPPORT_COMMUNITY: { en: 'Support & Community', uk: 'Підтримка та спільнота' },
+    COPY_LINK: { en: 'Copy Link', uk: 'Копіювати посилання' },
+    OPEN_LINK: { en: 'Open Link', uk: 'Відкрити посилання' },
+    THANK_SUPPORTING: { en: 'Thank you for supporting the project!', uk: 'Дякую за підтримку проєкту!' },
+    MASTERIES: { en: 'Masteries', uk: 'Вміння' },
+    GOLD_MASTERY: { en: 'Gold Mastery', uk: 'Золота майстерність' },
+    GOLD_MASTERY_INFO: { en: 'Lv 1-7: +5% gold per kill. Lv 8-14: +10% per kill and extra starting gold. Lv 15-20: higher gold and bonus after each wave.', uk: 'Рівні 1-7: +5% золота за вбивство. Рівні 8-14: +10% за вбивство та додаткове початкове золото. Рівні 15-20: більше золота та бонус після кожної хвилі.' },
     BACK_TO_DEFENSE: { en: 'Back to Defense', uk: 'Назад до захисту' },
     TOTAL_XP: { en: 'XP', uk: 'Досвід' },
     SPENT: { en: 'Spent', uk: 'Витрачено' },
     AVAILABLE: { en: 'Available', uk: 'Доступно' },
     LOG_IN_MASTERY_MSG: { en: 'Log in to earn and spend Mastery XP.', uk: 'Увійдіть, щоб заробляти та витрачати досвід майстерності.' },
-    NEED_LOG_IN: { en: 'You need to be logged in to earn XP and unlock Masteries.', uk: 'Вам потрібно увійти, щоб заробляти досвід та відкривати майстерність.' },
+    NEED_LOG_IN: { en: 'You need to be logged in to earn XP and unlock Masteries.', uk: 'Вам потрібно увійти, щоб заробляти досвід та відкривати Вміння.' },
     LOGIN_GOOGLE: { en: 'Login with Google', uk: 'Увійти через Google' },
     MASTERIES_SUBTITLE: { en: 'Spend points to permanently improve each tower tier.', uk: 'Витрачайте очки, щоб назавжди покращити кожен тир веж.' },
     DAMAGE: { en: 'Damage', uk: 'Шкода' },
     RANGE: { en: 'Range', uk: 'Дальність' },
     PER_LEVEL: { en: 'per level', uk: 'за рівень' },
-    REQUIRES_5_POINTS: { en: 'Requires 5 points in tier.', uk: 'Потрібно 5 очок в тирі' },
+    REQUIRES_5_POINTS: { en: 'Requires 200 points in tier.', uk: 'Потрібно 200 очок в тирі' },
     SAVE_CHANGES: { en: 'Save Changes', uk: 'Зберегти зміни' },
     SAVING: { en: 'Saving...', uk: 'Збереження...' },
     SAVED: { en: 'Saved', uk: 'Збережено' },

@@ -6,11 +6,13 @@ import { TDTile } from '../../models/unit.model';
 import { SettingsService } from '../../services/settings.service';
 import { FirebaseService } from '../../services/firebase.service';
 import { Subscription } from 'rxjs';
+import { GameEngineService } from '../../services/game-engine.service';
+import { SupportCommunityComponent } from '../support-community/support-community.component';
 
 @Component({
     selector: 'app-tower-defense',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, SupportCommunityComponent],
     templateUrl: 'tower-defense.component.html',
     styleUrls: ['../../app.css'],
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -148,6 +150,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     constructor(
         public tdEngine: TowerDefenseEngineService,
         public settings: SettingsService,
+        public gameEngine: GameEngineService,
         public firebase: FirebaseService,
         public router: Router,
         private cdr: ChangeDetectorRef,
@@ -155,6 +158,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     ngOnInit() {
         this.tdEngine.initializeGame(this.mapLevel());
+        this.cdr.detectChanges();
         this.uiSub = this.tdEngine.uiTick$.subscribe(() => {
             this.cdr.detectChanges();
         });
@@ -162,8 +166,19 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     ngAfterViewInit() {
         if (!this.isBrowser) return;
-        this.initCanvas();
-        this.startCanvasLoop();
+        setTimeout(() => {
+            this.initCanvas();
+            this.startCanvasLoop();
+            setTimeout(() => this.resizeCanvas(), 100);
+        }, 0);
+        // requestAnimationFrame(() => {
+        //     requestAnimationFrame(() => {
+        //         this.initCanvas();
+        //         this.drawFrame();
+        //         this.gameReady.set(true);
+        //         this.startCanvasLoop();
+        //     });
+        // });
         window.addEventListener('resize', this.resizeCanvas);
     }
 
@@ -217,14 +232,25 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         if (!tile || !tile.tower) return { display: 'none' };
 
         const tower = tile.tower;
-        const size = tower.range * 2 * 62; // range is in tiles
+        const tileSize = this.tdEngine.tileSize;
+        const size = tower.range * 2 * tileSize;
         return {
-            left: `${tower.position.x * 62 + 30}px`,
-            top: `${tower.position.y * 62 + 30}px`,
+            left: `${tower.position.x * tileSize + tileSize / 2}px`,
+            top: `${tower.position.y * tileSize + tileSize / 2}px`,
             width: `${size}px`,
             height: `${size}px`,
             display: 'block'
         };
+    }
+    navigateToFeedback() {
+        const user = this.firebase.user$();
+        if (user) {
+            this.router.navigate(['/feedback']);
+            return;
+        }
+        try {
+            this.firebase.loginWithGoogle();
+        } catch { }
     }
 
     sellTower() {
@@ -280,6 +306,10 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const canvas = this.gameCanvas?.nativeElement;
         if (!canvas) return;
         const tile = this.tdEngine.tileSize;
+        const gridSize = this.tdEngine.gridSize;
+
+        if (!tile || !gridSize) return;
+
         const size = this.tdEngine.gridSize * tile;
         // Style size
         canvas.style.width = `${size}px`;
@@ -350,19 +380,53 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const ex = end.x * tile + tile / 2;
         const ey = end.y * tile + tile / 2;
 
-        ctx.fillStyle = 'rgba(56,189,248,0.7)';
+        ctx.save();
+        ctx.translate(sx, sy);
+        const gateRadius = tile * 0.35;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(56,189,248,0.95)';
+        ctx.shadowColor = 'rgba(56,189,248,1)';
+        ctx.shadowBlur = 14;
         ctx.beginPath();
-        ctx.arc(sx, sy, tile * 0.25, 0, Math.PI * 2);
-        ctx.fill();
+        const turns = 3;
+        const totalAngle = Math.PI * 2 * turns;
+        let first = true;
+        for (let a = 0; a <= totalAngle; a += Math.PI / 32) {
+            const t = a / totalAngle;
+            const r = gateRadius * (0.4 + 0.6 * t);
+            const x = Math.cos(a) * r;
+            const y = Math.sin(a) * r;
+            if (first) {
+                ctx.moveTo(x, y);
+                first = false;
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.stroke();
+        ctx.restore();
 
-        ctx.fillStyle = 'rgba(248,113,113,0.9)';
+        ctx.save();
+        ctx.translate(ex, ey);
+        const shieldW = tile * 0.65;
+        const shieldH = tile * 0.7;
+        const hw = shieldW / 2;
+        const hh = shieldH / 2;
+        ctx.fillStyle = 'rgba(248,113,113,0.95)';
+        ctx.strokeStyle = '#fecaca';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = 'rgba(248,113,113,0.9)';
+        ctx.shadowBlur = 10;
         ctx.beginPath();
-        const r = tile * 0.28;
-        ctx.moveTo(ex, ey - r);
-        ctx.lineTo(ex - r * 0.8, ey + r * 0.4);
-        ctx.lineTo(ex + r * 0.8, ey + r * 0.4);
+        ctx.moveTo(0, -hh);
+        ctx.lineTo(hw, -hh * 0.1);
+        ctx.lineTo(hw * 0.8, hh);
+        ctx.lineTo(-hw * 0.8, hh);
+        ctx.lineTo(-hw, -hh * 0.2);
         ctx.closePath();
         ctx.fill();
+        ctx.stroke();
+        ctx.restore();
 
         ctx.restore();
     }
