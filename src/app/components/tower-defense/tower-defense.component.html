@@ -11,9 +11,15 @@
           </button>
           <button
             (click)="router.navigate(['/tower-defense-leaderboard'])"
-            class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded transition-colors uppercase tracking-wider"
+            class="cursor-pointer px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded transition-colors uppercase tracking-wider"
           >
             {{ settings.t('RANKING') }}
+          </button>
+          <button
+            (click)="router.navigate(['/masteries'])"
+            class="cursor-pointer px-4 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-bold rounded transition-colors uppercase tracking-wider"
+          >
+            {{ settings.t('MASTERIES') }}
           </button>
         </div>
         <div class="flex flex-col items-center gap-1 font-black tracking-wide">
@@ -84,31 +90,16 @@
         <div class="flex items-center gap-3">
           <button
             (click)="onLoginClick()"
-            class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded transition-colors uppercase tracking-wider"
+            class="cursor-pointer px-3 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded transition-colors uppercase tracking-wider"
           >
             {{ firebase.user$() ? firebase.user$()?.displayName || 'Account' : 'Login to Save Score' }}
           </button>
           <button
-            (click)="router.navigate(['/masteries'])"
-            class="px-3 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-bold rounded transition-colors uppercase tracking-wider"
-          >
-            Masteries
-          </button>
-          <button
             (click)="onRestart()"
-            class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded transition-colors uppercase tracking-wider"
+            class="cursor-pointer bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded transition-colors uppercase tracking-wider"
           >
             {{ settings.t('RESTART_GAME') }}
           </button>
-          <label class="flex items-center gap-2 text-xs font-bold text-rose-400">
-            <input
-              type="checkbox"
-              class="accent-rose-500"
-              [checked]="tdEngine.isHardMode()"
-              (change)="setHardMode($event.target.checked)"
-            />
-            Hard Mode
-          </label>
           <button
             (click)="tdEngine.startWave()"
             [disabled]="tdEngine.isWaveInProgress()"
@@ -120,36 +111,67 @@
           >
             {{ tdEngine.isWaveInProgress() ? settings.t('WAVE_IN_PROGRESS') : settings.t('START_WAVE') }}
           </button>
-          <div class="flex items-center gap-2 px-3 py-2 rounded bg-white/5 border border-white/10">
-            <span class="text-xs text-slate-300">Next:</span>
-            <span class="text-xs font-bold text-slate-100 capitalize">{{ tdEngine.nextWaveEnemyType() }}</span>
-            <span
-              class="shape-preview"
-              [ngClass]="{
-                'shape-circle': tdEngine.nextWaveEnemyType() === 'tank',
-                'shape-triangle': tdEngine.nextWaveEnemyType() === 'scout',
-                'shape-square': tdEngine.nextWaveEnemyType() === 'standard'
-              }"
-              [style.background]="
-                tdEngine.nextWaveEnemyType() === 'tank' ? 'hsl(330,70%,60%)' :
-                tdEngine.nextWaveEnemyType() === 'scout' ? 'hsl(50,90%,60%)' :
-                'hsl(200,70%,60%)'
-              "
-            ></span>
-          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="flex gap-4 flex-1 min-h-0">
+  <div class="relative flex gap-4 flex-1 min-h-0">
+    <label class="flex items-center gap-2 text-xs font-bold text-rose-400 absolute top-2 left-2 z-5">
+      <input
+        type="checkbox"
+        class="accent-rose-500"
+        [checked]="tdEngine.isHardMode()"
+        (change)="setHardMode($event.target.checked)"
+      />
+      Hard Mode
+    </label>
+    <div
+      class="flex items-center gap-2 px-3 py-2 rounded bg-white/5 border border-white/10 absolute bottom-2 left-2 z-5"
+    >
+      <span class="text-xs text-slate-300">Next:</span>
+      <span class="text-xs font-bold text-slate-100 capitalize">{{ tdEngine.nextWaveEnemyType() }}</span>
+      <span
+        class="shape-preview"
+        [ngClass]="{
+          'shape-circle': tdEngine.nextWaveEnemyType() === 'tank',
+          'shape-triangle': tdEngine.nextWaveEnemyType() === 'scout',
+          'shape-square': tdEngine.nextWaveEnemyType() === 'standard',
+        }"
+        [style.background]="
+          tdEngine.nextWaveEnemyType() === 'tank'
+            ? 'hsl(330,70%,60%)'
+            : tdEngine.nextWaveEnemyType() === 'scout'
+              ? 'hsl(50,90%,60%)'
+              : 'hsl(200,70%,60%)'
+        "
+      ></span>
+    </div>
+    <button
+      (click)="navigateToFeedback()"
+      class="absolute bottom-2 right-70 z-5 cursor-pointer flex items-center gap-2 px-4 py-1.5 rounded-full hover:bg-white/5 text-stone-400 hover:text-indigo-300 transition-all group"
+    >
+      <svg class="w-3.5 h-3.5 opacity-50 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M17 8h2a2 2 0 012 2v9l-4-4H7a2 2 0 01-2-2V6a2 2 0 012-2h8"
+        ></path>
+      </svg>
+      <span class="text-[10px] font-bold uppercase tracking-tighter">{{ settings.t('FEEDBACK_MODULE') }}</span>
+    </button>
     <!-- Main Game Area -->
     <div
-      class="flex-1 relative bg-slate-900 rounded-lg overflow-auto border flex items-center justify-center p-4"
+      class="flex-1 relative bg-slate-900 rounded-lg overflow-auto border flex items-center justify-center p-4 min-h-[400px]"
       [class.border-rose-600]="tdEngine.isHardMode()"
       [class.shadow-[0_0_25px_rgba(248,113,113,0.7)]]="tdEngine.isHardMode()"
     >
-      <canvas #gameCanvas class="block rounded" (click)="onCanvasClick($event)"></canvas>
+      <canvas
+        #gameCanvas
+        class="block rounded transition-opacity duration-300"
+        (click)="onCanvasClick($event)"
+      ></canvas>
     </div>
 
     <!-- Sidebar Controls -->
@@ -167,7 +189,7 @@
                 <button
                   (click)="buyTower(tier)"
                   [disabled]="tdEngine.money() < cost"
-                  class="shop-btn flex justify-between items-center"
+                  class="shop-btn flex justify-between items-center cursor-pointer"
                   [class.bg-slate-700]="tdEngine.money() >= cost"
                   [class.hover:bg-slate-600]="tdEngine.money() >= cost"
                   [class.bg-slate-900]="tdEngine.money() < cost"
@@ -208,7 +230,7 @@
                 <button
                   (click)="upgradeTower()"
                   [disabled]="tdEngine.money() < tdEngine.getUpgradeCost(tile.tower)"
-                  class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 rounded font-bold transition-all flex justify-between px-4 items-center"
+                  class="cursor-pointer w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 rounded font-bold transition-all flex justify-between px-4 items-center"
                 >
                   <span>{{ settings.t('UPGRADE') }}</span>
                   <span class="font-mono">${{ tdEngine.getUpgradeCost(tile.tower) }}</span>
@@ -222,7 +244,7 @@
               }
               <button
                 (click)="sellTower()"
-                class="w-full py-3 bg-rose-700 hover:bg-rose-600 rounded font-bold transition-all flex justify-center items-center text-sm"
+                class="cursor-pointer w-full py-3 bg-rose-700 hover:bg-rose-600 rounded font-bold transition-all flex justify-center items-center text-sm"
               >
                 {{ settings.t('SELL') }} (50% REFUND)
               </button>
@@ -313,6 +335,17 @@
         }
       </div>
     </div>
+    <button
+      class="mobile-actions-compact fixed bottom-4 right-5 z-50 px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-500 text-white shadow-xl cursor-pointer flex items-center gap-2 support-pulse"
+      (click)="gameEngine.toggleSupport()"
+      aria-label="Support the Project"
+    >
+      <span class="text-lg">❤️</span>
+      <span class="text-lg mobile-actions-hide-text">{{ settings.t('SUPPORT') }}</span>
+    </button>
+    @if (gameEngine.supportOpen()) {
+      <app-support-community />
+    }
   </div>
 
   @if (tdEngine.gameOver()) {

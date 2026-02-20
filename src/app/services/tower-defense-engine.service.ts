@@ -15,10 +15,10 @@ export class TowerDefenseEngineService {
     isWaveInProgress = signal(false);
     gameOver = signal(false);
 
-    gridSize = 10;
+    gridSize = 20;
     grid = signal<TDTile[][]>([]);
     path = signal<Position[]>([]);
-    readonly tileSize = 62;
+    tileSize = 62;
 
     enemies = signal<Enemy[]>([]);
     projectiles = signal<Projectile[]>([]);
@@ -71,9 +71,6 @@ export class TowerDefenseEngineService {
         };
         try {
             await this.firebase.saveTowerDefenseScore(payload);
-            if (this.isHardMode()) {
-                await this.firebase.updateHardModeScore(payload);
-            }
         } catch {
         }
     }
@@ -149,6 +146,13 @@ export class TowerDefenseEngineService {
 
     initializeGame(level: number) {
         this.gridSize = level === 2 ? 20 : 10;
+        if (this.gridSize === 10) {
+            this.tileSize = 62;
+        } else if (this.gridSize === 20) {
+            this.tileSize = 32;
+        } else {
+            this.tileSize = 32;
+        }
         this.dispose();
         this.generateMap();
         this.nextWaveEnemyType.set(this.determineWaveType(1));
@@ -189,118 +193,148 @@ export class TowerDefenseEngineService {
     }
 
     private generateRandomPath(): Position[] {
-        const maxIndex = this.gridSize - 1;
-        const start: Position = { x: 0, y: 0 };
-        const target: Position = { x: maxIndex, y: maxIndex };
-        const path: Position[] = [start];
-        const visited = new Set<string>([`${start.x},${start.y}`]);
+        const size = this.gridSize;
+        const total = size * size;
+        const minLen = Math.floor(total * 0.35);
+        const maxLen = Math.floor(total * 0.4);
+        const safetyLimit = 1000;
 
         const encode = (p: Position) => `${p.x},${p.y}`;
-        const dirs: Position[] = [
-            { x: 1, y: 0 },
-            { x: -1, y: 0 },
-            { x: 0, y: 1 },
-            { x: 0, y: -1 },
-        ];
+        const inBounds = (x: number, y: number) =>
+            x >= 0 && y >= 0 && x < size && y < size;
+
+        const randInt = (a: number, b: number) =>
+            a + Math.floor(Math.random() * (b - a + 1));
+
+        const startY = randInt(0, size - 1);
+        const endY = randInt(0, size - 1);
+        const start: Position = { x: 0, y: startY };
+        const end: Position = { x: size - 1, y: endY };
+
+        const buildStraight = (): Position[] => {
+            const result: Position[] = [];
+            let x = start.x;
+            let y = start.y;
+            result.push({ x, y });
+            const stepX = end.x > x ? 1 : -1;
+            for (let i = 0; i < safetyLimit && x !== end.x; i++) {
+                x += stepX;
+                result.push({ x, y });
+            }
+            const stepY = end.y > y ? 1 : -1;
+            for (let i = 0; i < safetyLimit && y !== end.y; i++) {
+                y += stepY;
+                result.push({ x, y });
+            }
+            return result;
+        };
+
+        const visited = new Set<string>();
+        const path: Position[] = [];
+
+        let iterations = 0;
+
+        const canStep = (nx: number, ny: number, prev: Position): boolean => {
+            if (!inBounds(nx, ny)) return false;
+            const key = encode({ x: nx, y: ny });
+            if (visited.has(key)) return false;
+            const neighbors: Position[] = [
+                { x: nx + 1, y: ny },
+                { x: nx - 1, y: ny },
+                { x: nx, y: ny + 1 },
+                { x: nx, y: ny - 1 }
+            ];
+            for (const n of neighbors) {
+                if (!inBounds(n.x, n.y)) continue;
+                const k = encode(n);
+                if (!visited.has(k)) continue;
+                if (n.x === prev.x && n.y === prev.y) continue;
+                return false;
+            }
+            return true;
+        };
 
         let current: Position = { ...start };
-        let safety = this.gridSize * this.gridSize * 5;
+        path.push(current);
+        visited.add(encode(current));
 
-        const manhattan = (a: Position, b: Position) =>
-            Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+        const midX1 = Math.floor(size / 3);
+        const midX2 = Math.floor((2 * size) / 3);
+        const midY = Math.floor(size / 2);
 
-        while ((current.x !== target.x || current.y !== target.y) && safety-- > 0) {
-            const candidates: Position[] = [];
+        const mid1: Position = { x: midX1, y: randInt(0, Math.max(0, midY - 1)) };
+        const mid2: Position = { x: midX2, y: randInt(midY, size - 1) };
 
-            for (const d of dirs) {
-                const nx = current.x + d.x;
-                const ny = current.y + d.y;
-                if (nx < 0 || ny < 0 || nx > maxIndex || ny > maxIndex) continue;
-                const key = `${nx},${ny}`;
-                if (visited.has(key)) continue;
-                candidates.push({ x: nx, y: ny });
+        const targets: Position[] = [mid1, mid2, end];
+
+        const connectTo = (target: Position) => {
+            for (let i = 0; i < safetyLimit && current.x !== target.x; i++) {
+                iterations++;
+                if (iterations > safetyLimit) return;
+                if (path.length >= maxLen) return;
+                const dirX = target.x > current.x ? 1 : -1;
+                const nx = current.x + dirX;
+                const ny = current.y;
+                if (!canStep(nx, ny, current)) break;
+                const next: Position = { x: nx, y: ny };
+                path.push(next);
+                visited.add(encode(next));
+                current = next;
             }
-
-            if (candidates.length === 0) {
-                if (path.length <= 1) break;
-                path.pop();
-                current = { ...path[path.length - 1] };
-                continue;
+            for (let i = 0; i < safetyLimit && current.y !== target.y; i++) {
+                iterations++;
+                if (iterations > safetyLimit) return;
+                if (path.length >= maxLen) return;
+                const dirY = target.y > current.y ? 1 : -1;
+                const nx = current.x;
+                const ny = current.y + dirY;
+                if (!canStep(nx, ny, current)) break;
+                const next: Position = { x: nx, y: ny };
+                path.push(next);
+                visited.add(encode(next));
+                current = next;
             }
+        };
 
-            candidates.sort((a, b) => manhattan(a, target) - manhattan(b, target));
-
-            let next: Position;
-            const forward = candidates[0];
-            if (candidates.length === 1) {
-                next = forward;
-            } else {
-                const sideways = candidates.slice(1);
-                const useSideways = Math.random() < 0.35;
-                if (useSideways) {
-                    next = sideways[Math.floor(Math.random() * sideways.length)];
-                } else {
-                    next = forward;
-                }
+        for (let i = 0; i < targets.length; i++) {
+            iterations++;
+            if (iterations > safetyLimit) {
+                return buildStraight();
             }
-
-            const last = path[path.length - 1];
-            const prev = path.length > 1 ? path[path.length - 2] : null;
-            if (prev) {
-                const dx1 = last.x - prev.x;
-                const dy1 = last.y - prev.y;
-                const dx2 = next.x - last.x;
-                const dy2 = next.y - last.y;
-                const isTurn = dx1 !== dx2 || dy1 !== dy2;
-                if (isTurn && path.length < 3 && Math.random() < 0.5) {
-                    next = forward;
-                }
-            }
-
-            path.push(next);
-            visited.add(encode(next));
-            current = next;
+            connectTo(targets[i]);
         }
 
-        let turns = 0;
-        for (let i = 2; i < path.length; i++) {
-            const a = path[i - 2];
-            const b = path[i - 1];
-            const c = path[i];
-            const dx1 = b.x - a.x;
-            const dy1 = b.y - a.y;
-            const dx2 = c.x - b.x;
-            const dy2 = c.y - b.y;
-            if (dx1 !== dx2 || dy1 !== dy2) turns++;
+        if (path.length < minLen) {
+            for (let i = 0; i < safetyLimit && path.length < minLen; i++) {
+                iterations++;
+                if (iterations > safetyLimit) {
+                    return buildStraight();
+                }
+                const dirs: Position[] = [
+                    { x: 1, y: 0 },
+                    { x: -1, y: 0 },
+                    { x: 0, y: 1 },
+                    { x: 0, y: -1 }
+                ];
+                let extended = false;
+                for (let d = 0; d < dirs.length; d++) {
+                    const dir = dirs[d];
+                    const nx = current.x + dir.x;
+                    const ny = current.y + dir.y;
+                    if (!canStep(nx, ny, current)) continue;
+                    const next: Position = { x: nx, y: ny };
+                    path.push(next);
+                    visited.add(encode(next));
+                    current = next;
+                    extended = true;
+                    break;
+                }
+                if (!extended) break;
+            }
         }
 
-        if (turns < 4 && path.length > 2) {
-            for (let i = 2; i < path.length - 1 && turns < 4; i++) {
-                const a = path[i - 2];
-                const b = path[i - 1];
-                const c = path[i];
-                const dx1 = b.x - a.x;
-                const dy1 = b.y - a.y;
-                const dx2 = c.x - b.x;
-                const dy2 = c.y - b.y;
-                const isStraight = dx1 === dx2 && dy1 === dy2;
-                if (!isStraight) continue;
-
-                const options: Position[] = [];
-                for (const d of dirs) {
-                    const nx = b.x + d.x;
-                    const ny = b.y + d.y;
-                    if (nx < 0 || ny < 0 || nx > maxIndex || ny > maxIndex) continue;
-                    const key = `${nx},${ny}`;
-                    if (visited.has(key)) continue;
-                    options.push({ x: nx, y: ny });
-                }
-                if (options.length === 0) continue;
-                const alt = options[Math.floor(Math.random() * options.length)];
-                path.splice(i, 0, alt);
-                visited.add(encode(alt));
-                turns++;
-            }
+        if (path.length === 0) {
+            return buildStraight();
         }
 
         return path;

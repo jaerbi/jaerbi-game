@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GameEngineService } from '../../services/game-engine.service';
+import { SettingsService } from '../../services/settings.service';
 
 @Component({
     selector: 'app-support-community',
@@ -10,7 +11,7 @@ import { GameEngineService } from '../../services/game-engine.service';
     <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
       <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 w-[880px] max-w-[95vw] mx-4 shadow-xl">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl font-bold text-white">Support & Community</h2>
+          <h2 class="text-2xl font-bold text-white">{{ settings.t('SUPPORT_COMMUNITY') }}</h2>
           <button
             class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 text-white text-lg cursor-pointer"
             (click)="gameEngine.closeSupport()"
@@ -22,7 +23,7 @@ import { GameEngineService } from '../../services/game-engine.service';
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
             <div class="text-lg font-semibold mb-3 text-white">Donate</div>
-            <div class="text-sm text-gray-300 mb-2 font-medium">Monobank Jar</div>
+            <div class="text-sm text-gray-300 mb-2 font-medium">{{ settings.t('MONOBANK_JAR') }}</div>
             
             <div class="flex items-start gap-4">
               <div class="w-32 h-32 bg-white rounded-lg p-2 border border-gray-300 flex items-center justify-center shrink-0">
@@ -41,13 +42,13 @@ import { GameEngineService } from '../../services/game-engine.service';
                     class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold cursor-pointer transition-colors"
                     (click)="openExternalLink('https://send.monobank.ua/jar/2fqGoPhV7G')"
                   >
-                    Open Link 📜
+                    {{ settings.t('OPEN_LINK') }} 📜
                   </button>
                   <button
                     class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm cursor-pointer transition-colors"
                     (click)="gameEngine.copySupportLink('https://send.monobank.ua/jar/2fqGoPhV7G')"
                   >
-                    Copy Link 📋
+                    {{ settings.t('COPY_LINK') }} 📋
                   </button>
                 </div>
               </div>
@@ -62,11 +63,11 @@ import { GameEngineService } from '../../services/game-engine.service';
                 Go to Donatello.to 💎
               </button>
             </div>
-            <div class="text-xs text-emerald-400 mt-4 font-medium italic">Thank you for supporting the project!</div>
+            <div class="text-xs text-emerald-400 mt-4 font-medium italic">{{ settings.t('THANK_SUPPORTING') }}</div>
           </div>
 
           <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4">
-            <div class="text-lg font-semibold mb-3 text-white">Social & Feedback</div>
+            <div class="text-lg font-semibold mb-3 text-white">{{ settings.t('SOCIAL_FEEDBACK') }}</div>
             <div class="flex flex-col gap-3">
               <button
                 class="flex items-center justify-start gap-3 px-4 py-3 rounded-lg bg-[#5865F2] hover:brightness-110 text-white text-sm font-bold cursor-pointer transition-all"
@@ -97,7 +98,7 @@ import { GameEngineService } from '../../services/game-engine.service';
   `
 })
 export class SupportCommunityComponent {
-    constructor(public gameEngine: GameEngineService) { }
+    constructor(public gameEngine: GameEngineService, public settings: SettingsService,) { }
 
     openExternalLink(url: string): void {
         const win = window.open(url, '_blank', 'noopener,noreferrer');
