@@ -175,10 +175,20 @@ export type TranslationKey =
     | 'MONOBANK_JAR'
     | 'SOCIAL_FEEDBACK'
     | 'SPEED'
+    | 'TARGETING'
+    | 'FIRST'
+    | 'WEAKEST'
+    | 'STRONGEST'
+    | 'RANDOM'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    RANDOM: { en: 'Random', uk: `Випадковий` },
+    STRONGEST: { en: 'Strongest', uk: `Найсильніший` },
+    WEAKEST: { en: 'Weakest', uk: `Найслабший` },
+    FIRST: { en: 'First', uk: `Перший` },
     SPEED: { en: 'Speed', uk: `Швидкість` },
+    TARGETING: { en: 'Targeting', uk: `Таргетинг` },
     SOCIAL_FEEDBACK: { en: 'Social & Feedback', uk: `Соціальні мережі та зворотний зв'язок` },
     MONOBANK_JAR: { en: 'Monobank Jar', uk: 'Банка Monobank' },
     SUPPORT_COMMUNITY: { en: 'Support & Community', uk: 'Підтримка та спільнота' },

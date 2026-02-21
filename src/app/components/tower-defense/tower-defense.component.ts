@@ -261,6 +261,13 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         }
     }
 
+    setTowerStrategy(strategy: 'first' | 'weakest' | 'strongest' | 'random') {
+        const tile = this.selectedTile();
+        if (tile && tile.tower) {
+            this.tdEngine.setTowerStrategy(tile.x, tile.y, strategy);
+        }
+    }
+
     buyAbility() {
         const tile = this.selectedTile();
         if (tile && tile.tower && tile.tower.level === 4 && !tile.tower.specialActive) {
@@ -450,6 +457,19 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         for (const t of towers) {
             const cx = t.position.x * tile + tile / 2;
             const cy = t.position.y * tile + tile / 2;
+            if (t.specialActive && t.hasGolden) {
+                const r = tile * 0.45;
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.strokeStyle = '#facc15';
+                ctx.lineWidth = 2.5;
+                ctx.globalAlpha = 0.9;
+                ctx.shadowColor = '#facc15';
+                ctx.shadowBlur = 12;
+                ctx.stroke();
+                ctx.restore();
+            }
             this.drawTowerShape(ctx, cx, cy, t.type, t.level, tile);
         }
     }

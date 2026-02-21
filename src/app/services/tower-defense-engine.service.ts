@@ -616,7 +616,7 @@ export class TowerDefenseEngineService {
         for (const tower of this.towersInternal) {
             tower.cooldown -= dt;
             if (tower.cooldown <= 0) {
-                const target = this.findNearestEnemy(tower, this.enemiesInternal);
+                const target = this.findTargetForTower(tower, this.enemiesInternal);
                 if (target) {
                     this.fireAt(tower, target);
                     tower.cooldown = tower.fireInterval;
@@ -659,21 +659,58 @@ export class TowerDefenseEngineService {
         }
     }
 
-    private findNearestEnemy(tower: Tower, enemies: Enemy[]): Enemy | null {
-        let nearest: Enemy | null = null;
-        let minDistSq = tower.range * tower.range;
+    private findTargetForTower(tower: Tower, enemies: Enemy[]): Enemy | null {
+        const rangeSq = tower.range * tower.range;
+        const path = this.path();
+        const candidates: { enemy: Enemy; distSq: number; progressScore: number }[] = [];
 
         for (const enemy of enemies) {
             const dx = tower.position.x - enemy.position.x;
             const dy = tower.position.y - enemy.position.y;
             const distSq = dx * dx + dy * dy;
+            if (distSq > rangeSq) continue;
+            const idx = enemy.pathIndex ?? 0;
+            const prog = enemy.progress ?? 0;
+            const progressScore = idx + prog;
+            candidates.push({ enemy, distSq, progressScore });
+        }
 
-            if (distSq <= minDistSq) {
-                minDistSq = distSq;
-                nearest = enemy;
+        if (candidates.length === 0) return null;
+
+        const strat = tower.strategy || 'first';
+
+        if (strat === 'random') {
+            const r = Math.floor(Math.random() * candidates.length);
+            return candidates[r].enemy;
+        }
+
+        if (strat === 'weakest') {
+            let best = candidates[0];
+            for (let i = 1; i < candidates.length; i++) {
+                if (candidates[i].enemy.hp < best.enemy.hp) {
+                    best = candidates[i];
+                }
+            }
+            return best.enemy;
+        }
+
+        if (strat === 'strongest') {
+            let best = candidates[0];
+            for (let i = 1; i < candidates.length; i++) {
+                if (candidates[i].enemy.hp > best.enemy.hp) {
+                    best = candidates[i];
+                }
+            }
+            return best.enemy;
+        }
+
+        let best = candidates[0];
+        for (let i = 1; i < candidates.length; i++) {
+            if (candidates[i].progressScore > best.progressScore) {
+                best = candidates[i];
             }
         }
-        return nearest;
+        return best.enemy;
     }
 
     private pushProjectile(p: Projectile) {
@@ -821,6 +858,7 @@ export class TowerDefenseEngineService {
                 const stats = this.tierStats[tier - 1];
                 const dmgLevel = this.getUpgradeLevel(tier, 'damage');
                 const rangeLevel = this.getUpgradeLevel(tier, 'range');
+                const goldenLevel = this.getUpgradeLevel(tier, 'golden');
                 const damageMultiplier = 1 + dmgLevel * 0.05;
                 const rangeBonus = rangeLevel * 0.1;
                 tile.tower = {
@@ -834,7 +872,9 @@ export class TowerDefenseEngineService {
                     range: stats.range + rangeBonus,
                     fireInterval: stats.fireInterval,
                     cooldown: 0,
-                    specialActive: false
+                    specialActive: false,
+                    strategy: 'first',
+                    hasGolden: goldenLevel > 0
                 };
                 this.towersInternal.push(tile.tower);
                 this.money.update(m => m - cost);
@@ -892,6 +932,18 @@ export class TowerDefenseEngineService {
                 }
             }
             return [...grid.map(row => [...row])];
+        });
+    }
+
+    setTowerStrategy(x: number, y: number, strategy: 'first' | 'weakest' | 'strongest' | 'random') {
+        this.grid.update(grid => {
+            const row = grid[y];
+            if (!row) return grid;
+            const tile = row[x];
+            if (tile && tile.tower) {
+                tile.tower.strategy = strategy;
+            }
+            return [...grid];
         });
     }
 

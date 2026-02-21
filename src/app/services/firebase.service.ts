@@ -182,6 +182,26 @@ export class FirebaseService {
     }
   }
 
+  async getUserBestTowerDefenseScore(userId: string): Promise<TowerDefenseScore | null> {
+    if (!this.db) return null;
+    try {
+      const q = query(
+        collection(this.db, 'towerDefenseLeaderboards'),
+        where('userId', '==', userId),
+        orderBy('maxWave', 'desc'),
+        orderBy('timestamp', 'desc'),
+        limit(1)
+      );
+      const querySnapshot = await getDocs(q);
+      if (querySnapshot.empty) {
+        return null;
+      }
+      return querySnapshot.docs[0].data() as TowerDefenseScore;
+    } catch {
+      return null;
+    }
+  }
+
   private async loadTowerDefenseMasteries(userId: string): Promise<void> {
     if (!this.db) return;
     if (this.loadedMasteriesUserId === userId && this.masteryProfile()) return;

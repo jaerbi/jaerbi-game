@@ -230,6 +230,43 @@
             </div>
 
             <div class="flex flex-col gap-2">
+              <div class="bg-slate-900 rounded p-3 mb-2">
+                <div class="text-xs text-slate-500 mb-1">{{ settings.t('TARGETING') }}</div>
+                <div class="flex flex-wrap gap-1">
+                  <button
+                    class="px-2 py-1 text-[10px] rounded-full border border-slate-600"
+                    [class.bg-sky-600]="tile.tower.strategy === 'first' || !tile.tower.strategy"
+                    [class.text-white]="tile.tower.strategy === 'first' || !tile.tower.strategy"
+                    (click)="setTowerStrategy('first')"
+                  >
+                    {{ settings.t('FIRST') }}
+                  </button>
+                  <button
+                    class="px-2 py-1 text-[10px] rounded-full border border-slate-600"
+                    [class.bg-sky-600]="tile.tower.strategy === 'weakest'"
+                    [class.text-white]="tile.tower.strategy === 'weakest'"
+                    (click)="setTowerStrategy('weakest')"
+                  >
+                    {{ settings.t('WEAKEST') }}
+                  </button>
+                  <button
+                    class="px-2 py-1 text-[10px] rounded-full border border-slate-600"
+                    [class.bg-sky-600]="tile.tower.strategy === 'strongest'"
+                    [class.text-white]="tile.tower.strategy === 'strongest'"
+                    (click)="setTowerStrategy('strongest')"
+                  >
+                    {{ settings.t('STRONGEST') }}
+                  </button>
+                  <button
+                    class="px-2 py-1 text-[10px] rounded-full border border-slate-600"
+                    [class.bg-sky-600]="tile.tower.strategy === 'random'"
+                    [class.text-white]="tile.tower.strategy === 'random'"
+                    (click)="setTowerStrategy('random')"
+                  >
+                    {{ settings.t('RANDOM') }}
+                  </button>
+                </div>
+              </div>
               @if (tile.tower.level < 4) {
                 <button
                   (click)="upgradeTower()"
