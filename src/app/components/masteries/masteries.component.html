@@ -200,10 +200,10 @@
                     <div class="flex flex-col items-center gap-2">
                       <div class="flex flex-col items-center gap-1">
                         <span class="font-mono text-xs text-amber-400">
-                          {{ getUpgradeLevel(tier.id, 'golden') }} / 1
+                          {{ getUpgradeLevel(tier.id, 'golden') }} / 3
                         </span>
                         <span
-                          *ngIf="getUpgradeLevel(tier.id, 'golden') < 1; else goldenMaxed"
+                          *ngIf="getUpgradeLevel(tier.id, 'golden') < 3; else goldenMaxed"
                           class="text-[10px] text-amber-200"
                         >
                           {{ settings.t('COST') }}: {{ getNextLevelCost(tier.id, 'golden') }} XP

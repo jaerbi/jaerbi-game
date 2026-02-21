@@ -62,12 +62,13 @@ export class TowerDefenseEngineService {
     private async saveResultIfLoggedIn() {
         const user = this.firebase.user$();
         if (!user) return;
+        const mapSizeLabel = this.gridSize === 20 ? '20x20' : '10x10';
         const payload = {
             userId: user.uid,
             displayName: user.displayName || 'Anonymous',
             maxWave: this.wave(),
             totalMoney: this.money(),
-            hardMode: this.isHardMode()
+            mapSize: mapSizeLabel
         };
         try {
             await this.firebase.saveTowerDefenseScore(payload);
@@ -633,11 +634,11 @@ export class TowerDefenseEngineService {
         if (frostTowers.length === 0) return;
 
         const golden = this.getUpgradeLevel(1, 'golden');
+        const auraMultiplier = 1 + golden * 0.1;
         const baseRadius = 2;
-        const bonusRadius = golden > 0 ? 0.1 : 0;
-        const radius = baseRadius + bonusRadius;
+        const radius = baseRadius * auraMultiplier;
         const radiusSq = radius * radius;
-        const slowMultiplier = golden > 0 ? 0.6 : 0.7;
+        const slowMultiplier = 0.7 * (1 - golden * 0.05);
 
         for (const enemy of this.enemiesInternal) {
             let isSlowed = false;
@@ -698,8 +699,9 @@ export class TowerDefenseEngineService {
             const golden = this.getUpgradeLevel(2, 'golden');
             if (golden > 0) {
                 const critChance = 0.1 * golden;
+                const critMultiplier = 1 + golden * 0.1;
                 if (Math.random() < critChance) {
-                    damage = Math.floor(damage * 2);
+                    damage = Math.floor(damage * critMultiplier);
                 }
             }
         }
@@ -729,8 +731,10 @@ export class TowerDefenseEngineService {
             const golden = this.getUpgradeLevel(3, 'golden');
             if (golden > 0) {
                 const stunChance = 0.05 * golden;
+                const extraDuration = golden * 0.2;
                 if (Math.random() < stunChance) {
-                    enemy.stunTime = Math.max(enemy.stunTime ?? 0, 0.5);
+                    const baseDuration = 0.5 + extraDuration;
+                    enemy.stunTime = Math.max(enemy.stunTime ?? 0, baseDuration);
                 }
             }
         }
@@ -787,7 +791,8 @@ export class TowerDefenseEngineService {
                         speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
                     };
                     this.pushProjectile(chainProj);
-                    const secondaryDamage = Math.floor(damage * 0.5);
+                    const jumpFactor = 0.5 + 0.1 * golden;
+                    const secondaryDamage = Math.floor(damage * jumpFactor);
                     closest.hp -= secondaryDamage;
                 }
             }

@@ -24,6 +24,7 @@ export interface TowerDefenseScore {
   displayName: string;
   maxWave: number;
   totalMoney: number;
+  mapSize: string;
   userTotalXp?: number;
   timestamp?: any;
 }

@@ -23,6 +23,13 @@ export class MasteriesComponent implements OnInit {
   private static readonly BASIC_COST_MULTIPLIER = 5;
   private static readonly GOLDEN_COST = 150;
 
+  private static readonly GOLDEN_MAX_LEVEL = 3;
+  private static readonly GOLDEN_LEVEL_COSTS: Record<number, number> = {
+    1: 50,
+    2: 150,
+    3: 400
+  };
+
   tiers: TierMeta[] = [
     {
       id: 1,
@@ -89,10 +96,12 @@ export class MasteriesComponent implements OnInit {
   }
 
   getNextLevelCost(tierId: number, kind: 'damage' | 'range' | 'golden'): number {
-    if (kind === 'golden') {
-      return MasteriesComponent.GOLDEN_COST;
-    }
     const current = this.getUpgradeLevel(tierId, kind);
+    if (kind === 'golden') {
+      const nextLevel = current + 1;
+      if (nextLevel > MasteriesComponent.GOLDEN_MAX_LEVEL) return 0;
+      return MasteriesComponent.GOLDEN_LEVEL_COSTS[nextLevel] ?? 0;
+    }
     if (current >= 20) return 0;
     return (current + 1) * MasteriesComponent.BASIC_COST_MULTIPLIER;
   }
@@ -181,7 +190,7 @@ export class MasteriesComponent implements OnInit {
     if (!this.profile()) return false;
     if (!this.canUnlockGolden(tierId)) return false;
     const current = this.getUpgradeLevel(tierId, 'golden');
-    if (current >= 1) return false;
+    if (current >= MasteriesComponent.GOLDEN_MAX_LEVEL) return false;
     const cost = this.getNextLevelCost(tierId, 'golden');
     if (this.availablePoints() < cost) return false;
     return true;
