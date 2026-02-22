@@ -62,12 +62,13 @@ export class TowerDefenseEngineService {
     private async saveResultIfLoggedIn() {
         const user = this.firebase.user$();
         if (!user) return;
+        const mapSizeLabel = this.gridSize === 20 ? '20x20' : '10x10';
         const payload = {
             userId: user.uid,
             displayName: user.displayName || 'Anonymous',
             maxWave: this.wave(),
             totalMoney: this.money(),
-            hardMode: this.isHardMode()
+            mapSize: mapSizeLabel
         };
         try {
             await this.firebase.saveTowerDefenseScore(payload);
@@ -615,11 +616,13 @@ export class TowerDefenseEngineService {
         for (const tower of this.towersInternal) {
             tower.cooldown -= dt;
             if (tower.cooldown <= 0) {
-                const target = this.findNearestEnemy(tower, this.enemiesInternal);
+                const target = this.findTargetForTower(tower, this.enemiesInternal);
                 if (target) {
+                    tower.targetEnemyId = target.id;
                     this.fireAt(tower, target);
                     tower.cooldown = tower.fireInterval;
                 } else {
+                    tower.targetEnemyId = undefined;
                     tower.cooldown = 0;
                 }
             }
@@ -633,11 +636,11 @@ export class TowerDefenseEngineService {
         if (frostTowers.length === 0) return;
 
         const golden = this.getUpgradeLevel(1, 'golden');
+        const auraMultiplier = 1 + golden * 0.1;
         const baseRadius = 2;
-        const bonusRadius = golden > 0 ? 0.1 : 0;
-        const radius = baseRadius + bonusRadius;
+        const radius = baseRadius * auraMultiplier;
         const radiusSq = radius * radius;
-        const slowMultiplier = golden > 0 ? 0.6 : 0.7;
+        const slowMultiplier = 0.7 * (1 - golden * 0.05);
 
         for (const enemy of this.enemiesInternal) {
             let isSlowed = false;
@@ -658,21 +661,58 @@ export class TowerDefenseEngineService {
         }
     }
 
-    private findNearestEnemy(tower: Tower, enemies: Enemy[]): Enemy | null {
-        let nearest: Enemy | null = null;
-        let minDistSq = tower.range * tower.range;
+    private findTargetForTower(tower: Tower, enemies: Enemy[]): Enemy | null {
+        const rangeSq = tower.range * tower.range;
+        const path = this.path();
+        const candidates: { enemy: Enemy; distSq: number; progressScore: number }[] = [];
 
         for (const enemy of enemies) {
             const dx = tower.position.x - enemy.position.x;
             const dy = tower.position.y - enemy.position.y;
             const distSq = dx * dx + dy * dy;
+            if (distSq > rangeSq) continue;
+            const idx = enemy.pathIndex ?? 0;
+            const prog = enemy.progress ?? 0;
+            const progressScore = idx + prog;
+            candidates.push({ enemy, distSq, progressScore });
+        }
 
-            if (distSq <= minDistSq) {
-                minDistSq = distSq;
-                nearest = enemy;
+        if (candidates.length === 0) return null;
+
+        const strat = tower.strategy || 'first';
+
+        if (strat === 'random') {
+            const r = Math.floor(Math.random() * candidates.length);
+            return candidates[r].enemy;
+        }
+
+        if (strat === 'weakest') {
+            let best = candidates[0];
+            for (let i = 1; i < candidates.length; i++) {
+                if (candidates[i].enemy.hp < best.enemy.hp) {
+                    best = candidates[i];
+                }
+            }
+            return best.enemy;
+        }
+
+        if (strat === 'strongest') {
+            let best = candidates[0];
+            for (let i = 1; i < candidates.length; i++) {
+                if (candidates[i].enemy.hp > best.enemy.hp) {
+                    best = candidates[i];
+                }
+            }
+            return best.enemy;
+        }
+
+        let best = candidates[0];
+        for (let i = 1; i < candidates.length; i++) {
+            if (candidates[i].progressScore > best.progressScore) {
+                best = candidates[i];
             }
         }
-        return nearest;
+        return best.enemy;
     }
 
     private pushProjectile(p: Projectile) {
@@ -694,32 +734,18 @@ export class TowerDefenseEngineService {
 
         let damage = tower.damage;
 
-        if (tower.type === 2) {
-            const golden = this.getUpgradeLevel(2, 'golden');
-            if (golden > 0) {
-                const critChance = 0.1 * golden;
-                if (Math.random() < critChance) {
-                    damage = Math.floor(damage * 2);
-                }
-            }
-        }
-
         if (tower.specialActive && tower.type === 4) {
             const ratio = enemy.hp / enemy.maxHp;
-            if (ratio < 0.15) {
-                if (enemy.isBoss) {
-                    damage = tower.damage * 3;
-                } else {
-                    enemy.hp = 0;
-                    return;
-                }
+            if (ratio < 0.5) {
+                const multiplier = enemy.isBoss ? 3 : 2;
+                damage = Math.floor(tower.damage * multiplier);
             }
         }
 
         if (tower.specialActive && tower.type === 3) {
             const nextStacks = Math.min(5, enemy.shatterStacks + 1);
             enemy.shatterStacks = nextStacks;
-            const multiplier = 1 + nextStacks * 0.1;
+            const multiplier = 1 + nextStacks * 0.2;
             damage = Math.floor(damage * multiplier);
         }
 
@@ -728,37 +754,45 @@ export class TowerDefenseEngineService {
         if (tower.type === 3) {
             const golden = this.getUpgradeLevel(3, 'golden');
             if (golden > 0) {
-                const stunChance = 0.05 * golden;
+                const stunChance = 0.15 + golden * 0.05;
                 if (Math.random() < stunChance) {
-                    enemy.stunTime = Math.max(enemy.stunTime ?? 0, 0.5);
+                    const baseDuration = (0.5 + golden * 0.2) * 1.2;
+                    enemy.stunTime = Math.max(enemy.stunTime ?? 0, baseDuration);
                 }
             }
         }
 
         if (tower.specialActive && tower.type === 2) {
-            if (Math.random() < 0.25) {
-                const secondary: Enemy[] = [];
+            const golden = this.getUpgradeLevel(2, 'golden');
+            const triggerChance = 0.25 + golden * 0.05;
+            const damageMultiplier = 1.5 + golden * 0.2;
+            if (Math.random() < triggerChance) {
+                const candidates: { enemy: Enemy; distSq: number }[] = [];
                 for (const other of this.enemiesInternal) {
-                    if (other.id === enemy.id) continue;
+                    if (other.id === enemy.id || other.hp <= 0) continue;
                     const dx = enemy.position.x - other.position.x;
                     const dy = enemy.position.y - other.position.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist <= 3) {
-                        secondary.push(other);
-                        if (secondary.length >= 2) break;
+                    const distSq = dx * dx + dy * dy;
+                    if (distSq <= 9) {
+                        candidates.push({ enemy: other, distSq });
                     }
                 }
-                const secondaryDamage = Math.floor(tower.damage * 0.5);
-                for (const s of secondary) {
-                    const chainProj: Projectile = {
-                        id: 'p' + (this.projectileIdCounter++),
-                        from: { ...tower.position },
-                        to: { ...s.position },
-                        progress: 0,
-                        speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
-                    };
-                    this.pushProjectile(chainProj);
-                    s.hp -= secondaryDamage;
+                if (candidates.length > 0) {
+                    candidates.sort((a, b) => a.distSq - b.distSq);
+                    const count = Math.min(2, candidates.length);
+                    for (let i = 0; i < count; i++) {
+                        const target = candidates[i].enemy;
+                        const chainProj: Projectile = {
+                            id: 'p' + (this.projectileIdCounter++),
+                            from: { ...tower.position },
+                            to: { ...target.position },
+                            progress: 0,
+                            speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
+                        };
+                        this.pushProjectile(chainProj);
+                        const secondaryDamage = Math.floor(tower.damage * damageMultiplier);
+                        target.hp -= secondaryDamage;
+                    }
                 }
             }
         }
@@ -766,29 +800,43 @@ export class TowerDefenseEngineService {
         if (tower.type === 4) {
             const golden = this.getUpgradeLevel(4, 'golden');
             if (golden > 0) {
-                let closest: Enemy | null = null;
-                let minDist = Infinity;
-                for (const other of this.enemiesInternal) {
-                    if (other.id === enemy.id) continue;
-                    const dx = enemy.position.x - other.position.x;
-                    const dy = enemy.position.y - other.position.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist <= 3 && dist < minDist) {
-                        minDist = dist;
-                        closest = other;
+                let chainChance = 0.1;
+                if (golden === 2) chainChance = 0.15;
+                else if (golden >= 3) chainChance = 0.2;
+
+                if (Math.random() < chainChance) {
+                    let closest: Enemy | null = null;
+                    let minDist = Infinity;
+                    for (const other of this.enemiesInternal) {
+                        if (other.id === enemy.id || other.hp <= 0) continue;
+                        const dx = enemy.position.x - other.position.x;
+                        const dy = enemy.position.y - other.position.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist <= 3 && dist < minDist) {
+                            minDist = dist;
+                            closest = other;
+                        }
                     }
-                }
-                if (closest) {
-                    const chainProj: Projectile = {
-                        id: 'p' + (this.projectileIdCounter++),
-                        from: { ...tower.position },
-                        to: { ...closest.position },
-                        progress: 0,
-                        speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
-                    };
-                    this.pushProjectile(chainProj);
-                    const secondaryDamage = Math.floor(damage * 0.5);
-                    closest.hp -= secondaryDamage;
+                    if (closest) {
+                        const chainProj: Projectile = {
+                            id: 'p' + (this.projectileIdCounter++),
+                            from: { ...tower.position },
+                            to: { ...closest.position },
+                            progress: 0,
+                            speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
+                        };
+                        this.pushProjectile(chainProj);
+
+                        let secondaryDamage = tower.damage;
+                        if (tower.specialActive) {
+                            const ratio2 = closest.hp / closest.maxHp;
+                            if (ratio2 < 0.5) {
+                                const multiplier2 = closest.isBoss ? 3 : 2;
+                                secondaryDamage = Math.floor(tower.damage * multiplier2);
+                            }
+                        }
+                        closest.hp -= secondaryDamage;
+                    }
                 }
             }
         }
@@ -816,6 +864,7 @@ export class TowerDefenseEngineService {
                 const stats = this.tierStats[tier - 1];
                 const dmgLevel = this.getUpgradeLevel(tier, 'damage');
                 const rangeLevel = this.getUpgradeLevel(tier, 'range');
+                const goldenLevel = this.getUpgradeLevel(tier, 'golden');
                 const damageMultiplier = 1 + dmgLevel * 0.05;
                 const rangeBonus = rangeLevel * 0.1;
                 tile.tower = {
@@ -829,7 +878,9 @@ export class TowerDefenseEngineService {
                     range: stats.range + rangeBonus,
                     fireInterval: stats.fireInterval,
                     cooldown: 0,
-                    specialActive: false
+                    specialActive: false,
+                    strategy: 'first',
+                    hasGolden: goldenLevel > 0
                 };
                 this.towersInternal.push(tile.tower);
                 this.money.update(m => m - cost);
@@ -887,6 +938,18 @@ export class TowerDefenseEngineService {
                 }
             }
             return [...grid.map(row => [...row])];
+        });
+    }
+
+    setTowerStrategy(x: number, y: number, strategy: 'first' | 'weakest' | 'strongest' | 'random') {
+        this.grid.update(grid => {
+            const row = grid[y];
+            if (!row) return grid;
+            const tile = row[x];
+            if (tile && tile.tower) {
+                tile.tower.strategy = strategy;
+            }
+            return [...grid];
         });
     }
 

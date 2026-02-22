@@ -34,6 +34,7 @@ import { SettingsService } from '../../services/settings.service';
                 <th class="text-left py-2 px-2 border-b border-slate-700">Rank</th>
                 <th class="text-left py-2 px-2 border-b border-slate-700">Name</th>
                 <th class="text-left py-2 px-2 border-b border-slate-700">Wave</th>
+                <th class="text-left py-2 px-2 border-b border-slate-700">Map</th>
                 <th class="text-left py-2 px-2 border-b border-slate-700">Mastery XP</th>
                 <th class="text-left py-2 px-2 border-b border-slate-700">Date</th>
               </tr>
@@ -48,6 +49,9 @@ import { SettingsService } from '../../services/settings.service';
                   {{ s.maxWave }}
                 </td>
                 <td class="py-2 px-2 border-b border-slate-800 font-mono text-sky-300">
+                  {{ s.mapSize || '10x10' }}
+                </td>
+                <td class="py-2 px-2 border-b border-slate-800 font-mono text-sky-300">
                   {{ s.userTotalXp ?? 0 }}
                 </td>
                 <td class="py-2 px-2 border-b border-slate-800 text-slate-300">
@@ -55,12 +59,41 @@ import { SettingsService } from '../../services/settings.service';
                 </td>
               </tr>
               <tr *ngIf="scores().length === 0">
-                <td colspan="5" class="py-8 text-center text-slate-400 italic">
+                <td colspan="6" class="py-8 text-center text-slate-400 italic">
                   No runs recorded yet. Finish a game while logged in to appear here.
                 </td>
               </tr>
             </tbody>
           </table>
+          <div *ngIf="best() as b" class="mt-6 pt-4 border-t border-slate-700">
+            <div class="text-xs font-semibold text-slate-400 mb-2">
+              Your Personal Best
+            </div>
+            <table class="w-full text-sm">
+              <tbody>
+                <tr class="text-white">
+                  <td class="py-2 px-2 border-b border-slate-800 font-mono text-amber-300">
+                    Your Best
+                  </td>
+                  <td class="py-2 px-2 border-b border-slate-800">
+                    {{ b.displayName || 'You' }}
+                  </td>
+                  <td class="py-2 px-2 border-b border-slate-800 font-mono text-emerald-400">
+                    {{ b.maxWave }}
+                  </td>
+                  <td class="py-2 px-2 border-b border-slate-800 font-mono text-sky-300">
+                    {{ b.mapSize || '10x10' }}
+                  </td>
+                  <td class="py-2 px-2 border-b border-slate-800 font-mono text-sky-300">
+                    {{ b.userTotalXp ?? 0 }}
+                  </td>
+                  <td class="py-2 px-2 border-b border-slate-800 text-slate-300">
+                    {{ b.timestamp?.toDate ? (b.timestamp.toDate() | date:'mediumDate') : (b.timestamp | date:'mediumDate') }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -69,6 +102,7 @@ import { SettingsService } from '../../services/settings.service';
 export class TowerDefenseLeaderboardComponent implements OnInit {
     loading = signal<boolean>(true);
     scores = signal<TowerDefenseScore[]>([]);
+    best = signal<TowerDefenseScore | null>(null);
 
     constructor(private firebase: FirebaseService,
         public settings: SettingsService,
@@ -83,10 +117,23 @@ export class TowerDefenseLeaderboardComponent implements OnInit {
         try {
             const list = await this.firebase.getTopTowerDefenseScores(10);
             this.scores.set(list ?? []);
+            await this.loadPersonalBest();
         } catch {
             this.scores.set([]);
+            this.best.set(null);
         } finally {
             this.loading.set(false);
         }
+    }
+
+    private async loadPersonalBest() {
+        const user = this.firebase.user$();
+        if (!user) {
+            this.best.set(null);
+            return;
+        }
+        const entry = await this.firebase.getUserBestTowerDefenseScore(user.uid);
+        console.log('entry: ', entry);
+        this.best.set(entry ?? null);
     }
 }

@@ -42,6 +42,9 @@ export interface Tower {
     fireInterval: number;
     cooldown: number;
     specialActive: boolean;
+    strategy?: 'first' | 'weakest' | 'strongest' | 'random';
+    hasGolden?: boolean;
+    targetEnemyId?: string;
 }
 
 export interface Enemy {

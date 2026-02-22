@@ -24,6 +24,7 @@ export interface TowerDefenseScore {
   displayName: string;
   maxWave: number;
   totalMoney: number;
+  mapSize: string;
   userTotalXp?: number;
   timestamp?: any;
 }
@@ -178,6 +179,26 @@ export class FirebaseService {
     } catch (e) {
       console.error('Error fetching TD scores: ', e);
       return [];
+    }
+  }
+
+  async getUserBestTowerDefenseScore(userId: string): Promise<TowerDefenseScore | null> {
+    if (!this.db) return null;
+    try {
+      const q = query(
+        collection(this.db, 'towerDefenseLeaderboards'),
+        where('userId', '==', userId),
+        orderBy('maxWave', 'desc'),
+        orderBy('timestamp', 'desc'),
+        limit(1)
+      );
+      const querySnapshot = await getDocs(q);
+      if (querySnapshot.empty) {
+        return null;
+      }
+      return querySnapshot.docs[0].data() as TowerDefenseScore;
+    } catch {
+      return null;
     }
   }
 

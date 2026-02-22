@@ -175,10 +175,20 @@ export type TranslationKey =
     | 'MONOBANK_JAR'
     | 'SOCIAL_FEEDBACK'
     | 'SPEED'
+    | 'TARGETING'
+    | 'FIRST'
+    | 'WEAKEST'
+    | 'STRONGEST'
+    | 'RANDOM'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    RANDOM: { en: 'Random', uk: `Випадковий` },
+    STRONGEST: { en: 'Strongest', uk: `Найсильніший` },
+    WEAKEST: { en: 'Weakest', uk: `Найслабший` },
+    FIRST: { en: 'First', uk: `Перший` },
     SPEED: { en: 'Speed', uk: `Швидкість` },
+    TARGETING: { en: 'Targeting', uk: `Таргетинг` },
     SOCIAL_FEEDBACK: { en: 'Social & Feedback', uk: `Соціальні мережі та зворотний зв'язок` },
     MONOBANK_JAR: { en: 'Monobank Jar', uk: 'Банка Monobank' },
     SUPPORT_COMMUNITY: { en: 'Support & Community', uk: 'Підтримка та спільнота' },
@@ -199,7 +209,7 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     DAMAGE: { en: 'Damage', uk: 'Шкода' },
     RANGE: { en: 'Range', uk: 'Дальність' },
     PER_LEVEL: { en: 'per level', uk: 'за рівень' },
-    REQUIRES_5_POINTS: { en: 'Requires 200 points in tier.', uk: 'Потрібно 200 очок в тирі' },
+    REQUIRES_5_POINTS: { en: 'Requires 15 points in tier.', uk: 'Потрібно 15 очок в тирі' },
     SAVE_CHANGES: { en: 'Save Changes', uk: 'Зберегти зміни' },
     SAVING: { en: 'Saving...', uk: 'Збереження...' },
     SAVED: { en: 'Saved', uk: 'Збережено' },
@@ -220,8 +230,8 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         uk: 'Критичне фокусування',
     },
     T2_GOLDEN_DESC: {
-        en: '+10% chance to deal double damage and faster projectiles.',
-        uk: '+10% шансу на подвійну шкоду та швидші снаряди.',
+        en: 'Boosts Ricochet: higher trigger chance and up to 150%+ damage.',
+        uk: 'Підсилює рикошет: вищий шанс активації та до 150%+ шкоди.',
     },
 
     // Tier 3
@@ -234,8 +244,8 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         uk: 'Контузійні вибухи',
     },
     T3_GOLDEN_DESC: {
-        en: 'Chance to briefly stun enemies and larger explosions.',
-        uk: 'Шанс на короткий час приголомшити ворогів та більші вибухи.',
+        en: 'Concussive blasts: stronger stun chance and duration on shattered foes.',
+        uk: 'Контузійні вибухи: вищий шанс і тривалість оглушення розбитих ворогів.',
     },
 
     // Tier 4
@@ -248,28 +258,28 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         uk: 'Ланцюгова блискавка',
     },
     T4_GOLDEN_DESC: {
-        en: 'Attacks can jump to extra enemies with higher frequency.',
-        uk: 'Атаки можуть перескакувати на додаткових ворогів.',
+        en: 'Chance to chain attack and strike an additional target.',
+        uk: 'Шанс на ланцюгову атаку по додатковій цілі.',
     },
     FINAL_STRIKE_INFO: {
-        en: 'If (Current HP / Max HP) < 0.15: Normal Enemy: Instant Kill. Boss: Deal 300% normal damage (Bosses are resistant to instant death).',
-        uk: `Якщо (Поточні HP / Макс. HP) < 0.15: Звичайний ворог: Миттєве вбивство. Бос: Завдає 300% звичайної шкоди (Боси стійкі до миттєвої смерті).`,
+        en: 'Execute: Crit on enemies below 50% HP. Bosses take even more damage.',
+        uk: `Екзекуція: критичний удар по ворогах з HP нижче 50%. Боси отримують ще більше шкоди.`,
     },
     FINAL_STRIKE: {
         en: 'Final Strike',
         uk: `Останній удар`,
     },
     SHATTER_INFO: {
-        en: 'Each hit adds 1 stack (Max 5). Incoming damage is multiplied by (1 + (shatterStacks * 0.10)). (Max +50% damage taken).',
-        uk: `Кожен удар додає 1 заряд (максимум 5). Вхідна шкода множиться на (1 + (розбиті заряди * 0.10)). (Максимум +50% отриманої шкоди).`,
+        en: 'Each hit adds 1 stack (Max 5). Damage is multiplied by (1 + stacks * 0.20). (Stack up to +100% dmg).',
+        uk: `Кожен удар додає 1 заряд (максимум 5). Шкода множиться на (1 + заряди * 0.20). (Накопичується до +100% шкоди).`,
     },
     SHATTER: {
         en: 'Shatter',
         uk: `Розколоти`,
     },
     CHAIN_LIGHTNING_INFO: {
-        en: '25% chance to deal 50% damage to two adjacent targets',
-        uk: `Шанс 25% нанести двом сусіднім цілям 50% урону`,
+        en: 'Chance for shots to ricochet and deal up to 150% damage to nearby enemies.',
+        uk: `Шанс рикошету пострілу та нанесення до 150% шкоди сусіднім ворогам.`,
     },
     CHAIN_LIGHTNING: {
         en: 'Chain Lightning',
