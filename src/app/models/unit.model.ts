@@ -44,6 +44,7 @@ export interface Tower {
     specialActive: boolean;
     strategy?: 'first' | 'weakest' | 'strongest' | 'random';
     hasGolden?: boolean;
+    targetEnemyId?: string;
 }
 
 export interface Enemy {

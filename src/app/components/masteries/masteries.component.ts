@@ -183,7 +183,7 @@ export class MasteriesComponent implements OnInit {
   canUnlockGolden(tierId: number): boolean {
     const dmg = this.getUpgradeLevel(tierId, 'damage');
     const rng = this.getUpgradeLevel(tierId, 'range');
-    return dmg + rng >= 199;
+    return dmg + rng >= 15;
   }
 
   canIncreaseGolden(tierId: number): boolean {

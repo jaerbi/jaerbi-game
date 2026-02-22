@@ -618,9 +618,11 @@ export class TowerDefenseEngineService {
             if (tower.cooldown <= 0) {
                 const target = this.findTargetForTower(tower, this.enemiesInternal);
                 if (target) {
+                    tower.targetEnemyId = target.id;
                     this.fireAt(tower, target);
                     tower.cooldown = tower.fireInterval;
                 } else {
+                    tower.targetEnemyId = undefined;
                     tower.cooldown = 0;
                 }
             }

@@ -209,7 +209,7 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     DAMAGE: { en: 'Damage', uk: 'Шкода' },
     RANGE: { en: 'Range', uk: 'Дальність' },
     PER_LEVEL: { en: 'per level', uk: 'за рівень' },
-    REQUIRES_5_POINTS: { en: 'Requires 200 points in tier.', uk: 'Потрібно 200 очок в тирі' },
+    REQUIRES_5_POINTS: { en: 'Requires 15 points in tier.', uk: 'Потрібно 15 очок в тирі' },
     SAVE_CHANGES: { en: 'Save Changes', uk: 'Зберегти зміни' },
     SAVING: { en: 'Saving...', uk: 'Збереження...' },
     SAVED: { en: 'Saved', uk: 'Збережено' },

@@ -454,23 +454,51 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     private drawTowers(ctx: CanvasRenderingContext2D, tile: number) {
         const towers = this.tdEngine.getTowersRef();
+        const enemies = this.tdEngine.getEnemiesRef();
         for (const t of towers) {
             const cx = t.position.x * tile + tile / 2;
             const cy = t.position.y * tile + tile / 2;
+            this.drawTowerShape(ctx, cx, cy, t.type, t.level, tile);
+
             if (t.specialActive && t.hasGolden) {
-                const r = tile * 0.45;
                 ctx.save();
-                ctx.beginPath();
-                ctx.arc(cx, cy, r, 0, Math.PI * 2);
-                ctx.strokeStyle = '#facc15';
-                ctx.lineWidth = 2.5;
-                ctx.globalAlpha = 0.9;
-                ctx.shadowColor = '#facc15';
-                ctx.shadowBlur = 12;
-                ctx.stroke();
+                ctx.fillStyle = '#FFD700';
+                ctx.shadowColor = 'black';
+                ctx.shadowBlur = 4;
+                ctx.font = `bold ${Math.floor(tile * 0.8)}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('★', cx, cy - tile * 0.3);
                 ctx.restore();
             }
-            this.drawTowerShape(ctx, cx, cy, t.type, t.level, tile);
+
+            if (t.targetEnemyId) {
+                const enemy = enemies.find(e => e.id === t.targetEnemyId);
+                if (enemy) {
+                    const ex = (enemy.displayX ?? (enemy.position.x + 0.5) * tile);
+                    const ey = (enemy.displayY ?? (enemy.position.y + 0.5) * tile);
+                    let color = 'rgba(255,255,255,0.5)';
+                    switch (t.strategy || 'first') {
+                        case 'weakest':
+                            color = 'rgba(248,113,113,0.7)';
+                            break;
+                        case 'strongest':
+                            color = 'rgba(192,132,252,0.7)';
+                            break;
+                        case 'random':
+                            color = 'rgba(74,222,128,0.7)';
+                            break;
+                    }
+                    ctx.save();
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy);
+                    ctx.lineTo(ex, ey);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
         }
     }
 

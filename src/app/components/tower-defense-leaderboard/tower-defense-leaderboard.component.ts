@@ -65,6 +65,35 @@ import { SettingsService } from '../../services/settings.service';
               </tr>
             </tbody>
           </table>
+          <div *ngIf="best() as b" class="mt-6 pt-4 border-t border-slate-700">
+            <div class="text-xs font-semibold text-slate-400 mb-2">
+              Your Personal Best
+            </div>
+            <table class="w-full text-sm">
+              <tbody>
+                <tr class="text-white">
+                  <td class="py-2 px-2 border-b border-slate-800 font-mono text-amber-300">
+                    Your Best
+                  </td>
+                  <td class="py-2 px-2 border-b border-slate-800">
+                    {{ b.displayName || 'You' }}
+                  </td>
+                  <td class="py-2 px-2 border-b border-slate-800 font-mono text-emerald-400">
+                    {{ b.maxWave }}
+                  </td>
+                  <td class="py-2 px-2 border-b border-slate-800 font-mono text-sky-300">
+                    {{ b.mapSize || '10x10' }}
+                  </td>
+                  <td class="py-2 px-2 border-b border-slate-800 font-mono text-sky-300">
+                    {{ b.userTotalXp ?? 0 }}
+                  </td>
+                  <td class="py-2 px-2 border-b border-slate-800 text-slate-300">
+                    {{ b.timestamp?.toDate ? (b.timestamp.toDate() | date:'mediumDate') : (b.timestamp | date:'mediumDate') }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -73,6 +102,7 @@ import { SettingsService } from '../../services/settings.service';
 export class TowerDefenseLeaderboardComponent implements OnInit {
     loading = signal<boolean>(true);
     scores = signal<TowerDefenseScore[]>([]);
+    best = signal<TowerDefenseScore | null>(null);
 
     constructor(private firebase: FirebaseService,
         public settings: SettingsService,
@@ -87,10 +117,23 @@ export class TowerDefenseLeaderboardComponent implements OnInit {
         try {
             const list = await this.firebase.getTopTowerDefenseScores(10);
             this.scores.set(list ?? []);
+            await this.loadPersonalBest();
         } catch {
             this.scores.set([]);
+            this.best.set(null);
         } finally {
             this.loading.set(false);
         }
+    }
+
+    private async loadPersonalBest() {
+        const user = this.firebase.user$();
+        if (!user) {
+            this.best.set(null);
+            return;
+        }
+        const entry = await this.firebase.getUserBestTowerDefenseScore(user.uid);
+        console.log('entry: ', entry);
+        this.best.set(entry ?? null);
     }
 }
