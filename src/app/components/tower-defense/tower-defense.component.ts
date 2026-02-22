@@ -485,7 +485,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 ctx.restore();
             }
 
-            if (speed < 4 && t.targetEnemyId) {
+            if (speed < 4 && t.targetEnemyId && t.type !== 6) {
                 const enemy = enemies.find(e => e.id === t.targetEnemyId);
                 if (enemy) {
                     const ex = (enemy.displayX ?? (enemy.position.x + 0.5) * tile);
@@ -512,6 +512,54 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                     ctx.restore();
                 }
             }
+
+            if (speed < 4 && t.type === 6 && t.targetEnemyId) {
+                const enemy = enemies.find(e => e.id === t.targetEnemyId);
+                if (enemy) {
+                    const ex = (enemy.displayX ?? (enemy.position.x + 0.5) * tile);
+                    const ey = (enemy.displayY ?? (enemy.position.y + 0.5) * tile);
+                    ctx.save();
+                    let stroke: CanvasGradient | string = 'rgba(56,189,248,0.9)';
+                    if (t.hasGolden) {
+                        const grad = ctx.createLinearGradient(cx, cy, ex, ey);
+                            grad.addColorStop(0, '#22c1c3');
+                            grad.addColorStop(0.5, '#a855f7');
+                            grad.addColorStop(1, '#f97316');
+                        stroke = grad;
+                    }
+                    ctx.strokeStyle = stroke as CanvasGradient;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy);
+                    ctx.lineTo(ex, ey);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+                if (t.extraTargetIds && t.extraTargetIds.length) {
+                    for (const id of t.extraTargetIds) {
+                        const enemy2 = enemies.find(e => e.id === id);
+                        if (!enemy2) continue;
+                        const ex2 = (enemy2.displayX ?? (enemy2.position.x + 0.5) * tile);
+                        const ey2 = (enemy2.displayY ?? (enemy2.position.y + 0.5) * tile);
+                        ctx.save();
+                        let stroke2: CanvasGradient | string = 'rgba(56,189,248,0.7)';
+                        if (t.hasGolden) {
+                            const grad2 = ctx.createLinearGradient(cx, cy, ex2, ey2);
+                            grad2.addColorStop(0, '#22c1c3');
+                            grad2.addColorStop(0.5, '#a855f7');
+                            grad2.addColorStop(1, '#f97316');
+                            stroke2 = grad2;
+                        }
+                        ctx.strokeStyle = stroke2 as CanvasGradient;
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(cx, cy);
+                        ctx.lineTo(ex2, ey2);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+            }
         }
     }
 
@@ -522,7 +570,9 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             type === 1 ? '#0ea5e9' :
                 type === 2 ? '#a855f7' :
                     type === 3 ? '#f59e0b' :
-                        '#ef4444';
+                        type === 4 ? '#ef4444' :
+                            type === 5 ? '#fb923c' :
+                                '#22d3ee';
         const lineWidth = 2.5;
         const lv = Math.max(1, Math.min(4, level || 1));
 
@@ -548,11 +598,29 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.closePath();
         } else if (type === 3) {
             ctx.rect(cx - half, cy - half, baseSize, baseSize);
+        } else if (type === 4) {
+            const h = baseSize * 0.9;
+            const w = baseSize * 0.9;
+            ctx.moveTo(cx, cy - h / 2);
+            ctx.lineTo(cx + w / 2, cy);
+            ctx.lineTo(cx, cy + h / 2);
+            ctx.lineTo(cx - w / 2, cy);
+            ctx.closePath();
+        } else if (type === 5) {
+            const r = baseSize * 0.5;
+            for (let i = 0; i < 5; i++) {
+                const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
         } else {
             const r = baseSize * 0.5;
             for (let i = 0; i < 6; i++) {
                 const angle = (Math.PI / 3) * i - Math.PI / 2;
-                const x = cx + Math.cos(angle) * r;
+                const x = cx + Math.cos(angle) * r * 0.7;
                 const y = cy + Math.sin(angle) * r;
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
@@ -680,6 +748,23 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.beginPath();
             ctx.arc(x * tile + tile / 2, y * tile + tile / 2, 3, 0, Math.PI * 2);
             ctx.fill();
+        }
+        const zones = this.tdEngine.getInfernoZonesRef();
+        for (const z of zones) {
+            if (z.dps <= 0) continue;
+            const cx = z.position.x * tile + tile / 2;
+            const cy = z.position.y * tile + tile / 2;
+            const r = z.radius * tile;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(248, 113, 113, 0.15)';
+            ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(248, 113, 113, 0.4)';
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.restore();
         }
     }
 
