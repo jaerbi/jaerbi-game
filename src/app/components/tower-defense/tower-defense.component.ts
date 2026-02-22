@@ -459,17 +459,29 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         for (const t of towers) {
             const cx = t.position.x * tile + tile / 2;
             const cy = t.position.y * tile + tile / 2;
+            const padding = tile * 0.15;
             this.drawTowerShape(ctx, cx, cy, t.type, t.level, tile);
 
+            if (t.specialActive) {
+                ctx.save();
+                ctx.fillStyle = '#00F2FF';
+                ctx.shadowColor = 'black';
+                ctx.shadowBlur = 4;
+                ctx.font = `bold ${Math.floor(tile * 0.3)}px Arial`;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                ctx.fillText('★', cx - tile / 2 + padding, cy - tile / 2 + padding);
+                ctx.restore();
+            }
             if (t.specialActive && t.hasGolden) {
                 ctx.save();
                 ctx.fillStyle = '#FFD700';
                 ctx.shadowColor = 'black';
                 ctx.shadowBlur = 4;
-                ctx.font = `bold ${Math.floor(tile * 0.8)}px Arial`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('★', cx, cy - tile * 0.3);
+                ctx.font = `bold ${Math.floor(tile * 0.3)}px Arial`;
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'top';
+                ctx.fillText('⚡', cx + tile / 2 - padding, cy - tile / 2 + padding);
                 ctx.restore();
             }
 
