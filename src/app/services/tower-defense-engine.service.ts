@@ -734,33 +734,18 @@ export class TowerDefenseEngineService {
 
         let damage = tower.damage;
 
-        if (tower.type === 2) {
-            const golden = this.getUpgradeLevel(2, 'golden');
-            if (golden > 0) {
-                const critChance = 0.1 * golden;
-                const critMultiplier = 1 + golden * 0.1;
-                if (Math.random() < critChance) {
-                    damage = Math.floor(damage * critMultiplier);
-                }
-            }
-        }
-
         if (tower.specialActive && tower.type === 4) {
             const ratio = enemy.hp / enemy.maxHp;
-            if (ratio < 0.15) {
-                if (enemy.isBoss) {
-                    damage = tower.damage * 3;
-                } else {
-                    enemy.hp = 0;
-                    return;
-                }
+            if (ratio < 0.5) {
+                const multiplier = enemy.isBoss ? 3 : 2;
+                damage = Math.floor(tower.damage * multiplier);
             }
         }
 
         if (tower.specialActive && tower.type === 3) {
             const nextStacks = Math.min(5, enemy.shatterStacks + 1);
             enemy.shatterStacks = nextStacks;
-            const multiplier = 1 + nextStacks * 0.1;
+            const multiplier = 1 + nextStacks * 0.2;
             damage = Math.floor(damage * multiplier);
         }
 
@@ -769,39 +754,45 @@ export class TowerDefenseEngineService {
         if (tower.type === 3) {
             const golden = this.getUpgradeLevel(3, 'golden');
             if (golden > 0) {
-                const stunChance = 0.05 * golden;
-                const extraDuration = golden * 0.2;
+                const stunChance = 0.15 + golden * 0.05;
                 if (Math.random() < stunChance) {
-                    const baseDuration = 0.5 + extraDuration;
+                    const baseDuration = (0.5 + golden * 0.2) * 1.2;
                     enemy.stunTime = Math.max(enemy.stunTime ?? 0, baseDuration);
                 }
             }
         }
 
         if (tower.specialActive && tower.type === 2) {
-            if (Math.random() < 0.25) {
-                const secondary: Enemy[] = [];
+            const golden = this.getUpgradeLevel(2, 'golden');
+            const triggerChance = 0.25 + golden * 0.05;
+            const damageMultiplier = 1.5 + golden * 0.2;
+            if (Math.random() < triggerChance) {
+                const candidates: { enemy: Enemy; distSq: number }[] = [];
                 for (const other of this.enemiesInternal) {
-                    if (other.id === enemy.id) continue;
+                    if (other.id === enemy.id || other.hp <= 0) continue;
                     const dx = enemy.position.x - other.position.x;
                     const dy = enemy.position.y - other.position.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist <= 3) {
-                        secondary.push(other);
-                        if (secondary.length >= 2) break;
+                    const distSq = dx * dx + dy * dy;
+                    if (distSq <= 9) {
+                        candidates.push({ enemy: other, distSq });
                     }
                 }
-                const secondaryDamage = Math.floor(tower.damage * 0.5);
-                for (const s of secondary) {
-                    const chainProj: Projectile = {
-                        id: 'p' + (this.projectileIdCounter++),
-                        from: { ...tower.position },
-                        to: { ...s.position },
-                        progress: 0,
-                        speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
-                    };
-                    this.pushProjectile(chainProj);
-                    s.hp -= secondaryDamage;
+                if (candidates.length > 0) {
+                    candidates.sort((a, b) => a.distSq - b.distSq);
+                    const count = Math.min(2, candidates.length);
+                    for (let i = 0; i < count; i++) {
+                        const target = candidates[i].enemy;
+                        const chainProj: Projectile = {
+                            id: 'p' + (this.projectileIdCounter++),
+                            from: { ...tower.position },
+                            to: { ...target.position },
+                            progress: 0,
+                            speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
+                        };
+                        this.pushProjectile(chainProj);
+                        const secondaryDamage = Math.floor(tower.damage * damageMultiplier);
+                        target.hp -= secondaryDamage;
+                    }
                 }
             }
         }
@@ -809,30 +800,43 @@ export class TowerDefenseEngineService {
         if (tower.type === 4) {
             const golden = this.getUpgradeLevel(4, 'golden');
             if (golden > 0) {
-                let closest: Enemy | null = null;
-                let minDist = Infinity;
-                for (const other of this.enemiesInternal) {
-                    if (other.id === enemy.id) continue;
-                    const dx = enemy.position.x - other.position.x;
-                    const dy = enemy.position.y - other.position.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist <= 3 && dist < minDist) {
-                        minDist = dist;
-                        closest = other;
+                let chainChance = 0.1;
+                if (golden === 2) chainChance = 0.15;
+                else if (golden >= 3) chainChance = 0.2;
+
+                if (Math.random() < chainChance) {
+                    let closest: Enemy | null = null;
+                    let minDist = Infinity;
+                    for (const other of this.enemiesInternal) {
+                        if (other.id === enemy.id || other.hp <= 0) continue;
+                        const dx = enemy.position.x - other.position.x;
+                        const dy = enemy.position.y - other.position.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist <= 3 && dist < minDist) {
+                            minDist = dist;
+                            closest = other;
+                        }
                     }
-                }
-                if (closest) {
-                    const chainProj: Projectile = {
-                        id: 'p' + (this.projectileIdCounter++),
-                        from: { ...tower.position },
-                        to: { ...closest.position },
-                        progress: 0,
-                        speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
-                    };
-                    this.pushProjectile(chainProj);
-                    const jumpFactor = 0.5 + 0.1 * golden;
-                    const secondaryDamage = Math.floor(damage * jumpFactor);
-                    closest.hp -= secondaryDamage;
+                    if (closest) {
+                        const chainProj: Projectile = {
+                            id: 'p' + (this.projectileIdCounter++),
+                            from: { ...tower.position },
+                            to: { ...closest.position },
+                            progress: 0,
+                            speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
+                        };
+                        this.pushProjectile(chainProj);
+
+                        let secondaryDamage = tower.damage;
+                        if (tower.specialActive) {
+                            const ratio2 = closest.hp / closest.maxHp;
+                            if (ratio2 < 0.5) {
+                                const multiplier2 = closest.isBoss ? 3 : 2;
+                                secondaryDamage = Math.floor(tower.damage * multiplier2);
+                            }
+                        }
+                        closest.hp -= secondaryDamage;
+                    }
                 }
             }
         }

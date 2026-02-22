@@ -455,6 +455,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     private drawTowers(ctx: CanvasRenderingContext2D, tile: number) {
         const towers = this.tdEngine.getTowersRef();
         const enemies = this.tdEngine.getEnemiesRef();
+        const speed = this.tdEngine.gameSpeedMultiplier();
         for (const t of towers) {
             const cx = t.position.x * tile + tile / 2;
             const cy = t.position.y * tile + tile / 2;
@@ -472,7 +473,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 ctx.restore();
             }
 
-            if (t.targetEnemyId) {
+            if (speed < 4 && t.targetEnemyId) {
                 const enemy = enemies.find(e => e.id === t.targetEnemyId);
                 if (enemy) {
                     const ex = (enemy.displayX ?? (enemy.position.x + 0.5) * tile);

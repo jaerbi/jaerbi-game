@@ -89,16 +89,16 @@
         </div>
         <div class="flex items-center gap-3">
           <button
-            (click)="onLoginClick()"
-            class="cursor-pointer px-3 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded transition-colors uppercase tracking-wider"
-          >
-            {{ firebase.user$() ? firebase.user$()?.displayName || 'Account' : 'Login to Save Score' }}
-          </button>
-          <button
             (click)="onRestart()"
             class="cursor-pointer bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded transition-colors uppercase tracking-wider"
           >
             {{ settings.t('RESTART_GAME') }}
+          </button>
+          <button
+            (click)="onLoginClick()"
+            class="cursor-pointer px-3 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded transition-colors uppercase tracking-wider"
+          >
+            {{ firebase.user$() ? firebase.user$()?.displayName || 'Account' : 'Login to Save Score' }}
           </button>
           <button
             (click)="tdEngine.startWave()"
