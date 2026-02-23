@@ -95,7 +95,7 @@ export class TowerDefenseEngineService {
         this.gameOver.set(false);
         this.savedResult = false;
         this.gameEndedHard = false;
-        this.money.set(100000);
+        this.money.set(100);
         this.lives.set(100);
         this.wave.set(0);
         const currentGrid = this.grid();
