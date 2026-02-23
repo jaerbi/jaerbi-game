@@ -43,6 +43,7 @@ export interface Tower {
     beamTime?: number;
     lastBeamTargetId?: string;
     extraTargetIds?: string[];
+    hitsOnTarget?: number;
 }
 
 export interface Enemy {

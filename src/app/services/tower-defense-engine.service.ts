@@ -48,11 +48,11 @@ export class TowerDefenseEngineService {
 
     private tierStats = [
         { damage: 5, range: 2, fireInterval: 0.5 },
-        { damage: 21, range: 3, fireInterval: 0.8 },
+        { damage: 21, range: 3, fireInterval: 0.7 },
         { damage: 83, range: 2.5, fireInterval: 1 },
-        { damage: 342, range: 3.7, fireInterval: 1.3 },
+        { damage: 348, range: 4, fireInterval: 1.3 },
         { damage: 71, range: 2.5, fireInterval: 2.4 },
-        { damage: 23, range: 3, fireInterval: 0.3 },
+        { damage: 23, range: 3, fireInterval: 0.2 },
         { damage: 66, range: 2.5, fireInterval: 1 }
     ];
 
@@ -95,7 +95,7 @@ export class TowerDefenseEngineService {
         this.gameOver.set(false);
         this.savedResult = false;
         this.gameEndedHard = false;
-        this.money.set(100);
+        this.money.set(100000);
         this.lives.set(100);
         this.wave.set(0);
         const currentGrid = this.grid();
@@ -732,6 +732,9 @@ export class TowerDefenseEngineService {
                 if (target) {
                     tower.targetEnemyId = target.id;
                     this.fireAt(tower, target);
+                    if (tower.type === 7) {
+                        tower.hitsOnTarget = (tower.hitsOnTarget || 0) + 1;
+                    }
                     tower.cooldown = tower.fireInterval;
                 } else {
                     tower.targetEnemyId = undefined;
@@ -739,6 +742,9 @@ export class TowerDefenseEngineService {
                     tower.lastBeamTargetId = undefined;
                     tower.extraTargetIds = undefined;
                     tower.cooldown = 0;
+                    if (tower.type === 7) {
+                        tower.hitsOnTarget = 0;
+                    }
                 }
             }
         }
@@ -777,9 +783,9 @@ export class TowerDefenseEngineService {
     }
 
     private findTargetForTower(tower: Tower, enemies: Enemy[]): Enemy | null {
-        const stickyTypes = [3, 6, 7]; 
+        const stickyTypes = [3, 6];
 
-        if (tower.targetEnemyId && stickyTypes.includes(tower.type)) {
+        if (tower.targetEnemyId) {
             const currentTarget = enemies.find(e => e.id === tower.targetEnemyId);
 
             if (currentTarget && currentTarget.hp > 0) {
@@ -789,10 +795,17 @@ export class TowerDefenseEngineService {
                 const rangeSq = tower.range * tower.range;
 
                 if (distSq <= rangeSq) {
-                    return currentTarget;
+                    if (tower.type === 7) {
+                        if ((tower.hitsOnTarget ?? 0) < 3) {
+                            return currentTarget;
+                        }
+                    } else if (stickyTypes.includes(tower.type)) {
+                        return currentTarget;
+                    }
                 }
             }
         }
+
         const rangeSq = tower.range * tower.range;
         const candidates: { enemy: Enemy; distSq: number; progressScore: number }[] = [];
 
@@ -800,49 +813,46 @@ export class TowerDefenseEngineService {
             const dx = tower.position.x - enemy.position.x;
             const dy = tower.position.y - enemy.position.y;
             const distSq = dx * dx + dy * dy;
+
             if (distSq > rangeSq) continue;
+
+            if (tower.type === 7 && enemy.id === tower.targetEnemyId && (tower.hitsOnTarget ?? 0) >= 3) {
+                continue;
+            }
+
             const idx = enemy.pathIndex ?? 0;
             const prog = enemy.progress ?? 0;
             const progressScore = idx + prog;
             candidates.push({ enemy, distSq, progressScore });
         }
 
-        if (candidates.length === 0) return null;
+        if (candidates.length === 0) {
+            tower.hitsOnTarget = 0;
+            return null;
+        }
 
+        const selectedEnemy = this.applyStrategy(tower, candidates);
+
+        if (tower.targetEnemyId !== selectedEnemy.id) {
+            tower.hitsOnTarget = 0;
+        }
+
+        return selectedEnemy;
+    }
+
+    private applyStrategy(tower: Tower, candidates: any[]): Enemy {
         const strat = tower.strategy || 'first';
 
-        if (strat === 'random') {
-            const r = Math.floor(Math.random() * candidates.length);
-            return candidates[r].enemy;
-        }
+        if (strat === 'random') return candidates[Math.floor(Math.random() * candidates.length)].enemy;
 
         if (strat === 'weakest') {
-            let best = candidates[0];
-            for (let i = 1; i < candidates.length; i++) {
-                if (candidates[i].enemy.hp < best.enemy.hp) {
-                    best = candidates[i];
-                }
-            }
-            return best.enemy;
+            return candidates.reduce((prev, curr) => curr.enemy.hp < prev.enemy.hp ? curr : prev).enemy;
         }
-
         if (strat === 'strongest') {
-            let best = candidates[0];
-            for (let i = 1; i < candidates.length; i++) {
-                if (candidates[i].enemy.hp > best.enemy.hp) {
-                    best = candidates[i];
-                }
-            }
-            return best.enemy;
+            return candidates.reduce((prev, curr) => curr.enemy.hp > prev.enemy.hp ? curr : prev).enemy;
         }
 
-        let best = candidates[0];
-        for (let i = 1; i < candidates.length; i++) {
-            if (candidates[i].progressScore > best.progressScore) {
-                best = candidates[i];
-            }
-        }
-        return best.enemy;
+        return candidates.reduce((prev, curr) => curr.progressScore > prev.progressScore ? curr : prev).enemy;
     }
 
     private pushProjectile(p: Projectile) {

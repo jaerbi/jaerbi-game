@@ -100,6 +100,17 @@
           >
             {{ firebase.user$() ? firebase.user$()?.displayName || 'Account' : 'Login to Save Score' }}
           </button>
+          <div class="auto-wave-control">
+            <label class="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                [checked]="autoWave()"
+                (change)="autoWave.set(!autoWave())"
+                class="form-checkbox h-5 w-5 text-blue-600"
+              />
+              <span class="text-white">Auto</span>
+            </label>
+          </div>
           <button
             (click)="tdEngine.startWave()"
             [disabled]="tdEngine.isWaveInProgress()"
@@ -116,7 +127,7 @@
     </div>
   </div>
 
-  <div class="relative flex gap-4 flex-1 min-h-0">
+  <div class="relative flex gap-4 flex-1 min-h-0 td-layout">
     <label class="flex items-center gap-2 text-xs font-bold text-rose-400 absolute top-2 left-2 z-5">
       <input
         type="checkbox"
@@ -163,19 +174,19 @@
     </button>
     <!-- Main Game Area -->
     <div
-      class="flex-1 relative bg-slate-900 rounded-lg overflow-auto border flex items-center justify-center p-4 min-h-[400px]"
+      class="flex-1 relative bg-slate-900 rounded-lg overflow-auto border flex items-center justify-center p-4 min-h-[400px] td-main-area"
       [class.border-rose-600]="tdEngine.isHardMode()"
       [class.shadow-[0_0_25px_rgba(248,113,113,0.7)]]="tdEngine.isHardMode()"
     >
       <canvas
         #gameCanvas
-        class="block rounded transition-opacity duration-300"
+        class="block rounded transition-opacity duration-300 td-canvas"
         (click)="onCanvasClick($event)"
       ></canvas>
     </div>
 
     <!-- Sidebar Controls -->
-    <div class="w-64 flex flex-col gap-4">
+    <div class="w-64 flex flex-col gap-4 td-sidebar">
       <!-- Shop / Context Menu -->
       <div class="flex-1 bg-slate-800 rounded-lg border border-slate-700 p-4 overflow-y-auto">
         @if (selectedTile(); as tile) {
@@ -183,7 +194,7 @@
             <h3 class="text-sm font-bold text-slate-400 mb-4 uppercase tracking-wider">
               {{ settings.t('BUY_DEFENDER') }}
             </h3>
-            <div class="flex flex-col gap-3">
+            <div class="flex flex-col gap-3 td-shop-list">
               @for (cost of tdEngine.towerCosts; track $index) {
                 @let tier = $index + 1;
                 <button
@@ -229,7 +240,7 @@
               </div>
             </div>
 
-            <div class="flex flex-col gap-2">
+            <div class="flex flex-col gap-2 td-shop-actions">
               <div class="bg-slate-900 rounded p-3 mb-2">
                 <div class="text-xs text-slate-500 mb-1">{{ settings.t('TARGETING') }}</div>
                 <div class="flex flex-wrap gap-1">

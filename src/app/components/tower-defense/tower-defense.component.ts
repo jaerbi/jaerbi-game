@@ -60,19 +60,19 @@ import { SupportCommunityComponent } from '../support-community/support-communit
     }
 
     .frost-aura-visual {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 248px; /* 4 клітинки * 62px */
-  height: 248px;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: rgba(0, 255, 255, 0.1);
-  border: 1px solid rgba(0, 255, 255, 0.3);
-  pointer-events: none;
-  z-index: 5;
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
-}
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 248px;
+      height: 248px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: rgba(0, 255, 255, 0.1);
+      border: 1px solid rgba(0, 255, 255, 0.3);
+      pointer-events: none;
+      z-index: 5;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+    }
 
     .enemy {
       position: absolute;
@@ -120,11 +120,51 @@ import { SupportCommunityComponent } from '../support-community/support-communit
     .shape-circle { border-radius: 50%; }
     .shape-triangle { clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
     .shape-hexagon { clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%); }
+
+    @media (max-width: 900px) {
+      .td-layout {
+        flex-direction: column;
+      }
+      .td-main-area {
+        width: 100vw;
+        max-width: 100vw;
+        margin-left: -1rem;
+        margin-right: -1rem;
+        padding: 0.5rem;
+        min-height: auto;
+      }
+      .td-sidebar {
+        width: 100%;
+      }
+      .td-canvas {
+        width: 100vw;
+        max-width: 100vw;
+        touch-action: none;
+      }
+      .td-shop-list {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 0.5rem;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+      }
+      .td-shop-list .shop-btn {
+        min-width: 72px;
+        min-height: 50px;
+      }
+      .td-shop-actions {
+        position: sticky;
+        bottom: 0;
+        background: rgba(15, 23, 42, 0.96);
+        padding-top: 0.5rem;
+      }
+    }
   `]
 })
 export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     selectedTile = signal<TDTile | null>(null);
     mapLevel = signal(1);
+    public autoWave = signal(false);
     private uiSub?: Subscription;
     @ViewChild('gameCanvas', { static: false }) gameCanvas?: ElementRef<HTMLCanvasElement>;
     private ctx?: CanvasRenderingContext2D | null;
@@ -146,6 +186,14 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     @HostListener('window:keyup', ['$event'])
     onKeyUp(event: KeyboardEvent) { }
+    @HostListener('window:beforeunload', ['$event'])
+    unloadNotification($event: any) {
+        const hasTowers = this.tdEngine.getTowersRef().length > 0;
+        const isPlaying = this.tdEngine.isWaveInProgress();
+        if (hasTowers || isPlaying) {
+            $event.returnValue = true;
+        }
+    }
 
     constructor(
         public tdEngine: TowerDefenseEngineService,
@@ -161,6 +209,14 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         this.cdr.detectChanges();
         this.uiSub = this.tdEngine.uiTick$.subscribe(() => {
             this.cdr.detectChanges();
+
+            if (this.autoWave() && !this.tdEngine.isWaveInProgress()) {
+                setTimeout(() => {
+                    if (this.autoWave() && !this.tdEngine.isWaveInProgress()) {
+                        this.tdEngine.startWave();
+                    }
+                }, 1000);
+            }
         });
     }
 
@@ -171,14 +227,6 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             this.startCanvasLoop();
             setTimeout(() => this.resizeCanvas(), 100);
         }, 0);
-        // requestAnimationFrame(() => {
-        //     requestAnimationFrame(() => {
-        //         this.initCanvas();
-        //         this.drawFrame();
-        //         this.gameReady.set(true);
-        //         this.startCanvasLoop();
-        //     });
-        // });
         window.addEventListener('resize', this.resizeCanvas);
     }
 
@@ -668,7 +716,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     private drawEnemies(ctx: CanvasRenderingContext2D, tile: number) {
         const enemies = this.tdEngine.getEnemiesRef();
-        const isFastSpeed = this.tdEngine.gameSpeedMultiplier() > 1;
+        const speed = this.tdEngine.gameSpeedMultiplier();
+        const isFastSpeed = speed > 1;
 
         for (const e of enemies) {
             const scale = e.scale ?? 1;
@@ -686,17 +735,17 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 strokeColor = '#f97316';
                 shadowColor = '#f97316';
                 shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 3;
+                lineWidth = 2;
             } else if (e.isMirror) {
                 strokeColor = '#f0f9ff';
                 shadowColor = '#0ea5e9';
                 shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 3;
+                lineWidth = 2;
             } else if (e.isSlime) {
                 strokeColor = '#22c55e';
                 shadowColor = '#22c55e';
                 shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 3;
+                lineWidth = 2;
             }
 
             ctx.shadowColor = shadowColor;
@@ -736,11 +785,31 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             const cy = e.displayY ?? ((e.position.y + 0.5) * tile);
             const barW = size;
             const barH = 4;
+            const barY = cy - r - 10;
             ctx.fillStyle = '#0f172a';
             ctx.fillRect(cx - r, cy - r - 10, barW, barH);
             ctx.fillStyle = '#10b981';
             const pct = Math.max(0, Math.min(1, e.hp / e.maxHp));
             ctx.fillRect(cx - r, cy - r - 10, barW * pct, barH);
+            const stacks = e.venomStacks || 0;
+
+            if (speed === 1 && stacks > 0) {
+                ctx.save();
+                const tickW = 3;
+                const tickH = 6;
+                const gap = 2;
+                const startX = cx - r;
+                const tickY = barY - tickH - 2;
+
+                ctx.fillStyle = '#84cc16';
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 2;
+
+                for (let i = 0; i < stacks; i++) {
+                    ctx.fillRect(startX + i * (tickW + gap), tickY, tickW, tickH);
+                }
+                ctx.restore();
+            }
         }
     }
 
