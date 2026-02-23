@@ -52,7 +52,7 @@ export class TowerDefenseEngineService {
         { damage: 80, range: 3, fireInterval: 1 },
         { damage: 300, range: 3.5, fireInterval: 1.2 },
         { damage: 80, range: 2.5, fireInterval: 2.0 },
-        { damage: 20, range: 3, fireInterval: 0.2 },
+        { damage: 23, range: 3, fireInterval: 0.3 },
         { damage: 60, range: 2.5, fireInterval: 1.2 }
     ];
 
@@ -95,7 +95,7 @@ export class TowerDefenseEngineService {
         this.gameOver.set(false);
         this.savedResult = false;
         this.gameEndedHard = false;
-        this.money.set(100000);
+        this.money.set(100);
         this.lives.set(100);
         this.wave.set(0);
         const currentGrid = this.grid();
@@ -177,8 +177,8 @@ export class TowerDefenseEngineService {
             return Math.random() < 0.5 ? 'scout' : 'standard';
         }
         const roll = Math.random();
-        if (roll < 0.23) return 'tank';
-        if (roll < 0.56) return 'scout';
+        if (roll < 0.20) return 'tank';
+        if (roll < 0.41) return 'scout';
         return 'standard';
     }
 
@@ -548,7 +548,7 @@ export class TowerDefenseEngineService {
             hpFinal = hp * 0.4;
             speedFinal = baseSpeed * 2.0;
         } else if (enemyType === 'boss') {
-            hpFinal = hp * 3;
+            hpFinal = hp * 4;
             speedFinal = baseSpeed * 0.5;
         }
         if (this.isHardMode()) {
@@ -667,8 +667,9 @@ export class TowerDefenseEngineService {
                 enemy.progress = 0;
 
                 if (enemy.pathIndex >= this.path().length - 1) {
+                    const damageToLives = enemy.type === 'boss' ? 5 : 1;
                     this.enemiesInternal.splice(i, 1);
-                    this.ngZone.run(() => this.lives.update(l => Math.max(0, l - 1)));
+                    this.ngZone.run(() => this.lives.update(l => Math.max(0, l - damageToLives)));
                     if (this.enemiesInternal.length === 0 && this.enemiesToSpawn === 0) {
                         this.currentWaveType = 'standard';
                     }
@@ -684,7 +685,6 @@ export class TowerDefenseEngineService {
             const iy = current.y + (next.y - current.y) * enemy.progress;
             enemy.displayX = (ix + 0.5) * tile;
             enemy.displayY = (iy + 0.5) * tile;
-            const shatter = enemy.shatterStacks ?? 0;
             const baseLight = 60;
             const lightness = baseLight;
             let scale = 1;
@@ -778,7 +778,6 @@ export class TowerDefenseEngineService {
 
     private findTargetForTower(tower: Tower, enemies: Enemy[]): Enemy | null {
         const rangeSq = tower.range * tower.range;
-        const path = this.path();
         const candidates: { enemy: Enemy; distSq: number; progressScore: number }[] = [];
 
         for (const enemy of enemies) {
