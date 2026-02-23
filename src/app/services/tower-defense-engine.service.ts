@@ -48,12 +48,12 @@ export class TowerDefenseEngineService {
 
     private tierStats = [
         { damage: 5, range: 2, fireInterval: 0.5 },
-        { damage: 20, range: 2.5, fireInterval: 0.7 },
-        { damage: 80, range: 3, fireInterval: 1 },
-        { damage: 300, range: 3.5, fireInterval: 1.2 },
-        { damage: 80, range: 2.5, fireInterval: 2.0 },
+        { damage: 21, range: 3, fireInterval: 0.8 },
+        { damage: 80, range: 2.5, fireInterval: 1 },
+        { damage: 342, range: 3.7, fireInterval: 1.3 },
+        { damage: 80, range: 2.5, fireInterval: 2.4 },
         { damage: 23, range: 3, fireInterval: 0.3 },
-        { damage: 60, range: 2.5, fireInterval: 1.2 }
+        { damage: 60, range: 2.5, fireInterval: 1 }
     ];
 
     private savedResult = false;
@@ -777,6 +777,22 @@ export class TowerDefenseEngineService {
     }
 
     private findTargetForTower(tower: Tower, enemies: Enemy[]): Enemy | null {
+        const stickyTypes = [3, 6, 7]; 
+
+        if (tower.targetEnemyId && stickyTypes.includes(tower.type)) {
+            const currentTarget = enemies.find(e => e.id === tower.targetEnemyId);
+
+            if (currentTarget && currentTarget.hp > 0) {
+                const dx = tower.position.x - currentTarget.position.x;
+                const dy = tower.position.y - currentTarget.position.y;
+                const distSq = dx * dx + dy * dy;
+                const rangeSq = tower.range * tower.range;
+
+                if (distSq <= rangeSq) {
+                    return currentTarget;
+                }
+            }
+        }
         const rangeSq = tower.range * tower.range;
         const candidates: { enemy: Enemy; distSq: number; progressScore: number }[] = [];
 
@@ -927,8 +943,8 @@ export class TowerDefenseEngineService {
 
         if (tower.specialActive && tower.type === 2) {
             const golden = this.getUpgradeLevel(2, 'golden');
-            const triggerChance = 0.25 + golden * 0.05;
-            const damageMultiplier = 1.5 + golden * 0.2;
+            const triggerChance = 0.25 + golden * 0.1;
+            const damageMultiplier = 1.5 + golden * 0.5;
             if (Math.random() < triggerChance) {
                 const candidates: { enemy: Enemy; distSq: number }[] = [];
                 for (const other of this.enemiesInternal) {
