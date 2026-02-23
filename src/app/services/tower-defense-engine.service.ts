@@ -10,7 +10,7 @@ import { Subject } from 'rxjs';
 export class TowerDefenseEngineService {
     // Game State
     money = signal(100);
-    lives = signal(20);         
+    lives = signal(20);
     wave = signal(0);
     isWaveInProgress = signal(false);
     gameOver = signal(false);
@@ -44,7 +44,7 @@ export class TowerDefenseEngineService {
     private currentWaveType: 'tank' | 'scout' | 'standard' | 'boss' = 'standard';
 
     // Costs and Stats
-    towerCosts = [15, 50, 250, 1000, 1300, 1700];
+    towerCosts = [15, 50, 250, 1000, 1300, 1700, 2000];
 
     private tierStats = [
         { damage: 5, range: 2, fireInterval: 0.5 },
@@ -52,7 +52,8 @@ export class TowerDefenseEngineService {
         { damage: 80, range: 3, fireInterval: 1 },
         { damage: 300, range: 3.5, fireInterval: 1.2 },
         { damage: 80, range: 2.5, fireInterval: 2.0 },
-        { damage: 20, range: 4, fireInterval: 0.2 }
+        { damage: 20, range: 3, fireInterval: 0.2 },
+        { damage: 60, range: 2.5, fireInterval: 1.2 }
     ];
 
     private savedResult = false;
@@ -474,7 +475,7 @@ export class TowerDefenseEngineService {
             const dx = pos.x - enemy.position.x;
             const dy = pos.y - enemy.position.y;
             if (dx * dx + dy * dy <= radiusSq) {
-                enemy.hp -= damage;
+                this.applyDamageWithResists(enemy, damage, 5);
             }
         }
         const explosion: InfernoZone = {
@@ -485,6 +486,31 @@ export class TowerDefenseEngineService {
             dps: 0
         };
         this.infernoZones.push(explosion);
+    }
+
+    private applyVenom(enemy: Enemy, tower: Tower) {
+        if (enemy.isSlime) return;
+        const stacks = Math.min(3, (enemy.venomStacks ?? 0) + 1);
+        enemy.venomStacks = stacks;
+        enemy.venomDuration = 4;
+        enemy.venomTickTimer = 0;
+        if (tower.specialActive) {
+            enemy.venomSlowActive = true;
+        }
+        const base = Math.max(enemy.venomBaseDamage ?? 0, tower.damage);
+        enemy.venomBaseDamage = base;
+    }
+
+    private applyDamageWithResists(enemy: Enemy, amount: number, tier: number) {
+        let dmg = amount;
+        if (enemy.isMagma && tier === 5) {
+            dmg = Math.floor(dmg * 0.1);
+        } else if (enemy.isMirror && tier === 6) {
+            dmg = Math.floor(dmg * 0.1);
+        } else if (enemy.isSlime && tier === 7) {
+            dmg = Math.floor(dmg * 0.1);
+        }
+        enemy.hp -= dmg;
     }
 
     private handleSpawning(dt: number) {
@@ -546,6 +572,16 @@ export class TowerDefenseEngineService {
             isFrozen: false,
             type: enemyType
         };
+        if (this.wave() >= 15) {
+            const roll = Math.random();
+            if (roll < 0.2) {
+                newEnemy.isMagma = true;
+            } else if (roll < 0.4) {
+                newEnemy.isMirror = true;
+            } else if (roll < 0.6) {
+                newEnemy.isSlime = true;
+            }
+        }
         this.enemiesInternal.push(newEnemy);
     }
 
@@ -560,6 +596,23 @@ export class TowerDefenseEngineService {
             }
             if (enemy.prismVulnerableTime && enemy.prismVulnerableTime > 0) {
                 enemy.prismVulnerableTime = Math.max(0, enemy.prismVulnerableTime - dt);
+            }
+            if (enemy.venomDuration && enemy.venomDuration > 0 && enemy.venomStacks && enemy.venomStacks > 0) {
+                enemy.venomDuration = Math.max(0, enemy.venomDuration - dt);
+                enemy.venomTickTimer = (enemy.venomTickTimer ?? 0) + dt;
+                const tickDamage = enemy.venomBaseDamage ?? 0;
+                while (enemy.venomTickTimer >= 1 && enemy.venomDuration > 0) {
+                    enemy.venomTickTimer -= 1;
+                    const total = tickDamage * enemy.venomStacks;
+                    this.applyDamageWithResists(enemy, total, 7);
+                }
+                if (enemy.venomDuration <= 0) {
+                    enemy.venomStacks = 0;
+                    enemy.venomTickTimer = 0;
+                }
+                if (enemy.venomStacks && enemy.venomStacks > 0 && enemy.venomSlowActive) {
+                    enemy.speedModifier *= 0.8;
+                }
             }
         }
 
@@ -604,8 +657,8 @@ export class TowerDefenseEngineService {
             const base = enemy.baseSpeed;
             const archetypeMultiplier =
                 enemy.type === 'tank' ? 0.5 :
-                enemy.type === 'scout' ? 2.0 :
-                enemy.type === 'boss' ? 0.5 : 1;
+                    enemy.type === 'scout' ? 2.0 :
+                        enemy.type === 'boss' ? 0.5 : 1;
             const moveSpeed = base * archetypeMultiplier * enemy.speedModifier;
             enemy.progress += moveSpeed * dt;
 
@@ -633,7 +686,7 @@ export class TowerDefenseEngineService {
             enemy.displayY = (iy + 0.5) * tile;
             const shatter = enemy.shatterStacks ?? 0;
             const baseLight = 60;
-            const lightness = baseLight; 
+            const lightness = baseLight;
             let scale = 1;
             if (enemy.type === 'tank') scale = 1.2;
             else if (enemy.type === 'scout') scale = 0.9;
@@ -855,8 +908,11 @@ export class TowerDefenseEngineService {
                 };
                 this.infernoZones.push(zone);
             }
+        } else if (tower.type === 7) {
+            this.applyVenom(enemy, tower);
+            this.applyDamageWithResists(enemy, damage, tower.type);
         } else if (tower.type !== 6 || !tower.specialActive) {
-            enemy.hp -= damage;
+            this.applyDamageWithResists(enemy, damage, tower.type);
         }
 
         if (tower.type === 3) {
@@ -899,7 +955,7 @@ export class TowerDefenseEngineService {
                         };
                         this.pushProjectile(chainProj);
                         const secondaryDamage = Math.floor(tower.damage * damageMultiplier);
-                        target.hp -= secondaryDamage;
+                        this.applyDamageWithResists(target, secondaryDamage, tower.type);
                     }
                 }
             }
@@ -942,7 +998,7 @@ export class TowerDefenseEngineService {
                 if (target.prismVulnerableTime && target.prismVulnerableTime > 0) {
                     dmg = Math.floor(dmg * 1.15);
                 }
-                target.hp -= dmg;
+                this.applyDamageWithResists(target, dmg, tower.type);
                 if (spectrumActive) {
                     target.prismVulnerableTime = Math.max(target.prismVulnerableTime ?? 0, 0.25);
                 }
@@ -990,7 +1046,7 @@ export class TowerDefenseEngineService {
                         if (closest.prismVulnerableTime && closest.prismVulnerableTime > 0) {
                             secondaryDamage = Math.floor(secondaryDamage * 1.15);
                         }
-                        closest.hp -= secondaryDamage;
+                        this.applyDamageWithResists(closest, secondaryDamage, tower.type);
                     }
                 }
             }

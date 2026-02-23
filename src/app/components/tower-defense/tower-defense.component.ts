@@ -485,35 +485,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 ctx.restore();
             }
 
-            if (speed < 4 && t.targetEnemyId && t.type !== 6) {
-                const enemy = enemies.find(e => e.id === t.targetEnemyId);
-                if (enemy) {
-                    const ex = (enemy.displayX ?? (enemy.position.x + 0.5) * tile);
-                    const ey = (enemy.displayY ?? (enemy.position.y + 0.5) * tile);
-                    let color = 'rgba(255,255,255,0.5)';
-                    switch (t.strategy || 'first') {
-                        case 'weakest':
-                            color = 'rgba(248,113,113,0.7)';
-                            break;
-                        case 'strongest':
-                            color = 'rgba(192,132,252,0.7)';
-                            break;
-                        case 'random':
-                            color = 'rgba(74,222,128,0.7)';
-                            break;
-                    }
-                    ctx.save();
-                    ctx.strokeStyle = color;
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.moveTo(cx, cy);
-                    ctx.lineTo(ex, ey);
-                    ctx.stroke();
-                    ctx.restore();
-                }
-            }
-
-            if (speed < 4 && t.type === 6 && t.targetEnemyId) {
+            if (speed === 1 && t.type === 6 && t.targetEnemyId) {
                 const enemy = enemies.find(e => e.id === t.targetEnemyId);
                 if (enemy) {
                     const ex = (enemy.displayX ?? (enemy.position.x + 0.5) * tile);
@@ -522,9 +494,9 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                     let stroke: CanvasGradient | string = 'rgba(56,189,248,0.9)';
                     if (t.hasGolden) {
                         const grad = ctx.createLinearGradient(cx, cy, ex, ey);
-                            grad.addColorStop(0, '#22c1c3');
-                            grad.addColorStop(0.5, '#a855f7');
-                            grad.addColorStop(1, '#f97316');
+                        grad.addColorStop(0, '#22c1c3');
+                        grad.addColorStop(0.5, '#a855f7');
+                        grad.addColorStop(1, '#f97316');
                         stroke = grad;
                     }
                     ctx.strokeStyle = stroke as CanvasGradient;
@@ -572,7 +544,9 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                     type === 3 ? '#f59e0b' :
                         type === 4 ? '#ef4444' :
                             type === 5 ? '#fb923c' :
-                                '#22d3ee';
+                                type === 6 ? '#22d3ee' :
+                                    '#84cc16';
+
         const lineWidth = 2.5;
         const lv = Math.max(1, Math.min(4, level || 1));
 
@@ -584,7 +558,6 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.shadowColor = color;
             ctx.shadowBlur = 16;
         }
-
         ctx.beginPath();
         if (type === 1) {
             const r = baseSize * 0.5;
@@ -616,15 +589,31 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 else ctx.lineTo(x, y);
             }
             ctx.closePath();
-        } else {
+        } else if (type === 6) {
             const r = baseSize * 0.5;
             for (let i = 0; i < 6; i++) {
                 const angle = (Math.PI / 3) * i - Math.PI / 2;
-                const x = cx + Math.cos(angle) * r * 0.7;
+                const x = cx + Math.cos(angle) * r;
                 const y = cy + Math.sin(angle) * r;
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
+            ctx.closePath();
+        } else if (type === 7) {
+            const r = baseSize * 0.5;
+            const thickness = 0.35;
+            ctx.moveTo(cx - r * thickness, cy - r);
+            ctx.lineTo(cx + r * thickness, cy - r);
+            ctx.lineTo(cx + r * thickness, cy - r * thickness);
+            ctx.lineTo(cx + r, cy - r * thickness);
+            ctx.lineTo(cx + r, cy + r * thickness);
+            ctx.lineTo(cx + r * thickness, cy + r * thickness);
+            ctx.lineTo(cx + r * thickness, cy + r);
+            ctx.lineTo(cx - r * thickness, cy + r);
+            ctx.lineTo(cx - r * thickness, cy + r * thickness);
+            ctx.lineTo(cx - r, cy + r * thickness);
+            ctx.lineTo(cx - r, cy - r * thickness);
+            ctx.lineTo(cx - r * thickness, cy - r * thickness);
             ctx.closePath();
         }
 
@@ -647,11 +636,13 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
         if (lv >= 4) {
             ctx.beginPath();
-            const outerR = baseSize * 0.7;
+            const outerR = baseSize * 0.75;
             ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+            ctx.setLineDash([2, 4]);
             ctx.strokeStyle = color;
-            ctx.globalAlpha = 0.4;
+            ctx.globalAlpha = 0.5;
             ctx.stroke();
+            ctx.setLineDash([]);
         }
 
         ctx.restore();
@@ -677,6 +668,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     private drawEnemies(ctx: CanvasRenderingContext2D, tile: number) {
         const enemies = this.tdEngine.getEnemiesRef();
+        const isFastSpeed = this.tdEngine.gameSpeedMultiplier() > 1;
+
         for (const e of enemies) {
             const scale = e.scale ?? 1;
             const size = scale * (tile * 0.65);
@@ -684,8 +677,32 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             const cx = e.displayX ?? ((e.position.x + 0.5) * tile);
             const cy = e.displayY ?? ((e.position.y + 0.5) * tile);
             ctx.fillStyle = e.bg || (e.isFrozen ? '#7dd3fc' : '#ef4444');
-            ctx.shadowColor = (this.tdEngine.gameSpeedMultiplier() > 1) ? 'transparent' : ctx.fillStyle;
-            ctx.shadowBlur = (this.tdEngine.gameSpeedMultiplier() > 1) ? 0 : 10;
+            let strokeColor = 'transparent';
+            let shadowColor = isFastSpeed ? 'transparent' : ctx.fillStyle;
+            let shadowBlur = isFastSpeed ? 0 : 10;
+            let lineWidth = 2;
+
+            if (e.isMagma) {
+                strokeColor = '#f97316';
+                shadowColor = '#f97316';
+                shadowBlur = isFastSpeed ? 0 : 15;
+                lineWidth = 3;
+            } else if (e.isMirror) {
+                strokeColor = '#f0f9ff';
+                shadowColor = '#0ea5e9';
+                shadowBlur = isFastSpeed ? 0 : 15;
+                lineWidth = 3;
+            } else if (e.isSlime) {
+                strokeColor = '#22c55e';
+                shadowColor = '#22c55e';
+                shadowBlur = isFastSpeed ? 0 : 15;
+                lineWidth = 3;
+            }
+
+            ctx.shadowColor = shadowColor;
+            ctx.shadowBlur = shadowBlur;
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = lineWidth;
             ctx.beginPath();
             if (e.type === 'tank') {
                 ctx.arc(cx, cy, r, 0, Math.PI * 2);
@@ -707,16 +724,18 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 ctx.rect(cx - r, cy - r, size, size);
             }
             ctx.fill();
+            if (strokeColor !== 'transparent') {
+                ctx.stroke();
+            }
             ctx.shadowBlur = 0;
         }
-
         for (const e of enemies) {
             const size = (e.isBoss ? 1.5 : 1) * (tile * 0.65);
             const r = size / 2;
             const cx = e.displayX ?? ((e.position.x + 0.5) * tile);
             const cy = e.displayY ?? ((e.position.y + 0.5) * tile);
             const barW = size;
-            const barH = 6;
+            const barH = 4;
             ctx.fillStyle = '#0f172a';
             ctx.fillRect(cx - r, cy - r - 10, barW, barH);
             ctx.fillStyle = '#10b981';
@@ -740,6 +759,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     private drawProjectiles(ctx: CanvasRenderingContext2D, tile: number) {
+        const speed = this.tdEngine.gameSpeedMultiplier();
+        if (speed >= 2) return;
         const projs = this.tdEngine.getProjectilesRef();
         ctx.fillStyle = '#fbbf24';
         for (const p of projs) {

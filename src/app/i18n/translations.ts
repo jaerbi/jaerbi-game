@@ -172,6 +172,9 @@ export type TranslationKey =
     | 'T6_NAME'
     | 'T6_GOLDEN_TITLE'
     | 'T6_GOLDEN_DESC'
+    | 'T7_NAME'
+    | 'T7_GOLDEN_TITLE'
+    | 'T7_GOLDEN_DESC'
     | 'GOLD_MASTERY'
     | 'GOLD_MASTERY_INFO'
     | 'THANK_SUPPORTING'
@@ -190,6 +193,8 @@ export type TranslationKey =
     | 'NAPALM_STRIKE_INFO'
     | 'REFRACTION_BEAM'
     | 'REFRACTION_BEAM_INFO'
+    | 'NEUROTOXIN'
+    | 'NEUROTOXIN_INFO'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
@@ -295,6 +300,18 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         en: 'Increases ramp-up cap to +300% and adds +15% taken damage.',
         uk: 'Підвищує ліміт нарощення до +300% та додає +15% отримуваної шкоди.',
     },
+    T7_NAME: {
+        en: 'Tier 7 – Venom',
+        uk: 'Тир 7 – Отрута',
+    },
+    T7_GOLDEN_TITLE: {
+        en: 'Septic Shock',
+        uk: 'Септичний шок',
+    },
+    T7_GOLDEN_DESC: {
+        en: 'Neurotoxin causes stronger slow and heavier stacking poison over time.',
+        uk: 'Нейротоксин сильніше сповільнює та посилює накопичення отрути з часом.',
+    },
     FINAL_STRIKE_INFO: {
         en: 'Execute: Crit on enemies below 50% HP. Bosses take even more damage.',
         uk: `Екзекуція: критичний удар по ворогах з HP нижче 50%. Боси отримують ще більше шкоди.`,
@@ -331,6 +348,8 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     REFRACTION_BEAM_INFO: { en: 'Allows attacking up to 3 targets simultaneously. Each beam benefits from the laser ramp-up bonus.', uk: `Дозволяє атакувати до 3 цілей одночасно. Кожна ціль отримує бонус від наростання потужності лазера.` },
     NAPALM_STRIKE: { en: 'Напалмовий удар', uk: `Напалмовий удар` },
     NAPALM_STRIKE_INFO: { en: 'Leaves a fire zone for 4s, dealing 50% tower damage per second to all enemies in the blast radius.', uk: `Залишає вогняну зону на 4 сек., що наносить 50% урону щосекунди всім ворогам у радіусі вибуху.` },
+    NEUROTOXIN: { en: 'Neurotoxin', uk: `Нейротоксин` },
+    NEUROTOXIN_INFO: { en: 'Poison now slows enemies by 20%.', uk: `Отрута тепер уповільнює ворогів на 20%.` },
     BUY_ABILITY: {
         en: 'Buy Ability',
         uk: `Купити Здібність`,

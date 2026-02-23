@@ -363,6 +363,15 @@
                       {{ settings.t('REFRACTION_BEAM_INFO') }}
                     </div>
                   }
+                  @if (tile.tower.type === 7) {
+                    <div class="text-purple-400 font-bold tracking-wide uppercase text-sm">
+                      {{ settings.t('NEUROTOXIN') }}
+                    </div>
+
+                    <div class="text-gray-400 text-sm leading-relaxed">
+                      {{ settings.t('NEUROTOXIN_INFO') }}
+                    </div>
+                  }
                 </div>
               }
             </div>

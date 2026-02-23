@@ -67,6 +67,14 @@ export interface Enemy {
     type?: 'tank' | 'scout' | 'standard' | 'boss';
     burnedByInferno?: boolean;
     prismVulnerableTime?: number;
+    venomStacks?: number;
+    venomDuration?: number;
+    venomTickTimer?: number;
+    venomBaseDamage?: number;
+    venomSlowActive?: boolean;
+    isMagma?: boolean;
+    isMirror?: boolean;
+    isSlime?: boolean;
 }
 
 export interface Projectile {
