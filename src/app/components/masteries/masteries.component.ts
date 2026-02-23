@@ -58,6 +58,27 @@ export class MasteriesComponent implements OnInit {
       color: 'text-rose-400',
       goldenTitleKey: 'T4_GOLDEN_TITLE',
       goldenDescriptionKey: 'T4_GOLDEN_DESC'
+    },
+    {
+      id: 5,
+      nameKey: 'T5_NAME',
+      color: 'text-orange-400',
+      goldenTitleKey: 'T5_GOLDEN_TITLE',
+      goldenDescriptionKey: 'T5_GOLDEN_DESC'
+    },
+    {
+      id: 6,
+      nameKey: 'T6_NAME',
+      color: 'text-cyan-400',
+      goldenTitleKey: 'T6_GOLDEN_TITLE',
+      goldenDescriptionKey: 'T6_GOLDEN_DESC'
+    },
+    {
+      id: 7,
+      nameKey: 'T7_NAME',
+      color: 'text-lime-400',
+      goldenTitleKey: 'T7_GOLDEN_TITLE',
+      goldenDescriptionKey: 'T7_GOLDEN_DESC'
     }
   ];
 

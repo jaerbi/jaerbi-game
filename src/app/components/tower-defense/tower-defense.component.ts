@@ -459,45 +459,77 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         for (const t of towers) {
             const cx = t.position.x * tile + tile / 2;
             const cy = t.position.y * tile + tile / 2;
+            const padding = tile * 0.15;
             this.drawTowerShape(ctx, cx, cy, t.type, t.level, tile);
 
+            if (t.specialActive) {
+                ctx.save();
+                ctx.fillStyle = '#00F2FF';
+                ctx.shadowColor = 'black';
+                ctx.shadowBlur = 4;
+                ctx.font = `bold ${Math.floor(tile * 0.3)}px Arial`;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                ctx.fillText('★', cx - tile / 2 + padding, cy - tile / 2 + padding);
+                ctx.restore();
+            }
             if (t.specialActive && t.hasGolden) {
                 ctx.save();
                 ctx.fillStyle = '#FFD700';
                 ctx.shadowColor = 'black';
                 ctx.shadowBlur = 4;
-                ctx.font = `bold ${Math.floor(tile * 0.8)}px Arial`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('★', cx, cy - tile * 0.3);
+                ctx.font = `bold ${Math.floor(tile * 0.3)}px Arial`;
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'top';
+                ctx.fillText('⚡', cx + tile / 2 - padding, cy - tile / 2 + padding);
                 ctx.restore();
             }
 
-            if (speed < 4 && t.targetEnemyId) {
+            if (speed === 1 && t.type === 6 && t.targetEnemyId) {
                 const enemy = enemies.find(e => e.id === t.targetEnemyId);
                 if (enemy) {
                     const ex = (enemy.displayX ?? (enemy.position.x + 0.5) * tile);
                     const ey = (enemy.displayY ?? (enemy.position.y + 0.5) * tile);
-                    let color = 'rgba(255,255,255,0.5)';
-                    switch (t.strategy || 'first') {
-                        case 'weakest':
-                            color = 'rgba(248,113,113,0.7)';
-                            break;
-                        case 'strongest':
-                            color = 'rgba(192,132,252,0.7)';
-                            break;
-                        case 'random':
-                            color = 'rgba(74,222,128,0.7)';
-                            break;
-                    }
                     ctx.save();
-                    ctx.strokeStyle = color;
-                    ctx.lineWidth = 1;
+                    let stroke: CanvasGradient | string = 'rgba(56,189,248,0.9)';
+                    if (t.hasGolden) {
+                        const grad = ctx.createLinearGradient(cx, cy, ex, ey);
+                        grad.addColorStop(0, '#22c1c3');
+                        grad.addColorStop(0.5, '#a855f7');
+                        grad.addColorStop(1, '#f97316');
+                        stroke = grad;
+                    }
+                    ctx.strokeStyle = stroke as CanvasGradient;
+                    ctx.lineWidth = 2;
                     ctx.beginPath();
                     ctx.moveTo(cx, cy);
                     ctx.lineTo(ex, ey);
                     ctx.stroke();
                     ctx.restore();
+                }
+                if (t.extraTargetIds && t.extraTargetIds.length) {
+                    for (const id of t.extraTargetIds) {
+                        const enemy2 = enemies.find(e => e.id === id);
+                        if (!enemy2) continue;
+                        const ex2 = (enemy2.displayX ?? (enemy2.position.x + 0.5) * tile);
+                        const ey2 = (enemy2.displayY ?? (enemy2.position.y + 0.5) * tile);
+                        ctx.save();
+                        let stroke2: CanvasGradient | string = 'rgba(56,189,248,0.7)';
+                        if (t.hasGolden) {
+                            const grad2 = ctx.createLinearGradient(cx, cy, ex2, ey2);
+                            grad2.addColorStop(0, '#22c1c3');
+                            grad2.addColorStop(0.5, '#a855f7');
+                            grad2.addColorStop(1, '#f97316');
+                            stroke2 = grad2;
+                        }
+                        ctx.strokeStyle = stroke2 as CanvasGradient;
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(cx, cy);
+                        ctx.lineTo(ex2, ey2);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
                 }
             }
         }
@@ -510,7 +542,11 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             type === 1 ? '#0ea5e9' :
                 type === 2 ? '#a855f7' :
                     type === 3 ? '#f59e0b' :
-                        '#ef4444';
+                        type === 4 ? '#ef4444' :
+                            type === 5 ? '#fb923c' :
+                                type === 6 ? '#22d3ee' :
+                                    '#84cc16';
+
         const lineWidth = 2.5;
         const lv = Math.max(1, Math.min(4, level || 1));
 
@@ -522,7 +558,6 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.shadowColor = color;
             ctx.shadowBlur = 16;
         }
-
         ctx.beginPath();
         if (type === 1) {
             const r = baseSize * 0.5;
@@ -536,7 +571,25 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.closePath();
         } else if (type === 3) {
             ctx.rect(cx - half, cy - half, baseSize, baseSize);
-        } else {
+        } else if (type === 4) {
+            const h = baseSize * 0.9;
+            const w = baseSize * 0.9;
+            ctx.moveTo(cx, cy - h / 2);
+            ctx.lineTo(cx + w / 2, cy);
+            ctx.lineTo(cx, cy + h / 2);
+            ctx.lineTo(cx - w / 2, cy);
+            ctx.closePath();
+        } else if (type === 5) {
+            const r = baseSize * 0.5;
+            for (let i = 0; i < 5; i++) {
+                const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+        } else if (type === 6) {
             const r = baseSize * 0.5;
             for (let i = 0; i < 6; i++) {
                 const angle = (Math.PI / 3) * i - Math.PI / 2;
@@ -545,6 +598,22 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
+            ctx.closePath();
+        } else if (type === 7) {
+            const r = baseSize * 0.5;
+            const thickness = 0.35;
+            ctx.moveTo(cx - r * thickness, cy - r);
+            ctx.lineTo(cx + r * thickness, cy - r);
+            ctx.lineTo(cx + r * thickness, cy - r * thickness);
+            ctx.lineTo(cx + r, cy - r * thickness);
+            ctx.lineTo(cx + r, cy + r * thickness);
+            ctx.lineTo(cx + r * thickness, cy + r * thickness);
+            ctx.lineTo(cx + r * thickness, cy + r);
+            ctx.lineTo(cx - r * thickness, cy + r);
+            ctx.lineTo(cx - r * thickness, cy + r * thickness);
+            ctx.lineTo(cx - r, cy + r * thickness);
+            ctx.lineTo(cx - r, cy - r * thickness);
+            ctx.lineTo(cx - r * thickness, cy - r * thickness);
             ctx.closePath();
         }
 
@@ -567,11 +636,13 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
         if (lv >= 4) {
             ctx.beginPath();
-            const outerR = baseSize * 0.7;
+            const outerR = baseSize * 0.75;
             ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+            ctx.setLineDash([2, 4]);
             ctx.strokeStyle = color;
-            ctx.globalAlpha = 0.4;
+            ctx.globalAlpha = 0.5;
             ctx.stroke();
+            ctx.setLineDash([]);
         }
 
         ctx.restore();
@@ -597,6 +668,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     private drawEnemies(ctx: CanvasRenderingContext2D, tile: number) {
         const enemies = this.tdEngine.getEnemiesRef();
+        const isFastSpeed = this.tdEngine.gameSpeedMultiplier() > 1;
+
         for (const e of enemies) {
             const scale = e.scale ?? 1;
             const size = scale * (tile * 0.65);
@@ -604,8 +677,32 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             const cx = e.displayX ?? ((e.position.x + 0.5) * tile);
             const cy = e.displayY ?? ((e.position.y + 0.5) * tile);
             ctx.fillStyle = e.bg || (e.isFrozen ? '#7dd3fc' : '#ef4444');
-            ctx.shadowColor = (this.tdEngine.gameSpeedMultiplier() > 1) ? 'transparent' : ctx.fillStyle;
-            ctx.shadowBlur = (this.tdEngine.gameSpeedMultiplier() > 1) ? 0 : 10;
+            let strokeColor = 'transparent';
+            let shadowColor = isFastSpeed ? 'transparent' : ctx.fillStyle;
+            let shadowBlur = isFastSpeed ? 0 : 10;
+            let lineWidth = 2;
+
+            if (e.isMagma) {
+                strokeColor = '#f97316';
+                shadowColor = '#f97316';
+                shadowBlur = isFastSpeed ? 0 : 15;
+                lineWidth = 3;
+            } else if (e.isMirror) {
+                strokeColor = '#f0f9ff';
+                shadowColor = '#0ea5e9';
+                shadowBlur = isFastSpeed ? 0 : 15;
+                lineWidth = 3;
+            } else if (e.isSlime) {
+                strokeColor = '#22c55e';
+                shadowColor = '#22c55e';
+                shadowBlur = isFastSpeed ? 0 : 15;
+                lineWidth = 3;
+            }
+
+            ctx.shadowColor = shadowColor;
+            ctx.shadowBlur = shadowBlur;
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = lineWidth;
             ctx.beginPath();
             if (e.type === 'tank') {
                 ctx.arc(cx, cy, r, 0, Math.PI * 2);
@@ -627,16 +724,18 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 ctx.rect(cx - r, cy - r, size, size);
             }
             ctx.fill();
+            if (strokeColor !== 'transparent') {
+                ctx.stroke();
+            }
             ctx.shadowBlur = 0;
         }
-
         for (const e of enemies) {
             const size = (e.isBoss ? 1.5 : 1) * (tile * 0.65);
             const r = size / 2;
             const cx = e.displayX ?? ((e.position.x + 0.5) * tile);
             const cy = e.displayY ?? ((e.position.y + 0.5) * tile);
             const barW = size;
-            const barH = 6;
+            const barH = 4;
             ctx.fillStyle = '#0f172a';
             ctx.fillRect(cx - r, cy - r - 10, barW, barH);
             ctx.fillStyle = '#10b981';
@@ -660,6 +759,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     private drawProjectiles(ctx: CanvasRenderingContext2D, tile: number) {
+        const speed = this.tdEngine.gameSpeedMultiplier();
+        if (speed >= 2) return;
         const projs = this.tdEngine.getProjectilesRef();
         ctx.fillStyle = '#fbbf24';
         for (const p of projs) {
@@ -668,6 +769,23 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.beginPath();
             ctx.arc(x * tile + tile / 2, y * tile + tile / 2, 3, 0, Math.PI * 2);
             ctx.fill();
+        }
+        const zones = this.tdEngine.getInfernoZonesRef();
+        for (const z of zones) {
+            if (z.dps <= 0) continue;
+            const cx = z.position.x * tile + tile / 2;
+            const cy = z.position.y * tile + tile / 2;
+            const r = z.radius * tile;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(248, 113, 113, 0.15)';
+            ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(248, 113, 113, 0.4)';
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.restore();
         }
     }
 

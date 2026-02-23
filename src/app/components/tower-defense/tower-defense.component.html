@@ -347,6 +347,31 @@
                       {{ settings.t('FINAL_STRIKE_INFO') }}
                     </div>
                   }
+                  @if (tile.tower.type === 5) {
+                    <div class="text-purple-400 font-bold tracking-wide uppercase text-sm">
+                      {{ settings.t('NAPALM_STRIKE') }}
+                    </div>
+                    <div class="text-gray-400 text-sm leading-relaxed">
+                      {{ settings.t('NAPALM_STRIKE_INFO') }}
+                    </div>
+                  }
+                  @if (tile.tower.type === 6) {
+                    <div class="text-purple-400 font-bold tracking-wide uppercase text-sm">
+                      {{ settings.t('REFRACTION_BEAM') }}
+                    </div>
+                    <div class="text-gray-400 text-sm leading-relaxed">
+                      {{ settings.t('REFRACTION_BEAM_INFO') }}
+                    </div>
+                  }
+                  @if (tile.tower.type === 7) {
+                    <div class="text-purple-400 font-bold tracking-wide uppercase text-sm">
+                      {{ settings.t('NEUROTOXIN') }}
+                    </div>
+
+                    <div class="text-gray-400 text-sm leading-relaxed">
+                      {{ settings.t('NEUROTOXIN_INFO') }}
+                    </div>
+                  }
                 </div>
               }
             </div>
