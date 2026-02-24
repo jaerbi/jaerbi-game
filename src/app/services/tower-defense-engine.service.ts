@@ -7,6 +7,19 @@ import { SettingsService } from './settings.service';
 
 import { CampaignService, LevelConfig } from './campaign.service';
 
+// Immutable Constants for Security
+const TOWER_COSTS = [15, 50, 250, 500, 510, 520, 530] as const;
+
+const TIER_STATS = [
+    { damage: 5, range: 1.5, fireInterval: 0.5 },
+    { damage: 21, range: 2, fireInterval: 0.7 },
+    { damage: 83, range: 1.5, fireInterval: 1 },
+    { damage: 342, range: 2, fireInterval: 1.5 },
+    { damage: 71, range: 1.5, fireInterval: 2.5 },
+    { damage: 23, range: 2, fireInterval: 0.2 },
+    { damage: 66, range: 1.5, fireInterval: 1 }
+] as const;
+
 @Injectable({
     providedIn: 'root'
 })
@@ -55,17 +68,7 @@ export class TowerDefenseEngineService {
     private currentWaveType: 'tank' | 'scout' | 'standard' | 'boss' = 'standard';
 
     // Costs and Stats
-    towerCosts = [15, 50, 250, 500, 510, 520, 530];
-
-    private tierStats = [
-        { damage: 5, range: 1.5, fireInterval: 0.5 },
-        { damage: 21, range: 2, fireInterval: 0.7 },
-        { damage: 83, range: 1.5, fireInterval: 1 },
-        { damage: 342, range: 2, fireInterval: 1.5 },
-        { damage: 71, range: 1.5, fireInterval: 2.5 },
-        { damage: 23, range: 2, fireInterval: 0.2 },
-        { damage: 66, range: 1.5, fireInterval: 1 }
-    ];
+    readonly towerCosts = TOWER_COSTS;
 
     private savedResult = false;
     private gameEndedHard = false;
@@ -88,7 +91,7 @@ export class TowerDefenseEngineService {
         if (config && this.wave() >= config.waveCount) {
             // Level Completed
             const xp = config.xpReward;
-            await this.firebase.awardTowerDefenseXp(xp, config.id);
+            await this.firebase.awardTowerDefenseXp(xp, config.id, this.wave());
         } else if (this.gameMode() === 'random') {
             // Random Mode XP
             const wavesCleared = this.wave();
@@ -99,7 +102,7 @@ export class TowerDefenseEngineService {
                 xp = Math.floor(base + bonus);
             }
             if (xp > 0) {
-                await this.firebase.awardTowerDefenseXp(xp);
+                await this.firebase.awardTowerDefenseXp(xp, undefined, wavesCleared);
             }
         }
 
@@ -568,16 +571,7 @@ export class TowerDefenseEngineService {
             if (!this.savedResult) {
                 this.savedResult = true;
                 this.saveResultIfLoggedIn();
-                const wavesCleared = this.wave();
-                let xp = 0;
-                if (wavesCleared >= 5) {
-                    const base = wavesCleared * 1.5;
-                    const bonus = wavesCleared > 20 ? (wavesCleared - 20) * 2 : 0;
-                    xp = Math.floor(base + bonus);
-                }
-                if (xp > 0) {
-                    this.firebase.awardTowerDefenseXp(xp);
-                }
+                // Logic moved to saveResultIfLoggedIn to centralize XP checks
             }
             this.gameEndedHard = true;
             return;
@@ -1293,6 +1287,10 @@ export class TowerDefenseEngineService {
         }
     }
 
+    getTowerCost(tier: number): number {
+        return TOWER_COSTS[tier - 1] ?? 999999;
+    }
+
     buyTower(x: number, y: number, tier: number) {
         // Check allowed towers
         if (this.gameMode() === 'campaign') {
@@ -1300,13 +1298,13 @@ export class TowerDefenseEngineService {
             if (!allowed.includes(tier)) return;
         }
 
-        const cost = this.towerCosts[tier - 1];
+        const cost = this.getTowerCost(tier);
         if (this.money() < cost) return;
 
         this.grid.update(grid => {
             const tile = grid[y][x];
             if (tile.type === 'buildable' && !tile.tower) {
-                const stats = this.tierStats[tier - 1];
+                const stats = TIER_STATS[tier - 1];
                 const dmgLevel = this.getUpgradeLevel(tier, 'damage');
                 const rangeLevel = this.getUpgradeLevel(tier, 'range');
                 const goldenLevel = this.getUpgradeLevel(tier, 'golden');
@@ -1377,11 +1375,15 @@ export class TowerDefenseEngineService {
                 multiplier = 0.7;
                 break;
         }
-        return Math.floor(tower.baseCost * multiplier);
+        // Use constant cost for integrity
+        const baseCost = this.getTowerCost(tower.type);
+        return Math.floor(baseCost * multiplier);
     }
 
     getSpecialCost(tower: Tower): number {
-        return tower.baseCost * 4;
+        // Recalculate base cost from constant to avoid tampering with tower.baseCost
+        const baseCost = this.getTowerCost(tower.type);
+        return baseCost * 4;
     }
 
     getTowerDescription(tier: number): string {

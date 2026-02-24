@@ -253,11 +253,33 @@ export class FirebaseService {
         }
     }
 
-    async awardTowerDefenseXp(xp: number, levelId?: string): Promise<void> {
+    async awardTowerDefenseXp(xp: number, levelId?: string, wave?: number): Promise<void> {
         if (!this.db) return;
         if (xp <= 0) return;
         const user = this.user$();
         if (!user) return;
+
+        // Sanity Check: XP Limit
+        // Assume reasonable max XP per wave is roughly 50 (5 + wave * X)
+        // If random mode: 1.5 * wave + bonus.
+        // Let's set a strict cap per transaction.
+        // For campaign levels, we trust the levelId config lookup (ideally), but since this service doesn't know config:
+        // We'll set a hard cap of 2000 XP per transaction which covers Level 5 (1500 XP).
+        // If wave is provided, we can do dynamic check.
+        
+        let maxAllowed = 2500;
+        if (wave && !levelId) {
+             // Random mode formula check: Base = wave * 1.5, Bonus = (wave-20)*2
+             // E.g. Wave 100: 150 + 160 = 310.
+             // Allow generous buffer.
+             maxAllowed = Math.max(500, wave * 10); 
+        }
+
+        if (xp > maxAllowed) {
+            console.error(`Security Alert: XP Award Rejected. Attempted: ${xp}, Max Allowed: ${maxAllowed}`);
+            return;
+        }
+
         try {
             console.count('FIREBASE_CALL: awardTowerDefenseXp');
             const current = this.masteryProfile() ?? { totalXp: 0, usedPoints: 0, upgrades: {}, completedLevelIds: [] };
