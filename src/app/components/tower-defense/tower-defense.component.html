@@ -446,7 +446,7 @@
                   {{ settings.currentLang() === 'uk' ? 'Всього нанесено:' : 'Total Output:' }}
                 </span>
                 <span class="text-xs font-mono text-white font-bold">
-                  {{ getTotalDamage(statsView.list) | number }}
+                  {{ getTotalDamage(statsView.list) | abbreviateNumber }}
                 </span>
               </div>
               @for (item of statsView.list; track item.type) {
@@ -465,7 +465,7 @@
                       </span>
                     </div>
                     <span class="font-mono text-xs font-bold" [style.color]="item.color">
-                      {{ item.damage | number: '1.0-0' }}
+                      {{ item.damage | abbreviateNumber }}
                     </span>
                   </div>
 

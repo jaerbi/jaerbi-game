@@ -8,11 +8,12 @@ import { FirebaseService } from '../../services/firebase.service';
 import { Subscription } from 'rxjs';
 import { GameEngineService } from '../../services/game-engine.service';
 import { SupportCommunityComponent } from '../support-community/support-community.component';
+import { AbbreviateNumberPipe } from './abbreviate-number.pipe';
 
 @Component({
     selector: 'app-tower-defense',
     standalone: true,
-    imports: [CommonModule, SupportCommunityComponent],
+    imports: [CommonModule, SupportCommunityComponent, AbbreviateNumberPipe],
     templateUrl: 'tower-defense.component.html',
     styleUrls: ['../../app.css'],
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -120,7 +121,18 @@ import { SupportCommunityComponent } from '../support-community/support-communit
     .shape-circle { border-radius: 50%; }
     .shape-triangle { clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
     .shape-hexagon { clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%); }
+    .td-shop-list button {
+        box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+        }
 
+        .td-shop-list button:active:not([disabled]) {
+        transform: scale(0.98);
+        }
+
+        .td-shop-list button[disabled] {
+        cursor: not-allowed;
+        filter: grayscale(0.8);
+        }
     @media (max-width: 900px) {
       .td-layout {
         flex-direction: column;
@@ -158,18 +170,6 @@ import { SupportCommunityComponent } from '../support-community/support-communit
         background: rgba(15, 23, 42, 0.96);
         padding-top: 0.5rem;
       }
-      .td-shop-list button {
-        box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-        }
-
-        .td-shop-list button:active:not([disabled]) {
-        transform: scale(0.98);
-        }
-
-        .td-shop-list button[disabled] {
-        cursor: not-allowed;
-        filter: grayscale(0.8);
-        }
     }
   `]
 })
