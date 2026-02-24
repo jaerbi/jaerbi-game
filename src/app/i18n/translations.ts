@@ -195,9 +195,17 @@ export type TranslationKey =
     | 'REFRACTION_BEAM_INFO'
     | 'NEUROTOXIN'
     | 'NEUROTOXIN_INFO'
+    | 'DAMAGE_STATS'
+    | 'DAMAGE_STATS_DESC'
+    | 'NO_DATA'
+    | 'SELECT_TILE_TO_BUILD'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    SELECT_TILE_TO_BUILD: { en: 'Оберіть вільну ділянку для будівництва', uk: `Select an empty tile to build` },
+    DAMAGE_STATS: { en: 'Damage Statistics', uk: `Статистика урону` },
+    NO_DATA: { en: 'No data yet', uk: `Дані відсутні` },
+    DAMAGE_STATS_DESC: { en: 'Cumulative damage dealt by each tower type', uk: `Сумарний урон за типами веж` },
     RANDOM: { en: 'Random', uk: `Випадковий` },
     STRONGEST: { en: 'Strongest', uk: `Найсильніший` },
     WEAKEST: { en: 'Weakest', uk: `Найслабший` },

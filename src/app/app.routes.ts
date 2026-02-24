@@ -6,6 +6,7 @@ import { LandingPageComponent } from './components/landing-page/landing-page.com
 import { TowerDefenseComponent } from './components/tower-defense/tower-defense.component';
 import { TowerDefenseLeaderboardComponent } from './components/tower-defense-leaderboard/tower-defense-leaderboard.component';
 import { MasteriesComponent } from './components/masteries/masteries.component';
+import { canLeaveGameGuard } from './guards/can-leave-game-guard.guard';
 
 export const routes: Routes = [
     {
@@ -19,6 +20,7 @@ export const routes: Routes = [
     {
         path: 'tower-defense',
         component: TowerDefenseComponent,
+        canDeactivate: [canLeaveGameGuard]
     },
     {
         path: 'tower-defense-leaderboard',

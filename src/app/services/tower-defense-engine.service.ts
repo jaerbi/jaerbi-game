@@ -3,6 +3,7 @@ import { NgZone } from '@angular/core';
 import { FirebaseService } from './firebase.service';
 import { Enemy, InfernoZone, Position, Projectile, TDTile, TileType, Tower } from '../models/unit.model';
 import { Subject } from 'rxjs';
+import { SettingsService } from './settings.service';
 
 @Injectable({
     providedIn: 'root'
@@ -25,6 +26,7 @@ export class TowerDefenseEngineService {
     gameSpeedMultiplier = signal(1);
     nextWaveEnemyType = signal<'tank' | 'scout' | 'standard'>('standard');
     isHardMode = signal(false);
+    statsByTowerType = signal<Record<number, number>>({});
 
     private enemiesInternal: Enemy[] = [];
     private projectilesInternal: Projectile[] = [];
@@ -44,22 +46,22 @@ export class TowerDefenseEngineService {
     private currentWaveType: 'tank' | 'scout' | 'standard' | 'boss' = 'standard';
 
     // Costs and Stats
-    towerCosts = [15, 50, 250, 1000, 1300, 1700, 2000];
+    towerCosts = [15, 50, 250, 900, 1300, 1400, 1500];
 
     private tierStats = [
         { damage: 5, range: 2, fireInterval: 0.5 },
-        { damage: 21, range: 3, fireInterval: 0.8 },
-        { damage: 80, range: 2.5, fireInterval: 1 },
-        { damage: 342, range: 3.7, fireInterval: 1.3 },
-        { damage: 80, range: 2.5, fireInterval: 2.4 },
-        { damage: 23, range: 3, fireInterval: 0.3 },
-        { damage: 60, range: 2.5, fireInterval: 1 }
+        { damage: 21, range: 3, fireInterval: 0.7 },
+        { damage: 83, range: 2.5, fireInterval: 1 },
+        { damage: 342, range: 3.5, fireInterval: 1.5 },
+        { damage: 71, range: 2.5, fireInterval: 2.5 },
+        { damage: 23, range: 3, fireInterval: 0.2 },
+        { damage: 66, range: 2.5, fireInterval: 1 }
     ];
 
     private savedResult = false;
     private gameEndedHard = false;
 
-    constructor(private ngZone: NgZone, private firebase: FirebaseService) {
+    constructor(private ngZone: NgZone, private firebase: FirebaseService, public settings: SettingsService) {
         this.initGame();
     }
 
@@ -72,7 +74,8 @@ export class TowerDefenseEngineService {
             displayName: user.displayName || 'Anonymous',
             maxWave: this.wave(),
             totalMoney: this.money(),
-            mapSize: mapSizeLabel
+            mapSize: mapSizeLabel,
+            gridSize: this.gridSize
         };
         try {
             await this.firebase.saveTowerDefenseScore(payload);
@@ -161,6 +164,7 @@ export class TowerDefenseEngineService {
         }
         this.dispose();
         this.generateMap();
+        this.statsByTowerType.set({});
         this.nextWaveEnemyType.set(this.determineWaveType(1));
         const goldLevel = this.getGoldMasteryLevel();
         if (goldLevel >= 8) {
@@ -511,6 +515,12 @@ export class TowerDefenseEngineService {
             dmg = Math.floor(dmg * 0.1);
         }
         enemy.hp -= dmg;
+        const t = tier | 0;
+        this.statsByTowerType.update(s => {
+            const next = { ...s };
+            next[t] = (next[t] ?? 0) + dmg;
+            return next;
+        });
     }
 
     private handleSpawning(dt: number) {
@@ -635,7 +645,7 @@ export class TowerDefenseEngineService {
                 const dy = zone.position.y - enemy.position.y;
                 if (dx * dx + dy * dy <= radiusSq) {
                     if (zone.dps > 0) {
-                        enemy.hp -= zone.dps * dt;
+                        this.applyDamageWithResists(enemy, zone.dps * dt, 5);
                         enemy.burnedByInferno = true;
                     }
                 }
@@ -644,38 +654,31 @@ export class TowerDefenseEngineService {
 
         for (let i = this.enemiesInternal.length - 1; i >= 0; i--) {
             const enemy = this.enemiesInternal[i];
-            if (enemy.stunTime && enemy.stunTime > 0) {
-                const path = this.path();
-                const current = path[enemy.pathIndex];
-                const next = path[enemy.pathIndex + 1] || current;
-                const ix = current.x + (next.x - current.x) * enemy.progress;
-                const iy = current.y + (next.y - current.y) * enemy.progress;
-                enemy.displayX = (ix + 0.5) * tile;
-                enemy.displayY = (iy + 0.5) * tile;
-                continue;
-            }
-            const base = enemy.baseSpeed;
-            const archetypeMultiplier =
-                enemy.type === 'tank' ? 0.5 :
-                    enemy.type === 'scout' ? 2.0 :
-                        enemy.type === 'boss' ? 0.5 : 1;
-            const moveSpeed = base * archetypeMultiplier * enemy.speedModifier;
-            enemy.progress += moveSpeed * dt;
+            const isStunned = !!(enemy.stunTime && enemy.stunTime > 0);
+            if (!isStunned) {
+                const base = enemy.baseSpeed;
+                const archetypeMultiplier =
+                    enemy.type === 'tank' ? 0.5 :
+                        enemy.type === 'scout' ? 2.0 :
+                            enemy.type === 'boss' ? 0.5 : 1;
+                const moveSpeed = base * archetypeMultiplier * enemy.speedModifier;
+                enemy.progress += moveSpeed * dt;
 
-            if (enemy.progress >= 1) {
-                enemy.pathIndex++;
-                enemy.progress = 0;
+                if (enemy.progress >= 1) {
+                    enemy.pathIndex++;
+                    enemy.progress = 0;
 
-                if (enemy.pathIndex >= this.path().length - 1) {
-                    const damageToLives = enemy.type === 'boss' ? 5 : 1;
-                    this.enemiesInternal.splice(i, 1);
-                    this.ngZone.run(() => this.lives.update(l => Math.max(0, l - damageToLives)));
-                    if (this.enemiesInternal.length === 0 && this.enemiesToSpawn === 0) {
-                        this.currentWaveType = 'standard';
+                    if (enemy.pathIndex >= this.path().length - 1) {
+                        const damageToLives = enemy.type === 'boss' ? 5 : 1;
+                        this.enemiesInternal.splice(i, 1);
+                        this.ngZone.run(() => this.lives.update(l => Math.max(0, l - damageToLives)));
+                        if (this.enemiesInternal.length === 0 && this.enemiesToSpawn === 0) {
+                            this.currentWaveType = 'standard';
+                        }
+                        continue;
                     }
-                    continue;
+                    enemy.position = { ...this.path()[enemy.pathIndex] };
                 }
-                enemy.position = { ...this.path()[enemy.pathIndex] };
             }
 
             const path = this.path();
@@ -732,6 +735,9 @@ export class TowerDefenseEngineService {
                 if (target) {
                     tower.targetEnemyId = target.id;
                     this.fireAt(tower, target);
+                    if (tower.type === 7) {
+                        tower.hitsOnTarget = (tower.hitsOnTarget || 0) + 1;
+                    }
                     tower.cooldown = tower.fireInterval;
                 } else {
                     tower.targetEnemyId = undefined;
@@ -739,6 +745,9 @@ export class TowerDefenseEngineService {
                     tower.lastBeamTargetId = undefined;
                     tower.extraTargetIds = undefined;
                     tower.cooldown = 0;
+                    if (tower.type === 7) {
+                        tower.hitsOnTarget = 0;
+                    }
                 }
             }
         }
@@ -755,7 +764,8 @@ export class TowerDefenseEngineService {
         const baseRadius = 2;
         const radius = baseRadius * auraMultiplier;
         const radiusSq = radius * radius;
-        const slowMultiplier = 0.7 * (1 - golden * 0.05);
+        const slowAmount = 0.30 + golden * 0.06;
+        const slowMultiplier = Math.max(0.1, 1 - slowAmount);
 
         for (const enemy of this.enemiesInternal) {
             let isSlowed = false;
@@ -777,72 +787,86 @@ export class TowerDefenseEngineService {
     }
 
     private findTargetForTower(tower: Tower, enemies: Enemy[]): Enemy | null {
-        const stickyTypes = [3, 6, 7]; 
+        const stickyTypes = [3, 6];
 
-        if (tower.targetEnemyId && stickyTypes.includes(tower.type)) {
+        if (tower.targetEnemyId) {
             const currentTarget = enemies.find(e => e.id === tower.targetEnemyId);
 
             if (currentTarget && currentTarget.hp > 0) {
                 const dx = tower.position.x - currentTarget.position.x;
                 const dy = tower.position.y - currentTarget.position.y;
                 const distSq = dx * dx + dy * dy;
-                const rangeSq = tower.range * tower.range;
+                const effRange = tower.type === 1 ? this.getEffectiveRange(tower) : tower.range;
+                const rangeSq = effRange * effRange;
 
                 if (distSq <= rangeSq) {
-                    return currentTarget;
+                    if (tower.type === 7) {
+                        if ((tower.hitsOnTarget ?? 0) < 3) {
+                            return currentTarget;
+                        }
+                    } else if (stickyTypes.includes(tower.type)) {
+                        return currentTarget;
+                    }
                 }
             }
         }
-        const rangeSq = tower.range * tower.range;
+
+        const effRange = tower.type === 1 ? this.getEffectiveRange(tower) : tower.range;
+        const rangeSq = effRange * effRange;
         const candidates: { enemy: Enemy; distSq: number; progressScore: number }[] = [];
 
         for (const enemy of enemies) {
             const dx = tower.position.x - enemy.position.x;
             const dy = tower.position.y - enemy.position.y;
             const distSq = dx * dx + dy * dy;
+
             if (distSq > rangeSq) continue;
+
+            if (tower.type === 7 && enemy.id === tower.targetEnemyId && (tower.hitsOnTarget ?? 0) >= 3) {
+                continue;
+            }
+
             const idx = enemy.pathIndex ?? 0;
             const prog = enemy.progress ?? 0;
             const progressScore = idx + prog;
             candidates.push({ enemy, distSq, progressScore });
         }
 
-        if (candidates.length === 0) return null;
+        if (candidates.length === 0) {
+            tower.hitsOnTarget = 0;
+            return null;
+        }
 
+        const selectedEnemy = this.applyStrategy(tower, candidates);
+
+        if (tower.targetEnemyId !== selectedEnemy.id) {
+            tower.hitsOnTarget = 0;
+        }
+
+        return selectedEnemy;
+    }
+
+    getEffectiveRange(tower: Tower): number {
+        if (tower.type === 1) {
+            const golden = this.getUpgradeLevel(1, 'golden');
+            return tower.range * (1 + golden * 0.1);
+        }
+        return tower.range;
+    }
+
+    private applyStrategy(tower: Tower, candidates: any[]): Enemy {
         const strat = tower.strategy || 'first';
 
-        if (strat === 'random') {
-            const r = Math.floor(Math.random() * candidates.length);
-            return candidates[r].enemy;
-        }
+        if (strat === 'random') return candidates[Math.floor(Math.random() * candidates.length)].enemy;
 
         if (strat === 'weakest') {
-            let best = candidates[0];
-            for (let i = 1; i < candidates.length; i++) {
-                if (candidates[i].enemy.hp < best.enemy.hp) {
-                    best = candidates[i];
-                }
-            }
-            return best.enemy;
+            return candidates.reduce((prev, curr) => curr.enemy.hp < prev.enemy.hp ? curr : prev).enemy;
         }
-
         if (strat === 'strongest') {
-            let best = candidates[0];
-            for (let i = 1; i < candidates.length; i++) {
-                if (candidates[i].enemy.hp > best.enemy.hp) {
-                    best = candidates[i];
-                }
-            }
-            return best.enemy;
+            return candidates.reduce((prev, curr) => curr.enemy.hp > prev.enemy.hp ? curr : prev).enemy;
         }
 
-        let best = candidates[0];
-        for (let i = 1; i < candidates.length; i++) {
-            if (candidates[i].progressScore > best.progressScore) {
-                best = candidates[i];
-            }
-        }
-        return best.enemy;
+        return candidates.reduce((prev, curr) => curr.progressScore > prev.progressScore ? curr : prev).enemy;
     }
 
     private pushProjectile(p: Projectile) {
@@ -897,6 +921,16 @@ export class TowerDefenseEngineService {
             damage = Math.floor(damage * 1.15);
         }
 
+        if (tower.type === 2) {
+            const golden = this.getUpgradeLevel(2, 'golden');
+            const bonusDamage = enemy.hp * (0.01 + golden * 0.01);
+            damage += bonusDamage;
+        } else if (tower.type === 4) {
+            const golden = this.getUpgradeLevel(4, 'golden');
+            const bonusDamage = enemy.hp * (0.05 + golden * 0.02);
+            damage += bonusDamage;
+        }
+
         if (tower.type === 5) {
             const radius = 1.5;
             const radiusSq = radius * radius;
@@ -909,7 +943,7 @@ export class TowerDefenseEngineService {
                     if (other.prismVulnerableTime && other.prismVulnerableTime > 0) {
                         aoeDamage = Math.floor(aoeDamage * 1.15);
                     }
-                    other.hp -= aoeDamage;
+                    this.applyDamageWithResists(other, aoeDamage, 5);
                     other.burnedByInferno = true;
                 }
             }
@@ -1106,7 +1140,8 @@ export class TowerDefenseEngineService {
                     cooldown: 0,
                     specialActive: false,
                     strategy: 'first',
-                    hasGolden: goldenLevel > 0
+                    hasGolden: goldenLevel > 0,
+                    description: this.getTowerDescription(tier)
                 };
                 this.towersInternal.push(tile.tower);
                 this.money.update(m => m - cost);
@@ -1150,6 +1185,37 @@ export class TowerDefenseEngineService {
 
     getSpecialCost(tower: Tower): number {
         return tower.baseCost * 4;
+    }
+
+    getTowerDescription(tier: number): string {
+        const isUk = this.settings.currentLang() === 'uk';
+
+        switch (tier) {
+            case 1:
+                return isUk ? 'Сповільнює ворогів у радіусі дії'
+                    : 'Slows enemies in range';
+            case 2:
+                return isUk ? 'Уражає ланцюговою блискавкою декілька цілей'
+                    : 'Chains lightning to nearby enemies';
+            case 3:
+                return isUk ? 'Посилює урон за рахунок ефекту розколу'
+                    : 'Amplifies damage with shatter stacks';
+            case 4:
+                return isUk ? 'Завдає бонусний урон по поранених ворогах'
+                    : 'Deals bonus damage to weakened enemies';
+            case 5:
+                return isUk ? 'AOE урон по області та зони горіння'
+                    : 'Splash AOE damage and burning zones';
+            case 6:
+                return isUk ? 'Промінь, що посилюється, та ланцюгова атака'
+                    : 'Beam ramps damage and chains with golden';
+            case 7:
+                return isUk ? 'Накладає ефекти отрути з поступовим уроном'
+                    : 'Applies venom stacks and poison DOT';
+            default:
+                return isUk ? 'Стандартна вежа'
+                    : 'Standard tower';
+        }
     }
 
     buyAbility(x: number, y: number) {
