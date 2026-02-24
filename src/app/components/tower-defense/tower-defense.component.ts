@@ -281,7 +281,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
         const tower = tile.tower;
         const tileSize = this.tdEngine.tileSize;
-        const size = tower.range * 2 * tileSize;
+        const range = tower.type === 1 ? this.tdEngine.getEffectiveRange(tower) : tower.range;
+        const size = range * 2 * tileSize;
         return {
             left: `${tower.position.x * tileSize + tileSize / 2}px`,
             top: `${tower.position.y * tileSize + tileSize / 2}px`,
@@ -321,6 +322,38 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         if (tile && tile.tower && tile.tower.level === 4 && !tile.tower.specialActive) {
             this.tdEngine.buyAbility(tile.x, tile.y);
         }
+    }
+
+    getTowerName(type: number): string {
+        return type === 1 ? 'Ice' :
+            type === 2 ? 'Lightning' :
+            type === 3 ? 'Shatter' :
+            type === 4 ? 'Executioner' :
+            type === 5 ? 'Inferno' :
+            type === 6 ? 'Prism Beam' :
+            'Neurotoxin';
+    }
+
+    getTowerColor(type: number): string {
+        return type === 1 ? '#0ea5e9' :
+            type === 2 ? '#a855f7' :
+            type === 3 ? '#f59e0b' :
+            type === 4 ? '#ef4444' :
+            type === 5 ? '#fb923c' :
+            type === 6 ? '#22d3ee' :
+            '#84cc16';
+    }
+
+    getDamageStatsView() {
+        const stats = this.tdEngine.statsByTowerType();
+        const list = [1,2,3,4,5,6,7].map(type => ({
+            type,
+            name: this.getTowerName(type),
+            color: this.getTowerColor(type),
+            damage: stats[type] ?? 0
+        }));
+        const max = list.reduce((m, a) => a.damage > m ? a.damage : m, 0);
+        return { list, max };
     }
 
     setSpeed(multiplier: number) {
@@ -864,7 +897,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const t = tileSel.tower;
         const cx = t.position.x * tile + tile / 2;
         const cy = t.position.y * tile + tile / 2;
-        const radius = t.range * tile;
+        const range = t.type === 1 ? this.tdEngine.getEffectiveRange(t) : t.range;
+        const radius = range * tile;
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(56, 189, 248, 0.12)';

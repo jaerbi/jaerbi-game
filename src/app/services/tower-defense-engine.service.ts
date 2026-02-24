@@ -25,6 +25,7 @@ export class TowerDefenseEngineService {
     gameSpeedMultiplier = signal(1);
     nextWaveEnemyType = signal<'tank' | 'scout' | 'standard'>('standard');
     isHardMode = signal(false);
+    statsByTowerType = signal<Record<number, number>>({});
 
     private enemiesInternal: Enemy[] = [];
     private projectilesInternal: Projectile[] = [];
@@ -72,7 +73,8 @@ export class TowerDefenseEngineService {
             displayName: user.displayName || 'Anonymous',
             maxWave: this.wave(),
             totalMoney: this.money(),
-            mapSize: mapSizeLabel
+            mapSize: mapSizeLabel,
+            gridSize: this.gridSize
         };
         try {
             await this.firebase.saveTowerDefenseScore(payload);
@@ -161,6 +163,7 @@ export class TowerDefenseEngineService {
         }
         this.dispose();
         this.generateMap();
+        this.statsByTowerType.set({});
         this.nextWaveEnemyType.set(this.determineWaveType(1));
         const goldLevel = this.getGoldMasteryLevel();
         if (goldLevel >= 8) {
@@ -511,6 +514,12 @@ export class TowerDefenseEngineService {
             dmg = Math.floor(dmg * 0.1);
         }
         enemy.hp -= dmg;
+        const t = tier | 0;
+        this.statsByTowerType.update(s => {
+            const next = { ...s };
+            next[t] = (next[t] ?? 0) + dmg;
+            return next;
+        });
     }
 
     private handleSpawning(dt: number) {
@@ -635,7 +644,7 @@ export class TowerDefenseEngineService {
                 const dy = zone.position.y - enemy.position.y;
                 if (dx * dx + dy * dy <= radiusSq) {
                     if (zone.dps > 0) {
-                        enemy.hp -= zone.dps * dt;
+                        this.applyDamageWithResists(enemy, zone.dps * dt, 5);
                         enemy.burnedByInferno = true;
                     }
                 }
@@ -644,38 +653,31 @@ export class TowerDefenseEngineService {
 
         for (let i = this.enemiesInternal.length - 1; i >= 0; i--) {
             const enemy = this.enemiesInternal[i];
-            if (enemy.stunTime && enemy.stunTime > 0) {
-                const path = this.path();
-                const current = path[enemy.pathIndex];
-                const next = path[enemy.pathIndex + 1] || current;
-                const ix = current.x + (next.x - current.x) * enemy.progress;
-                const iy = current.y + (next.y - current.y) * enemy.progress;
-                enemy.displayX = (ix + 0.5) * tile;
-                enemy.displayY = (iy + 0.5) * tile;
-                continue;
-            }
-            const base = enemy.baseSpeed;
-            const archetypeMultiplier =
-                enemy.type === 'tank' ? 0.5 :
-                    enemy.type === 'scout' ? 2.0 :
-                        enemy.type === 'boss' ? 0.5 : 1;
-            const moveSpeed = base * archetypeMultiplier * enemy.speedModifier;
-            enemy.progress += moveSpeed * dt;
+            const isStunned = !!(enemy.stunTime && enemy.stunTime > 0);
+            if (!isStunned) {
+                const base = enemy.baseSpeed;
+                const archetypeMultiplier =
+                    enemy.type === 'tank' ? 0.5 :
+                        enemy.type === 'scout' ? 2.0 :
+                            enemy.type === 'boss' ? 0.5 : 1;
+                const moveSpeed = base * archetypeMultiplier * enemy.speedModifier;
+                enemy.progress += moveSpeed * dt;
 
-            if (enemy.progress >= 1) {
-                enemy.pathIndex++;
-                enemy.progress = 0;
+                if (enemy.progress >= 1) {
+                    enemy.pathIndex++;
+                    enemy.progress = 0;
 
-                if (enemy.pathIndex >= this.path().length - 1) {
-                    const damageToLives = enemy.type === 'boss' ? 5 : 1;
-                    this.enemiesInternal.splice(i, 1);
-                    this.ngZone.run(() => this.lives.update(l => Math.max(0, l - damageToLives)));
-                    if (this.enemiesInternal.length === 0 && this.enemiesToSpawn === 0) {
-                        this.currentWaveType = 'standard';
+                    if (enemy.pathIndex >= this.path().length - 1) {
+                        const damageToLives = enemy.type === 'boss' ? 5 : 1;
+                        this.enemiesInternal.splice(i, 1);
+                        this.ngZone.run(() => this.lives.update(l => Math.max(0, l - damageToLives)));
+                        if (this.enemiesInternal.length === 0 && this.enemiesToSpawn === 0) {
+                            this.currentWaveType = 'standard';
+                        }
+                        continue;
                     }
-                    continue;
+                    enemy.position = { ...this.path()[enemy.pathIndex] };
                 }
-                enemy.position = { ...this.path()[enemy.pathIndex] };
             }
 
             const path = this.path();
@@ -761,7 +763,8 @@ export class TowerDefenseEngineService {
         const baseRadius = 2;
         const radius = baseRadius * auraMultiplier;
         const radiusSq = radius * radius;
-        const slowMultiplier = 0.7 * (1 - golden * 0.05);
+        const slowAmount = 0.30 + golden * 0.06;
+        const slowMultiplier = Math.max(0.1, 1 - slowAmount);
 
         for (const enemy of this.enemiesInternal) {
             let isSlowed = false;
@@ -792,7 +795,8 @@ export class TowerDefenseEngineService {
                 const dx = tower.position.x - currentTarget.position.x;
                 const dy = tower.position.y - currentTarget.position.y;
                 const distSq = dx * dx + dy * dy;
-                const rangeSq = tower.range * tower.range;
+                const effRange = tower.type === 1 ? this.getEffectiveRange(tower) : tower.range;
+                const rangeSq = effRange * effRange;
 
                 if (distSq <= rangeSq) {
                     if (tower.type === 7) {
@@ -806,7 +810,8 @@ export class TowerDefenseEngineService {
             }
         }
 
-        const rangeSq = tower.range * tower.range;
+        const effRange = tower.type === 1 ? this.getEffectiveRange(tower) : tower.range;
+        const rangeSq = effRange * effRange;
         const candidates: { enemy: Enemy; distSq: number; progressScore: number }[] = [];
 
         for (const enemy of enemies) {
@@ -838,6 +843,14 @@ export class TowerDefenseEngineService {
         }
 
         return selectedEnemy;
+    }
+
+    getEffectiveRange(tower: Tower): number {
+        if (tower.type === 1) {
+            const golden = this.getUpgradeLevel(1, 'golden');
+            return tower.range * (1 + golden * 0.1);
+        }
+        return tower.range;
     }
 
     private applyStrategy(tower: Tower, candidates: any[]): Enemy {
@@ -907,6 +920,16 @@ export class TowerDefenseEngineService {
             damage = Math.floor(damage * 1.15);
         }
 
+        if (tower.type === 2) {
+            const golden = this.getUpgradeLevel(2, 'golden');
+            const bonusDamage = enemy.hp * (0.01 + golden * 0.01);
+            damage += bonusDamage;
+        } else if (tower.type === 4) {
+            const golden = this.getUpgradeLevel(4, 'golden');
+            const bonusDamage = enemy.hp * (0.05 + golden * 0.02);
+            damage += bonusDamage;
+        }
+
         if (tower.type === 5) {
             const radius = 1.5;
             const radiusSq = radius * radius;
@@ -919,7 +942,7 @@ export class TowerDefenseEngineService {
                     if (other.prismVulnerableTime && other.prismVulnerableTime > 0) {
                         aoeDamage = Math.floor(aoeDamage * 1.15);
                     }
-                    other.hp -= aoeDamage;
+                    this.applyDamageWithResists(other, aoeDamage, 5);
                     other.burnedByInferno = true;
                 }
             }
@@ -1116,7 +1139,8 @@ export class TowerDefenseEngineService {
                     cooldown: 0,
                     specialActive: false,
                     strategy: 'first',
-                    hasGolden: goldenLevel > 0
+                    hasGolden: goldenLevel > 0,
+                    description: this.getTowerDescription(tier)
                 };
                 this.towersInternal.push(tile.tower);
                 this.money.update(m => m - cost);
@@ -1160,6 +1184,19 @@ export class TowerDefenseEngineService {
 
     getSpecialCost(tower: Tower): number {
         return tower.baseCost * 4;
+    }
+
+    getTowerDescription(tier: number): string {
+        switch (tier) {
+            case 1: return 'Slows enemies in range';
+            case 2: return 'Chains lightning to nearby enemies';
+            case 3: return 'Amplifies damage with shatter stacks';
+            case 4: return 'Deals bonus damage to weakened enemies';
+            case 5: return 'Splash AOE damage and burning zones';
+            case 6: return 'Beam ramps damage and chains with golden';
+            case 7: return 'Applies venom stacks and poison DOT';
+            default: return 'Standard tower';
+        }
     }
 
     buyAbility(x: number, y: number) {

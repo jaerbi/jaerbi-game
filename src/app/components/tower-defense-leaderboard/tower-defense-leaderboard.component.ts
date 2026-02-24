@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FirebaseService, TowerDefenseScore } from '../../services/firebase.service';
 import { RouterLink } from '@angular/router';
@@ -28,6 +28,26 @@ import { SettingsService } from '../../services/settings.service';
         </div>
 
         <div *ngIf="!loading()">
+          <div class="mb-4 inline-flex rounded-full bg-slate-900/70 p-1 border border-slate-700">
+            <button
+              class="px-4 py-1 text-xs font-semibold rounded-full transition-colors"
+              [class.bg-sky-500]="selectedMapSize() === 10"
+              [class.text-slate-900]="selectedMapSize() === 10"
+              [class.text-slate-300]="selectedMapSize() !== 10"
+              (click)="selectMapSize(10)"
+            >
+              Map 10x10
+            </button>
+            <button
+              class="px-4 py-1 text-xs font-semibold rounded-full transition-colors"
+              [class.bg-sky-500]="selectedMapSize() === 20"
+              [class.text-slate-900]="selectedMapSize() === 20"
+              [class.text-slate-300]="selectedMapSize() !== 20"
+              (click)="selectMapSize(20)"
+            >
+              Map 20x20
+            </button>
+          </div>
           <table class="w-full text-sm">
             <thead>
               <tr class="text-slate-300">
@@ -103,37 +123,48 @@ export class TowerDefenseLeaderboardComponent implements OnInit {
     loading = signal<boolean>(true);
     scores = signal<TowerDefenseScore[]>([]);
     best = signal<TowerDefenseScore | null>(null);
+    selectedMapSize = signal<10 | 20>(10);
+    displayScores = computed(() => this.scores());
 
-    constructor(private firebase: FirebaseService,
-        public settings: SettingsService,
-    ) { }
+    constructor(private firebase: FirebaseService, public settings: SettingsService) { }
 
     ngOnInit() {
+        const currentSize = this.settings.mapSize();
+        if (currentSize === 20) {
+            this.selectedMapSize.set(20);
+        } else {
+            this.selectedMapSize.set(10);
+        }
         this.loadScores();
     }
 
     async loadScores() {
         this.loading.set(true);
+        const size = this.selectedMapSize();
         try {
-            const list = await this.firebase.getTopTowerDefenseScores(10);
+            const list = await this.firebase.getTopTowerDefenseScores(10, size);
             this.scores.set(list ?? []);
-            await this.loadPersonalBest();
+            await this.loadPersonalBest(size);
         } catch {
             this.scores.set([]);
-            this.best.set(null);
         } finally {
             this.loading.set(false);
         }
     }
 
-    private async loadPersonalBest() {
+    private async loadPersonalBest(size: number) {
         const user = this.firebase.user$();
-        if (!user) {
-            this.best.set(null);
-            return;
-        }
-        const entry = await this.firebase.getUserBestTowerDefenseScore(user.uid);
-        console.log('entry: ', entry);
+
+        if (!user) return;
+
+        const entry = await this.firebase.getUserBestTowerDefenseScore(user.uid, size);
         this.best.set(entry ?? null);
+    }
+
+    selectMapSize(size: 10 | 20) {
+        if (this.selectedMapSize() === size) return;
+
+        this.selectedMapSize.set(size);
+        this.loadScores();
     }
 }
