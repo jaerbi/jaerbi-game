@@ -62,29 +62,13 @@
                 4x
               </button>
             </div>
-            <div class="flex items-center gap-1">
-              <span class="text-slate-400 mr-1">Map Size:</span>
-              <button
-                (click)="onMapSizeChange(1)"
-                class="px-2 py-0.5 rounded border text-[10px] font-bold"
-                [class.bg-slate-200]="mapLevel() === 1"
-                [class.text-slate-900]="mapLevel() === 1"
-                [class.bg-slate-800]="mapLevel() !== 1"
-                [class.text-slate-300]="mapLevel() !== 1"
-              >
-                Small (10x10)
-              </button>
-              <button
-                (click)="onMapSizeChange(2)"
-                class="px-2 py-0.5 rounded border text-[10px] font-bold"
-                [class.bg-slate-200]="mapLevel() === 2"
-                [class.text-slate-900]="mapLevel() === 2"
-                [class.bg-slate-800]="mapLevel() !== 2"
-                [class.text-slate-300]="mapLevel() !== 2"
-              >
-                Large (20x20)
-              </button>
-            </div>
+            
+            <button
+              (click)="openMissionSelect()"
+              class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold rounded uppercase tracking-wider transition-colors"
+            >
+              Mission Select
+            </button>
           </div>
         </div>
         <div class="flex items-center gap-3">
@@ -93,6 +77,12 @@
             class="cursor-pointer bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded transition-colors uppercase tracking-wider"
           >
             {{ settings.t('RESTART_GAME') }}
+          </button>
+          <button
+            (click)="toggleStatsPanel()"
+            class="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded transition-colors uppercase tracking-wider"
+          >
+            Statistics
           </button>
           <button
             (click)="onLoginClick()"
@@ -121,6 +111,15 @@
             [class.text-slate-500]="tdEngine.isWaveInProgress()"
           >
             {{ tdEngine.isWaveInProgress() ? settings.t('WAVE_IN_PROGRESS') : settings.t('START_WAVE') }}
+          </button>
+          <button
+            (click)="togglePause()"
+            [disabled]="!tdEngine.isWaveInProgress()"
+            class="cursor-pointer px-4 py-2 rounded text-sm font-black transition-all"
+            [class.bg-yellow-600]="tdEngine.isWaveInProgress() && !tdEngine.isPaused()"
+            [class.bg-emerald-600]="tdEngine.isWaveInProgress() && tdEngine.isPaused()"
+          >
+            {{ tdEngine.isPaused() ? 'Resume' : 'Pause' }}
           </button>
         </div>
       </div>
@@ -184,6 +183,38 @@
         (click)="onCanvasClick($event)"
       ></canvas>
     </div>
+    @if (showStatsPanel) {
+      <div class="fixed inset-0 z-[99] pointer-events-none">
+        <div class="absolute top-4 right-4 w-96 bg-slate-800 border border-slate-600 rounded-lg shadow-xl p-4 pointer-events-auto">
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-lg font-black">{{ settings.t('DAMAGE_STATS') }}</div>
+            <button (click)="toggleStatsPanel()" class="text-white">✕</button>
+          </div>
+          @let statsView = getDamageStatsView();
+          <div class="space-y-2">
+            @for (item of statsView.list; track item.type) {
+              <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 w-40">
+                  <span class="inline-block w-3 h-3 rounded-full" [style.background]="item.color"></span>
+                  <span class="text-sm font-semibold">{{ item.name }}</span>
+                </div>
+                <div class="flex-1">
+                  <div class="h-3 rounded-full bg-slate-700/60 overflow-hidden border border-slate-600">
+                    <div
+                      class="h-full"
+                      [style.width.%]="statsView.max > 0 ? (item.damage / statsView.max) * 100 : 0"
+                      [style.background]="item.color"
+                      style="transition: width 0.2s ease-out"
+                    ></div>
+                  </div>
+                </div>
+                <div class="w-24 text-right font-mono text-sm" [style.color]="item.color">{{ item.damage | number:'1.0-0' }}</div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
 
     <!-- Sidebar Controls -->
     <div class="w-64 flex flex-col gap-4 td-sidebar">
@@ -530,11 +561,132 @@
   }
 </div>
 <footer
-  class="absolute bottom-6 -left-24 w-full flex flex-col sm:flex-row items-center justify-center gap-2 text-slate-500 text-[10px] font-medium uppercase tracking-widest opacity-50"
+  class="fixed bottom-2 w-full flex flex-col sm:flex-row items-center justify-center gap-2 text-slate-500 text-[10px] font-medium uppercase tracking-widest opacity-50 pointer-events-none"
 >
   <span class="">&copy; 2026 Shape Tactics Labs // {{ settings.version }}</span>
-  <a (click)="openPrivacy()" class="underline cursor-pointer hover:text-sky-400">Privacy Policy</a>
+  <a (click)="openPrivacy()" class="underline cursor-pointer hover:text-sky-400 pointer-events-auto">Privacy Policy</a>
 </footer>
+@if (showMissionSelect) {
+  <div class="fixed inset-0 z-[999] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" (click)="closeMissionSelect()"></div>
+
+    <div class="relative bg-slate-900 border border-sky-500/50 p-8 rounded-2xl max-w-4xl w-full max-h-[85vh] overflow-y-auto flex flex-col gap-6">
+      <button (click)="closeMissionSelect()" class="absolute top-4 right-4 text-white hover:text-rose-400 text-xl font-bold">✕</button>
+      
+      <h2 class="text-3xl font-black text-center uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">
+        Mission Select
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Random Mode Card -->
+        <div 
+          (click)="selectRandomMode()"
+          class="bg-slate-800/50 border border-slate-700 hover:border-sky-500 rounded-xl p-6 cursor-pointer transition-all hover:bg-slate-800 group"
+        >
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-white group-hover:text-sky-400">Random Operations</h3>
+            <span class="text-2xl">🎲</span>
+          </div>
+          <p class="text-sm text-slate-400 mb-4">
+            Infinite procedurally generated maps. Earn XP based on wave progress.
+          </p>
+          <div class="flex items-center gap-2 mb-3">
+             <span class="text-xs font-bold text-slate-500 uppercase tracking-wider w-20">Map Size:</span>
+             <div class="flex bg-slate-900 rounded p-1">
+                <button 
+                  (click)="$event.stopPropagation(); onMapSizeChange(1)" 
+                  class="px-3 py-1 rounded text-xs font-bold transition-colors"
+                  [class.bg-sky-600]="mapLevel() === 1"
+                  [class.text-white]="mapLevel() === 1"
+                  [class.text-slate-500]="mapLevel() !== 1"
+                >10x10</button>
+                <button 
+                  (click)="$event.stopPropagation(); onMapSizeChange(2)" 
+                  class="px-3 py-1 rounded text-xs font-bold transition-colors"
+                  [class.bg-sky-600]="mapLevel() === 2"
+                  [class.text-white]="mapLevel() === 2"
+                  [class.text-slate-500]="mapLevel() !== 2"
+                >20x20</button>
+             </div>
+          </div>
+          <div class="flex items-center gap-2">
+             <span class="text-xs font-bold text-slate-500 uppercase tracking-wider w-20">Difficulty:</span>
+             <div class="flex bg-slate-900 rounded p-1">
+                <button 
+                  (click)="$event.stopPropagation(); setHardMode(false)" 
+                  class="px-3 py-1 rounded text-xs font-bold transition-colors"
+                  [class.bg-sky-600]="!tdEngine.isHardMode()"
+                  [class.text-white]="!tdEngine.isHardMode()"
+                  [class.text-slate-500]="tdEngine.isHardMode()"
+                >Normal</button>
+                <button 
+                  (click)="$event.stopPropagation(); setHardMode(true)" 
+                  class="px-3 py-1 rounded text-xs font-bold transition-colors"
+                  [class.bg-rose-600]="tdEngine.isHardMode()"
+                  [class.text-white]="tdEngine.isHardMode()"
+                  [class.text-slate-500]="!tdEngine.isHardMode()"
+                >Hard</button>
+             </div>
+          </div>
+        </div>
+
+        <!-- Campaign List -->
+        <div class="flex flex-col gap-3">
+          <h3 class="text-lg font-bold text-white mb-2 uppercase tracking-wide">Campaign Missions</h3>
+          
+          @for (level of campaignService.levels; track level.id) {
+            @let unlocked = isLevelUnlocked(level.id);
+            @let completed = isLevelCompleted(level.id);
+            
+            <div 
+              (click)="selectCampaignLevel(level.id)"
+              class="relative overflow-hidden rounded-xl border p-4 transition-all"
+              [class.cursor-pointer]="unlocked"
+              [class.cursor-not-allowed]="!unlocked"
+              [class.bg-slate-800]="unlocked"
+              [class.hover:bg-slate-700]="unlocked"
+              [class.border-slate-600]="unlocked"
+              [class.hover:border-emerald-500]="unlocked && completed"
+              [class.hover:border-sky-500]="unlocked && !completed"
+              [class.bg-slate-900]="!unlocked"
+              [class.border-slate-800]="!unlocked"
+              [class.opacity-60]="!unlocked"
+            >
+              <div class="flex items-start justify-between relative z-10">
+                <div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-xs font-black px-2 py-0.5 rounded bg-black/30 text-slate-400">
+                      {{ level.difficulty | uppercase }}
+                    </span>
+                    <h4 class="font-bold text-white" [class.text-slate-500]="!unlocked">{{ level.name }}</h4>
+                    @if (completed) {
+                      <span class="text-emerald-400 text-lg" title="Completed">✓</span>
+                    }
+                    @if (!unlocked) {
+                      <span class="text-slate-600 text-lg">🔒</span>
+                    }
+                  </div>
+                  <p class="text-xs text-slate-400 line-clamp-2 mb-2">{{ level.description }}</p>
+                  
+                  <div class="flex items-center gap-4 text-[10px] font-mono text-slate-500">
+                    <span>🌊 {{ level.waveCount }} Waves</span>
+                    <span>💰 {{ level.startingGold }} Gold</span>
+                    @if (!completed) {
+                      <span class="text-amber-400">✨ {{ level.xpReward }} XP</span>
+                    } @else {
+                      <span class="text-slate-600">XP Claimed</span>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
 @if (showPrivacy) {
   <div class="fixed inset-0 z-[999] flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" (click)="showPrivacy = false"></div>

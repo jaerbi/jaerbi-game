@@ -199,11 +199,13 @@ export type TranslationKey =
     | 'DAMAGE_STATS_DESC'
     | 'NO_DATA'
     | 'SELECT_TILE_TO_BUILD'
+    | 'CAMPAING'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
-    SELECT_TILE_TO_BUILD: { en: 'Оберіть вільну ділянку для будівництва', uk: `Select an empty tile to build` },
-    DAMAGE_STATS: { en: 'Damage Statistics', uk: `Статистика шкодау` },
+    CAMPAING: { en: 'Campaign', uk: `Кампанія` },
+    SELECT_TILE_TO_BUILD: { en: 'Select an empty tile to build', uk: `Оберіть вільну ділянку для будівництва` },
+    DAMAGE_STATS: { en: 'Damage Statistics', uk: `Статистика шкода` },
     NO_DATA: { en: 'No data yet', uk: `Дані відсутні` },
     DAMAGE_STATS_DESC: { en: 'Cumulative damage dealt by each tower type', uk: `Сумарний шкода за типами веж` },
     RANDOM: { en: 'Random', uk: `Випадковий` },

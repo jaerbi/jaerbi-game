@@ -34,6 +34,7 @@ export interface MasteryProfile {
     totalXp: number;
     usedPoints: number;
     upgrades: { [key: string]: number };
+    completedLevelIds?: string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -219,7 +220,8 @@ export class FirebaseService {
                 const profile: MasteryProfile = {
                     totalXp: typeof data.totalXp === 'number' ? data.totalXp : 0,
                     usedPoints: typeof data.usedPoints === 'number' ? data.usedPoints : 0,
-                    upgrades: data.upgrades && typeof data.upgrades === 'object' ? data.upgrades as { [key: string]: number } : {}
+                    upgrades: data.upgrades && typeof data.upgrades === 'object' ? data.upgrades as { [key: string]: number } : {},
+                    completedLevelIds: Array.isArray(data.completedLevelIds) ? data.completedLevelIds : []
                 };
                 this.masteryProfile.set(profile);
             } else {
@@ -251,18 +253,29 @@ export class FirebaseService {
         }
     }
 
-    async awardTowerDefenseXp(xp: number): Promise<void> {
+    async awardTowerDefenseXp(xp: number, levelId?: string): Promise<void> {
         if (!this.db) return;
         if (xp <= 0) return;
         const user = this.user$();
         if (!user) return;
         try {
             console.count('FIREBASE_CALL: awardTowerDefenseXp');
-            const current = this.masteryProfile() ?? { totalXp: 0, usedPoints: 0, upgrades: {} };
+            const current = this.masteryProfile() ?? { totalXp: 0, usedPoints: 0, upgrades: {}, completedLevelIds: [] };
+            
+            // Prevent XP farming for campaign levels
+            if (levelId && current.completedLevelIds?.includes(levelId)) {
+                return;
+            }
+
+            const nextCompleted = levelId && !current.completedLevelIds?.includes(levelId) 
+                ? [...(current.completedLevelIds || []), levelId]
+                : current.completedLevelIds;
+
             const next: MasteryProfile = {
                 totalXp: current.totalXp + xp,
                 usedPoints: current.usedPoints,
-                upgrades: current.upgrades
+                upgrades: current.upgrades,
+                completedLevelIds: nextCompleted
             };
             const ref = doc(this.db, 'towerDefenseMasteries', user.uid);
             await setDoc(ref, { userId: user.uid, ...next }, { merge: true });

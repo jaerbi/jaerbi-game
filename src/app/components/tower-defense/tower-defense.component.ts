@@ -1,4 +1,4 @@
-import { Component, signal, OnDestroy, OnInit, HostListener, ChangeDetectionStrategy, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener, signal, computed, ChangeDetectionStrategy, ChangeDetectorRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TowerDefenseEngineService } from '../../services/tower-defense-engine.service';
@@ -10,6 +10,7 @@ import { GameEngineService } from '../../services/game-engine.service';
 import { SupportCommunityComponent } from '../support-community/support-community.component';
 import { AbbreviateNumberPipe } from './abbreviate-number.pipe';
 import { AppPrivacyPolicyComponent } from '../privacy-policy/privacy-policy.component';
+import { CampaignService } from '../../services/campaign.service';
 
 @Component({
     selector: 'app-tower-defense',
@@ -184,6 +185,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     private rafId: number | null = null;
     private readonly isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
     showPrivacy = false;
+    showMissionSelect = false;
+    showStatsPanel = false;
 
     @HostListener('window:keydown', ['$event'])
     onKeyDown(event: KeyboardEvent) {
@@ -216,6 +219,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         public firebase: FirebaseService,
         public router: Router,
         private cdr: ChangeDetectorRef,
+        public campaignService: CampaignService
     ) { }
 
     ngOnInit() {
@@ -264,7 +268,16 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     onRestart() {
-        this.tdEngine.initializeGame(this.mapLevel());
+        if (this.tdEngine.gameMode() === 'campaign') {
+            const config = this.tdEngine.currentLevelConfig();
+            if (config) {
+                this.tdEngine.initializeGame(this.mapLevel(), config.id);
+            } else {
+                this.tdEngine.initializeGame(this.mapLevel());
+            }
+        } else {
+            this.tdEngine.initializeGame(this.mapLevel());
+        }
         this.selectedTile.set(null);
     }
 
@@ -338,6 +351,16 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         if (tile && tile.tower && tile.tower.level === 4 && !tile.tower.specialActive) {
             this.tdEngine.buyAbility(tile.x, tile.y);
         }
+    }
+    togglePause() {
+        if (this.tdEngine.isPaused()) {
+            this.tdEngine.resumeGame();
+        } else {
+            this.tdEngine.pauseGame();
+        }
+    }
+    toggleStatsPanel() {
+        this.showStatsPanel = !this.showStatsPanel;
     }
 
     getTowerName(type: number): string {
@@ -544,15 +567,101 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     private drawGrid(ctx: CanvasRenderingContext2D, tile: number) {
-        const grid = this.tdEngine.getGridRef();
+        const grid = this.tdEngine.grid();
+        const halfTile = tile / 2;
+
         for (let y = 0; y < grid.length; y++) {
             const row = grid[y];
             for (let x = 0; x < row.length; x++) {
                 const t = row[x];
-                if (t.type === 'path') ctx.fillStyle = '#475569';
-                else if (t.type === 'buildable') ctx.fillStyle = '#1e293b';
-                else ctx.fillStyle = 'rgba(203, 23, 23, 0)';
-                ctx.fillRect(x * tile, y * tile, tile - 2, tile - 2);
+                const px = x * tile;
+                const py = y * tile;
+                const size = tile - 2;
+
+                if (t.type === 'path') {
+                    ctx.fillStyle = '#475569';
+                    ctx.fillRect(px, py, size, size);
+                } else if (t.type === 'buildable') {
+                    // Base buildable color
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(px, py, size, size);
+
+                    // Draw Bonus Tile Visuals
+                    if (t.bonus) {
+                        ctx.save();
+                        // Inner glow/border
+                        ctx.lineWidth = 2;
+                        
+                        if (t.bonus === 'damage') {
+                            // Red/Orange Cross Swords or Symbol
+                            ctx.strokeStyle = '#ef4444'; // Red-500
+                            ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+                            ctx.fillRect(px + 4, py + 4, size - 8, size - 8);
+                            ctx.strokeRect(px + 4, py + 4, size - 8, size - 8);
+                            
+                            // Icon: Sword
+                            ctx.fillStyle = '#fca5a5';
+                            ctx.font = `bold ${Math.floor(tile * 0.5)}px sans-serif`;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText('⚔️', px + halfTile, py + halfTile);
+
+                        } else if (t.bonus === 'range') {
+                            // Blue Target/Scope
+                            ctx.strokeStyle = '#3b82f6'; // Blue-500
+                            ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
+                            ctx.beginPath();
+                            ctx.arc(px + halfTile, py + halfTile, (size/2) - 4, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.stroke();
+
+                            // Icon: Scope
+                            ctx.fillStyle = '#93c5fd';
+                            ctx.font = `bold ${Math.floor(tile * 0.5)}px sans-serif`;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText('🔭', px + halfTile, py + halfTile);
+
+                        } else if (t.bonus === 'bounty') {
+                            // Gold Coin
+                            ctx.strokeStyle = '#eab308'; // Yellow-500
+                            ctx.fillStyle = 'rgba(234, 179, 8, 0.2)';
+                            ctx.beginPath();
+                            ctx.roundRect(px + 4, py + 4, size - 8, size - 8, 4);
+                            ctx.fill();
+                            ctx.stroke();
+
+                            // Icon: Coin
+                            ctx.fillStyle = '#fde047';
+                            ctx.font = `bold ${Math.floor(tile * 0.5)}px sans-serif`;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText('💰', px + halfTile, py + halfTile);
+
+                        } else if (t.bonus === 'mastery') {
+                            // Purple Star/Magic
+                            ctx.strokeStyle = '#a855f7'; // Purple-500
+                            ctx.fillStyle = 'rgba(168, 85, 247, 0.2)';
+                            ctx.beginPath();
+                            ctx.moveTo(px + halfTile, py + 4);
+                            ctx.lineTo(px + size - 4, py + halfTile);
+                            ctx.lineTo(px + halfTile, py + size - 4);
+                            ctx.lineTo(px + 4, py + halfTile);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.stroke();
+
+                            // Icon: Star
+                            ctx.fillStyle = '#d8b4fe';
+                            ctx.font = `bold ${Math.floor(tile * 0.5)}px sans-serif`;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText('✨', px + halfTile, py + halfTile);
+                        }
+                        
+                        ctx.restore();
+                    }
+                }
             }
         }
     }
@@ -938,12 +1047,57 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const rect = canvas.getBoundingClientRect();
         const xCss = evt.clientX - rect.left;
         const yCss = evt.clientY - rect.top;
+
         const tile = this.tdEngine.tileSize;
         const gx = Math.floor(xCss / tile);
         const gy = Math.floor(yCss / tile);
-        const grid = this.tdEngine.getGridRef();
-        if (gy >= 0 && gy < grid.length && gx >= 0 && gx < grid[0].length) {
-            this.onTileClick(grid[gy][gx]);
+
+        if (gx >= 0 && gx < this.tdEngine.gridSize && gy >= 0 && gy < this.tdEngine.gridSize) {
+            const grid = this.tdEngine.getGridRef();
+            const clickedTile = grid[gy][gx];
+            if (clickedTile.type === 'buildable') {
+                this.selectedTile.set(clickedTile);
+            } else {
+                this.selectedTile.set(null);
+            }
         }
+    }
+
+    openMissionSelect() {
+        this.showMissionSelect = true;
+    }
+
+    closeMissionSelect() {
+        this.showMissionSelect = false;
+    }
+
+    selectRandomMode() {
+        this.tdEngine.setModeRandom();
+        this.closeMissionSelect();
+    }
+
+    selectCampaignLevel(levelId: string) {
+        // Check if locked
+        if (!this.isLevelUnlocked(levelId)) return;
+        this.tdEngine.initializeGame(this.tdEngine.gridSize === 20 ? 2 : 1, levelId);
+        this.closeMissionSelect();
+    }
+
+    isLevelUnlocked(levelId: string): boolean {
+        if (levelId === 'level_1') return true;
+        const profile = this.firebase.masteryProfile();
+        if (!profile || !profile.completedLevelIds) return false;
+        
+        // Find index of this level
+        const index = this.campaignService.levels.findIndex(l => l.id === levelId);
+        if (index <= 0) return true; // Should be handled by level_1 check but safe guard
+        
+        const prevLevel = this.campaignService.levels[index - 1];
+        return profile.completedLevelIds.includes(prevLevel.id);
+    }
+
+    isLevelCompleted(levelId: string): boolean {
+        const profile = this.firebase.masteryProfile();
+        return !!profile?.completedLevelIds?.includes(levelId);
     }
 }
