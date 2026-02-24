@@ -158,6 +158,18 @@ import { SupportCommunityComponent } from '../support-community/support-communit
         background: rgba(15, 23, 42, 0.96);
         padding-top: 0.5rem;
       }
+      .td-shop-list button {
+        box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .td-shop-list button:active:not([disabled]) {
+        transform: scale(0.98);
+        }
+
+        .td-shop-list button[disabled] {
+        cursor: not-allowed;
+        filter: grayscale(0.8);
+        }
     }
   `]
 })
@@ -325,28 +337,32 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     getTowerName(type: number): string {
-        return type === 1 ? 'Ice' :
-            type === 2 ? 'Lightning' :
-            type === 3 ? 'Shatter' :
-            type === 4 ? 'Executioner' :
-            type === 5 ? 'Inferno' :
-            type === 6 ? 'Prism Beam' :
-            'Neurotoxin';
+        const isUk = this.settings.currentLang() === 'uk';
+
+        switch (type) {
+            case 1: return isUk ? 'Льодяна' : 'Ice';
+            case 2: return isUk ? 'Блискавка' : 'Lightning';
+            case 3: return isUk ? 'Розколювач' : 'Shatter';
+            case 4: return isUk ? 'Кат' : 'Executioner';
+            case 5: return isUk ? 'Інферно' : 'Inferno';
+            case 6: return isUk ? 'Призматичний промінь' : 'Prism Beam';
+            default: return isUk ? 'Нейротоксин' : 'Neurotoxin';
+        }
     }
 
     getTowerColor(type: number): string {
         return type === 1 ? '#0ea5e9' :
             type === 2 ? '#a855f7' :
-            type === 3 ? '#f59e0b' :
-            type === 4 ? '#ef4444' :
-            type === 5 ? '#fb923c' :
-            type === 6 ? '#22d3ee' :
-            '#84cc16';
+                type === 3 ? '#f59e0b' :
+                    type === 4 ? '#ef4444' :
+                        type === 5 ? '#fb923c' :
+                            type === 6 ? '#22d3ee' :
+                                '#84cc16';
     }
 
     getDamageStatsView() {
         const stats = this.tdEngine.statsByTowerType();
-        const list = [1,2,3,4,5,6,7].map(type => ({
+        const list = [1, 2, 3, 4, 5, 6, 7].map(type => ({
             type,
             name: this.getTowerName(type),
             color: this.getTowerColor(type),
@@ -354,6 +370,10 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         }));
         const max = list.reduce((m, a) => a.damage > m ? a.damage : m, 0);
         return { list, max };
+    }
+
+    getTotalDamage(list: any[]): number {
+        return list.reduce((sum, item) => sum + item.damage, 0);
     }
 
     setSpeed(multiplier: number) {

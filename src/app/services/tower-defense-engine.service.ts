@@ -3,6 +3,7 @@ import { NgZone } from '@angular/core';
 import { FirebaseService } from './firebase.service';
 import { Enemy, InfernoZone, Position, Projectile, TDTile, TileType, Tower } from '../models/unit.model';
 import { Subject } from 'rxjs';
+import { SettingsService } from './settings.service';
 
 @Injectable({
     providedIn: 'root'
@@ -60,7 +61,7 @@ export class TowerDefenseEngineService {
     private savedResult = false;
     private gameEndedHard = false;
 
-    constructor(private ngZone: NgZone, private firebase: FirebaseService) {
+    constructor(private ngZone: NgZone, private firebase: FirebaseService, public settings: SettingsService) {
         this.initGame();
     }
 
@@ -1187,15 +1188,33 @@ export class TowerDefenseEngineService {
     }
 
     getTowerDescription(tier: number): string {
+        const isUk = this.settings.currentLang() === 'uk';
+
         switch (tier) {
-            case 1: return 'Slows enemies in range';
-            case 2: return 'Chains lightning to nearby enemies';
-            case 3: return 'Amplifies damage with shatter stacks';
-            case 4: return 'Deals bonus damage to weakened enemies';
-            case 5: return 'Splash AOE damage and burning zones';
-            case 6: return 'Beam ramps damage and chains with golden';
-            case 7: return 'Applies venom stacks and poison DOT';
-            default: return 'Standard tower';
+            case 1:
+                return isUk ? 'Сповільнює ворогів у радіусі дії'
+                    : 'Slows enemies in range';
+            case 2:
+                return isUk ? 'Уражає ланцюговою блискавкою декілька цілей'
+                    : 'Chains lightning to nearby enemies';
+            case 3:
+                return isUk ? 'Посилює урон за рахунок ефекту розколу'
+                    : 'Amplifies damage with shatter stacks';
+            case 4:
+                return isUk ? 'Завдає бонусний урон по поранених ворогах'
+                    : 'Deals bonus damage to weakened enemies';
+            case 5:
+                return isUk ? 'AOE урон по області та зони горіння'
+                    : 'Splash AOE damage and burning zones';
+            case 6:
+                return isUk ? 'Промінь, що посилюється, та ланцюгова атака'
+                    : 'Beam ramps damage and chains with golden';
+            case 7:
+                return isUk ? 'Накладає ефекти отрути з поступовим уроном'
+                    : 'Applies venom stacks and poison DOT';
+            default:
+                return isUk ? 'Стандартна вежа'
+                    : 'Standard tower';
         }
     }
 
