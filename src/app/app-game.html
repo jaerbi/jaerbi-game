@@ -1,6 +1,4 @@
-<div
-  class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-start p-4 relative overflow-hidden"
->
+<div class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-start p-4 relative overflow-hidden">
   <!-- Floating Giants Background -->
   <div class="fixed inset-0 overflow-hidden pointer-events-none select-none z-0">
     <div class="floating-shape shape-giant-1"></div>
@@ -75,9 +73,23 @@
 
   <!-- Title -->
   <div class="fixed top-8 left-8 flex items-start gap-4 group select-none mobile-hide-logo">
-    <button (click)="goToHub()" class="cursor-pointer p-2 bg-slate-800/50 hover:bg-slate-700 border border-slate-700/50 rounded-lg transition-all group/btn" title="Return to Gaming Hub">
-      <svg class="w-6 h-6 text-slate-400 group-hover/btn:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+    <button
+      (click)="goToHub()"
+      class="cursor-pointer p-2 bg-slate-800/50 hover:bg-slate-700 border border-slate-700/50 rounded-lg transition-all group/btn"
+      title="Return to Gaming Hub"
+    >
+      <svg
+        class="w-6 h-6 text-slate-400 group-hover/btn:text-white"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+        />
       </svg>
     </button>
     <div class="relative w-12 h-12 flex items-center justify-center">
@@ -1824,9 +1836,30 @@
   </div>
 
   <!-- -------------------------------------------- Version -------------------------------------------- -->
-  <div class="fixed bottom-2 left-2 text-[8px] text-gray-300">
-    {{ settings.version }} | ©︎ Created by jaerbi and just
-  </div>
+  <footer
+    class="absolute bottom-6 left-2 text-slate-500 text-sm font-medium uppercase tracking-widest opacity-50 text-[10px] mt-10"
+  >
+    <span class="mr-2">&copy; 2026 Shape Tactics Labs // {{ settings.version }}</span>
+    <a (click)="openPrivacy()" class="underline cursor-pointer hover:text-sky-400">Privacy Policy</a>
+  </footer>
+
+  @if (showPrivacy) {
+    <div class="fixed inset-0 z-[999] flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" (click)="showPrivacy = false"></div>
+
+      <div
+        class="relative bg-slate-900 border border-sky-500/50 p-8 rounded-2xl max-w-2xl max-h-[80vh] overflow-y-auto"
+      >
+        <button (click)="showPrivacy = false" class="absolute top-4 right-4 text-white">✕</button>
+
+        <app-privacy-policy></app-privacy-policy>
+
+        <div class="mt-6 text-center">
+          <button (click)="showPrivacy = false" class="px-6 py-2 bg-sky-600 text-white rounded-lg">Close</button>
+        </div>
+      </div>
+    </div>
+  }
 
   <!-- Game Rules Modal -->
   @if (gameEngine.rulesOpen()) {

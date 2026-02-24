@@ -9,11 +9,12 @@ import { SupportCommunityComponent } from './components/support-community/suppor
 import { LeaderboardModalComponent } from './components/leaderboard-modal/leaderboard-modal.component';
 import { UnitsComponent } from './components/units/units.component';
 import { SandboxComponent } from './components/sandbox/sandbox.component';
+import { AppPrivacyPolicyComponent } from './components/privacy-policy/privacy-policy.component';
 
 @Component({
     selector: 'app-game',
     standalone: true,
-    imports: [CommonModule, GameRulesComponent, SupportCommunityComponent, LeaderboardModalComponent, UnitsComponent, SandboxComponent],
+    imports: [CommonModule, GameRulesComponent, SupportCommunityComponent, LeaderboardModalComponent, UnitsComponent, SandboxComponent, AppPrivacyPolicyComponent],
     templateUrl: './app-game.html',
     styleUrl: './app.css'
 })
@@ -23,6 +24,7 @@ export class AppGame implements OnInit, OnDestroy {
     isAutoBattleActive = signal(false);
     isMobileMenuOpen = signal(false);
     private lastEconomyProcessedTurn: number = -1;
+    showPrivacy = false;
 
     constructor(
         public gameEngine: GameEngineService,
@@ -42,7 +44,9 @@ export class AppGame implements OnInit, OnDestroy {
         this.isAutoBattleActive.set(false);
         this.gameEngine.pauseGame();
     }
-
+    openPrivacy() {
+        this.showPrivacy = true;
+    }
     goToHub() {
         this.isAutoBattleActive.set(false);
         this.router.navigate(['/']);
@@ -74,7 +78,7 @@ export class AppGame implements OnInit, OnDestroy {
         }
         try {
             this.firebase.loginWithGoogle();
-        } catch {}
+        } catch { }
     }
     navigateToRoadmap() {
         this.router.navigate(['/roadmap']);

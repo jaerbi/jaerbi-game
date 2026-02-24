@@ -9,11 +9,12 @@ import { Subscription } from 'rxjs';
 import { GameEngineService } from '../../services/game-engine.service';
 import { SupportCommunityComponent } from '../support-community/support-community.component';
 import { AbbreviateNumberPipe } from './abbreviate-number.pipe';
+import { AppPrivacyPolicyComponent } from '../privacy-policy/privacy-policy.component';
 
 @Component({
     selector: 'app-tower-defense',
     standalone: true,
-    imports: [CommonModule, SupportCommunityComponent, AbbreviateNumberPipe],
+    imports: [CommonModule, SupportCommunityComponent, AbbreviateNumberPipe, AppPrivacyPolicyComponent],
     templateUrl: 'tower-defense.component.html',
     styleUrls: ['../../app.css'],
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -182,6 +183,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     private ctx?: CanvasRenderingContext2D | null;
     private rafId: number | null = null;
     private readonly isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
+    showPrivacy = false;
 
     @HostListener('window:keydown', ['$event'])
     onKeyDown(event: KeyboardEvent) {
@@ -253,7 +255,9 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         }
         this.tdEngine.resetEngine();
     }
-
+    openPrivacy() {
+        this.showPrivacy = true;
+    }
     goBack() {
         this.tdEngine.resetEngine();
         this.router.navigate(['/']);
