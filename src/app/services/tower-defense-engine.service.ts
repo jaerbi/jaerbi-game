@@ -46,16 +46,16 @@ export class TowerDefenseEngineService {
     private currentWaveType: 'tank' | 'scout' | 'standard' | 'boss' = 'standard';
 
     // Costs and Stats
-    towerCosts = [15, 50, 250, 900, 1300, 1400, 1500];
+    towerCosts = [15, 50, 250, 500, 510, 520, 8530];
 
     private tierStats = [
-        { damage: 5, range: 2, fireInterval: 0.5 },
-        { damage: 21, range: 3, fireInterval: 0.7 },
-        { damage: 83, range: 2.5, fireInterval: 1 },
-        { damage: 342, range: 3.5, fireInterval: 1.5 },
-        { damage: 71, range: 2.5, fireInterval: 2.5 },
-        { damage: 23, range: 3, fireInterval: 0.2 },
-        { damage: 66, range: 2.5, fireInterval: 1 }
+        { damage: 5, range: 1.5, fireInterval: 0.5 },
+        { damage: 21, range: 2, fireInterval: 0.7 },
+        { damage: 83, range: 1.5, fireInterval: 1 },
+        { damage: 342, range: 2, fireInterval: 1.5 },
+        { damage: 71, range: 1.5, fireInterval: 2.5 },
+        { damage: 23, range: 2, fireInterval: 0.2 },
+        { damage: 66, range: 1.5, fireInterval: 1 }
     ];
 
     private savedResult = false;
