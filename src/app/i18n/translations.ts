@@ -203,9 +203,9 @@ export type TranslationKey =
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     SELECT_TILE_TO_BUILD: { en: 'Оберіть вільну ділянку для будівництва', uk: `Select an empty tile to build` },
-    DAMAGE_STATS: { en: 'Damage Statistics', uk: `Статистика урону` },
+    DAMAGE_STATS: { en: 'Damage Statistics', uk: `Статистика шкодау` },
     NO_DATA: { en: 'No data yet', uk: `Дані відсутні` },
-    DAMAGE_STATS_DESC: { en: 'Cumulative damage dealt by each tower type', uk: `Сумарний урон за типами веж` },
+    DAMAGE_STATS_DESC: { en: 'Cumulative damage dealt by each tower type', uk: `Сумарний шкода за типами веж` },
     RANDOM: { en: 'Random', uk: `Випадковий` },
     STRONGEST: { en: 'Strongest', uk: `Найсильніший` },
     WEAKEST: { en: 'Weakest', uk: `Найслабший` },
@@ -355,7 +355,7 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     REFRACTION_BEAM: { en: 'Refraction Beam', uk: `Заломлення променя` },
     REFRACTION_BEAM_INFO: { en: 'Allows attacking up to 3 targets simultaneously. Each beam benefits from the laser ramp-up bonus.', uk: `Дозволяє атакувати до 3 цілей одночасно. Кожна ціль отримує бонус від наростання потужності лазера.` },
     NAPALM_STRIKE: { en: 'Напалмовий удар', uk: `Напалмовий удар` },
-    NAPALM_STRIKE_INFO: { en: 'Leaves a fire zone for 4s, dealing 50% tower damage per second to all enemies in the blast radius.', uk: `Залишає вогняну зону на 4 сек., що наносить 50% урону щосекунди всім ворогам у радіусі вибуху.` },
+    NAPALM_STRIKE_INFO: { en: 'Leaves a fire zone for 4s, dealing 50% tower damage per second to all enemies in the blast radius.', uk: `Залишає вогняну зону на 4 сек., що наносить 50% шкодау щосекунди всім ворогам у радіусі вибуху.` },
     NEUROTOXIN: { en: 'Neurotoxin', uk: `Нейротоксин` },
     NEUROTOXIN_INFO: { en: 'Poison now slows enemies by 20%.', uk: `Отрута тепер уповільнює ворогів на 20%.` },
     BUY_ABILITY: {

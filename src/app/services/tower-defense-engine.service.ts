@@ -1198,19 +1198,19 @@ export class TowerDefenseEngineService {
                 return isUk ? 'Уражає ланцюговою блискавкою декілька цілей'
                     : 'Chains lightning to nearby enemies';
             case 3:
-                return isUk ? 'Посилює урон за рахунок ефекту розколу'
+                return isUk ? 'Посилює шкода за рахунок ефекту розколу'
                     : 'Amplifies damage with shatter stacks';
             case 4:
-                return isUk ? 'Завдає бонусний урон по поранених ворогах'
+                return isUk ? 'Завдає бонусний шкода по поранених ворогах'
                     : 'Deals bonus damage to weakened enemies';
             case 5:
-                return isUk ? 'AOE урон по області та зони горіння'
+                return isUk ? 'AOE шкода по області та зони горіння'
                     : 'Splash AOE damage and burning zones';
             case 6:
                 return isUk ? 'Промінь, що посилюється, та ланцюгова атака'
                     : 'Beam ramps damage and chains with golden';
             case 7:
-                return isUk ? 'Накладає ефекти отрути з поступовим уроном'
+                return isUk ? 'Накладає ефекти отрути з поступовим шкодаом'
                     : 'Applies venom stacks and poison DOT';
             default:
                 return isUk ? 'Стандартна вежа'
