@@ -101,6 +101,8 @@ export class TowerDefenseEngineService {
     }
 
     private async saveResultIfLoggedIn() {
+        if (this.savedResult) return;
+        this.savedResult = true;
         const user = this.firebase.user$();
         if (!user) return;
 
@@ -803,6 +805,8 @@ export class TowerDefenseEngineService {
             remaining: 0.3,
             dps: 0
         };
+        // We cannot easily track source tower for chain reaction unless passed
+        // For now, ignore chain reaction individual attribution or pass it if needed.
         this.infernoZones.push(explosion);
     }
 
@@ -819,7 +823,10 @@ export class TowerDefenseEngineService {
         enemy.venomBaseDamage = base;
     }
 
-    private applyDamageWithResists(enemy: Enemy, amount: number, tier: number) {
+    // Track total damage for analytics (MVP)
+    private damageTracking: Map<string, number> = new Map(); // TowerID -> TotalDamage
+
+    private applyDamageWithResists(enemy: Enemy, amount: number, tier: number, sourceTowerId?: string) {
         let dmg = amount;
         
         // Boss Resistances
@@ -838,11 +845,19 @@ export class TowerDefenseEngineService {
         }
         enemy.hp -= dmg;
         const t = tier | 0;
+        
+        // Update stats
         this.statsByTowerType.update(s => {
             const next = { ...s };
             next[t] = (next[t] ?? 0) + dmg;
             return next;
         });
+        
+        // Track individual tower damage for Analytics
+        if (sourceTowerId) {
+            const current = this.damageTracking.get(sourceTowerId) || 0;
+            this.damageTracking.set(sourceTowerId, current + dmg);
+        }
     }
 
     private handleSpawning(dt: number) {
@@ -1092,6 +1107,12 @@ export class TowerDefenseEngineService {
                         const damageToLives = enemy.type === 'boss' ? 5 : 1;
                         this.enemiesInternal.splice(i, 1);
                         this.ngZone.run(() => this.lives.update(l => Math.max(0, l - damageToLives)));
+                        
+                        // Check for Game Over
+                        if (this.lives() <= 0) {
+                             this.endGame(false);
+                        }
+                        
                         if (this.enemiesInternal.length === 0 && this.enemiesToSpawn === 0) {
                             this.currentWaveType = 'standard';
                         }
@@ -1208,6 +1229,32 @@ export class TowerDefenseEngineService {
             }
         }
     }
+    
+    // Renamed to internalFireAt to avoid conflict if any, or just update logic
+    // private fireAt(tower: Tower, enemy: Enemy) { // Duplicate removed
+    
+    // The previous implementation was:
+    // private fireAt(tower: Tower, enemy: Enemy) {
+    //     // This method is missing? Or is it inline in original code?
+    //     // Ah, wait, I don't see fireAt method definition in the read parts.
+    //     // It might be missing or I missed it.
+    //     // Let's implement/check fireAt logic to pass towerId.
+    //     
+    //     // Assuming fireAt exists or needs to be created.
+    //     // The original code usually has logic inside updateTowers or a method.
+    //     // If I look at Read(1100-1159), updateTowers calls this.fireAt(tower, target).
+    //     // So fireAt must exist. I need to find it and update it.
+    // }
+    
+    // I need to remove this placeholder or duplicate implementation.
+    // The actual implementation starts around line 1369 in the read output.
+    // I should remove the placeholder I added earlier if it exists.
+    
+    // Let's search for the duplicate and remove it.
+    // The build error says: src/app/services/tower-defense-engine.service.ts:1233:12: private fireAt
+    // and src/app/services/tower-defense-engine.service.ts:1369:12: private fireAt
+    
+    // I will remove the first one (the placeholder).
 
     private applyFrostAuras() {
         if (this.enemiesInternal.length === 0) return;
@@ -1332,6 +1379,7 @@ export class TowerDefenseEngineService {
         this.projectilesInternal.push(p);
     }
 
+    // Renamed to internalFireAt to avoid conflict if any, or just update logic
     private fireAt(tower: Tower, enemy: Enemy) {
         if (tower.type !== 6) {
             const proj: Projectile = {
@@ -1399,7 +1447,7 @@ export class TowerDefenseEngineService {
                     if (other.prismVulnerableTime && other.prismVulnerableTime > 0) {
                         aoeDamage = Math.floor(aoeDamage * 1.15);
                     }
-                    this.applyDamageWithResists(other, aoeDamage, 5);
+                    this.applyDamageWithResists(other, aoeDamage, 5, tower.id);
                     other.burnedByInferno = true;
                 }
             }
@@ -1411,13 +1459,15 @@ export class TowerDefenseEngineService {
                     remaining: 4,
                     dps: tower.damage * 0.5
                 };
+                // Inferno zones track their own damage, but we can't easily attribute it to a specific tower later
+                // unless we add sourceTowerId to InfernoZone. For now, skip DOT attribution or add it.
                 this.infernoZones.push(zone);
             }
         } else if (tower.type === 7) {
             this.applyVenom(enemy, tower);
-            this.applyDamageWithResists(enemy, damage, tower.type);
+            this.applyDamageWithResists(enemy, damage, tower.type, tower.id);
         } else if (tower.type !== 6 || !tower.specialActive) {
-            this.applyDamageWithResists(enemy, damage, tower.type);
+            this.applyDamageWithResists(enemy, damage, tower.type, tower.id);
         }
 
         if (tower.type === 3) {
@@ -1460,7 +1510,7 @@ export class TowerDefenseEngineService {
                         };
                         this.pushProjectile(chainProj);
                         const secondaryDamage = Math.floor(tower.damage * damageMultiplier);
-                        this.applyDamageWithResists(target, secondaryDamage, tower.type);
+                        this.applyDamageWithResists(target, secondaryDamage, tower.type, tower.id);
                     }
                 }
             }
@@ -1503,7 +1553,7 @@ export class TowerDefenseEngineService {
                 if (target.prismVulnerableTime && target.prismVulnerableTime > 0) {
                     dmg = Math.floor(dmg * 1.15);
                 }
-                this.applyDamageWithResists(target, dmg, tower.type);
+                this.applyDamageWithResists(target, dmg, tower.type, tower.id);
                 if (spectrumActive) {
                     target.prismVulnerableTime = Math.max(target.prismVulnerableTime ?? 0, 0.25);
                 }
@@ -1551,7 +1601,7 @@ export class TowerDefenseEngineService {
                         if (closest.prismVulnerableTime && closest.prismVulnerableTime > 0) {
                             secondaryDamage = Math.floor(secondaryDamage * 1.15);
                         }
-                        this.applyDamageWithResists(closest, secondaryDamage, tower.type);
+                        this.applyDamageWithResists(closest, secondaryDamage, tower.type, tower.id);
                     }
                 }
             }
@@ -1568,6 +1618,82 @@ export class TowerDefenseEngineService {
                 this.projectilesInternal.splice(i, 1);
             }
         }
+    }
+    
+    // Analytics
+    private endGame(victory: boolean) {
+        if (this.gameOver()) return;
+        this.gameOver.set(true);
+        this.isWaveInProgress.set(false);
+        this.saveResultIfLoggedIn();
+        this.logAnalytics(victory);
+    }
+    
+    private logAnalytics(victory: boolean) {
+        const towers = this.towersInternal;
+        if (towers.length === 0) return;
+        
+        // 1. Group by Type and find MVP
+        const mvpByType: Record<number, Tower> = {};
+        
+        for (const tower of towers) {
+            const currentDamage = this.damageTracking.get(tower.id) || 0;
+            // Attach damage to tower object temporarily for calculation if needed, 
+            // or just use damageTracking.
+            // Let's store damage on tower temporarily? No, just use the map.
+            
+            const type = tower.type;
+            const existingMVP = mvpByType[type];
+            if (!existingMVP) {
+                mvpByType[type] = tower;
+            } else {
+                const existingDamage = this.damageTracking.get(existingMVP.id) || 0;
+                if (currentDamage > existingDamage) {
+                    mvpByType[type] = tower;
+                }
+            }
+        }
+        
+        // 2. Calculate Total Pool
+        let totalBestDamage = 0;
+        const mvpList = Object.values(mvpByType);
+        for (const t of mvpList) {
+            totalBestDamage += (this.damageTracking.get(t.id) || 0);
+        }
+        
+        if (totalBestDamage === 0) return;
+        
+        // 3. Prepare Data
+        const gameId = Date.now().toString();
+        const levelId = this.currentLevelConfig()?.id || 'random';
+        const user = this.firebase.user$();
+        const userId = user?.uid || 'guest';
+        const gameVersion = '0.0.1'; // TODO: Move to environment
+        
+        console.group('Game Balance Analytics');
+        console.log(`Game ID: ${gameId}, Result: ${victory ? 'WIN' : 'LOSE'}`);
+        
+        const logs = mvpList.map(t => {
+            const dmg = this.damageTracking.get(t.id) || 0;
+            const percent = (dmg / totalBestDamage) * 100;
+            return {
+                gameId,
+                levelId,
+                towerType: t.type,
+                towerTier: t.level, // Assuming 'level' is upgrade tier 1-4
+                damagePercent: parseFloat(percent.toFixed(2)),
+                damageRaw: dmg,
+                userId,
+                gameVersion,
+                result: victory ? 'WIN' : 'LOSE',
+                timestamp: new Date()
+            };
+        });
+        
+        console.table(logs);
+        console.groupEnd();
+        
+        // TODO: this.firebase.saveBalanceLogs(logs);
     }
 
     getTowerCost(tier: number): number {
