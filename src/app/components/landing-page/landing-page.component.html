@@ -1,6 +1,30 @@
 <div
   class="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-white overflow-hidden relative"
 >
+  <div class="absolute top-6 right-6 z-50">
+    <div class="flex items-center gap-1 px-1 py-0.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
+      <button
+        (click)="settings.setLang('uk')"
+        class="cursor-pointer text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full transition-all"
+        [class.bg-emerald-500/20]="settings.currentLang() === 'uk'"
+        [class.text-emerald-400]="settings.currentLang() === 'uk'"
+        [class.text-slate-500]="settings.currentLang() !== 'uk'"
+        [class.hover:text-slate-300]="settings.currentLang() !== 'uk'"
+      >
+        UA
+      </button>
+      <button
+        (click)="settings.setLang('en')"
+        class="cursor-pointer text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full transition-all"
+        [class.bg-emerald-500/20]="settings.currentLang() === 'en'"
+        [class.text-emerald-400]="settings.currentLang() === 'en'"
+        [class.text-slate-500]="settings.currentLang() !== 'en'"
+        [class.hover:text-slate-300]="settings.currentLang() !== 'en'"
+      >
+        EN
+      </button>
+    </div>
+  </div>
   <!-- Background Glow Effects -->
   <div class="absolute top-1/4 -left-1/4 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl animate-pulse"></div>
   <div
