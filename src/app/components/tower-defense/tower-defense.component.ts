@@ -395,8 +395,12 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     navigateToFeedback() {
         const user = this.firebase.user$();
         if (user) {
-            window.open('https://shape-tactics.com/jaerbi/shape-tactics/issues/new', '_blank');
+            this.router.navigate(['/feedback']);
+            return;
         }
+        try {
+            this.firebase.loginWithGoogle();
+        } catch { }
     }
 
     getDamageStats() {
@@ -406,7 +410,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             { id: 2, name: 'Cannon', color: '#f87171' },
             { id: 3, name: 'Ice', color: '#2dd4bf' },
             { id: 4, name: 'Sniper', color: '#a3e635' },
-            { id: 5, name: 'Inferno', color: '#fb923c' },
+            { id: 5, name: 'Inferno', color: '#ee822a' },
             { id: 6, name: 'Prism', color: '#c084fc' },
             { id: 7, name: 'Poison', color: '#4ade80' }
         ];
@@ -468,7 +472,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             type === 2 ? '#a855f7' :
                 type === 3 ? '#f59e0b' :
                     type === 4 ? '#ef4444' :
-                        type === 5 ? '#fb923c' :
+                        type === 5 ? '#ee822a' :
                             type === 6 ? '#22d3ee' :
                                 '#84cc16';
     }
@@ -888,7 +892,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 type === 2 ? '#a855f7' :
                     type === 3 ? '#f59e0b' :
                         type === 4 ? '#ef4444' :
-                            type === 5 ? '#fb923c' :
+                            type === 5 ? '#ee822a' :
                                 type === 6 ? '#22d3ee' :
                                     '#84cc16';
 
@@ -1183,25 +1187,19 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         if (!rect) return;
         
         // Transform screen coordinates to canvas coordinates
-        // The click event is relative to the viewport.
-        // rect.left/top accounts for the transform (translate + scale)
-        // because getBoundingClientRect returns the visual box.
+        // getBoundingClientRect returns the visual box relative to viewport.
+        // event.clientX/Y is also relative to viewport.
         
-        const clientX = event.clientX - rect.left;
-        const clientY = event.clientY - rect.top;
+        // Calculate offset within the visual canvas
+        const offsetX = event.clientX - rect.left;
+        const offsetY = event.clientY - rect.top;
         
-        // We need to map the visual click (on the scaled element) 
-        // to the internal canvas resolution (unscaled).
+        // Since the canvas is scaled, we divide by the current zoom level to get internal coordinates.
+        // We assume uniform scaling (zoomLevel applies to both X and Y).
+        const scale = this.zoomLevel();
         
-        // Visual Width / Internal Width = Scale Factor
-        const internalWidth = this.gameCanvas?.nativeElement.width || 1;
-        const internalHeight = this.gameCanvas?.nativeElement.height || 1;
-        
-        const xRatio = internalWidth / rect.width;
-        const yRatio = internalHeight / rect.height;
-        
-        const canvasX = clientX * xRatio;
-        const canvasY = clientY * yRatio;
+        const canvasX = offsetX / scale;
+        const canvasY = offsetY / scale;
 
         const tile = this.tdEngine.tileSize;
         const x = Math.floor(canvasX / tile);

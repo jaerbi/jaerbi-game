@@ -346,4 +346,22 @@ export class FirebaseService {
             console.error('Error awarding TD XP: ', e);
         }
     }
+
+    async saveBalanceLogs(logs: any[]): Promise<void> {
+        if (!this.db || logs.length === 0) return;
+        try {
+            console.count('FIREBASE_CALL: saveBalanceLogs');
+            // Batch write? Or simple loop. Logs are usually 1-7 items.
+            // Using batch is safer for consistency but simple adds are fine here.
+            const batch = [];
+            for (const log of logs) {
+                // Add timestamp if missing or ensure it's serverTimestamp?
+                // The log already has a timestamp.
+                batch.push(addDoc(collection(this.db, 'balance_logs'), log));
+            }
+            await Promise.all(batch);
+        } catch (e) {
+            console.error('Error saving balance logs: ', e);
+        }
+    }
 }

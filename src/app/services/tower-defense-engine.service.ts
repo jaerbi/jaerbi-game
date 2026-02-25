@@ -100,6 +100,14 @@ export class TowerDefenseEngineService {
         this.initGame();
     }
 
+    // XP Logic is mainly in saveResultIfLoggedIn (End of Game), not per kill.
+    // The user requested: "If there is an XP system, apply the same 5x multiplier to the XP gained from killing a Boss."
+    // But currently XP is awarded at END of game based on waves cleared or level completion.
+    // There is no per-kill XP accumulation.
+    // To implement "XP from killing a boss", we would need to track "bonus XP" during the game and add it at the end.
+    
+    private bonusXpAccumulated = 0;
+
     private async saveResultIfLoggedIn() {
         if (this.savedResult) return;
         this.savedResult = true;
@@ -108,22 +116,28 @@ export class TowerDefenseEngineService {
 
         // Campaign Completion Logic
         const config = this.currentLevelConfig();
+        let xpToAward = 0;
+        let levelId: string | undefined = undefined;
+
         if (config && this.wave() >= config.waveCount) {
             // Level Completed
-            const xp = config.xpReward;
-            await this.firebase.awardTowerDefenseXp(xp, config.id, this.wave());
+            xpToAward = config.xpReward;
+            levelId = config.id;
         } else if (this.gameMode() === 'random') {
             // Random Mode XP
             const wavesCleared = this.wave();
-            let xp = 0;
             if (wavesCleared >= 5) {
                 const base = wavesCleared * 1.5;
                 const bonus = wavesCleared > 20 ? (wavesCleared - 20) * 2 : 0;
-                xp = Math.floor(base + bonus);
+                xpToAward = Math.floor(base + bonus);
             }
-            if (xp > 0) {
-                await this.firebase.awardTowerDefenseXp(xp, undefined, wavesCleared);
-            }
+        }
+        
+        // Add Accumulated Bonus XP (e.g. from Bosses)
+        xpToAward += this.bonusXpAccumulated;
+
+        if (xpToAward > 0) {
+             await this.firebase.awardTowerDefenseXp(xpToAward, levelId, this.wave());
         }
 
         const mapSizeLabel = this.gridSize === 20 ? '20x20' : '10x10';
@@ -157,6 +171,8 @@ export class TowerDefenseEngineService {
         this.savedResult = false;
         this.gameEndedHard = false;
         this.money.set(50);
+        this.damageTracking.clear(); // Reset Analytics
+        this.bonusXpAccumulated = 0;
         this.lives.set(100);
         this.wave.set(0);
         const currentGrid = this.grid();
@@ -1171,6 +1187,19 @@ export class TowerDefenseEngineService {
                 const goldMultiplier = this.getGoldKillMultiplier();
                 let reward = Math.floor(baseReward * goldMultiplier);
                 
+                // Boss Reward Bonus (5x)
+                if (enemy.type === 'boss') {
+                    reward *= 5;
+                    // "If there is an XP system, apply the same 5x multiplier to the XP gained from killing a Boss."
+                    // Since XP is per level/wave, we'll interpret this as "Bonus XP = 5x typical kill XP".
+                    // But enemies don't give XP.
+                    // Let's give a flat bonus XP for boss kill. 
+                    // E.g., Boss Kill = 10 XP * 5 = 50 XP?
+                    // Or maybe 10% of level reward?
+                    // Let's assume a base value like 10 XP.
+                    this.bonusXpAccumulated += 50; 
+                }
+
                 // Reward Tile (Bounty) Bonus: +20% gold if killed by/near tower?
                 // Actually, finding the killer is hard here.
                 // Let's implement a global check: if there is ANY active tower on a 'bounty' tile, give small bonus?
@@ -1669,9 +1698,10 @@ export class TowerDefenseEngineService {
         const user = this.firebase.user$();
         const userId = user?.uid || 'guest';
         const gameVersion = '0.0.1'; // TODO: Move to environment
+        const isHardMode = this.isHardMode();
         
-        console.group('Game Balance Analytics');
-        console.log(`Game ID: ${gameId}, Result: ${victory ? 'WIN' : 'LOSE'}`);
+        // console.group('Game Balance Analytics');
+        // console.log(`Game ID: ${gameId}, Result: ${victory ? 'WIN' : 'LOSE'}`);
         
         const logs = mvpList.map(t => {
             const dmg = this.damageTracking.get(t.id) || 0;
@@ -1686,14 +1716,15 @@ export class TowerDefenseEngineService {
                 userId,
                 gameVersion,
                 result: victory ? 'WIN' : 'LOSE',
-                timestamp: new Date()
+                timestamp: new Date(),
+                isHardMode
             };
         });
         
-        console.table(logs);
-        console.groupEnd();
+        // console.table(logs);
+        // console.groupEnd();
         
-        // TODO: this.firebase.saveBalanceLogs(logs);
+        this.firebase.saveBalanceLogs(logs);
     }
 
     getTowerCost(tier: number): number {
