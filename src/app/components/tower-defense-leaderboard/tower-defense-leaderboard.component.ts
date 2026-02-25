@@ -36,7 +36,7 @@ import { SettingsService } from '../../services/settings.service';
               [class.text-slate-300]="selectedMapSize() !== 10"
               (click)="selectMapSize(10)"
             >
-              Map 10x10
+              Top 10 (10x10)
             </button>
             <button
               class="px-4 py-1 text-xs font-semibold rounded-full transition-colors"
@@ -45,7 +45,16 @@ import { SettingsService } from '../../services/settings.service';
               [class.text-slate-300]="selectedMapSize() !== 20"
               (click)="selectMapSize(20)"
             >
-              Map 20x20
+              Top 10 (20x20)
+            </button>
+            <button
+              class="px-4 py-1 text-xs font-semibold rounded-full transition-colors"
+              [class.bg-sky-500]="selectedMapSize() === 0"
+              [class.text-slate-900]="selectedMapSize() === 0"
+              [class.text-slate-300]="selectedMapSize() !== 0"
+              (click)="selectMapSize(0)"
+            >
+              My Records
             </button>
           </div>
           <table class="w-full text-sm">
@@ -78,16 +87,16 @@ import { SettingsService } from '../../services/settings.service';
                   {{ s.timestamp?.toDate ? (s.timestamp.toDate() | date:'mediumDate') : (s.timestamp | date:'mediumDate') }}
                 </td>
               </tr>
-              <tr *ngIf="scores().length === 0">
-                <td colspan="6" class="py-8 text-center text-slate-400 italic">
-                  No runs recorded yet. Finish a game while logged in to appear here.
-                </td>
-              </tr>
             </tbody>
           </table>
-          <div *ngIf="best() as b" class="mt-6 pt-4 border-t border-slate-700">
+
+          <div *ngIf="scores().length === 0" class="py-8 text-center text-slate-400 italic">
+            No records found.
+          </div>
+
+          <div *ngIf="selectedMapSize() !== 0 && best() as b" class="mt-6 pt-4 border-t border-slate-700">
             <div class="text-xs font-semibold text-slate-400 mb-2">
-              Your Personal Best
+              Your Personal Best ({{selectedMapSize()}}x{{selectedMapSize()}})
             </div>
             <table class="w-full text-sm">
               <tbody>
@@ -123,18 +132,14 @@ export class TowerDefenseLeaderboardComponent implements OnInit {
     loading = signal<boolean>(true);
     scores = signal<TowerDefenseScore[]>([]);
     best = signal<TowerDefenseScore | null>(null);
-    selectedMapSize = signal<10 | 20>(10);
+    selectedMapSize = signal<10 | 20 | 0>(10); // 0 = My Records
     displayScores = computed(() => this.scores());
 
     constructor(private firebase: FirebaseService, public settings: SettingsService) { }
 
     ngOnInit() {
-        const currentSize = this.settings.mapSize();
-        if (currentSize === 20) {
-            this.selectedMapSize.set(20);
-        } else {
-            this.selectedMapSize.set(10);
-        }
+        // Default to 10x10
+        this.selectedMapSize.set(10);
         this.loadScores();
     }
 
@@ -142,9 +147,22 @@ export class TowerDefenseLeaderboardComponent implements OnInit {
         this.loading.set(true);
         const size = this.selectedMapSize();
         try {
-            const list = await this.firebase.getTopTowerDefenseScores(10, size);
-            this.scores.set(list ?? []);
-            await this.loadPersonalBest(size);
+            if (size === 0) {
+                // Load My Records
+                const user = this.firebase.user$();
+                if (user) {
+                    const list = await this.firebase.getMyTowerDefenseHistory(user.uid, 10);
+                    this.scores.set(list ?? []);
+                    this.best.set(null); // Hide personal best footer in this view
+                } else {
+                    this.scores.set([]);
+                }
+            } else {
+                // Load Top 10 Global
+                const list = await this.firebase.getTopTowerDefenseScores(10, size);
+                this.scores.set(list ?? []);
+                await this.loadPersonalBest(size);
+            }
         } catch {
             this.scores.set([]);
         } finally {
@@ -161,7 +179,7 @@ export class TowerDefenseLeaderboardComponent implements OnInit {
         this.best.set(entry ?? null);
     }
 
-    selectMapSize(size: 10 | 20) {
+    selectMapSize(size: 10 | 20 | 0) {
         if (this.selectedMapSize() === size) return;
 
         this.selectedMapSize.set(size);

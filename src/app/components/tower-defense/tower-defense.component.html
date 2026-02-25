@@ -24,26 +24,28 @@
             </button>
           </div>
           <!-- Mode Switcher -->
-          <div class="flex bg-slate-900 rounded-lg p-1 border border-slate-700">
-            <button
-              (click)="setGameMode('random')"
-              class="px-3 py-1 text-xs font-bold rounded transition-colors uppercase tracking-wider"
-              [class.bg-sky-600]="tdEngine.gameMode() === 'random'"
-              [class.text-white]="tdEngine.gameMode() === 'random'"
-              [class.text-slate-500]="tdEngine.gameMode() !== 'random'"
-            >
-              Random
-            </button>
-            <button
-              (click)="setGameMode('campaign')"
-              class="px-3 py-1 text-xs font-bold rounded transition-colors uppercase tracking-wider"
-              [class.bg-indigo-600]="tdEngine.gameMode() === 'campaign'"
-              [class.text-white]="tdEngine.gameMode() === 'campaign'"
-              [class.text-slate-500]="tdEngine.gameMode() !== 'campaign'"
-            >
-              Campaign
-            </button>
-          </div>
+          @if (false) {
+            <div class="flex bg-slate-900 rounded-lg p-1 border border-slate-700">
+              <button
+                (click)="setGameMode('random')"
+                class="px-3 py-1 text-xs font-bold rounded transition-colors uppercase tracking-wider"
+                [class.bg-sky-600]="tdEngine.gameMode() === 'random'"
+                [class.text-white]="tdEngine.gameMode() === 'random'"
+                [class.text-slate-500]="tdEngine.gameMode() !== 'random'"
+              >
+                Random
+              </button>
+              <button
+                (click)="setGameMode('campaign')"
+                class="px-3 py-1 text-xs font-bold rounded transition-colors uppercase tracking-wider"
+                [class.bg-indigo-600]="tdEngine.gameMode() === 'campaign'"
+                [class.text-white]="tdEngine.gameMode() === 'campaign'"
+                [class.text-slate-500]="tdEngine.gameMode() !== 'campaign'"
+              >
+                Campaign
+              </button>
+            </div>
+          }
         </div>
         <div class="flex flex-col items-center gap-1 font-black tracking-wide">
           <div class="flex items-baseline gap-6">
@@ -221,68 +223,54 @@
       ></canvas>
     </div>
     @if (showStatsPanel) {
-      <div class="fixed inset-0 z-[99] pointer-events-none">
+      <div class="fixed inset-0 z-[99] pointer-events-none overflow-hidden boundary-container">
         <div
-          class="absolute top-4 right-4 w-96 bg-slate-800 border border-slate-600 rounded-lg shadow-xl p-4 pointer-events-auto"
+          cdkDrag
+          cdkDragBoundary=".boundary-container"
+          class="absolute top-4 right-4 w-96 bg-slate-800 border border-slate-600 rounded-lg shadow-xl p-4 pointer-events-auto flex flex-col"
         >
-          <div class="flex items-center justify-between mb-2">
-            <div class="text-lg font-black">{{ settings.t('DAMAGE_STATS') }}</div>
-            <button (click)="toggleStatsPanel()" class="text-white">✕</button>
+          <div
+            cdkDragHandle
+            class="flex items-center justify-between mb-2 cursor-move select-none border-b border-white/5 pb-2"
+          >
+            <div class="text-lg font-black uppercase tracking-tight text-slate-200">
+              {{ settings.t('DAMAGE_STATS') }}
+            </div>
+            <button (click)="toggleStatsPanel()" class="text-slate-400 hover:text-white p-1">✕</button>
           </div>
+
           @let statsView = getDamageStatsView();
-          <div class="space-y-2">
+          <div class="space-y-2 mt-2">
             @for (item of statsView.list; track item.type) {
               <div class="flex items-center gap-3">
                 <div class="flex items-center gap-2 w-40">
                   <span class="inline-block w-3 h-3 rounded-full" [style.background]="item.color"></span>
-                  <span class="text-sm font-semibold">{{ item.name }}</span>
+                  <span class="text-sm font-semibold text-slate-300">{{ item.name }}</span>
                 </div>
+
                 <div class="flex-1">
-                  <div class="h-3 rounded-full bg-slate-700/60 overflow-hidden border border-slate-600">
+                  <div class="h-3 rounded-full bg-slate-700/60 overflow-hidden border border-slate-600/50">
                     <div
-                      class="h-full"
+                      class="h-full shadow-[0_0_8px_rgba(0,0,0,0.2)]"
                       [style.width.%]="statsView.max > 0 ? (item.damage / statsView.max) * 100 : 0"
                       [style.background]="item.color"
-                      style="transition: width 0.2s ease-out"
+                      style="transition: width 0.4s cubic-bezier(0.17, 0.55, 0.55, 1)"
                     ></div>
                   </div>
                 </div>
-                <div class="w-24 text-right font-mono text-sm" [style.color]="item.color">
+
+                <div class="w-24 text-right font-mono text-sm font-bold" [style.color]="item.color">
                   {{ item.damage | number: '1.0-0' }}
                 </div>
               </div>
             }
           </div>
-        </div>
-      </div>
-    }
 
-    <!-- Draggable Statistics Modal -->
-    @if (showStats) {
-      <div
-        cdkDrag
-        cdkDragBoundary=".td-main-area"
-        class="absolute top-4 left-4 w-64 bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50 flex flex-col"
-      >
-        <div cdkDragHandle class="bg-slate-800 p-2 flex justify-between items-center cursor-move select-none border-b border-slate-700">
-          <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">
-            Battle Statistics
-          </h3>
-          <button (click)="showStats = false" class="text-slate-500 hover:text-white transition-colors">✕</button>
-        </div>
-        
-        <div class="p-2 space-y-1 max-h-[300px] overflow-y-auto custom-scrollbar">
-          @for (item of getDamageStats(); track item.name) {
-            <div class="flex items-center justify-between text-xs p-1 hover:bg-white/5 rounded">
-              <div class="flex items-center gap-2">
-                <div class="w-2 h-2 rounded-full" [style.background-color]="item.color"></div>
-                <span class="text-slate-300">{{ item.name }}</span>
-              </div>
-              <div class="font-mono text-slate-400">
-                {{ item.damage | number: '1.0-0' }}
-              </div>
-            </div>
-          }
+          <div
+            class="mt-4 pt-2 border-t border-white/5 text-[10px] text-slate-500 uppercase text-center font-bold tracking-widest"
+          >
+            Drag header to reposition
+          </div>
         </div>
       </div>
     }
@@ -314,27 +302,37 @@
                       💰
                     } @else if (tile.bonus === 'mastery') {
                       ✨
+                    } @else if (tile.bonus === 'speed') {
+                      ⚡
                     }
                   </span>
-                  <span class="text-sm font-bold text-white uppercase tracking-wide">Strategic Point</span>
+                  <span class="text-sm font-bold text-white uppercase tracking-wide">
+                    @if (tile.bonus === 'bounty') {
+                      REWARD ZONE
+                    } @else {
+                      Strategic Point
+                    }
+                  </span>
                 </div>
                 <div class="text-xs text-slate-400 leading-relaxed">
                   @if (tile.bonus === 'damage') {
                     Increases tower
                     <span class="text-rose-400 font-bold">Damage</span>
-                    by 5% per upgrade level.
+                    by 20% (flat).
                   } @else if (tile.bonus === 'range') {
                     Increases tower
                     <span class="text-sky-400 font-bold">Range</span>
-                    significantly.
+                    by 0.5 tiles.
                   } @else if (tile.bonus === 'bounty') {
-                    Reduces
-                    <span class="text-amber-400 font-bold">Upgrade Costs</span>
-                    for towers placed here.
+                    Increases gold gained from enemies defeated by towers placed on this tile.
                   } @else if (tile.bonus === 'mastery') {
                     Grants
-                    <span class="text-purple-400 font-bold">Global Damage Bonus</span>
+                    <span class="text-purple-400 font-bold">Damage Bonus</span>
                     (+10%) to this tower.
+                  } @else if (tile.bonus === 'speed') {
+                    Increases
+                    <span class="text-lime-400 font-bold">Attack Speed</span>
+                    by 35%.
                   }
                 </div>
               </div>
@@ -403,15 +401,15 @@
               </div>
               <div class="flex justify-between mb-1">
                 <span class="text-xs text-slate-500">{{ settings.t('DAMAGE') }}</span>
-                <span class="text-xs font-bold text-rose-400">{{ tile.tower.damage | number:'1.0-2' }}</span>
+                <span class="text-xs font-bold text-rose-400">{{ tile.tower.damage | number: '1.0-2' }}</span>
               </div>
               <div class="flex justify-between mb-1">
                 <span class="text-xs text-slate-500">{{ settings.t('RANGE') }}</span>
-                <span class="text-xs font-bold text-sky-400">{{ tile.tower.range | number:'1.0-2' }}</span>
+                <span class="text-xs font-bold text-sky-400">{{ tile.tower.range | number: '1.0-2' }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-xs text-slate-500">{{ settings.t('SPEED') }}</span>
-                <span class="text-xs font-bold text-lime-400">{{ tile.tower.fireInterval | number:'1.0-2' }}</span>
+                <span class="text-xs font-bold text-lime-400">{{ tile.tower.fireInterval | number: '1.0-2' }}</span>
               </div>
               @if (tile.tower.description) {
                 <div class="mt-3 text-[11px] text-slate-300 leading-snug">
@@ -865,20 +863,16 @@
           </div>
         </div>
 
-        <div class="pt-4 border-t border-slate-800">
-          <button
-            (click)="showDevTools = !showDevTools"
-            class="text-xs text-slate-600 hover:text-slate-400 block mb-2"
-          >
-            Developer Tools
-          </button>
-          <button
-            (click)="showStats = !showStats"
-            class="text-xs text-sky-600 hover:text-sky-400 block"
-          >
-            Toggle Stats Panel
-          </button>
-        </div>
+        @if (false) {
+          <div class="pt-4 border-t border-slate-800">
+            <button
+              (click)="showDevTools = !showDevTools"
+              class="text-xs text-slate-600 hover:text-slate-400 block mb-2"
+            >
+              Developer Tools
+            </button>
+          </div>
+        }
       </div>
     </div>
   </div>

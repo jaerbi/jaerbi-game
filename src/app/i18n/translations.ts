@@ -205,9 +205,9 @@ export type TranslationKey =
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     CAMPAING: { en: 'Campaign', uk: `Кампанія` },
     SELECT_TILE_TO_BUILD: { en: 'Select an empty tile to build', uk: `Оберіть вільну ділянку для будівництва` },
-    DAMAGE_STATS: { en: 'Damage Statistics', uk: `Статистика шкода` },
+    DAMAGE_STATS: { en: 'Damage Statistics', uk: `Статистика шкоди` },
     NO_DATA: { en: 'No data yet', uk: `Дані відсутні` },
-    DAMAGE_STATS_DESC: { en: 'Cumulative damage dealt by each tower type', uk: `Сумарний шкода за типами веж` },
+    DAMAGE_STATS_DESC: { en: 'Cumulative damage dealt by each tower type', uk: `Сумарна шкода за типами веж` },
     RANDOM: { en: 'Random', uk: `Випадковий` },
     STRONGEST: { en: 'Strongest', uk: `Найсильніший` },
     WEAKEST: { en: 'Weakest', uk: `Найслабший` },

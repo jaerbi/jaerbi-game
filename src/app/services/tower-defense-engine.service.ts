@@ -12,9 +12,9 @@ const TOWER_COSTS = [15, 50, 250, 500, 500, 500, 500] as const;
 
 const TIER_STATS = [
     { damage: 5, range: 1.5, fireInterval: 0.5 },
-    { damage: 21, range: 2, fireInterval: 0.7 },
+    { damage: 21, range: 2.2, fireInterval: 0.7 },
     { damage: 83, range: 1.5, fireInterval: 1 },
-    { damage: 342, range: 2, fireInterval: 1.5 },
+    { damage: 300, range: 2.1, fireInterval: 1.7 },
     { damage: 71, range: 1.5, fireInterval: 2.5 },
     { damage: 15, range: 2, fireInterval: 0.3 },
     { damage: 66, range: 1.5, fireInterval: 1 }
@@ -25,7 +25,7 @@ const TIER_STATS = [
 })
 export class TowerDefenseEngineService {
     // Game State
-    money = signal(40);
+    money = signal(50);
     lives = signal(20);
     wave = signal(0);
     isWaveInProgress = signal(false);
@@ -153,7 +153,7 @@ export class TowerDefenseEngineService {
         this.gameOver.set(false);
         this.savedResult = false;
         this.gameEndedHard = false;
-        this.money.set(40);
+        this.money.set(50);
         this.lives.set(100);
         this.wave.set(0);
         const currentGrid = this.grid();
@@ -310,9 +310,9 @@ export class TowerDefenseEngineService {
         this.allowedTowers.set([1, 2, 3, 4, 5, 6, 7]);
         this.isFirstTimeClear = false;
 
-        let startMoney = 40;
+        let startMoney = 50;
         if (this.isHardMode()) {
-            startMoney = 30;
+            startMoney = 40;
         }
         const goldLevel = this.getGoldMasteryLevel();
         if (goldLevel >= 8) {
@@ -1091,6 +1091,30 @@ export class TowerDefenseEngineService {
                 
                 const goldMultiplier = this.getGoldKillMultiplier();
                 let reward = Math.floor(baseReward * goldMultiplier);
+                
+                // Reward Tile (Bounty) Bonus: +20% gold if killed by/near tower?
+                // Actually, finding the killer is hard here.
+                // Let's implement a global check: if there is ANY active tower on a 'bounty' tile, give small bonus?
+                // Or better: if the enemy dies within range of a tower on a 'bounty' tile.
+                // Iterating towers is costly.
+                // Let's assume the user meant "Bounty Tile increases gold for kills" as a general rule if you use it.
+                // But typically it means "Tower on this tile gets more gold per kill".
+                // Since we don't track the killer, let's compromise:
+                // If the enemy is within 3 tiles of a tower on a 'bounty' tile, +2 gold.
+                
+                const bountyTowers = this.towersInternal.filter(t => {
+                    const tile = this.grid()[t.position.y][t.position.x];
+                    return tile.bonus === 'bounty';
+                });
+                
+                for (const bt of bountyTowers) {
+                    const dx = bt.position.x - deathPos.x;
+                    const dy = bt.position.y - deathPos.y;
+                    if (dx*dx + dy*dy <= bt.range * bt.range) {
+                        reward += 2; // +2 Gold per kill near Bounty Tower
+                        break; // Only once
+                    }
+                }
 
                 if (this.isHardMode()) {
                     reward = Math.floor(reward * 0.8);
@@ -1461,7 +1485,7 @@ export class TowerDefenseEngineService {
                         let secondaryDamage = tower.damage;
                         if (tower.specialActive) {
                             const ratio2 = closest.hp / closest.maxHp;
-                            if (ratio2 < 0.5) {
+                            if (ratio2 < 0.3) {
                                 const multiplier2 = closest.isBoss ? 3 : 2;
                                 secondaryDamage = Math.floor(tower.damage * multiplier2);
                             }
@@ -1499,7 +1523,23 @@ export class TowerDefenseEngineService {
             if (!allowed.includes(tier)) return;
         }
 
-        const cost = this.getTowerCost(tier);
+        let cost = this.getTowerCost(tier);
+        // Check if tile has Bounty bonus to reduce cost?
+        // Wait, "Bounty" usually means reward for kills.
+        // But user requested "Reward Tile: Increase Gold for Enemy Kills".
+        // The previous code had "Reduces Upgrade Costs".
+        // The user said: "Reward Tile: Currently incorrectly claims to reduce the cost of an upgrade."
+        // And "Bug Fix: Update descriptions to correctly show 'Increase Gold for Enemy Kills'".
+        
+        // So I should NOT reduce cost here.
+        // But wait, the previous code didn't reduce cost here either.
+        
+        // Let's verify if Bounty affects cost elsewhere.
+        // It seems the "Bounty" bonus was implemented as "Reduces Upgrade Costs" in the description but logic was missing or partial.
+        // User wants "Increase Gold for Enemy Kills".
+        // So I should implement that logic in updateEnemies (where kills happen).
+        // And ensure cost is NOT reduced here.
+        
         if (this.money() < cost) return;
 
         this.grid.update(grid => {
@@ -1604,10 +1644,10 @@ export class TowerDefenseEngineService {
                 return isUk ? 'Уражає ланцюговою блискавкою декілька цілей'
                     : 'Chains lightning to nearby enemies';
             case 3:
-                return isUk ? 'Посилює шкода за рахунок ефекту розколу'
+                return isUk ? 'Посилює шкоду за рахунок ефекту розколу'
                     : 'Amplifies damage with shatter stacks';
             case 4:
-                return isUk ? 'Завдає бонусний шкода по поранених ворогах'
+                return isUk ? 'Завдає бонусну шкоду по поранених ворогах'
                     : 'Deals bonus damage to weakened enemies';
             case 5:
                 return isUk ? 'AOE шкода по області та зони горіння'
@@ -1616,7 +1656,7 @@ export class TowerDefenseEngineService {
                 return isUk ? 'Промінь, що посилюється, та ланцюгова атака'
                     : 'Beam ramps damage and chains with golden';
             case 7:
-                return isUk ? 'Накладає ефекти отрути з поступовим шкодаом'
+                return isUk ? 'Накладає ефекти отрути з поступовим зростанням шкоди'
                     : 'Applies venom stacks and poison DOT';
             default:
                 return isUk ? 'Стандартна вежа'

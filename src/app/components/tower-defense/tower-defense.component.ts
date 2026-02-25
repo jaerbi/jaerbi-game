@@ -11,11 +11,12 @@ import { SupportCommunityComponent } from '../support-community/support-communit
 import { AbbreviateNumberPipe } from './abbreviate-number.pipe';
 import { AppPrivacyPolicyComponent } from '../privacy-policy/privacy-policy.component';
 import { CampaignService } from '../../services/campaign.service';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 
 @Component({
     selector: 'app-tower-defense',
     standalone: true,
-    imports: [CommonModule, SupportCommunityComponent, AbbreviateNumberPipe, AppPrivacyPolicyComponent],
+    imports: [CommonModule, SupportCommunityComponent, AbbreviateNumberPipe, AppPrivacyPolicyComponent, DragDropModule],
     templateUrl: 'tower-defense.component.html',
     styleUrls: ['../../app.css'],
     changeDetection: ChangeDetectionStrategy.OnPush,

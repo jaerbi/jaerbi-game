@@ -171,17 +171,52 @@ export class FirebaseService {
         if (!this.db) return [];
         const querySize = `${size}x${size}`;
         try {
+            // First get raw list
             const q = query(
                 collection(this.db, 'towerDefenseLeaderboards'),
                 where('mapSize', '==', querySize),
                 orderBy('maxWave', 'desc'),
+                limit(limitCount * 4) // Fetch more to filter duplicates
+            );
+            const querySnapshot = await getDocs(q);
+            const allScores = querySnapshot.docs.map(doc => doc.data() as TowerDefenseScore);
+
+            // Filter to keep only best per user
+            const bestPerUser = new Map<string, TowerDefenseScore>();
+            for (const s of allScores) {
+                if (!bestPerUser.has(s.userId)) {
+                    bestPerUser.set(s.userId, s);
+                } else {
+                    const existing = bestPerUser.get(s.userId)!;
+                    if (s.maxWave > existing.maxWave) {
+                        bestPerUser.set(s.userId, s);
+                    }
+                }
+            }
+            
+            return Array.from(bestPerUser.values())
+                .sort((a, b) => b.maxWave - a.maxWave)
+                .slice(0, limitCount);
+
+        } catch (e) {
+            console.error('Error fetching TD scores: ', e);
+            return [];
+        }
+    }
+
+    async getMyTowerDefenseHistory(userId: string, limitCount: number): Promise<TowerDefenseScore[]> {
+        if (!this.db) return [];
+        try {
+            const q = query(
+                collection(this.db, 'towerDefenseLeaderboards'),
+                where('userId', '==', userId),
                 orderBy('timestamp', 'desc'),
                 limit(limitCount)
             );
             const querySnapshot = await getDocs(q);
             return querySnapshot.docs.map(doc => doc.data() as TowerDefenseScore);
         } catch (e) {
-            console.error('Error fetching TD scores: ', e);
+            console.error('Error fetching my TD history: ', e);
             return [];
         }
     }
