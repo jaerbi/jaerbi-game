@@ -9,45 +9,41 @@
           >
             {{ settings.t('EXIT_GAME') }}
           </button>
+          <div class="flex items-center gap-3">
+            <button
+              (click)="router.navigate(['/tower-defense-leaderboard'])"
+              class="cursor-pointer px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded transition-colors uppercase tracking-wider"
+            >
+              {{ settings.t('RANKING') }}
+            </button>
+            <button
+              (click)="router.navigate(['/masteries'])"
+              class="cursor-pointer px-4 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-bold rounded transition-colors uppercase tracking-wider"
+            >
+              {{ settings.t('MASTERIES') }}
+            </button>
+          </div>
           <!-- Mode Switcher -->
-          @if (false) {
-            <div class="flex bg-slate-900 rounded-lg p-1 border border-slate-700">
-              <button
-                (click)="setGameMode('random')"
-                class="px-3 py-1 text-xs font-bold rounded transition-colors uppercase tracking-wider"
-                [class.bg-sky-600]="tdEngine.gameMode() === 'random'"
-                [class.text-white]="tdEngine.gameMode() === 'random'"
-                [class.text-slate-500]="tdEngine.gameMode() !== 'random'"
-              >
-                Random
-              </button>
-              <button
-                (click)="setGameMode('campaign')"
-                class="px-3 py-1 text-xs font-bold rounded transition-colors uppercase tracking-wider"
-                [class.bg-indigo-600]="tdEngine.gameMode() === 'campaign'"
-                [class.text-white]="tdEngine.gameMode() === 'campaign'"
-                [class.text-slate-500]="tdEngine.gameMode() !== 'campaign'"
-              >
-                Campaign
-              </button>
-            </div>
-          }
-          @if (true) {
-              <div class="flex items-center gap-3">
-                <button
-                  (click)="router.navigate(['/tower-defense-leaderboard'])"
-                  class="cursor-pointer px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded transition-colors uppercase tracking-wider"
-                >
-                  {{ settings.t('RANKING') }}
-                </button>
-                <button
-                  (click)="router.navigate(['/masteries'])"
-                  class="cursor-pointer px-4 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-bold rounded transition-colors uppercase tracking-wider"
-                >
-                  {{ settings.t('MASTERIES') }}
-                </button>
-              </div>
-          }
+          <div class="flex bg-slate-900 rounded-lg p-1 border border-slate-700">
+            <button
+              (click)="setGameMode('random')"
+              class="px-3 py-1 text-xs font-bold rounded transition-colors uppercase tracking-wider"
+              [class.bg-sky-600]="tdEngine.gameMode() === 'random'"
+              [class.text-white]="tdEngine.gameMode() === 'random'"
+              [class.text-slate-500]="tdEngine.gameMode() !== 'random'"
+            >
+              Random
+            </button>
+            <button
+              (click)="setGameMode('campaign')"
+              class="px-3 py-1 text-xs font-bold rounded transition-colors uppercase tracking-wider"
+              [class.bg-indigo-600]="tdEngine.gameMode() === 'campaign'"
+              [class.text-white]="tdEngine.gameMode() === 'campaign'"
+              [class.text-slate-500]="tdEngine.gameMode() !== 'campaign'"
+            >
+              Campaign
+            </button>
+          </div>
         </div>
         <div class="flex flex-col items-center gap-1 font-black tracking-wide">
           <div class="flex items-baseline gap-6">
@@ -111,22 +107,6 @@
               Settings
             </button>
           </div>
-          @if (false) {
-            <div class="flex items-center gap-3">
-              <button
-                (click)="router.navigate(['/tower-defense-leaderboard'])"
-                class="cursor-pointer px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded transition-colors uppercase tracking-wider"
-              >
-                {{ settings.t('RANKING') }}
-              </button>
-              <button
-                (click)="router.navigate(['/masteries'])"
-                class="cursor-pointer px-4 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-bold rounded transition-colors uppercase tracking-wider"
-              >
-                {{ settings.t('MASTERIES') }}
-              </button>
-            </div>
-          }
         </div>
         <div class="flex items-center gap-3">
           <button
@@ -468,7 +448,7 @@
                 (click)="sellTower()"
                 class="cursor-pointer w-full py-3 bg-rose-700 hover:bg-rose-600 rounded font-bold transition-all flex justify-center items-center text-sm"
               >
-                {{ settings.t('SELL') }} (50% REFUND)
+                {{ settings.t('SELL') }} (60% REFUND)
               </button>
               @if (tile.tower.level === 4) {
                 <button
@@ -672,132 +652,134 @@
 </footer>
 @if (showMissionSelect) {
   <div class="fixed inset-0 z-[999] flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" (click)="closeMissionSelect()"></div>
+    <div class="absolute inset-0 bg-slate-950/90 backdrop-blur-md" (click)="closeMissionSelect()"></div>
 
-    <div
-      class="relative bg-slate-900 border border-sky-500/50 p-8 rounded-2xl max-w-4xl w-full max-h-[85vh] overflow-y-auto flex flex-col gap-6"
-    >
-      <button
-        (click)="closeMissionSelect()"
-        class="absolute top-4 right-4 text-white hover:text-rose-400 text-xl font-bold"
-      >
-        ✕
-      </button>
-
-      <h2
-        class="text-3xl font-black text-center uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400"
-      >
-        Mission Select
-      </h2>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Random Mode Card -->
-        <div
-          (click)="selectRandomMode()"
-          class="bg-slate-800/50 border border-slate-700 hover:border-sky-500 rounded-xl p-6 cursor-pointer transition-all hover:bg-slate-800 group"
+    <div class="relative w-full max-w-6xl max-h-[90vh] flex flex-col gap-8 animate-in zoom-in-95 duration-300">
+      <div class="text-center space-y-2">
+        <h2
+          class="text-5xl font-black uppercase tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-b from-sky-400 to-indigo-600 drop-shadow-sm"
         >
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xl font-bold text-white group-hover:text-sky-400">Random Operations</h3>
-            <span class="text-2xl">🎲</span>
-          </div>
-          <p class="text-sm text-slate-400 mb-4">
-            Infinite procedurally generated maps. Earn XP based on wave progress.
-          </p>
-          <div class="flex items-center gap-2 mb-3">
-            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider w-20">Map Size:</span>
-            <div class="text-xs text-slate-400 italic">Configure in Settings</div>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider w-20">Difficulty:</span>
-            <div class="flex bg-slate-900 rounded p-1">
-              <button
-                (click)="$event.stopPropagation(); setHardMode(false)"
-                class="px-3 py-1 rounded text-xs font-bold transition-colors"
-                [class.bg-sky-600]="!tdEngine.isHardMode()"
-                [class.text-white]="!tdEngine.isHardMode()"
-                [class.text-slate-500]="tdEngine.isHardMode()"
+          Campaign Map
+        </h2>
+        <p class="text-slate-500 font-mono text-sm tracking-widest uppercase">Select your next operational zone</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto p-4 custom-scrollbar">
+        @for (level of campaignService.levels; track level.id) {
+          @let unlocked = isLevelUnlocked(level.id);
+          @let completed = isLevelCompleted(level.id);
+          @let isSelected = selectedCampaignLevel === level.id;
+
+          <div
+            (click)="unlocked ? selectCampaignLevel(level.id) : null"
+            class="group relative flex flex-col h-full transition-all duration-500 rounded-3xl border-2 p-1 overflow-hidden"
+            [class.cursor-pointer]="unlocked"
+            [class.opacity-50]="!unlocked"
+            [class.scale-[0.98]]="!isSelected && unlocked"
+            [class.border-emerald-500/50]="completed"
+            [class.border-sky-500]="isSelected && !completed"
+            [class.border-slate-800]="!isSelected && !completed"
+            [class.shadow-[0_0_40px_rgba(56,189,248,0.1)]]="isSelected && !completed"
+          >
+            <div class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 z-0"></div>
+
+            @if (!unlocked) {
+              <div class="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/60 backdrop-grayscale">
+                <div class="text-4xl filter drop-shadow-lg">🔒</div>
+              </div>
+            }
+
+            <div class="relative z-10 p-6 flex flex-col h-full">
+              <div class="flex justify-between items-start mb-4">
+                <span
+                  class="px-3 py-1 rounded-full text-[10px] font-black tracking-tighter uppercase bg-black/40"
+                  [class.text-emerald-400]="level.difficulty === 'easy'"
+                  [class.text-amber-400]="level.difficulty === 'normal'"
+                  [class.text-rose-500]="level.difficulty === 'hard'"
+                >
+                  {{ level.difficulty }}
+                </span>
+                @if (completed) {
+                  <span class="flex items-center gap-1 text-emerald-400 text-[10px] font-bold uppercase">
+                    <span class="text-lg">✓</span>
+                    Secured
+                  </span>
+                }
+              </div>
+
+              <h3
+                class="text-2xl font-black text-white mb-2 group-hover:text-sky-400 transition-colors uppercase italic"
               >
-                Normal
-              </button>
-              <button
-                (click)="$event.stopPropagation(); setHardMode(true)"
-                class="px-3 py-1 rounded text-xs font-bold transition-colors"
-                [class.bg-rose-600]="tdEngine.isHardMode()"
-                [class.text-white]="tdEngine.isHardMode()"
-                [class.text-slate-500]="!tdEngine.isHardMode()"
-              >
-                Hard
-              </button>
-            </div>
-          </div>
-        </div>
+                {{ level.name }}
+              </h3>
 
-        <!-- Campaign List -->
-        <div class="flex flex-col gap-3">
-          <h3 class="text-lg font-bold text-white mb-2 uppercase tracking-wide">Campaign Missions</h3>
+              <p class="text-slate-400 text-sm leading-relaxed mb-6 font-medium">
+                {{ level.description }}
+              </p>
 
-          @for (level of campaignService.levels; track level.id) {
-            @let unlocked = isLevelUnlocked(level.id);
-            @let completed = isLevelCompleted(level.id);
+              <div class="grid grid-cols-2 gap-2 mt-auto pb-4 border-b border-white/5">
+                <div class="bg-black/30 p-2 rounded-xl border border-white/5 text-center">
+                  <div class="text-[9px] text-slate-500 uppercase font-bold">Waves</div>
+                  <div class="text-sm font-mono text-white">{{ level.waveCount }}</div>
+                </div>
+                <div class="bg-black/30 p-2 rounded-xl border border-white/5 text-center">
+                  <div class="text-[9px] text-slate-500 uppercase font-bold">Gold</div>
+                  <div class="text-sm font-mono text-white">{{ level.startingGold }}</div>
+                </div>
+              </div>
 
-            <div
-              (click)="selectCampaignLevel(level.id)"
-              class="relative overflow-hidden rounded-xl border p-4 transition-all"
-              [class.cursor-pointer]="unlocked"
-              [class.cursor-not-allowed]="!unlocked"
-              [class.bg-slate-800]="unlocked"
-              [class.hover:bg-slate-700]="unlocked"
-              [class.border-slate-600]="unlocked"
-              [class.hover:border-emerald-500]="unlocked && completed"
-              [class.hover:border-sky-500]="unlocked && !completed"
-              [class.bg-slate-900]="!unlocked"
-              [class.border-slate-800]="!unlocked"
-              [class.opacity-60]="!unlocked"
-            >
-              <div class="flex items-start justify-between relative z-10">
-                <div>
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="text-xs font-black px-2 py-0.5 rounded bg-black/30 text-slate-400">
-                      {{ level.difficulty | uppercase }}
+              <div class="mt-4 flex flex-col gap-4">
+                <div class="flex justify-between items-center px-1">
+                  <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Reward</span>
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="text-sm font-black transition-all duration-300"
+                      [class.text-amber-400]="!completed"
+                      [class.text-slate-600]="completed"
+                      [class.line-through]="completed"
+                    >
+                      {{ level.xpReward }} XP
                     </span>
-                    <h4 class="font-bold text-white" [class.text-slate-500]="!unlocked">{{ level.name }}</h4>
                     @if (completed) {
-                      <span class="text-emerald-400 text-lg" title="Completed">✓</span>
-                    }
-                    @if (!unlocked) {
-                      <span class="text-slate-600 text-lg">🔒</span>
-                    }
-                  </div>
-                  <p class="text-xs text-slate-400 line-clamp-2 mb-2">{{ level.description }}</p>
-
-                  <div class="flex items-center gap-4 text-[10px] font-mono text-slate-500">
-                    <span>🌊 {{ level.waveCount }} Waves</span>
-                    <span>💰 {{ level.startingGold }} Gold</span>
-                    @if (!completed) {
-                      <span class="text-amber-400">✨ {{ level.xpReward }} XP</span>
-                    } @else {
-                      <span class="text-slate-600">XP Claimed</span>
+                      <span
+                        class="text-[9px] font-black text-emerald-500/80 bg-emerald-500/10 px-2 py-0.5 rounded uppercase border border-emerald-500/20"
+                      >
+                        Claimed
+                      </span>
                     }
                   </div>
                 </div>
-                @if (selectedCampaignLevel === level.id) {
-                  <div
-                    class="mt-4 pt-4 border-t border-slate-700/50 flex items-center justify-between animate-in fade-in slide-in-from-top-2"
-                  >
-                    <div class="text-xs text-slate-400 font-bold">Ready to launch?</div>
+
+                <div class="h-12">
+                  @if (isSelected && unlocked) {
                     <button
                       (click)="$event.stopPropagation(); startCampaignLevel()"
-                      class="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded shadow-lg shadow-sky-500/20"
+                      class="w-full h-full bg-sky-600 hover:bg-sky-500 text-white font-black rounded-xl uppercase tracking-widest text-sm shadow-lg shadow-sky-900/40 transition-all transform active:scale-95 animate-in fade-in slide-in-from-bottom-2 duration-200"
                     >
-                      START MISSION
+                      Start Mission
                     </button>
-                  </div>
-                }
+                  } @else if (unlocked) {
+                    <div
+                      class="w-full h-full border-2 border-dashed border-slate-800 rounded-xl flex items-center justify-center group-hover:border-slate-700 transition-colors"
+                    >
+                      <span class="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">
+                        Click to select zone
+                      </span>
+                    </div>
+                  }
+                </div>
               </div>
             </div>
-          }
-        </div>
+          </div>
+        }
       </div>
+
+      <button
+        (click)="closeMissionSelect()"
+        class="absolute -top-6 -right-6 w-12 h-12 flex items-center justify-center bg-slate-800 hover:bg-rose-600 text-white rounded-full transition-all border-2 border-slate-700 shadow-xl"
+      >
+        ✕
+      </button>
     </div>
   </div>
 }
@@ -841,13 +823,11 @@
           </div>
         </div>
 
-        @if (false) {
-          <div class="pt-4 border-t border-slate-800">
-            <button (click)="showDevTools = !showDevTools" class="text-xs text-slate-600 hover:text-slate-400">
-              Developer Tools
-            </button>
-          </div>
-        }
+        <div class="pt-4 border-t border-slate-800">
+          <button (click)="showDevTools = !showDevTools" class="text-xs text-slate-600 hover:text-slate-400">
+            Developer Tools
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -917,9 +897,11 @@
           <div class="text-xs text-slate-500 uppercase font-bold mb-1">XP Gained</div>
           <div class="text-2xl font-mono text-amber-400">
             +{{
-              isLevelCompleted(tdEngine.currentLevelConfig()?.id || '')
-                ? 0
-                : tdEngine.currentLevelConfig()?.xpReward || 0
+              tdEngine.gameMode() === 'campaign'
+                ? tdEngine.isFirstTimeClear
+                  ? tdEngine.currentLevelConfig()?.xpReward || 0
+                  : 0
+                : tdEngine.calculateEarnedXp()
             }}
           </div>
         </div>

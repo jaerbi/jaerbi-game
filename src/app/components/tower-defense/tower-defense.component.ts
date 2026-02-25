@@ -247,7 +247,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         setTimeout(() => {
             this.initCanvas();
             this.startCanvasLoop();
-            setTimeout(() => this.resizeCanvas(), 100);
+            setTimeout(() => this.resizeCanvas(), 500);
         }, 0);
         window.addEventListener('resize', this.resizeCanvas);
     }

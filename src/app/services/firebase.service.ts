@@ -255,41 +255,44 @@ export class FirebaseService {
 
     async awardTowerDefenseXp(xp: number, levelId?: string, wave?: number): Promise<void> {
         if (!this.db) return;
+
         if (xp <= 0) return;
+
         const user = this.user$();
+
         if (!user) return;
 
-        // Sanity Check: XP Limit
-        // Assume reasonable max XP per wave is roughly 50 (5 + wave * X)
-        // If random mode: 1.5 * wave + bonus.
-        // Let's set a strict cap per transaction.
-        // For campaign levels, we trust the levelId config lookup (ideally), but since this service doesn't know config:
-        // We'll set a hard cap of 2000 XP per transaction which covers Level 5 (1500 XP).
-        // If wave is provided, we can do dynamic check.
-        
-        let maxAllowed = 2500;
-        if (wave && !levelId) {
-             // Random mode formula check: Base = wave * 1.5, Bonus = (wave-20)*2
-             // E.g. Wave 100: 150 + 160 = 310.
-             // Allow generous buffer.
-             maxAllowed = Math.max(500, wave * 10); 
-        }
+        /**
+         * CALCULATION LOGIC AND LIMITS (Sanity Check):
+         * 1. Campaign: XP is fixed (e.g. Level 5 = 40 XP).
+         * 2. Random Mode: XP = (Wave * 1.5) + Bonus.
+         * - Bonus is awarded after wave 20: (Wave - 20) * 2.
+         * * CALCULATION EXAMPLES:
+         * - Wave 10: (10 * 1.5) = 15 XP
+         * - Wave 20: (20 * 1.5) = 30 XP
+         * - Wave 40: (40 * 1.5) + (20 * 2) = 60 + 40 = 100 XP
+         * - Wave 80: (80 * 1.5) + (60 * 2) = 120 + 120 = 240 XP (Limit Limit)
+         * * LIMIT: 250 XP per session is a safe maximum.
+         */
+        const HARD_CAP = 250;
 
-        if (xp > maxAllowed) {
-            console.error(`Security Alert: XP Award Rejected. Attempted: ${xp}, Max Allowed: ${maxAllowed}`);
+        // Dynamic check: if more than HARD_CAP allows has arrived
+        if (xp > HARD_CAP) {
+            console.error(`Security Alert: XP Award Rejected. Attempted: ${xp}, Max Allowed: ${HARD_CAP}`);
             return;
         }
 
         try {
             console.count('FIREBASE_CALL: awardTowerDefenseXp');
             const current = this.masteryProfile() ?? { totalXp: 0, usedPoints: 0, upgrades: {}, completedLevelIds: [] };
-            
-            // Prevent XP farming for campaign levels
+
+            // Preventing XP re-farming for campaign levels
             if (levelId && current.completedLevelIds?.includes(levelId)) {
+                console.warn(`XP skipped: Level ${levelId} already completed.`);
                 return;
             }
 
-            const nextCompleted = levelId && !current.completedLevelIds?.includes(levelId) 
+            const nextCompleted = levelId && !current.completedLevelIds?.includes(levelId)
                 ? [...(current.completedLevelIds || []), levelId]
                 : current.completedLevelIds;
 
@@ -299,9 +302,11 @@ export class FirebaseService {
                 upgrades: current.upgrades,
                 completedLevelIds: nextCompleted
             };
+
             const ref = doc(this.db, 'towerDefenseMasteries', user.uid);
             await setDoc(ref, { userId: user.uid, ...next }, { merge: true });
             this.masteryProfile.set(next);
+
         } catch (e) {
             console.error('Error awarding TD XP: ', e);
         }

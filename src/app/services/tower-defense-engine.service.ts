@@ -46,9 +46,10 @@ export class TowerDefenseEngineService {
     gameMode = signal<'random' | 'campaign'>('random');
     campaignMapId = signal<number>(1);
     campaignDifficulty = signal<'easy' | 'normal' | 'hard'>('normal');
-    
+
     currentLevelConfig = signal<LevelConfig | null>(null);
     allowedTowers = signal<number[]>([1, 2, 3, 4, 5, 6, 7]);
+    public isFirstTimeClear = false;
 
     private enemiesInternal: Enemy[] = [];
     private projectilesInternal: Projectile[] = [];
@@ -74,8 +75,8 @@ export class TowerDefenseEngineService {
     private gameEndedHard = false;
 
     constructor(
-        private ngZone: NgZone, 
-        private firebase: FirebaseService, 
+        private ngZone: NgZone,
+        private firebase: FirebaseService,
         public settings: SettingsService,
         private campaignService: CampaignService
     ) {
@@ -85,7 +86,7 @@ export class TowerDefenseEngineService {
     private async saveResultIfLoggedIn() {
         const user = this.firebase.user$();
         if (!user) return;
-        
+
         // Campaign Completion Logic
         const config = this.currentLevelConfig();
         if (config && this.wave() >= config.waveCount) {
@@ -162,7 +163,7 @@ export class TowerDefenseEngineService {
 
     generateMap(config?: LevelConfig) {
         let newPath: Position[];
-        
+
         if (config && config.customPath) {
             newPath = config.customPath;
         } else if (config && config.mapLayout === 'static') {
@@ -170,7 +171,7 @@ export class TowerDefenseEngineService {
         } else {
             newPath = this.generateRandomPath();
         }
-        
+
         this.path.set(newPath);
 
         const newGrid: TDTile[][] = [];
@@ -192,7 +193,7 @@ export class TowerDefenseEngineService {
                     ];
                     if (neighbors.some(n => pathSet.has(`${n.x},${n.y}`))) {
                         type = 'buildable';
-                        
+
                         // Apply bonus tiles if configured
                         if (config && config.bonusTiles) {
                             const found = config.bonusTiles.find(t => t.x === x && t.y === y);
@@ -209,15 +210,39 @@ export class TowerDefenseEngineService {
         }
         this.grid.set(newGrid);
     }
+    public calculateEarnedXp(): number {
+        if (this.gameMode() === 'campaign') {
+            const config = this.currentLevelConfig();
+            if (config && this.wave() >= config.waveCount && this.isFirstTimeClear) {
+                return config.xpReward;
+            }
+            return 0;
+        }
 
+        // Random Mode
+        const wavesCleared = this.wave();
+        if (wavesCleared < 5) return 0;
+
+        const base = wavesCleared * 1.5;
+        const bonus = wavesCleared > 20 ? (wavesCleared - 20) * 2 : 0;
+        const total = Math.floor(base + bonus);
+
+        // HARD_CAP (250 XP), 
+        return Math.min(total, 250);
+    }
     initializeGame(level: number, campaignLevelId?: string) {
         // Reset state
         this.dispose();
+        this.isFirstTimeClear = false;
 
         // Handle Campaign Mode Configuration
         if (campaignLevelId) {
             const config = this.campaignService.getLevel(campaignLevelId);
             if (config) {
+                const profile = this.firebase.masteryProfile();
+                const alreadyDone = profile?.completedLevelIds?.includes(campaignLevelId) ?? false;
+                this.isFirstTimeClear = !alreadyDone;
+
                 // Use custom grid size if provided, otherwise default to level param (usually 1/10 or 2/20)
                 this.gridSize = config.gridSize ?? (level === 2 ? 20 : 10);
                 this.updateTileSize();
@@ -226,7 +251,7 @@ export class TowerDefenseEngineService {
                 this.gameMode.set('campaign');
                 this.allowedTowers.set(config.allowedTowers);
                 this.campaignDifficulty.set(config.difficulty);
-                
+
                 // Set Money from config
                 let money = config.startingGold;
                 // Add Mastery Bonus
@@ -266,7 +291,7 @@ export class TowerDefenseEngineService {
         this.currentLevelConfig.set(null);
         this.gameMode.set('random');
         this.allowedTowers.set([1, 2, 3, 4, 5, 6, 7]);
-        
+
         let startMoney = 100;
         if (this.isHardMode()) {
             startMoney = 60;
@@ -277,17 +302,12 @@ export class TowerDefenseEngineService {
             startMoney += bonus;
         }
         this.money.set(startMoney);
-        
+
         this.generateMap();
     }
 
     private determineWaveType(wave: number): 'tank' | 'scout' | 'standard' {
-        if (wave <= 2) {
-            return 'standard';
-        }
-        if (wave <= 8) {
-            return Math.random() < 0.5 ? 'scout' : 'standard';
-        }
+        if (wave <= 2) { return 'standard'; }
         const roll = Math.random();
         if (roll < 0.20) return 'tank';
         if (roll < 0.41) return 'scout';
@@ -493,17 +513,17 @@ export class TowerDefenseEngineService {
         const baseCount = 5 + wave * 2;
         const maxUnits = 50; // Hard cap
         const actualCount = Math.min(baseCount, maxUnits);
-        
+
         // If capped, add HP multiplier
         // e.g. if we should have 100 units but cap at 50, double HP
         this.currentWaveEnemyCount = actualCount;
-        
+
         // We'll apply this multiplier inside spawnEnemy by storing it or recalculating
         // For simplicity, let's just use the count cap and rely on the polynomial HP scaling which is already robust
         // But if we want to compensate:
         // const compensation = baseCount > maxUnits ? baseCount / maxUnits : 1;
         // We can add a property to the class to store this for spawnEnemy
-        
+
         this.enemiesToSpawn = actualCount;
         this.spawnTimer = 0;
 
@@ -551,20 +571,20 @@ export class TowerDefenseEngineService {
         // Campaign Victory Check
         const config = this.currentLevelConfig();
         if (config && this.wave() > config.waveCount && this.enemiesInternal.length === 0 && this.enemiesToSpawn === 0) {
-             // Victory!
-             this.enemiesInternal = [];
-             this.projectilesInternal = [];
-             this.stopGameLoop();
-             this.ngZone.run(() => {
-                 this.isWaveInProgress.set(false);
-                 this.gameOver.set(true); // Treat as game over but positive (victory handled in UI by checking lives > 0)
-             });
-             if (!this.savedResult) {
-                 this.savedResult = true;
-                 this.saveResultIfLoggedIn();
-             }
-             this.gameEndedHard = true;
-             return;
+            // Victory!
+            this.enemiesInternal = [];
+            this.projectilesInternal = [];
+            this.stopGameLoop();
+            this.ngZone.run(() => {
+                this.isWaveInProgress.set(false);
+                this.gameOver.set(true); // Treat as game over but positive (victory handled in UI by checking lives > 0)
+            });
+            if (!this.savedResult) {
+                this.savedResult = true;
+                this.saveResultIfLoggedIn();
+            }
+            this.gameEndedHard = true;
+            return;
         }
 
         const effectiveDt = dt * this.gameSpeedMultiplier();
@@ -702,7 +722,7 @@ export class TowerDefenseEngineService {
 
     private spawnEnemy() {
         const currentWave = this.wave();
-        
+
         // Linear scaling for early waves (1-10) to smooth difficulty curve
         let hpMultiplier: number;
         if (currentWave <= 10) {
@@ -713,9 +733,9 @@ export class TowerDefenseEngineService {
             const w = currentWave - 10;
             hpMultiplier = 3.0 + 0.25 * w + 0.015 * w * w;
         }
-        
+
         const hp = 50 * hpMultiplier;
-        
+
         // Apply Level Specific Multiplier
         let levelMultiplier = 1;
         if (this.gameMode() === 'campaign') {
@@ -724,7 +744,7 @@ export class TowerDefenseEngineService {
                 levelMultiplier = config.healthMultiplier;
             }
         }
-        
+
         const baseSpeed = 0.5 + (currentWave * 0.02); // Slower speed scaling
         const total = this.currentWaveEnemyCount || (5 + this.wave() * 2);
         const spawnedSoFar = total - this.enemiesToSpawn;
@@ -747,7 +767,7 @@ export class TowerDefenseEngineService {
             hpFinal = hp * levelMultiplier * 0.4;
             speedFinal = baseSpeed * 2.0;
         } else if (enemyType === 'boss') {
-            hpFinal = hp * levelMultiplier * 4;
+            hpFinal = hp * levelMultiplier * 6;
             speedFinal = baseSpeed * 0.5;
         }
         if (this.isHardMode()) {
@@ -771,20 +791,75 @@ export class TowerDefenseEngineService {
             isFrozen: false,
             type: enemyType
         };
-        if (this.wave() >= 15) {
-            const roll = Math.random();
-            if (roll < 0.2) {
-                newEnemy.isMagma = true;
-            } else if (roll < 0.4) {
-                newEnemy.isMirror = true;
-            } else if (roll < 0.6) {
-                newEnemy.isSlime = true;
-            } else if (roll < 0.8) {
-                newEnemy.isBulwark = true;
-            }
-        }
+        this.scaleEnemyWave(newEnemy);
+        // if (this.wave() >= 25) {
+        //     const roll = Math.random();
+        //     if (roll < 0.2) {
+        //         newEnemy.isMagma = true;
+        //     } else if (roll < 0.4) {
+        //         newEnemy.isMirror = true;
+        //     } else if (roll < 0.6) {
+        //         newEnemy.isSlime = true;
+        //     } else if (roll < 0.8) {
+        //         newEnemy.isBulwark = true;
+        //     }
+        // }
         this.enemiesInternal.push(newEnemy);
     }
+    // jaerbi
+    private currentWaveArchetype: { primary: string; secondary?: string; chance: number } | null = null;
+    private scaleEnemyWave(newEnemy: Enemy): void {
+        const wave = this.wave();
+        if (this.enemies.length === 0 || !this.currentWaveArchetype) {
+            this.currentWaveArchetype = this.generateWaveArchetype(wave);
+        }
+        if (wave >= 10 && this.currentWaveArchetype) {
+            const roll = Math.random();
+            const arch = this.currentWaveArchetype;
+
+            if (arch.primary === 'chaos') {
+                if (roll < 0.2) newEnemy.isMagma = true;
+                else if (roll < 0.4) newEnemy.isMirror = true;
+                else if (roll < 0.6) newEnemy.isSlime = true;
+                else if (roll < 0.8) newEnemy.isBulwark = true;
+            } else {
+                if (roll < arch.chance) {
+                    (newEnemy as any)[arch.primary] = true;
+                } else if (arch.secondary && roll < 0.95) {
+                    (newEnemy as any)[arch.secondary] = true;
+                }
+            }
+        }
+
+        // LEAVE YOUR OTHER LOGIC HERE (HP, speed, elites, etc.)
+        // For example: if (wave >= 25) { ... }
+    }
+    private generateWaveArchetype(wave: number): any {
+        if (wave < 10) return null;
+
+        const roll = Math.random();
+        const types = ['isMagma', 'isMirror', 'isSlime', 'isBulwark'];
+
+        // 40% mono wave
+        if (roll < 0.4) {
+            return {
+                primary: types[Math.floor(Math.random() * types.length)],
+                chance: 0.9
+            };
+        }
+        // 30% combo wave
+        else if (roll < 0.7) {
+            const shuffled = [...types].sort(() => 0.5 - Math.random());
+            return {
+                primary: shuffled[0],
+                secondary: shuffled[1],
+                chance: 0.5
+            };
+        }
+        // 30% chaos
+        return { primary: 'chaos', chance: 0 };
+    }
+    // jaerbi END
 
     private updateEnemies(dt: number) {
         for (let i = this.enemiesInternal.length - 1; i >= 0; i--) {
@@ -911,7 +986,7 @@ export class TowerDefenseEngineService {
                 const baseReward = 5 + this.wave();
                 const goldMultiplier = this.getGoldKillMultiplier();
                 let reward = Math.floor(baseReward * goldMultiplier);
-                
+
                 // Bounty Tile Bonus
                 const grid = this.grid();
                 // Find nearest tower with bounty bonus that might have killed it (simplified: global check or specific logic)
@@ -922,7 +997,7 @@ export class TowerDefenseEngineService {
                 // Or better: pass the killing tower to this logic.
                 // Since we don't have the killer reference here, we'll skip the per-tower bounty logic for now or implement it later.
                 // Alternative: Add a global "Bounty" passive if any Bounty tile is active? No, that's not specific.
-                
+
                 if (this.isHardMode()) {
                     reward = Math.floor(reward * 0.8);
                 }
