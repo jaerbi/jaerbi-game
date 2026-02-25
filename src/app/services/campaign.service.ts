@@ -16,7 +16,7 @@ export interface LevelConfig {
     bonusTiles?: { x: number; y: number; type: 'damage' | 'range' | 'bounty' | 'mastery' | 'speed' }[];
     healthMultiplier?: number; // Enemy HP Multiplier for this level
     enemyTypes?: string[]; // E.g. ['Standard', 'Magma', 'Mirror']
-    waveTypeSequence?: number[]; // 1=Standard, 2=Scout, 3=Tank, 4=Magma, 5=Mirror, 6=Slime, 7=Bulwark
+    waveTypeSequence?: number[]; // 1=Standard, 2=Scout, 3=Tank, 4=Boss
 }
 
 @Injectable({
@@ -56,7 +56,7 @@ export class CampaignService {
                 gridSize: 10,
                 healthMultiplier: 1.0,
                 enemyTypes: ['Standard', 'Scout'],
-                waveTypeSequence: [1, 1, 1, 2, 1, 2, 1, 2, 1, 2],
+                waveTypeSequence: [1, 1, 1, 2, 1, 2, 1, 2, 1, 1, 4],
                 // Simple S-shape
                 customPath: [
                     { x: 0, y: 2 }, { x: 1, y: 2 }, { x: 2, y: 2 }, { x: 3, y: 2 }, { x: 4, y: 2 },
@@ -74,18 +74,18 @@ export class CampaignService {
                 id: 'level_2',
                 name: isUa ? '2. Вузький Прохід' : '2. The Choke',
                 description: isUa
-                    ? 'Вороги йдуть групами. Використовуйте сплеск (Splash), щоб знищити їх разом.'
-                    : 'Enemies swarm together. Use Splash damage to wipe them out at once.',
+                    ? 'Вороги йдуть групами. Використовуйте Башні з AoE, щоб знищити їх разом.'
+                    : 'Enemies swarm together. Use AoE damage to wipe them out at once.',
                 waveCount: 12,
-                startingGold: 130,
+                startingGold: 60,
                 allowedTowers: [1, 2], // Turret, Cannon
                 mapLayout: 'static',
                 difficulty: 'normal',
                 xpReward: 25,
                 gridSize: 12,
-                healthMultiplier: 0.9, // Трохи слабші, але їх багато
+                healthMultiplier: 1.1,
                 enemyTypes: ['Standard', 'Tank'],
-                waveTypeSequence: [1, 1, 1, 1, 1, 1, 3, 1, 1, 3, 1, 1, 3, 1, 3],
+                waveTypeSequence: [1, 1, 3, 1, 1, 1, 3, 1, 3, 3, 1, 1, 3, 3, 3],
                 // Tight spiral/snake
                 customPath: [
                     { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 0 },
