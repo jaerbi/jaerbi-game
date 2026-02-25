@@ -257,6 +257,36 @@
       </div>
     }
 
+    <!-- Draggable Statistics Modal -->
+    @if (showStats) {
+      <div
+        cdkDrag
+        cdkDragBoundary=".td-main-area"
+        class="absolute top-4 left-4 w-64 bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50 flex flex-col"
+      >
+        <div cdkDragHandle class="bg-slate-800 p-2 flex justify-between items-center cursor-move select-none border-b border-slate-700">
+          <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">
+            Battle Statistics
+          </h3>
+          <button (click)="showStats = false" class="text-slate-500 hover:text-white transition-colors">✕</button>
+        </div>
+        
+        <div class="p-2 space-y-1 max-h-[300px] overflow-y-auto custom-scrollbar">
+          @for (item of getDamageStats(); track item.name) {
+            <div class="flex items-center justify-between text-xs p-1 hover:bg-white/5 rounded">
+              <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full" [style.background-color]="item.color"></div>
+                <span class="text-slate-300">{{ item.name }}</span>
+              </div>
+              <div class="font-mono text-slate-400">
+                {{ item.damage | number: '1.0-0' }}
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
     <!-- Sidebar Controls -->
     <div class="w-64 flex flex-col gap-4 td-sidebar">
       <!-- Shop / Context Menu -->
@@ -275,7 +305,7 @@
                 class="mb-4 bg-slate-900 border border-slate-700 p-3 rounded-lg animate-in fade-in slide-in-from-left-2"
               >
                 <div class="flex items-center gap-2 mb-1">
-                  <span class="text-lg">
+                  <span class="text-xs">
                     @if (tile.bonus === 'damage') {
                       ⚔️
                     } @else if (tile.bonus === 'range') {
@@ -373,15 +403,15 @@
               </div>
               <div class="flex justify-between mb-1">
                 <span class="text-xs text-slate-500">{{ settings.t('DAMAGE') }}</span>
-                <span class="text-xs font-bold text-rose-400">{{ tile.tower.damage }}</span>
+                <span class="text-xs font-bold text-rose-400">{{ tile.tower.damage | number:'1.0-2' }}</span>
               </div>
               <div class="flex justify-between mb-1">
                 <span class="text-xs text-slate-500">{{ settings.t('RANGE') }}</span>
-                <span class="text-xs font-bold text-sky-400">{{ tile.tower.range }}</span>
+                <span class="text-xs font-bold text-sky-400">{{ tile.tower.range | number:'1.0-2' }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-xs text-slate-500">{{ settings.t('SPEED') }}</span>
-                <span class="text-xs font-bold text-lime-400">{{ tile.tower.fireInterval }}</span>
+                <span class="text-xs font-bold text-lime-400">{{ tile.tower.fireInterval | number:'1.0-2' }}</span>
               </div>
               @if (tile.tower.description) {
                 <div class="mt-3 text-[11px] text-slate-300 leading-snug">
@@ -836,8 +866,17 @@
         </div>
 
         <div class="pt-4 border-t border-slate-800">
-          <button (click)="showDevTools = !showDevTools" class="text-xs text-slate-600 hover:text-slate-400">
+          <button
+            (click)="showDevTools = !showDevTools"
+            class="text-xs text-slate-600 hover:text-slate-400 block mb-2"
+          >
             Developer Tools
+          </button>
+          <button
+            (click)="showStats = !showStats"
+            class="text-xs text-sky-600 hover:text-sky-400 block"
+          >
+            Toggle Stats Panel
           </button>
         </div>
       </div>

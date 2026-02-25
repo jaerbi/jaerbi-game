@@ -209,6 +209,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     selectedCampaignLevel: string | null = null;
     selectedDifficulty: 'easy' | 'normal' | 'hard' = 'normal';
     showStatsPanel = false;
+    showStats = false; // For draggable modal
 
     @HostListener('window:keydown', ['$event'])
     onKeyDown(event: KeyboardEvent) {
@@ -385,12 +386,26 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     navigateToFeedback() {
         const user = this.firebase.user$();
         if (user) {
-            this.router.navigate(['/feedback']);
-            return;
+            window.open('https://github.com/jaerbi/shape-tactics/issues/new', '_blank');
         }
-        try {
-            this.firebase.loginWithGoogle();
-        } catch { }
+    }
+
+    getDamageStats() {
+        const stats = this.tdEngine.statsByTowerType();
+        const towers = [
+            { id: 1, name: 'Turret', color: '#60a5fa' },
+            { id: 2, name: 'Cannon', color: '#f87171' },
+            { id: 3, name: 'Ice', color: '#2dd4bf' },
+            { id: 4, name: 'Sniper', color: '#a3e635' },
+            { id: 5, name: 'Inferno', color: '#fb923c' },
+            { id: 6, name: 'Prism', color: '#c084fc' },
+            { id: 7, name: 'Poison', color: '#4ade80' }
+        ];
+        return towers.map(t => ({
+            name: t.name,
+            color: t.color,
+            damage: stats[t.id] || 0
+        })).sort((a, b) => b.damage - a.damage);
     }
 
     sellTower() {

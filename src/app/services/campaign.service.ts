@@ -16,6 +16,7 @@ export interface LevelConfig {
     bonusTiles?: { x: number; y: number; type: 'damage' | 'range' | 'bounty' | 'mastery' | 'speed' }[];
     healthMultiplier?: number; // Enemy HP Multiplier for this level
     enemyTypes?: string[]; // E.g. ['Standard', 'Magma', 'Mirror']
+    waveTypeSequence?: number[]; // 1=Standard, 2=Scout, 3=Tank, 4=Magma, 5=Mirror, 6=Slime, 7=Bulwark
 }
 
 @Injectable({
@@ -55,6 +56,7 @@ export class CampaignService {
                 gridSize: 10,
                 healthMultiplier: 1.0,
                 enemyTypes: ['Standard', 'Scout'],
+                waveTypeSequence: [1, 1, 1, 2, 1, 2, 1, 2, 1, 2],
                 // Simple S-shape
                 customPath: [
                     { x: 0, y: 2 }, { x: 1, y: 2 }, { x: 2, y: 2 }, { x: 3, y: 2 }, { x: 4, y: 2 },
@@ -81,8 +83,9 @@ export class CampaignService {
                 difficulty: 'normal',
                 xpReward: 25,
                 gridSize: 12,
-                healthMultiplier: 1,
-                enemyTypes: ['Standard', 'Tank', 'Slime'],
+                healthMultiplier: 0.9, // Трохи слабші, але їх багато
+                enemyTypes: ['Standard', 'Tank'],
+                waveTypeSequence: [1, 1, 1, 1, 1, 1, 3, 1, 1, 3, 1, 1, 3, 1, 3],
                 // Tight spiral/snake
                 customPath: [
                     { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 0 },
@@ -111,7 +114,8 @@ export class CampaignService {
                 xpReward: 30,
                 gridSize: 15,
                 healthMultiplier: 1.2,
-                enemyTypes: ['Standard', 'Mirror', 'Magma'],
+                enemyTypes: ['Standard', 'Scout', 'Tank'],
+                waveTypeSequence: [1, 1, 2, 1, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2],
                 //Large circle around the edges
                 customPath: [
                     { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 0 }, { x: 5, y: 0 }, { x: 6, y: 0 }, { x: 7, y: 0 }, { x: 8, y: 0 }, { x: 9, y: 0 }, { x: 10, y: 0 }, { x: 11, y: 0 }, { x: 12, y: 0 }, { x: 13, y: 0 }, { x: 14, y: 0 },
@@ -137,8 +141,9 @@ export class CampaignService {
                 difficulty: 'hard',
                 xpReward: 40,
                 gridSize: 12,
-                healthMultiplier: 1.5,
-                enemyTypes: ['Magma', 'Slime', 'Bulwark'],
+                healthMultiplier: 1.5, // Дуже живучі
+                enemyTypes: ['Standard', 'Tank', 'Scout'],
+                waveTypeSequence: [1, 1, 3, 1, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2],
                 // Zig-zag vertical
                 customPath: [
                     { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 1, y: 2 }, { x: 1, y: 3 },
@@ -167,7 +172,8 @@ export class CampaignService {
                 xpReward: 50,
                 gridSize: 10,
                 healthMultiplier: 1.8,
-                enemyTypes: ['Tank', 'Bulwark', 'Mirror'],
+                enemyTypes: ['Tank', 'Scout', 'Standard'],
+                waveTypeSequence: [3, 3, 2, 3, 2, 1, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2],
                 // Very short U-turn
                 customPath: [
                     { x: 2, y: 0 }, { x: 2, y: 1 }, { x: 2, y: 2 }, { x: 2, y: 3 }, { x: 2, y: 4 }, { x: 2, y: 5 },
@@ -175,8 +181,8 @@ export class CampaignService {
                     { x: 5, y: 4 }, { x: 5, y: 3 }, { x: 5, y: 2 }, { x: 5, y: 1 }, { x: 5, y: 0 }
                 ],
                 bonusTiles: [
-                    { x: 3, y: 4, type: 'bounty' }, //The key to victory is to place the first tower here.
-                    { x: 4, y: 4, type: 'damage' },
+                    { x: 3, y: 4, type: 'damage' }, //Norm
+                    { x: 4, y: 4, type: 'bounty' },//The key to victory is to place the first tower here.
                     { x: 1, y: 1, type: 'speed' } // Trap
                 ]
             }
