@@ -161,7 +161,16 @@ export class TowerDefenseEngineService {
     }
 
     generateMap(config?: LevelConfig) {
-        const newPath = config && config.mapLayout === 'static' ? this.getCampaignPath(this.gridSize, 1) : this.generateRandomPath();
+        let newPath: Position[];
+        
+        if (config && config.customPath) {
+            newPath = config.customPath;
+        } else if (config && config.mapLayout === 'static') {
+            newPath = this.getCampaignPath(this.gridSize, 1);
+        } else {
+            newPath = this.generateRandomPath();
+        }
+        
         this.path.set(newPath);
 
         const newGrid: TDTile[][] = [];
@@ -202,21 +211,17 @@ export class TowerDefenseEngineService {
     }
 
     initializeGame(level: number, campaignLevelId?: string) {
-        this.gridSize = level === 2 ? 20 : 10;
-        if (this.gridSize === 10) {
-            this.tileSize = 62;
-        } else if (this.gridSize === 20) {
-            this.tileSize = 32;
-        } else {
-            this.tileSize = 32;
-        }
-        
+        // Reset state
         this.dispose();
 
         // Handle Campaign Mode Configuration
         if (campaignLevelId) {
             const config = this.campaignService.getLevel(campaignLevelId);
             if (config) {
+                // Use custom grid size if provided, otherwise default to level param (usually 1/10 or 2/20)
+                this.gridSize = config.gridSize ?? (level === 2 ? 20 : 10);
+                this.updateTileSize();
+
                 this.currentLevelConfig.set(config);
                 this.gameMode.set('campaign');
                 this.allowedTowers.set(config.allowedTowers);
@@ -236,14 +241,25 @@ export class TowerDefenseEngineService {
             } else {
                 console.error('Level config not found for', campaignLevelId);
                 // Fallback to random
+                this.gridSize = level === 2 ? 20 : 10;
+                this.updateTileSize();
                 this.setupRandomGame();
             }
         } else {
+            this.gridSize = level === 2 ? 20 : 10;
+            this.updateTileSize();
             this.setupRandomGame();
         }
 
         this.statsByTowerType.set({});
         this.nextWaveEnemyType.set(this.determineWaveType(1));
+    }
+
+    private updateTileSize() {
+        // Calculate tile size to fit within a reasonable canvas area (e.g. 600px max width/height)
+        // Default base logic was: 10->62, 20->32. 
+        // Let's make it dynamic: 620 / gridSize
+        this.tileSize = Math.floor(620 / this.gridSize);
     }
 
     private setupRandomGame() {
@@ -687,11 +703,27 @@ export class TowerDefenseEngineService {
     private spawnEnemy() {
         const currentWave = this.wave();
         
-        // Smoother HP Scaling: Polynomial (Quadratic) instead of Exponential
-        // Old: 50 * 1.2^wave
-        // New: 50 * (1 + 0.15 * wave + 0.01 * wave^2)
-        const hpMultiplier = 1 + 0.15 * currentWave + 0.01 * currentWave * currentWave;
+        // Linear scaling for early waves (1-10) to smooth difficulty curve
+        let hpMultiplier: number;
+        if (currentWave <= 10) {
+            hpMultiplier = 1 + 0.2 * currentWave; // 1.2, 1.4, ..., 3.0 at wave 10
+        } else {
+            // Polynomial scaling after wave 10
+            // Match the value at wave 10 (3.0) and grow quadratically
+            const w = currentWave - 10;
+            hpMultiplier = 3.0 + 0.25 * w + 0.015 * w * w;
+        }
+        
         const hp = 50 * hpMultiplier;
+        
+        // Apply Level Specific Multiplier
+        let levelMultiplier = 1;
+        if (this.gameMode() === 'campaign') {
+            const config = this.currentLevelConfig();
+            if (config && config.healthMultiplier) {
+                levelMultiplier = config.healthMultiplier;
+            }
+        }
         
         const baseSpeed = 0.5 + (currentWave * 0.02); // Slower speed scaling
         const total = this.currentWaveEnemyCount || (5 + this.wave() * 2);
@@ -706,16 +738,16 @@ export class TowerDefenseEngineService {
             enemyType = 'boss';
         }
 
-        let hpFinal = hp;
+        let hpFinal = hp * levelMultiplier;
         let speedFinal = baseSpeed;
         if (enemyType === 'tank') {
-            hpFinal = hp * 2;
+            hpFinal = hp * levelMultiplier * 2;
             speedFinal = baseSpeed * 0.5;
         } else if (enemyType === 'scout') {
-            hpFinal = hp * 0.4;
+            hpFinal = hp * levelMultiplier * 0.4;
             speedFinal = baseSpeed * 2.0;
         } else if (enemyType === 'boss') {
-            hpFinal = hp * 4;
+            hpFinal = hp * levelMultiplier * 4;
             speedFinal = baseSpeed * 0.5;
         }
         if (this.isHardMode()) {
@@ -1353,7 +1385,8 @@ export class TowerDefenseEngineService {
                 if (this.money() >= cost) {
                     tile.tower.level++;
                     tile.tower.damage = Math.floor(tile.tower.damage * 1.3);
-                    tile.tower.range += 0.5;
+                    // More conservative range upgrade: +10% instead of flat +0.5
+                    tile.tower.range = parseFloat((tile.tower.range * 1.1).toFixed(2));
                     tile.tower.invested += cost;
                     this.money.update(m => m - cost);
                 }
@@ -1448,8 +1481,9 @@ export class TowerDefenseEngineService {
         this.grid.update(grid => {
             const tile = grid[y][x];
             if (tile.tower) {
+                // Refund 60% of total investment
                 const invested = tile.tower.invested ?? tile.tower.baseCost;
-                const refund = Math.floor(invested * 0.5);
+                const refund = Math.floor(invested * 0.6);
                 const id = tile.tower.id;
                 tile.tower = null;
                 this.money.update(m => m + refund);

@@ -186,6 +186,10 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     private readonly isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
     showPrivacy = false;
     showMissionSelect = false;
+    showSettings = false;
+    showDevTools = false;
+    selectedCampaignLevel: string | null = null;
+    selectedDifficulty: 'easy' | 'normal' | 'hard' = 'normal';
     showStatsPanel = false;
 
     @HostListener('window:keydown', ['$event'])
@@ -279,6 +283,46 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             this.tdEngine.initializeGame(this.mapLevel());
         }
         this.selectedTile.set(null);
+    }
+
+    setGameMode(mode: 'random' | 'campaign') {
+        if (this.tdEngine.gameMode() === mode) return;
+
+        if (mode === 'random') {
+            this.tdEngine.setModeRandom();
+            this.showMissionSelect = false;
+        } else {
+            // Campaign Mode: Load Level 1 by default and show mission select
+            this.tdEngine.gameMode.set('campaign');
+            this.tdEngine.initializeGame(1, 'level_1');
+            this.openMissionSelect();
+        }
+    }
+
+    forceLoadLevel(levelId: string) {
+        this.tdEngine.initializeGame(this.tdEngine.gridSize === 20 ? 2 : 1, levelId);
+        this.showDevTools = false;
+        this.showSettings = false;
+    }
+
+    onNextLevel() {
+        const config = this.tdEngine.currentLevelConfig();
+        if (config) {
+            const currentIndex = this.campaignService.levels.findIndex(l => l.id === config.id);
+            const nextLevel = this.campaignService.levels[currentIndex + 1];
+            if (nextLevel) {
+                // Check unlocked? Assume completion unlocks next.
+                this.tdEngine.initializeGame(this.tdEngine.gridSize === 20 ? 2 : 1, nextLevel.id);
+                this.selectedTile.set(null);
+            } else {
+                // No more levels
+                this.openMissionSelect();
+            }
+        }
+    }
+
+    toggleSettings() {
+        this.showSettings = !this.showSettings;
     }
 
     onTileClick(tile: TDTile) {
@@ -468,16 +512,33 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     private clearCanvas(ctx: CanvasRenderingContext2D, size: number) {
-        ctx.clearRect(0, 0, size, size);
+        // Clear entire canvas to avoid artifacts
+        const canvas = this.gameCanvas?.nativeElement;
+        if (canvas) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        } else {
+            ctx.clearRect(0, 0, size, size);
+        }
     }
 
     private drawFrame() {
         const canvas = this.gameCanvas?.nativeElement;
         const ctx = this.ctx;
         if (!canvas || !ctx) return;
-        const tile = this.tdEngine.tileSize;
-        const size = this.tdEngine.gridSize * tile;
-        this.clearCanvas(ctx, size);
+        
+        // Ensure tile size is integer to avoid sub-pixel rendering artifacts
+        const tile = Math.floor(this.tdEngine.tileSize);
+        const gridSize = this.tdEngine.gridSize;
+        const totalSize = gridSize * tile;
+
+        this.clearCanvas(ctx, totalSize);
+        
+        // Clip to valid grid area to prevent drawing outside
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, totalSize, totalSize);
+        ctx.clip();
+
         this.drawGrid(ctx, tile);
         this.drawPathOverlay(ctx, tile);
         this.drawSelection(ctx, tile);
@@ -487,6 +548,9 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         if (this.tdEngine.gameSpeedMultiplier() === 1) {
             this.drawProjectiles(ctx, tile);
         }
+        
+        ctx.restore(); // Remove clip
+        
         this.drawRangeIndicator(ctx, tile);
     }
 
@@ -1065,10 +1129,12 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     openMissionSelect() {
         this.showMissionSelect = true;
+        this.selectedCampaignLevel = null;
     }
 
     closeMissionSelect() {
         this.showMissionSelect = false;
+        this.selectedCampaignLevel = null;
     }
 
     selectRandomMode() {
@@ -1077,10 +1143,16 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     selectCampaignLevel(levelId: string) {
-        // Check if locked
         if (!this.isLevelUnlocked(levelId)) return;
-        this.tdEngine.initializeGame(this.tdEngine.gridSize === 20 ? 2 : 1, levelId);
+        this.selectedCampaignLevel = levelId;
+        // Don't start yet, show difficulty selection
+    }
+
+    startCampaignLevel() {
+        if (!this.selectedCampaignLevel) return;
+        this.tdEngine.initializeGame(this.tdEngine.gridSize === 20 ? 2 : 1, this.selectedCampaignLevel);
         this.closeMissionSelect();
+        this.selectedCampaignLevel = null;
     }
 
     isLevelUnlocked(levelId: string): boolean {

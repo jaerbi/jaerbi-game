@@ -449,8 +449,8 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         uk: `ВИХІД З ГРИ`,
     },
     TOWER_DEFFENCE_DESCRIPTION: {
-        en: 'A new game is already in development. Stay tuned for a completely different strategy experience. Coming soon to Game Center.',
-        uk: `Нова гра вже розробляється. Слідкуйте за оновленнями, щоб дізнатися про зовсім інший стратегічний досвід. Скоро в ігровому центрі.`,
+        en: 'Shape Defense is here! Are you ready for a completely new strategy experience and fresh tactical challenges? Step into the battle now.',
+        uk: 'Shape Defense вже тут! Чи готові ви до абсолютно нових стратегічних вражень та справжніх тактичних викликів? Вступайте в бій прямо зараз.',
     },
     SHAPE_TACTIC_DESCRIPTION: {
         en: 'Strategic turn-based combat with AI and merging mechanics. Build your base, manage resources, and conquer the battlefield.',
