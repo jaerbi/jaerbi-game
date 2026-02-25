@@ -96,7 +96,7 @@ export interface InfernoZone {
     dps: number;
 }
 
-export type TileBonus = 'none' | 'damage' | 'range' | 'bounty' | 'mastery';
+export type TileBonus = 'none' | 'damage' | 'range' | 'bounty' | 'mastery' | 'speed';
 
 export interface TDTile {
     x: number;

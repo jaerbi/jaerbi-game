@@ -135,6 +135,24 @@ import { CampaignService } from '../../services/campaign.service';
         cursor: not-allowed;
         filter: grayscale(0.8);
         }
+        .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(15, 23, 42, 0.5);
+        border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(56, 189, 248, 0.3);
+        border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(56, 189, 248, 0.6);
+        }
+
+        .group:hover {
+        box-shadow: 0 0 40px rgba(56, 189, 248, 0.15);
+        }
     @media (max-width: 900px) {
       .td-layout {
         flex-direction: column;
@@ -721,6 +739,31 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
                             ctx.fillText('✨', px + halfTile, py + halfTile);
+
+                        } else if (t.bonus === 'speed') {
+                            // Yellow Lightning
+                            ctx.strokeStyle = '#facc15'; // Yellow-400
+                            ctx.fillStyle = 'rgba(250, 204, 21, 0.2)';
+                            
+                            // Draw lightning bolt shape or just a distinct box
+                            ctx.beginPath();
+                            ctx.moveTo(px + halfTile + 4, py + 4);
+                            ctx.lineTo(px + halfTile - 4, py + halfTile);
+                            ctx.lineTo(px + size - 8, py + halfTile - 4);
+                            ctx.lineTo(px + halfTile - 4, py + size - 4);
+                            ctx.lineTo(px + halfTile + 4, py + halfTile);
+                            ctx.lineTo(px + 8, py + halfTile + 4);
+                            ctx.closePath();
+                            
+                            ctx.fill();
+                            ctx.stroke();
+
+                            // Icon: Lightning
+                            ctx.fillStyle = '#fef08a';
+                            ctx.font = `bold ${Math.floor(tile * 0.5)}px sans-serif`;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText('⚡', px + halfTile, py + halfTile);
                         }
                         
                         ctx.restore();

@@ -651,20 +651,22 @@
   <a (click)="openPrivacy()" class="underline cursor-pointer hover:text-sky-400 pointer-events-auto">Privacy Policy</a>
 </footer>
 @if (showMissionSelect) {
-  <div class="fixed inset-0 z-[999] flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-slate-950/90 backdrop-blur-md" (click)="closeMissionSelect()"></div>
+  <div class="fixed inset-0 z-[999] flex items-center justify-center p-2 sm:p-4">
+    <div class="absolute inset-0 bg-slate-950/95 backdrop-blur-sm" (click)="closeMissionSelect()"></div>
 
-    <div class="relative w-full max-w-6xl max-h-[90vh] flex flex-col gap-8 animate-in zoom-in-95 duration-300">
-      <div class="text-center space-y-2">
+    <div class="relative w-full max-w-5xl max-h-[95vh] flex flex-col gap-4 animate-in zoom-in-95 duration-300">
+      <div class="text-center">
         <h2
-          class="text-5xl font-black uppercase tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-b from-sky-400 to-indigo-600 drop-shadow-sm"
+          class="text-3xl font-black uppercase tracking-[0.15em] text-transparent bg-clip-text bg-gradient-to-b from-sky-400 to-indigo-600"
         >
           Campaign Map
         </h2>
-        <p class="text-slate-500 font-mono text-sm tracking-widest uppercase">Select your next operational zone</p>
+        <p class="text-slate-500 font-mono text-[10px] uppercase tracking-widest">Select Operational Zone</p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto p-4 custom-scrollbar">
+      <div
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto p-2 custom-scrollbar items-stretch"
+      >
         @for (level of campaignService.levels; track level.id) {
           @let unlocked = isLevelUnlocked(level.id);
           @let completed = isLevelCompleted(level.id);
@@ -672,27 +674,27 @@
 
           <div
             (click)="unlocked ? selectCampaignLevel(level.id) : null"
-            class="group relative flex flex-col h-full transition-all duration-500 rounded-3xl border-2 p-1 overflow-hidden"
+            class="group relative flex flex-col transition-all duration-300 rounded-2xl border-2 p-0.5 overflow-hidden"
             [class.cursor-pointer]="unlocked"
-            [class.opacity-50]="!unlocked"
+            [class.opacity-60]="!unlocked"
             [class.scale-[0.98]]="!isSelected && unlocked"
-            [class.border-emerald-500/50]="completed"
+            [class.border-emerald-500/30]="completed"
             [class.border-sky-500]="isSelected && !completed"
-            [class.border-slate-800]="!isSelected && !completed"
-            [class.shadow-[0_0_40px_rgba(56,189,248,0.1)]]="isSelected && !completed"
+            [class.border-slate-800/50]="!isSelected && !completed"
+            [class.shadow-[0_0_20px_rgba(56,189,248,0.15)]]="isSelected"
           >
-            <div class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 z-0"></div>
+            <div class="absolute inset-0 bg-slate-900 z-0"></div>
 
             @if (!unlocked) {
-              <div class="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/60 backdrop-grayscale">
-                <div class="text-4xl filter drop-shadow-lg">🔒</div>
+              <div class="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/40 backdrop-blur-[2px]">
+                <div class="text-2xl opacity-50">🔒</div>
               </div>
             }
 
-            <div class="relative z-10 p-6 flex flex-col h-full">
-              <div class="flex justify-between items-start mb-4">
+            <div class="relative z-10 p-4 flex flex-col h-full gap-3">
+              <div class="flex justify-between items-center">
                 <span
-                  class="px-3 py-1 rounded-full text-[10px] font-black tracking-tighter uppercase bg-black/40"
+                  class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-tighter bg-black/40"
                   [class.text-emerald-400]="level.difficulty === 'easy'"
                   [class.text-amber-400]="level.difficulty === 'normal'"
                   [class.text-rose-500]="level.difficulty === 'hard'"
@@ -700,40 +702,56 @@
                   {{ level.difficulty }}
                 </span>
                 @if (completed) {
-                  <span class="flex items-center gap-1 text-emerald-400 text-[10px] font-bold uppercase">
-                    <span class="text-lg">✓</span>
+                  <span class="text-emerald-400 text-[9px] font-bold uppercase flex items-center gap-1">
+                    <span class="text-sm">✓</span>
                     Secured
                   </span>
                 }
               </div>
 
-              <h3
-                class="text-2xl font-black text-white mb-2 group-hover:text-sky-400 transition-colors uppercase italic"
-              >
-                {{ level.name }}
-              </h3>
+              <div>
+                <h3
+                  class="text-lg font-black text-white leading-tight uppercase italic group-hover:text-sky-400 transition-colors"
+                >
+                  {{ level.name }}
+                </h3>
+                <p class="text-slate-400 text-[11px] leading-snug line-clamp-2 mt-1 font-medium">
+                  {{ level.description }}
+                </p>
+              </div>
 
-              <p class="text-slate-400 text-sm leading-relaxed mb-6 font-medium">
-                {{ level.description }}
-              </p>
-
-              <div class="grid grid-cols-2 gap-2 mt-auto pb-4 border-b border-white/5">
-                <div class="bg-black/30 p-2 rounded-xl border border-white/5 text-center">
-                  <div class="text-[9px] text-slate-500 uppercase font-bold">Waves</div>
-                  <div class="text-sm font-mono text-white">{{ level.waveCount }}</div>
+              <div class="flex gap-2 border-y border-white/5 py-2">
+                <div class="flex-1 flex flex-col items-center border-r border-white/5">
+                  <span class="text-[8px] text-slate-500 uppercase font-bold">Waves</span>
+                  <span class="text-xs font-mono text-white">{{ level.waveCount }}</span>
                 </div>
-                <div class="bg-black/30 p-2 rounded-xl border border-white/5 text-center">
-                  <div class="text-[9px] text-slate-500 uppercase font-bold">Gold</div>
-                  <div class="text-sm font-mono text-white">{{ level.startingGold }}</div>
+                <div class="flex-1 flex flex-col items-center">
+                  <span class="text-[8px] text-slate-500 uppercase font-bold">Gold</span>
+                  <span class="text-xs font-mono text-white">{{ level.startingGold }}</span>
                 </div>
               </div>
 
-              <div class="mt-4 flex flex-col gap-4">
-                <div class="flex justify-between items-center px-1">
-                  <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Reward</span>
-                  <div class="flex items-center gap-2">
+              @if (level.enemyTypes?.length) {
+                <div class="space-y-1">
+                  <div class="text-[8px] text-slate-500 uppercase font-bold tracking-widest">Intel</div>
+                  <div class="flex flex-wrap gap-1">
+                    @for (type of level.enemyTypes; track type) {
+                      <span
+                        class="px-1.5 py-0.5 bg-slate-800/50 rounded text-[9px] text-slate-300 border border-slate-700/50"
+                      >
+                        {{ type }}
+                      </span>
+                    }
+                  </div>
+                </div>
+              }
+
+              <div class="mt-auto pt-2 space-y-3">
+                <div class="flex justify-between items-end">
+                  <span class="text-[8px] font-bold text-slate-500 uppercase">Reward</span>
+                  <div class="flex items-center gap-1.5">
                     <span
-                      class="text-sm font-black transition-all duration-300"
+                      class="text-xs font-black transition-all"
                       [class.text-amber-400]="!completed"
                       [class.text-slate-600]="completed"
                       [class.line-through]="completed"
@@ -741,30 +759,24 @@
                       {{ level.xpReward }} XP
                     </span>
                     @if (completed) {
-                      <span
-                        class="text-[9px] font-black text-emerald-500/80 bg-emerald-500/10 px-2 py-0.5 rounded uppercase border border-emerald-500/20"
-                      >
-                        Claimed
-                      </span>
+                      <span class="text-[8px] font-bold text-emerald-500/80 uppercase">Claimed</span>
                     }
                   </div>
                 </div>
 
-                <div class="h-12">
+                <div class="h-10">
                   @if (isSelected && unlocked) {
                     <button
                       (click)="$event.stopPropagation(); startCampaignLevel()"
-                      class="w-full h-full bg-sky-600 hover:bg-sky-500 text-white font-black rounded-xl uppercase tracking-widest text-sm shadow-lg shadow-sky-900/40 transition-all transform active:scale-95 animate-in fade-in slide-in-from-bottom-2 duration-200"
+                      class="w-full h-full bg-sky-600 hover:bg-sky-500 text-white font-black rounded-lg uppercase tracking-tighter text-xs shadow-lg transition-all transform active:scale-95 animate-in fade-in slide-in-from-bottom-1"
                     >
-                      Start Mission
+                      Deploy Operation
                     </button>
                   } @else if (unlocked) {
                     <div
-                      class="w-full h-full border-2 border-dashed border-slate-800 rounded-xl flex items-center justify-center group-hover:border-slate-700 transition-colors"
+                      class="w-full h-full border border-dashed border-slate-800 rounded-lg flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity"
                     >
-                      <span class="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">
-                        Click to select zone
-                      </span>
+                      <span class="text-[9px] font-bold text-slate-500 uppercase">Select Zone</span>
                     </div>
                   }
                 </div>
@@ -776,7 +788,7 @@
 
       <button
         (click)="closeMissionSelect()"
-        class="absolute -top-6 -right-6 w-12 h-12 flex items-center justify-center bg-slate-800 hover:bg-rose-600 text-white rounded-full transition-all border-2 border-slate-700 shadow-xl"
+        class="absolute -top-2 -right-2 sm:-top-4 sm:-right-4 w-10 h-10 flex items-center justify-center bg-slate-800 hover:bg-rose-600 text-white rounded-full transition-all border-2 border-slate-700 shadow-xl z-[1000]"
       >
         ✕
       </button>

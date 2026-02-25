@@ -8,7 +8,7 @@ import { SettingsService } from './settings.service';
 import { CampaignService, LevelConfig } from './campaign.service';
 
 // Immutable Constants for Security
-const TOWER_COSTS = [15, 50, 250, 500, 510, 520, 530] as const;
+const TOWER_COSTS = [15, 50, 250, 500, 500, 500, 500] as const;
 
 const TIER_STATS = [
     { damage: 5, range: 1.5, fireInterval: 0.5 },
@@ -182,24 +182,25 @@ export class TowerDefenseEngineService {
             const row: TDTile[] = [];
             for (let x = 0; x < this.gridSize; x++) {
                 let type: TileType = 'void';
-                let bonus: 'none' | 'damage' | 'range' | 'bounty' | 'mastery' | undefined = undefined;
+                let bonus: 'none' | 'damage' | 'range' | 'bounty' | 'mastery' | 'speed' | undefined = undefined;
 
                 if (pathSet.has(`${x},${y}`)) {
                     type = 'path';
                 } else {
-                    // Check if adjacent to path
+                    // Check if adjacent to path (Standard Buildable Rule)
                     const neighbors = [
                         { x: x - 1, y }, { x: x + 1, y }, { x, y: y - 1 }, { x, y: y + 1 }
                     ];
                     if (neighbors.some(n => pathSet.has(`${n.x},${n.y}`))) {
                         type = 'buildable';
+                    }
 
-                        // Apply bonus tiles if configured
-                        if (config && config.bonusTiles) {
-                            const found = config.bonusTiles.find(t => t.x === x && t.y === y);
-                            if (found) {
-                                bonus = found.type;
-                            }
+                    // Apply Bonus Tiles & Force Buildable (Strategic Points)
+                    if (config && config.bonusTiles) {
+                        const found = config.bonusTiles.find(t => t.x === x && t.y === y);
+                        if (found) {
+                            bonus = found.type;
+                            type = 'buildable'; // FORCE BUILDABLE for bonus tiles
                         }
                     }
                 }
@@ -291,6 +292,7 @@ export class TowerDefenseEngineService {
         this.currentLevelConfig.set(null);
         this.gameMode.set('random');
         this.allowedTowers.set([1, 2, 3, 4, 5, 6, 7]);
+        this.isFirstTimeClear = false;
 
         let startMoney = 100;
         if (this.isHardMode()) {
@@ -302,8 +304,64 @@ export class TowerDefenseEngineService {
             startMoney += bonus;
         }
         this.money.set(startMoney);
-
-        this.generateMap();
+        
+        // Generate Random Bonus Tiles
+        const bonusTiles: { x: number, y: number, type: 'damage' | 'range' | 'bounty' | 'mastery' | 'speed' }[] = [];
+        // Generate path first so we know where to place tiles
+        const tempPath = this.generateRandomPath(); 
+        // Note: generateMap will call generateRandomPath again if we don't pass a config.
+        // We should create a dummy config or just let generateMap handle it if we modify it to accept random bonus tiles.
+        // Actually, let's just use generateMap logic modification.
+        
+        // Better approach: Let generateMap create the path, then we inject bonus tiles into the grid.
+        // But generateMap creates the grid based on path.
+        
+        // Let's create a temporary config for this random session
+        const randomBonusCount = Math.floor(Math.random() * 3) + 3; // 3 to 5
+        // We need the path to know valid spots.
+        // Let's generate path here.
+        
+        this.path.set(tempPath);
+        
+        // Find valid spots for bonus tiles (not on path)
+        const pathSet = new Set(tempPath.map(p => `${p.x},${p.y}`));
+        const validSpots: {x: number, y: number}[] = [];
+        for(let y=0; y<this.gridSize; y++) {
+            for(let x=0; x<this.gridSize; x++) {
+                if(!pathSet.has(`${x},${y}`)) {
+                    validSpots.push({x, y});
+                }
+            }
+        }
+        
+        // Shuffle valid spots
+        for (let i = validSpots.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [validSpots[i], validSpots[j]] = [validSpots[j], validSpots[i]];
+        }
+        
+        const types = ['damage', 'range', 'speed', 'bounty', 'mastery'] as const;
+        
+        for(let i=0; i<randomBonusCount && i<validSpots.length; i++) {
+            const spot = validSpots[i];
+            const type = types[Math.floor(Math.random() * types.length)];
+            bonusTiles.push({ x: spot.x, y: spot.y, type });
+        }
+        
+        // Call generateMap with our random configuration
+        this.generateMap({
+            id: 'random',
+            name: 'Random Sector',
+            description: 'Procedurally generated zone.',
+            waveCount: 999,
+            startingGold: startMoney,
+            allowedTowers: [1, 2, 3, 4, 5, 6, 7],
+            mapLayout: 'random',
+            difficulty: this.isHardMode() ? 'hard' : 'normal',
+            xpReward: 0,
+            customPath: tempPath,
+            bonusTiles: bonusTiles
+        });
     }
 
     private determineWaveType(wave: number): 'tank' | 'scout' | 'standard' {
@@ -1429,6 +1487,11 @@ export class TowerDefenseEngineService {
                     damageMultiplier += 0.1;
                 }
 
+                let finalFireInterval = stats.fireInterval;
+                if (tile.bonus === 'speed') {
+                    finalFireInterval *= 0.65; // -35% Cooldown (35% faster)
+                }
+
                 tile.tower = {
                     id: crypto.randomUUID(),
                     type: tier,
@@ -1438,7 +1501,7 @@ export class TowerDefenseEngineService {
                     invested: cost,
                     damage: Math.floor(stats.damage * damageMultiplier),
                     range: stats.range + rangeBonus,
-                    fireInterval: stats.fireInterval,
+                    fireInterval: finalFireInterval,
                     cooldown: 0,
                     specialActive: false,
                     strategy: 'first',
