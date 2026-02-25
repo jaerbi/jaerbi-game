@@ -77,6 +77,7 @@ export interface Enemy {
     isMagma?: boolean;
     isMirror?: boolean;
     isSlime?: boolean;
+    isBulwark?: boolean;
 }
 
 export interface Projectile {
@@ -95,10 +96,13 @@ export interface InfernoZone {
     dps: number;
 }
 
+export type TileBonus = 'none' | 'damage' | 'range' | 'bounty' | 'mastery' | 'speed';
+
 export interface TDTile {
     x: number;
     y: number;
     type: TileType;
     tower: Tower | null;
+    bonus?: TileBonus;
 }
 

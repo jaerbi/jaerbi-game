@@ -1,10 +1,10 @@
 {
   "name": "shape-tactics",
-  "version": "2.5.7",
+  "version": "2.6.7",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "serve:ssr:jaerbi-game": "node dist/jaerbi-game/server/server.mjs"

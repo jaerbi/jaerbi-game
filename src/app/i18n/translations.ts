@@ -110,7 +110,8 @@ export type TranslationKey =
     | 'LIVES'
     | 'WAVE'
     | 'WAVES'
-    | 'RESTART_GAME'
+    | 'RESET'
+    | 'INTEL'
     | 'WAVE_IN_PROGRESS'
     | 'START_WAVE'
     | 'BUY_DEFENDER'
@@ -199,13 +200,23 @@ export type TranslationKey =
     | 'DAMAGE_STATS_DESC'
     | 'NO_DATA'
     | 'SELECT_TILE_TO_BUILD'
+    | 'CAMPAIGN'
+    | 'COMMENCE'
+    | 'ENGAGED'
+    | 'CREDITS'
+    | 'SHIELDS'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
-    SELECT_TILE_TO_BUILD: { en: 'Оберіть вільну ділянку для будівництва', uk: `Select an empty tile to build` },
-    DAMAGE_STATS: { en: 'Damage Statistics', uk: `Статистика урону` },
+    SHIELDS: { en: 'Shields', uk: `Щити` },
+    CREDITS: { en: 'Credits', uk: `Кредити` },
+    ENGAGED: { en: 'In Battle', uk: `У бою` },
+    COMMENCE: { en: 'Engage', uk: `До бою!` },
+    CAMPAIGN: { en: 'Campaign', uk: `Кампанія` },
+    SELECT_TILE_TO_BUILD: { en: 'Select an empty tile to build', uk: `Оберіть вільну ділянку для будівництва` },
+    DAMAGE_STATS: { en: 'Damage Statistics', uk: `Статистика шкоди` },
     NO_DATA: { en: 'No data yet', uk: `Дані відсутні` },
-    DAMAGE_STATS_DESC: { en: 'Cumulative damage dealt by each tower type', uk: `Сумарний урон за типами веж` },
+    DAMAGE_STATS_DESC: { en: 'Cumulative damage dealt by each tower type', uk: `Сумарна шкода за типами веж` },
     RANDOM: { en: 'Random', uk: `Випадковий` },
     STRONGEST: { en: 'Strongest', uk: `Найсильніший` },
     WEAKEST: { en: 'Weakest', uk: `Найслабший` },
@@ -355,7 +366,7 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     REFRACTION_BEAM: { en: 'Refraction Beam', uk: `Заломлення променя` },
     REFRACTION_BEAM_INFO: { en: 'Allows attacking up to 3 targets simultaneously. Each beam benefits from the laser ramp-up bonus.', uk: `Дозволяє атакувати до 3 цілей одночасно. Кожна ціль отримує бонус від наростання потужності лазера.` },
     NAPALM_STRIKE: { en: 'Напалмовий удар', uk: `Напалмовий удар` },
-    NAPALM_STRIKE_INFO: { en: 'Leaves a fire zone for 4s, dealing 50% tower damage per second to all enemies in the blast radius.', uk: `Залишає вогняну зону на 4 сек., що наносить 50% урону щосекунди всім ворогам у радіусі вибуху.` },
+    NAPALM_STRIKE_INFO: { en: 'Leaves a fire zone for 4s, dealing 50% tower damage per second to all enemies in the blast radius.', uk: `Залишає вогняну зону на 4 сек., що наносить 50% шкодау щосекунди всім ворогам у радіусі вибуху.` },
     NEUROTOXIN: { en: 'Neurotoxin', uk: `Нейротоксин` },
     NEUROTOXIN_INFO: { en: 'Poison now slows enemies by 20%.', uk: `Отрута тепер уповільнює ворогів на 20%.` },
     BUY_ABILITY: {
@@ -426,9 +437,13 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         en: 'WAVE IN PROGRESS',
         uk: `ХВИЛЯ В ПРОЦЕСІ`,
     },
-    RESTART_GAME: {
-        en: 'RESTART GAME',
-        uk: `ПЕРЕЗАПУСК ГРИ`,
+    RESET: {
+        en: 'Reset',
+        uk: `Скинути`,
+    },
+    INTEL: {
+        en: 'Intel',
+        uk: `Дані`,
     },
     WAVE: {
         en: 'WAVE',
@@ -447,8 +462,8 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         uk: `ВИХІД З ГРИ`,
     },
     TOWER_DEFFENCE_DESCRIPTION: {
-        en: 'A new game is already in development. Stay tuned for a completely different strategy experience. Coming soon to Game Center.',
-        uk: `Нова гра вже розробляється. Слідкуйте за оновленнями, щоб дізнатися про зовсім інший стратегічний досвід. Скоро в ігровому центрі.`,
+        en: 'Shape Defense is here! Are you ready for a completely new strategy experience and fresh tactical challenges? Step into the battle now.',
+        uk: 'Shape Defense вже тут! Чи готові ви до абсолютно нових стратегічних вражень та справжніх тактичних викликів? Вступайте в бій прямо зараз.',
     },
     SHAPE_TACTIC_DESCRIPTION: {
         en: 'Strategic turn-based combat with AI and merging mechanics. Build your base, manage resources, and conquer the battlefield.',

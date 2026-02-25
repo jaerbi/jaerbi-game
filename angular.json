@@ -23,7 +23,8 @@
                 "glob": "**/*",
                 "input": "public"
               },
-              "src/favicon.ico"
+              "src/favicon.ico",
+              "src/ads.txt"
             ],
             "styles": [
               "src/styles.css"
@@ -36,6 +37,10 @@
           },
           "configurations": {
             "production": {
+              "optimization": true,
+              "extractLicenses": true,
+              "sourceMap": false,
+              "namedChunks": false,
               "budgets": [
                 {
                   "type": "initial",

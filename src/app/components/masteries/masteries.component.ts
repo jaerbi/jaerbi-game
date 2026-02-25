@@ -246,6 +246,17 @@ export class MasteriesComponent implements OnInit {
     }
   }
 
+  resetMasteries() {
+    const p = this.firebase.masteryProfile();
+    if (!p) return;
+    const next: MasteryProfile = { totalXp: p.totalXp, usedPoints: 0, upgrades: {} };
+    this.firebase.setMasteryProfile(next);
+    try {
+      localStorage.setItem('td_masteries', JSON.stringify(next));
+    } catch { }
+    this.save();
+  }
+
   login() {
     this.firebase.loginWithGoogle();
   }

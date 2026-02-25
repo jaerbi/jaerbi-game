@@ -34,6 +34,7 @@ export interface MasteryProfile {
     totalXp: number;
     usedPoints: number;
     upgrades: { [key: string]: number };
+    completedLevelIds?: string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -170,17 +171,52 @@ export class FirebaseService {
         if (!this.db) return [];
         const querySize = `${size}x${size}`;
         try {
+            // First get raw list
             const q = query(
                 collection(this.db, 'towerDefenseLeaderboards'),
                 where('mapSize', '==', querySize),
                 orderBy('maxWave', 'desc'),
+                limit(limitCount * 4) // Fetch more to filter duplicates
+            );
+            const querySnapshot = await getDocs(q);
+            const allScores = querySnapshot.docs.map(doc => doc.data() as TowerDefenseScore);
+
+            // Filter to keep only best per user
+            const bestPerUser = new Map<string, TowerDefenseScore>();
+            for (const s of allScores) {
+                if (!bestPerUser.has(s.userId)) {
+                    bestPerUser.set(s.userId, s);
+                } else {
+                    const existing = bestPerUser.get(s.userId)!;
+                    if (s.maxWave > existing.maxWave) {
+                        bestPerUser.set(s.userId, s);
+                    }
+                }
+            }
+            
+            return Array.from(bestPerUser.values())
+                .sort((a, b) => b.maxWave - a.maxWave)
+                .slice(0, limitCount);
+
+        } catch (e) {
+            console.error('Error fetching TD scores: ', e);
+            return [];
+        }
+    }
+
+    async getMyTowerDefenseHistory(userId: string, limitCount: number): Promise<TowerDefenseScore[]> {
+        if (!this.db) return [];
+        try {
+            const q = query(
+                collection(this.db, 'towerDefenseLeaderboards'),
+                where('userId', '==', userId),
                 orderBy('timestamp', 'desc'),
                 limit(limitCount)
             );
             const querySnapshot = await getDocs(q);
             return querySnapshot.docs.map(doc => doc.data() as TowerDefenseScore);
         } catch (e) {
-            console.error('Error fetching TD scores: ', e);
+            console.error('Error fetching my TD history: ', e);
             return [];
         }
     }
@@ -219,7 +255,8 @@ export class FirebaseService {
                 const profile: MasteryProfile = {
                     totalXp: typeof data.totalXp === 'number' ? data.totalXp : 0,
                     usedPoints: typeof data.usedPoints === 'number' ? data.usedPoints : 0,
-                    upgrades: data.upgrades && typeof data.upgrades === 'object' ? data.upgrades as { [key: string]: number } : {}
+                    upgrades: data.upgrades && typeof data.upgrades === 'object' ? data.upgrades as { [key: string]: number } : {},
+                    completedLevelIds: Array.isArray(data.completedLevelIds) ? data.completedLevelIds : []
                 };
                 this.masteryProfile.set(profile);
             } else {
@@ -251,24 +288,80 @@ export class FirebaseService {
         }
     }
 
-    async awardTowerDefenseXp(xp: number): Promise<void> {
+    async awardTowerDefenseXp(xp: number, levelId?: string, wave?: number): Promise<void> {
         if (!this.db) return;
+
         if (xp <= 0) return;
+
         const user = this.user$();
+
         if (!user) return;
+
+        /**
+         * CALCULATION LOGIC AND LIMITS (Sanity Check):
+         * 1. Campaign: XP is fixed (e.g. Level 5 = 40 XP).
+         * 2. Random Mode: XP = (Wave * 1.5) + Bonus.
+         * - Bonus is awarded after wave 20: (Wave - 20) * 2.
+         * * CALCULATION EXAMPLES:
+         * - Wave 10: (10 * 1.5) = 15 XP
+         * - Wave 20: (20 * 1.5) = 30 XP
+         * - Wave 40: (40 * 1.5) + (20 * 2) = 60 + 40 = 100 XP
+         * - Wave 80: (80 * 1.5) + (60 * 2) = 120 + 120 = 240 XP (Limit Limit)
+         * * LIMIT: 250 XP per session is a safe maximum.
+         */
+        const HARD_CAP = 250;
+
+        // Dynamic check: if more than HARD_CAP allows has arrived
+        if (xp > HARD_CAP) {
+            console.error(`Security Alert: XP Award Rejected. Attempted: ${xp}, Max Allowed: ${HARD_CAP}`);
+            return;
+        }
+
         try {
             console.count('FIREBASE_CALL: awardTowerDefenseXp');
-            const current = this.masteryProfile() ?? { totalXp: 0, usedPoints: 0, upgrades: {} };
+            const current = this.masteryProfile() ?? { totalXp: 0, usedPoints: 0, upgrades: {}, completedLevelIds: [] };
+
+            // Preventing XP re-farming for campaign levels
+            if (levelId && current.completedLevelIds?.includes(levelId)) {
+                console.warn(`XP skipped: Level ${levelId} already completed.`);
+                return;
+            }
+
+            const nextCompleted = levelId && !current.completedLevelIds?.includes(levelId)
+                ? [...(current.completedLevelIds || []), levelId]
+                : current.completedLevelIds;
+
             const next: MasteryProfile = {
                 totalXp: current.totalXp + xp,
                 usedPoints: current.usedPoints,
-                upgrades: current.upgrades
+                upgrades: current.upgrades,
+                completedLevelIds: nextCompleted
             };
+
             const ref = doc(this.db, 'towerDefenseMasteries', user.uid);
             await setDoc(ref, { userId: user.uid, ...next }, { merge: true });
             this.masteryProfile.set(next);
+
         } catch (e) {
             console.error('Error awarding TD XP: ', e);
+        }
+    }
+
+    async saveBalanceLogs(logs: any[]): Promise<void> {
+        if (!this.db || logs.length === 0) return;
+        try {
+            console.count('FIREBASE_CALL: saveBalanceLogs');
+            // Batch write? Or simple loop. Logs are usually 1-7 items.
+            // Using batch is safer for consistency but simple adds are fine here.
+            const batch = [];
+            for (const log of logs) {
+                // Add timestamp if missing or ensure it's serverTimestamp?
+                // The log already has a timestamp.
+                batch.push(addDoc(collection(this.db, 'balance_logs'), log));
+            }
+            await Promise.all(batch);
+        } catch (e) {
+            console.error('Error saving balance logs: ', e);
         }
     }
 }

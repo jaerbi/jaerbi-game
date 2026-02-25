@@ -274,7 +274,13 @@
             </div>
 
             <div class="flex flex-col items-end gap-4">
-              
+              <button
+                (click)="resetMasteries()"
+                [disabled]="!profile()"
+                class="px-6 py-3 rounded-xl font-black uppercase tracking-widest transition-all bg-rose-600 text-white shadow-[0_0_20px_rgba(244,63,94,0.4)] hover:bg-rose-500"
+              >
+                Reset Masteries
+              </button>
 
               <button
               (click)="save()"
