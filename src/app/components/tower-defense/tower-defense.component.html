@@ -123,7 +123,7 @@
         </button>
       </div>
 
-      @if (true) {
+      @if (false) {
           <div class="bg-slate-950/40 backdrop-blur-md p-1 rounded-2xl border border-white/10 flex shadow-xl">
             <button
               (click)="setGameMode('random')"
@@ -182,17 +182,27 @@
       </svg>
       <span class="text-[14px] font-bold uppercase tracking-tighter">{{ settings.t('FEEDBACK_MODULE') }}</span>
     </button>
-    <!-- Main Game Area -->
+    <!-- Main Game Area Container with Zoom/Pan -->
     <div
-      class="flex-1 relative bg-slate-900 rounded-lg overflow-auto border flex items-center justify-center p-4 min-h-[400px] td-main-area"
+      class="flex-1 relative bg-slate-900 rounded-lg overflow-hidden border flex items-center justify-center p-4 min-h-[400px] td-main-area cursor-grab active:cursor-grabbing"
       [class.border-rose-600]="tdEngine.isHardMode()"
       [class.shadow-[0_0_25px_rgba(248,113,113,0.7)]]="tdEngine.isHardMode()"
+      (mousedown)="startPan($event)"
+      (mousemove)="pan($event)"
+      (mouseup)="endPan()"
+      (mouseleave)="endPan()"
+      (wheel)="onWheel($event)"
     >
-      <canvas
-        #gameCanvas
-        class="block rounded transition-opacity duration-300 td-canvas"
-        (click)="onCanvasClick($event)"
-      ></canvas>
+      <div 
+        class="origin-center transition-transform duration-75 ease-out"
+        [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px) scale(' + zoomLevel() + ')'"
+      >
+        <canvas
+          #gameCanvas
+          class="block rounded transition-opacity duration-300 td-canvas"
+          (click)="onCanvasClick($event)"
+        ></canvas>
+      </div>
     </div>
     @if (showStatsPanel) {
       <div class="fixed inset-0 z-[99] pointer-events-none overflow-hidden boundary-container">

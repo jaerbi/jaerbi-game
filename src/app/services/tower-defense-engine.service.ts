@@ -67,6 +67,7 @@ export class TowerDefenseEngineService {
     private spawnTimer = 0;
     private spawnInterval = 1000;
     private currentWaveType: 'tank' | 'scout' | 'standard' | 'boss' = 'standard';
+    private isBossWaveActive = false;
 
     // Costs and Stats
     readonly towerCosts = TOWER_COSTS;
@@ -582,13 +583,50 @@ export class TowerDefenseEngineService {
 
         // Scripted Logic for CURRENT Wave
         const config = this.currentLevelConfig();
-        if (config && config.waveTypeSequence && config.waveTypeSequence.length >= this.wave()) {
-            const typeId = config.waveTypeSequence[this.wave() - 1];
+        const currentWave = this.wave();
+        
+        // Determine if this is a Boss Wave based on distribution
+        let isBossWave = false;
+        if (config && config.bossCount && config.waveCount) {
+            const bosses = config.bossCount;
+            const waves = config.waveCount;
+            // Rule: Last wave always has boss
+            if (currentWave === waves) {
+                isBossWave = true;
+            } else {
+                // Distribute others evenly
+                // Formula: Math.floor(waves / bosses * i) for i=1 to bosses
+                const interval = waves / bosses;
+                // Check if current wave matches any calculated boss wave index
+                // Note: We need to match integer wave numbers.
+                for (let i = 1; i <= bosses; i++) {
+                    const bossWaveIndex = Math.floor(interval * i);
+                    if (currentWave === bossWaveIndex) {
+                        isBossWave = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (config && config.waveTypeSequence && config.waveTypeSequence.length >= currentWave) {
+            const typeId = config.waveTypeSequence[currentWave - 1];
             this.currentScriptedWave = this.mapScriptedWave(typeId);
             this.currentWaveType = this.currentScriptedWave.baseType;
         } else {
             this.currentScriptedWave = null;
             this.currentWaveType = this.nextWaveEnemyType();
+        }
+        
+        // Override for Boss
+        if (isBossWave) {
+            // Force boss type if not already scripted to something specific?
+            // Actually, boss property is handled in spawnEnemy.
+            // But we can set a flag or modify currentScriptedWave.
+            // Let's set a temporary flag for spawnEnemy to check.
+            this.isBossWaveActive = true;
+        } else {
+            this.isBossWaveActive = false;
         }
 
         // Scripted Logic for NEXT Wave (for UI prediction)
@@ -847,9 +885,29 @@ export class TowerDefenseEngineService {
         const baseSpeed = 0.5 + (currentWave * 0.02) + (Math.floor(currentWave / 5) * 0.1); 
         const total = this.currentWaveEnemyCount || (5 + this.wave() * 2);
         const spawnedSoFar = total - this.enemiesToSpawn;
-        const isBossWave = this.wave() % 5 === 0;
-        const isLastOfWave = spawnedSoFar === total - 1;
-        const boss = isBossWave && isLastOfWave;
+        
+        // Smart Boss Logic or Legacy Boss Logic
+        let boss = false;
+        if (this.isBossWaveActive) {
+            // New logic: Boss is the LAST enemy of the wave? Or all enemies?
+            // "inject a Boss Enemy (Enemy Type ID: 4) into specific waves"
+            // Usually just one boss at end of wave.
+            const isLastOfWave = spawnedSoFar === total - 1;
+            if (isLastOfWave) {
+                boss = true;
+            }
+        } else {
+            // Legacy Logic (every 5 waves) - disable if using bossCount?
+            // "The last boss must ALWAYS appear in the last wave" -> implies controlled spawning.
+            // If bossCount is set, we rely on isBossWaveActive.
+            // If not set (random mode?), we can keep legacy logic.
+            if (this.gameMode() === 'random') {
+                const isBossWave = this.wave() % 5 === 0;
+                const isLastOfWave = spawnedSoFar === total - 1;
+                boss = isBossWave && isLastOfWave;
+            }
+        }
+        
         const hue = (this.wave() * 40) % 360;
 
         let enemyType: 'tank' | 'scout' | 'standard' | 'boss' = this.currentWaveType;

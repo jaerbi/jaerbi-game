@@ -212,6 +212,14 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     showStatsPanel = false;
     showStats = false; // For draggable modal
 
+    // Zoom & Pan State
+    zoomLevel = signal(1);
+    panX = signal(0);
+    panY = signal(0);
+    isPanning = false;
+    lastMouseX = 0;
+    lastMouseY = 0;
+
     @HostListener('window:keydown', ['$event'])
     onKeyDown(event: KeyboardEvent) {
         if (this.tdEngine.isWaveInProgress()) { return; }
@@ -387,7 +395,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     navigateToFeedback() {
         const user = this.firebase.user$();
         if (user) {
-            window.open('https://github.com/jaerbi/shape-tactics/issues/new', '_blank');
+            window.open('https://shape-tactics.com/jaerbi/shape-tactics/issues/new', '_blank');
         }
     }
 
@@ -1164,17 +1172,94 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         ctx.stroke();
     }
 
-    onCanvasClick(evt: MouseEvent) {
-        const canvas = this.gameCanvas?.nativeElement;
-        if (!canvas) return;
-        const rect = canvas.getBoundingClientRect();
-        const xCss = evt.clientX - rect.left;
-        const yCss = evt.clientY - rect.top;
+    onCanvasClick(event: MouseEvent) {
+        // If panning occurred, ignore click
+        if (this.wasPanning) {
+            this.wasPanning = false;
+            return;
+        }
+
+        const rect = this.gameCanvas?.nativeElement.getBoundingClientRect();
+        if (!rect) return;
+        
+        // Transform screen coordinates to canvas coordinates
+        // The click event is relative to the viewport.
+        // rect.left/top accounts for the transform (translate + scale)
+        // because getBoundingClientRect returns the visual box.
+        
+        const clientX = event.clientX - rect.left;
+        const clientY = event.clientY - rect.top;
+        
+        // We need to map the visual click (on the scaled element) 
+        // to the internal canvas resolution (unscaled).
+        
+        // Visual Width / Internal Width = Scale Factor
+        const internalWidth = this.gameCanvas?.nativeElement.width || 1;
+        const internalHeight = this.gameCanvas?.nativeElement.height || 1;
+        
+        const xRatio = internalWidth / rect.width;
+        const yRatio = internalHeight / rect.height;
+        
+        const canvasX = clientX * xRatio;
+        const canvasY = clientY * yRatio;
 
         const tile = this.tdEngine.tileSize;
-        const gx = Math.floor(xCss / tile);
-        const gy = Math.floor(yCss / tile);
+        const x = Math.floor(canvasX / tile);
+        const y = Math.floor(canvasY / tile);
+        this.handleTileClick(x, y);
+    }
+    
+    // Zoom & Pan Handlers
+    onWheel(event: WheelEvent) {
+        event.preventDefault();
+        // Zoom towards center (simplified) or pointer?
+        // For now, center zoom is safer with simple translate/scale.
+        const delta = event.deltaY > 0 ? 0.9 : 1.1;
+        const newZoom = Math.max(0.5, Math.min(3, this.zoomLevel() * delta));
+        this.zoomLevel.set(newZoom);
+    }
 
+    private wasPanning = false;
+
+    startPan(event: MouseEvent) {
+        // Middle click (1) or Left Click + Alt/Ctrl? 
+        // User requested "drag (pan)". Often left click is drag if not on interactable.
+        // But left click is also select/build.
+        // Let's use Left Click for drag, but distinguish click vs drag.
+        
+        if (event.button === 0 || event.button === 1) { 
+            this.isPanning = true;
+            this.wasPanning = false; // Will be set to true if moved enough
+            this.lastMouseX = event.clientX;
+            this.lastMouseY = event.clientY;
+        }
+    }
+
+    pan(event: MouseEvent) {
+        if (!this.isPanning) return;
+        
+        const dx = event.clientX - this.lastMouseX;
+        const dy = event.clientY - this.lastMouseY;
+        
+        // Threshold to distinguish click from drag
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+            this.wasPanning = true;
+        }
+        
+        if (this.wasPanning) {
+            this.panX.update(x => x + dx);
+            this.panY.update(y => y + dy);
+        }
+        
+        this.lastMouseX = event.clientX;
+        this.lastMouseY = event.clientY;
+    }
+
+    endPan() {
+        this.isPanning = false;
+    }
+
+    private handleTileClick(gx: number, gy: number) {
         if (gx >= 0 && gx < this.tdEngine.gridSize && gy >= 0 && gy < this.tdEngine.gridSize) {
             const grid = this.tdEngine.getGridRef();
             const clickedTile = grid[gy][gx];

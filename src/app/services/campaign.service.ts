@@ -17,6 +17,7 @@ export interface LevelConfig {
     healthMultiplier?: number; // Enemy HP Multiplier for this level
     enemyTypes?: string[]; // E.g. ['Standard', 'Magma', 'Mirror']
     waveTypeSequence?: number[]; // 1=Standard, 2=Scout, 3=Tank, 4=Boss
+    bossCount?: number; // Number of bosses to spawn during the campaign
 }
 
 @Injectable({
@@ -56,7 +57,8 @@ export class CampaignService {
                 gridSize: 10,
                 healthMultiplier: 1.0,
                 enemyTypes: ['Standard', 'Scout'],
-                waveTypeSequence: [1, 1, 1, 2, 1, 2, 1, 2, 1, 1, 4],
+                waveTypeSequence: [1, 1, 1, 2, 1, 2, 1, 2, 1, 2],
+                bossCount: 1, // Only at the end
                 // Simple S-shape
                 customPath: [
                     { x: 0, y: 2 }, { x: 1, y: 2 }, { x: 2, y: 2 }, { x: 3, y: 2 }, { x: 4, y: 2 },
@@ -85,7 +87,8 @@ export class CampaignService {
                 gridSize: 12,
                 healthMultiplier: 1.1,
                 enemyTypes: ['Standard', 'Tank'],
-                waveTypeSequence: [1, 1, 3, 1, 1, 1, 3, 1, 3, 3, 1, 1, 3, 3, 3],
+                waveTypeSequence: [1, 1, 1, 1, 1, 1, 3, 1, 1, 3, 1, 1, 3, 1, 3],
+                bossCount: 2, // Wave 6 and 12
                 // Tight spiral/snake
                 customPath: [
                     { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 0 },
@@ -116,6 +119,7 @@ export class CampaignService {
                 healthMultiplier: 1.2,
                 enemyTypes: ['Standard', 'Scout', 'Tank'],
                 waveTypeSequence: [1, 1, 2, 1, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2],
+                bossCount: 3, // Waves 5, 10, 15
                 //Large circle around the edges
                 customPath: [
                     { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 0 }, { x: 5, y: 0 }, { x: 6, y: 0 }, { x: 7, y: 0 }, { x: 8, y: 0 }, { x: 9, y: 0 }, { x: 10, y: 0 }, { x: 11, y: 0 }, { x: 12, y: 0 }, { x: 13, y: 0 }, { x: 14, y: 0 },
@@ -144,6 +148,7 @@ export class CampaignService {
                 healthMultiplier: 1.5, // Дуже живучі
                 enemyTypes: ['Standard', 'Tank', 'Scout'],
                 waveTypeSequence: [1, 1, 3, 1, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2],
+                bossCount: 4, // 5, 10, 15, 20
                 // Zig-zag vertical
                 customPath: [
                     { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 1, y: 2 }, { x: 1, y: 3 },
@@ -174,6 +179,7 @@ export class CampaignService {
                 healthMultiplier: 1.8,
                 enemyTypes: ['Tank', 'Scout', 'Standard'],
                 waveTypeSequence: [3, 3, 2, 3, 2, 1, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2],
+                bossCount: 5, // 5, 10, 15, 20, 25
                 // Very short U-turn
                 customPath: [
                     { x: 2, y: 0 }, { x: 2, y: 1 }, { x: 2, y: 2 }, { x: 2, y: 3 }, { x: 2, y: 4 }, { x: 2, y: 5 },
