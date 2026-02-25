@@ -110,7 +110,8 @@ export type TranslationKey =
     | 'LIVES'
     | 'WAVE'
     | 'WAVES'
-    | 'RESTART_GAME'
+    | 'RESET'
+    | 'INTEL'
     | 'WAVE_IN_PROGRESS'
     | 'START_WAVE'
     | 'BUY_DEFENDER'
@@ -199,11 +200,19 @@ export type TranslationKey =
     | 'DAMAGE_STATS_DESC'
     | 'NO_DATA'
     | 'SELECT_TILE_TO_BUILD'
-    | 'CAMPAING'
+    | 'CAMPAIGN'
+    | 'COMMENCE'
+    | 'ENGAGED'
+    | 'CREDITS'
+    | 'SHIELDS'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
-    CAMPAING: { en: 'Campaign', uk: `Кампанія` },
+    SHIELDS: { en: 'Shields', uk: `Щити` },
+    CREDITS: { en: 'Credits', uk: `Кредити` },
+    ENGAGED: { en: 'In Battle', uk: `У бою` },
+    COMMENCE: { en: 'Engage', uk: `До бою!` },
+    CAMPAIGN: { en: 'Campaign', uk: `Кампанія` },
     SELECT_TILE_TO_BUILD: { en: 'Select an empty tile to build', uk: `Оберіть вільну ділянку для будівництва` },
     DAMAGE_STATS: { en: 'Damage Statistics', uk: `Статистика шкоди` },
     NO_DATA: { en: 'No data yet', uk: `Дані відсутні` },
@@ -428,9 +437,13 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         en: 'WAVE IN PROGRESS',
         uk: `ХВИЛЯ В ПРОЦЕСІ`,
     },
-    RESTART_GAME: {
-        en: 'RESTART GAME',
-        uk: `ПЕРЕЗАПУСК ГРИ`,
+    RESET: {
+        en: 'Reset',
+        uk: `Скинути`,
+    },
+    INTEL: {
+        en: 'Intel',
+        uk: `Дані`,
     },
     WAVE: {
         en: 'WAVE',
