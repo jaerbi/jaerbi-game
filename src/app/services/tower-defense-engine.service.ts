@@ -908,9 +908,9 @@ export class TowerDefenseEngineService {
 
                 // Earlier HP Buff for Resistant Enemies
                 let hpBonus = 1.0;
-                if (this.wave() >= 30) {
+                if (this.wave() >= 29) {
                     hpBonus = 1.5;
-                } else if (this.wave() >= 20) {
+                } else if (this.wave() >= 19) {
                     hpBonus = 1.3;
                 }
 

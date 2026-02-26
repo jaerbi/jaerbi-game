@@ -225,7 +225,17 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     onKeyDown(event: KeyboardEvent) {
         if (this.tdEngine.isWaveInProgress()) { return; }
 
+        if (event.repeat) return;
+
         const key = event.key;
+
+        if (key === ' ' || key === 'Spacebar') {
+            if (this.tdEngine.isWaveInProgress()) {
+                event.preventDefault();
+                this.togglePause();
+                return;
+            }
+        }
 
         if (key === 'Enter') {
             event.preventDefault();

@@ -108,8 +108,8 @@ export class DamageCalculationService {
     ): number {
         let dmg = amount;
 
-        // Counter Strategy Resistance (Wave 15+)
-        if (currentWave >= 15) {
+        // Counter Strategy Resistance (Wave 10+)
+        if (currentWave >= 10) {
             if (this.waveAnalytics.isResistant(enemy, towerType)) {
                 // Scaling Resistance based on Dominance Ratio
                 // If ratio > 0.9 (90% dominance), apply 90% reduction (multiplier 0.1)
