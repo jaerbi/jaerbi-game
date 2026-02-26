@@ -16,6 +16,7 @@ export class WaveAnalyticsService {
     public consecutiveCounterWaves = 0;
     public currentWaveCounterType: number | null = null;
     public currentWaveCounterChance: number = 0;
+    public currentDominanceRatio: number = 0;
 
     constructor(private _settings: SettingsService) { }
 
@@ -100,13 +101,27 @@ export class WaveAnalyticsService {
         if (strategy) {
             const { type, ratio } = strategy;
             let spawnChance = wave >= 31 ? 0.8 : wave >= 21 ? 0.6 : 0.4;
-            this.consecutiveCounterWaves++;
-            const towerNames: Record<number, string> = {
-                1: this.getTowerName(1), 2: this.getTowerName(2), 3: this.getTowerName(3), 4: this.getTowerName(4), 5: this.getTowerName(5), 6: this.getTowerName(6), 7: this.getTowerName(7)
-            };
+            
+            // Mono-Penalty: If ratio > 0.8, force 100% chance (Wave 15+)
+            if (ratio > 0.8 && wave >= 15) {
+                spawnChance = 1.0;
+            }
+
+            this.currentWaveCounterType = type;
+            this.currentWaveCounterChance = spawnChance;
+            this.currentDominanceRatio = ratio; // Store for scaling resistance
+            if (this.currentWaveCounterChance > 0) {
+                this.consecutiveCounterWaves++;
+            } else {
+                this.consecutiveCounterWaves = 0;
+            }
 
             const wavesSinceLastMessage = wave - this.lastMessageWave;
             const typeChanged = type !== this.lastReportedType;
+
+            const towerNames: Record<number, string> = {
+                1: this.getTowerName(1), 2: this.getTowerName(2), 3: this.getTowerName(3), 4: this.getTowerName(4), 5: this.getTowerName(5), 6: this.getTowerName(6), 7: this.getTowerName(7)
+            };
 
             if (this.consecutiveCounterWaves >= 2 && (wavesSinceLastMessage >= 3 || typeChanged)) {
                 const isUk = this._settings.currentLang() === 'uk';

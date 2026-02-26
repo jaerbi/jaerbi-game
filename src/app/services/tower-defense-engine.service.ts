@@ -923,9 +923,16 @@ export class TowerDefenseEngineService {
                 const flags = this.waveAnalytics.getCounterFlag(counterType);
                 Object.assign(newEnemy, flags);
 
-                // Apply 1.2x HP bonus for Wave 31+
-                if (this.wave() >= 31) {
-                    newEnemy.maxHp = Math.floor(newEnemy.maxHp * 1.2);
+                // Earlier HP Buff for Resistant Enemies
+                let hpBonus = 1.0;
+                if (this.wave() >= 30) {
+                    hpBonus = 1.5;
+                } else if (this.wave() >= 20) {
+                    hpBonus = 1.3;
+                }
+
+                if (hpBonus > 1.0) {
+                    newEnemy.maxHp = Math.floor(newEnemy.maxHp * hpBonus);
                     newEnemy.hp = newEnemy.maxHp;
                 }
 
