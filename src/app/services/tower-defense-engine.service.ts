@@ -930,6 +930,19 @@ export class TowerDefenseEngineService {
             if (this.currentScriptedWave.isBulwark) newEnemy.isBulwark = true;
         }
 
+        // Apply Wave Modifiers from LevelConfig
+        const config = this.currentLevelConfig();
+        if (config && config.waveModifiers) {
+            const modifiers = config.waveModifiers[this.wave()];
+            if (modifiers) {
+                for (const mod of modifiers) {
+                    if (Math.random() < mod.chance) {
+                        (newEnemy as any)[mod.property] = true;
+                    }
+                }
+            }
+        }
+
         this.enemiesInternal.push(newEnemy);
     }
 
@@ -1285,9 +1298,20 @@ export class TowerDefenseEngineService {
         if (tower.type === 3) {
             const golden = this.getUpgradeLevel(3, 'golden');
             if (golden > 0) {
-                const stunChance = 0.15 + golden * 0.05;
+                // Golden Mastery - "Concussive Blasts"
+                // Logic: If enemy has shatter stacks, boost stun chance and duration
+                const shatterStacks = enemy.shatterStacks || 0;
+                
+                let stunChance = 0.15 + golden * 0.05;
+                let durationBonus = 0;
+
+                if (shatterStacks > 0) {
+                    stunChance += 0.15; // +15% Chance
+                    durationBonus = shatterStacks * 0.5; // +0.5s per stack
+                }
+
                 if (Math.random() < stunChance) {
-                    const baseDuration = (0.5 + golden * 0.2) * 1.2;
+                    const baseDuration = ((0.5 + golden * 0.2) * 1.2) + durationBonus;
                     enemy.stunTime = Math.max(enemy.stunTime ?? 0, baseDuration);
                 }
             }

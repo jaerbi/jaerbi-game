@@ -18,6 +18,12 @@ export interface LevelConfig {
     enemyTypes?: string[]; // E.g. ['Standard', 'Magma', 'Mirror']
     waveTypeSequence?: number[]; // 1=Standard, 2=Scout, 3=Tank, 4=Boss
     bossCount?: number; // Number of bosses to spawn during the campaign
+    waveModifiers?: {
+        [waveIndex: number]: Array<{
+            property: 'isFrost' | 'isGrounded' | 'isAgile' | 'isBulwark' | 'isMagma' | 'isMirror' | 'isSlime';
+            chance: number;
+        }>
+    };
 }
 
 @Injectable({
@@ -70,7 +76,12 @@ export class CampaignService {
                 bonusTiles: [
                     { x: 2, y: 3, type: 'damage' }, // Strategic point, covers two lines
                     { x: 7, y: 5, type: 'range' }   // Trap: Looks nice, but it's too far from the entrance for the Turret
-                ]
+                ],
+                waveModifiers: {
+                    4: [{ property: 'isFrost', chance: 0.2 }],
+                    5: [{ property: 'isFrost', chance: 0.3 }],
+                    6: [{ property: 'isFrost', chance: 0.6 }]
+                }
             },
             {
                 id: 'level_2',
@@ -100,7 +111,7 @@ export class CampaignService {
                 ],
                 bonusTiles: [
                     { x: 2, y: 1, type: 'damage' }, // Perfect for a cannon, hits 3 lines
-                    { x: 7, y: 3, type: 'bounty' }  // For the greedy
+                    { x: 7, y: 5, type: 'bounty' }  // For the greedy
                 ]
             },
             {

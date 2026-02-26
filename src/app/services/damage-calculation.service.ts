@@ -21,6 +21,10 @@ export class DamageCalculationService {
     readonly VENOM_DURATION = 4;
     readonly VENOM_MAX_STACKS = 3;
     readonly VENOM_SLOW_MODIFIER = 0.8;
+
+    // Shatter (Cannon)
+    readonly SHATTER_MAX_STACKS = 5;
+    readonly SHATTER_DAMAGE_PER_STACK = 0.20;
     
     // Prism
     readonly PRISM_RAMP_MAX_BONUS = 1;
@@ -53,11 +57,11 @@ export class DamageCalculationService {
             }
         }
 
-        // 3. Cannon Shatter (Special)
-        if (tower.specialActive && tower.type === 3) {
-            const nextStacks = Math.min(5, (target.shatterStacks || 0) + 1);
-            target.shatterStacks = nextStacks;
-            const multiplier = 1 + nextStacks * 0.2;
+        // 3. Cannon Shatter (Special) - Logic moved to dedicated method, calling it here
+        if (tower.type === 3) {
+            this.applyShatterStack(target, tower.specialActive);
+            const stacks = target.shatterStacks || 0;
+            const multiplier = 1 + stacks * this.SHATTER_DAMAGE_PER_STACK;
             damage = Math.floor(damage * multiplier);
         }
 
@@ -172,6 +176,21 @@ export class DamageCalculationService {
                 enemy.isFrozen = true;
             }
         }
+    }
+
+    applyShatterStack(enemy: Enemy, specialActive: boolean) {
+        // Only apply stacks if special is active? Or base mechanic?
+        // Prompt says: "Tower #3 should apply a 'Shatter' effect."
+        // Usually specialActive implies T4 upgrade. Let's assume it's a core mechanic if prompt implies it, 
+        // OR it replaces the old logic which checked specialActive.
+        // Old logic: "if (tower.specialActive && tower.type === 3)"
+        // So we keep specialActive check for applying the stack.
+        
+        if (!specialActive) return;
+
+        const currentStacks = enemy.shatterStacks || 0;
+        const nextStacks = Math.min(this.SHATTER_MAX_STACKS, currentStacks + 1);
+        enemy.shatterStacks = nextStacks;
     }
 
     /**

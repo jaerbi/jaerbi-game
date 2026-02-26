@@ -155,44 +155,6 @@ import { WaveAnalyticsService } from '../../services/wave-analytics.service';
         .group:hover {
         box-shadow: 0 0 40px rgba(56, 189, 248, 0.15);
         }
-    @media (max-width: 900px) {
-      .td-layout {
-        flex-direction: column;
-      }
-      .td-main-area {
-        width: 100vw;
-        max-width: 100vw;
-        margin-left: -1rem;
-        margin-right: -1rem;
-        padding: 0.5rem;
-        min-height: auto;
-      }
-      .td-sidebar {
-        width: 100%;
-      }
-      .td-canvas {
-        width: 100vw;
-        max-width: 100vw;
-        touch-action: none;
-      }
-      .td-shop-list {
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 0.5rem;
-        overflow-x: auto;
-        padding-bottom: 0.5rem;
-      }
-      .td-shop-list .shop-btn {
-        min-width: 72px;
-        min-height: 50px;
-      }
-      .td-shop-actions {
-        position: sticky;
-        bottom: 0;
-        background: rgba(15, 23, 42, 0.96);
-        padding-top: 0.5rem;
-      }
-    }
   `]
 })
 export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
@@ -223,23 +185,21 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     @HostListener('window:keydown', ['$event'])
     onKeyDown(event: KeyboardEvent) {
-        if (this.tdEngine.isWaveInProgress()) { return; }
-
-        if (event.repeat) return;
-
         const key = event.key;
 
         if (key === ' ' || key === 'Spacebar') {
             if (this.tdEngine.isWaveInProgress()) {
                 event.preventDefault();
                 this.togglePause();
-                return;
             }
+            return;
         }
 
         if (key === 'Enter') {
-            event.preventDefault();
-            this.tdEngine.startWave();
+            if (!this.tdEngine.isWaveInProgress()) {
+                event.preventDefault();
+                this.tdEngine.startWave();
+            }
             return;
         }
 
@@ -1118,24 +1078,28 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.fillStyle = '#10b981';
             const pct = Math.max(0, Math.min(1, e.hp / e.maxHp));
             ctx.fillRect(cx - r, cy - r - 10, barW * pct, barH);
-            const stacks = e.venomStacks || 0;
-
-            if (speed === 1 && stacks > 0) {
-                ctx.save();
-                const tickW = 3;
-                const tickH = 6;
+            // Venom stacks visualization
+            if (e.venomStacks && e.venomStacks > 0) {
+                const stackH = 4;
+                const stackW = 8;
                 const gap = 2;
-                const startX = cx - r;
-                const tickY = barY - tickH - 2;
-
+                const startY = cy - r + 5;
                 ctx.fillStyle = '#84cc16';
-                ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                ctx.shadowBlur = 2;
-
-                for (let i = 0; i < stacks; i++) {
-                    ctx.fillRect(startX + i * (tickW + gap), tickY, tickW, tickH);
+                for (let i = 0; i < e.venomStacks; i++) {
+                    ctx.fillRect(cx + r + 2, startY + i * (stackH + gap), stackW, stackH);
                 }
-                ctx.restore();
+            }
+
+            // Shatter stacks visualization (Left Side)
+            if (e.shatterStacks && e.shatterStacks > 0) {
+                const stackH = 4;
+                const stackW = 8;
+                const gap = 2;
+                const startY = cy - r + 5;
+                ctx.fillStyle = '#f5e50b'; // Cannon Yellow
+                for (let i = 0; i < e.shatterStacks; i++) {
+                    ctx.fillRect(cx - r - stackW - 2, startY + i * (stackH + gap), stackW, stackH);
+                }
             }
         }
     }
