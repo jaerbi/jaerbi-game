@@ -60,7 +60,7 @@
 
         <div class="flex flex-col items-center select-none">
           <span class="text-[9px] text-emerald-500 font-black uppercase tracking-[0.2em] mb-1">
-            {{ settings.t('CREDITS')}}
+            {{ settings.t('CREDITS') }}
           </span>
           <div class="flex items-center gap-2">
             <span class="text-2xl font-mono font-black text-white drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]">
@@ -124,24 +124,24 @@
       </div>
 
       @if (false) {
-          <div class="bg-slate-950/40 backdrop-blur-md p-1 rounded-2xl border border-white/10 flex shadow-xl">
-            <button
-              (click)="setGameMode('random')"
-              [class.bg-sky-500]="tdEngine.gameMode() === 'random'"
-              [class.text-white]="tdEngine.gameMode() === 'random'"
-              class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter text-slate-500 transition-all"
-            >
-              Random
-            </button>
-            <button
-              (click)="setGameMode('campaign')"
-              [class.bg-indigo-500]="tdEngine.gameMode() === 'campaign'"
-              [class.text-white]="tdEngine.gameMode() === 'campaign'"
-              class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter text-slate-500 transition-all"
-            >
-              Campaign
-            </button>
-          </div>
+        <div class="bg-slate-950/40 backdrop-blur-md p-1 rounded-2xl border border-white/10 flex shadow-xl">
+          <button
+            (click)="setGameMode('random')"
+            [class.bg-sky-500]="tdEngine.gameMode() === 'random'"
+            [class.text-white]="tdEngine.gameMode() === 'random'"
+            class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter text-slate-500 transition-all"
+          >
+            Random
+          </button>
+          <button
+            (click)="setGameMode('campaign')"
+            [class.bg-indigo-500]="tdEngine.gameMode() === 'campaign'"
+            [class.text-white]="tdEngine.gameMode() === 'campaign'"
+            class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter text-slate-500 transition-all"
+          >
+            Campaign
+          </button>
+        </div>
       }
     </div>
   </div>
@@ -195,18 +195,33 @@
     >
       <!-- Counter Strategy Warning -->
       @if (tdEngine.activeCounterStrategy(); as strategy) {
-        <div class="absolute top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-500">
-           <div class="bg-rose-950/90 backdrop-blur-md border border-rose-500/30 px-4 py-2 rounded-lg shadow-2xl flex items-center gap-3">
-              <span class="text-2xl animate-pulse">⚠️</span>
-              <div class="flex flex-col">
-                 <span class="text-xs font-bold text-rose-200 uppercase tracking-widest">Enemy Adapting</span>
-                 <span class="text-[10px] text-rose-300">Resistant to <span class="font-black text-white">{{strategy.name}}</span> towers!</span>
-              </div>
-           </div>
+        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-500">
+          <div
+            class="bg-rose-950/90 backdrop-blur-md border border-rose-500/30 px-6 py-3 rounded-xl shadow-2xl flex items-center gap-4 min-w-[300px]"
+          >
+            <div class="relative">
+              <span class="text-3xl animate-pulse">⚠️</span>
+              <div class="absolute inset-0 bg-rose-500 blur-lg opacity-20 animate-pulse"></div>
+            </div>
+
+            <div class="flex flex-col">
+              <span class="text-[10px] font-black text-rose-400 uppercase tracking-[0.2em]">
+                {{ settings.t('SYSTEM_ALERT_ADAPT') }}
+              </span>
+
+              <span class="text-sm font-medium text-white leading-tight">"{{ strategy.taunt }}"</span>
+
+              <span class="text-[10px] text-rose-300/80 mt-1 italic">
+                {{ settings.t('EFFICIENCY_OF')}}
+                <span class="text-rose-200 font-bold uppercase">{{ strategy.name }}</span>
+                {{ settings.t('DECREASED_BY') }}
+              </span>
+            </div>
+          </div>
         </div>
       }
 
-      <div 
+      <div
         class="origin-center transition-transform duration-75 ease-out"
         [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px) scale(' + zoomLevel() + ')'"
       >
@@ -730,7 +745,7 @@
               (click)="onRestart()"
               class="py-2 bg-rose-500/5 hover:bg-rose-500/10 text-rose-500/70 hover:text-rose-500 border border-rose-500/10 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all"
             >
-              {{ settings.t('RESET')}}
+              {{ settings.t('RESET') }}
             </button>
             <button
               (click)="toggleStatsPanel()"

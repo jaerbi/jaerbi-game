@@ -21,6 +21,7 @@ const TIER_STATS = [
 ] as const;
 
 import { WaveAnalyticsService } from './wave-analytics.service';
+import { DamageCalculationService } from './damage-calculation.service';
 
 @Injectable({
     providedIn: 'root'
@@ -103,7 +104,8 @@ export class TowerDefenseEngineService {
         private firebase: FirebaseService,
         public settings: SettingsService,
         private campaignService: CampaignService,
-        public waveAnalytics: WaveAnalyticsService
+        public waveAnalytics: WaveAnalyticsService,
+        private damageService: DamageCalculationService
     ) {
         this.initGame();
     }
@@ -785,66 +787,15 @@ export class TowerDefenseEngineService {
             const dx = pos.x - enemy.position.x;
             const dy = pos.y - enemy.position.y;
             if (dx * dx + dy * dy <= radiusSq) {
-                this.applyDamageWithResists(enemy, damage, 5);
+                this.damageService.applyDamage(enemy, damage, 5, this.wave(), undefined, (id, amt) => this.recordDamage(id, amt, 5));
             }
         }
-        const explosion: InfernoZone = {
-            id: 'z' + (this.projectileIdCounter++),
-            position: { ...pos },
-            radius,
-            remaining: 0.3,
-            dps: 0
-        };
+        const explosion = this.damageService.createInfernoZone(pos, 'z' + (this.projectileIdCounter++), radius);
         this.infernoZones.push(explosion);
-    }
-
-    private applyVenom(enemy: Enemy, tower: Tower) {
-        if (enemy.isSlime) return;
-        const stacks = Math.min(3, (enemy.venomStacks ?? 0) + 1);
-        enemy.venomStacks = stacks;
-        enemy.venomDuration = 4;
-        enemy.venomTickTimer = 0;
-        if (tower.specialActive) {
-            enemy.venomSlowActive = true;
-        }
-        const base = Math.max(enemy.venomBaseDamage ?? 0, tower.damage);
-        enemy.venomBaseDamage = base;
     }
 
     // Track total damage for analytics (MVP)
     private damageTracking: Map<string, number> = new Map();
-
-    private applyDamageWithResists(enemy: Enemy, amount: number, tier: number, sourceTowerId?: string) {
-        let dmg = amount;
-        
-        // Counter Strategy Resistance (Wave > 10 only)
-        if (this.wave() > 10) {
-            if (this.waveAnalytics.isResistant(enemy, tier)) {
-                dmg = Math.floor(dmg * 0.25); // 75% Reduction
-            }
-        }
-
-        // Boss Resistances
-        if (enemy.isBoss) {
-            dmg = Math.floor(dmg * 0.3);
-        }
-        
-        enemy.hp -= dmg;
-        const t = tier | 0;
-        
-        // Update stats
-        this.statsByTowerType.update(s => {
-            const next = { ...s };
-            next[t] = (next[t] ?? 0) + dmg;
-            return next;
-        });
-        
-        // Track individual tower damage for Analytics
-        if (sourceTowerId) {
-            const current = this.damageTracking.get(sourceTowerId) || 0;
-            this.damageTracking.set(sourceTowerId, current + dmg);
-        }
-    }
 
     private handleSpawning(dt: number) {
         if (this.enemiesToSpawn <= 0) return;
@@ -983,22 +934,10 @@ export class TowerDefenseEngineService {
             if (enemy.prismVulnerableTime && enemy.prismVulnerableTime > 0) {
                 enemy.prismVulnerableTime = Math.max(0, enemy.prismVulnerableTime - dt);
             }
-            if (enemy.venomDuration && enemy.venomDuration > 0 && enemy.venomStacks && enemy.venomStacks > 0) {
-                enemy.venomDuration = Math.max(0, enemy.venomDuration - dt);
-                enemy.venomTickTimer = (enemy.venomTickTimer ?? 0) + dt;
-                const tickDamage = enemy.venomBaseDamage ?? 0;
-                while (enemy.venomTickTimer >= 1 && enemy.venomDuration > 0) {
-                    enemy.venomTickTimer -= 1;
-                    const total = tickDamage * enemy.venomStacks;
-                    this.applyDamageWithResists(enemy, total, 7);
-                }
-                if (enemy.venomDuration <= 0) {
-                    enemy.venomStacks = 0;
-                    enemy.venomTickTimer = 0;
-                }
-                if (enemy.venomStacks && enemy.venomStacks > 0 && enemy.venomSlowActive) {
-                    enemy.speedModifier *= 0.8;
-                }
+            
+            const venomDamage = this.damageService.processVenomTick(enemy, dt);
+            if (venomDamage > 0) {
+                this.damageService.applyDamage(enemy, venomDamage, 7, this.wave());
             }
         }
 
@@ -1021,7 +960,7 @@ export class TowerDefenseEngineService {
                 const dy = zone.position.y - enemy.position.y;
                 if (dx * dx + dy * dy <= radiusSq) {
                     if (zone.dps > 0) {
-                        this.applyDamageWithResists(enemy, zone.dps * dt, 5);
+                        this.damageService.applyDamage(enemy, zone.dps * dt, 5, this.wave());
                         enemy.burnedByInferno = true;
                     }
                 }
@@ -1168,36 +1107,11 @@ export class TowerDefenseEngineService {
 
 
     private applyFrostAuras() {
-        if (this.enemiesInternal.length === 0) return;
-
-        const frostTowers = this.towersInternal.filter(t => t.type === 1 && t.specialActive);
-        if (frostTowers.length === 0) return;
-
-        const golden = this.getUpgradeLevel(1, 'golden');
-        const auraMultiplier = 1 + golden * 0.1;
-        const baseRadius = 2;
-        const radius = baseRadius * auraMultiplier;
-        const radiusSq = radius * radius;
-        const slowAmount = 0.30 + golden * 0.06;
-        const slowMultiplier = Math.max(0.1, 1 - slowAmount);
-
-        for (const enemy of this.enemiesInternal) {
-            let isSlowed = false;
-
-            for (const tower of frostTowers) {
-                const dx = tower.position.x - enemy.position.x;
-                const dy = tower.position.y - enemy.position.y;
-                if (dx * dx + dy * dy <= radiusSq) {
-                    isSlowed = true;
-                    break;
-                }
-            }
-
-            if (isSlowed) {
-                enemy.speedModifier = slowMultiplier;
-                enemy.isFrozen = true;
-            }
-        }
+        this.damageService.applyFrostAuras(
+            this.enemiesInternal, 
+            this.towersInternal.filter(t => t.type === 1 && t.specialActive), 
+            (tier, type: 'damage' | 'range' | 'golden') => this.getUpgradeLevel(tier, type)
+        );
     }
 
     private findTargetForTower(tower: Tower, enemies: Enemy[]): Enemy | null {
@@ -1290,6 +1204,27 @@ export class TowerDefenseEngineService {
         this.projectilesInternal.push(p);
     }
 
+    private recordDamage(sourceTowerId: string | undefined, amount: number, type?: number) {
+        if (sourceTowerId) {
+            const current = this.damageTracking.get(sourceTowerId) || 0;
+            this.damageTracking.set(sourceTowerId, current + amount);
+        }
+        
+        let typeToUpdate = type;
+        if (!typeToUpdate && sourceTowerId) {
+             const t = this.towersInternal.find(t => t.id === sourceTowerId);
+             if (t) typeToUpdate = t.type;
+        }
+
+        if (typeToUpdate) {
+            const t = typeToUpdate;
+            this.statsByTowerType.update(stats => ({
+                ...stats,
+                [t]: (stats[t] || 0) + amount
+            }));
+        }
+    }
+
     // Renamed to internalFireAt to avoid conflict if any, or just update logic
     private fireAt(tower: Tower, enemy: Enemy) {
         if (tower.type !== 6) {
@@ -1303,51 +1238,14 @@ export class TowerDefenseEngineService {
             this.pushProjectile(proj);
         }
 
-        let damage = tower.damage;
-
-        if (tower.specialActive && tower.type === 4) {
-            const ratio = enemy.hp / enemy.maxHp;
-            if (ratio < 0.5) {
-                const multiplier = enemy.isBoss ? 3 : 2;
-                damage = Math.floor(tower.damage * multiplier);
-            }
-        }
-
-        if (tower.specialActive && tower.type === 3) {
-            const nextStacks = Math.min(5, enemy.shatterStacks + 1);
-            enemy.shatterStacks = nextStacks;
-            const multiplier = 1 + nextStacks * 0.2;
-            damage = Math.floor(damage * multiplier);
-        }
-
-        if (tower.type === 6) {
-            const sameTarget = tower.lastBeamTargetId === enemy.id;
-            const prevTime = tower.beamTime ?? 0;
-            const newTime = sameTarget ? prevTime + tower.fireInterval : tower.fireInterval;
-            tower.beamTime = newTime;
-            tower.lastBeamTargetId = enemy.id;
-            const golden = this.getUpgradeLevel(6, 'golden');
-            const maxBonus = golden > 0 ? 3 : 1;
-            const ramp = 1 + Math.min(maxBonus, newTime * 0.5);
-            damage = Math.floor(damage * ramp);
-        }
-
-        if (enemy.prismVulnerableTime && enemy.prismVulnerableTime > 0) {
-            damage = Math.floor(damage * 1.15);
-        }
-
-        if (tower.type === 2) {
-            const golden = this.getUpgradeLevel(2, 'golden');
-            const bonusDamage = enemy.hp * (0.01 + golden * 0.01);
-            damage += bonusDamage;
-        } else if (tower.type === 4) {
-            const golden = this.getUpgradeLevel(4, 'golden');
-            const bonusDamage = enemy.hp * (0.05 + golden * 0.02);
-            damage += bonusDamage;
-        }
+        const damage = this.damageService.calculateTowerDamage(
+            tower, 
+            enemy, 
+            (tier, type: 'damage' | 'range' | 'golden') => this.getUpgradeLevel(tier, type)
+        );
 
         if (tower.type === 5) {
-            const radius = 1.5;
+            const radius = tower.specialActive ? 2.5 : 1.5;
             const radiusSq = radius * radius;
             const basePos = enemy.position;
             for (const other of this.enemiesInternal) {
@@ -1358,27 +1256,19 @@ export class TowerDefenseEngineService {
                     if (other.prismVulnerableTime && other.prismVulnerableTime > 0) {
                         aoeDamage = Math.floor(aoeDamage * 1.15);
                     }
-                    this.applyDamageWithResists(other, aoeDamage, 5, tower.id);
+                    this.damageService.applyDamage(other, aoeDamage, 5, this.wave(), tower.id, this.recordDamage.bind(this));
                     other.burnedByInferno = true;
                 }
             }
             if (tower.specialActive) {
-                const zone: InfernoZone = {
-                    id: 'z' + (this.projectileIdCounter++),
-                    position: { ...basePos },
-                    radius,
-                    remaining: 4,
-                    dps: tower.damage * 0.5
-                };
-                // Inferno zones track their own damage, but we can't easily attribute it to a specific tower later
-                // unless we add sourceTowerId to InfernoZone. For now, skip DOT attribution or add it.
+                const zone = this.damageService.createInfernoZone(basePos, 'z' + (this.projectileIdCounter++), radius);
                 this.infernoZones.push(zone);
             }
         } else if (tower.type === 7) {
-            this.applyVenom(enemy, tower);
-            this.applyDamageWithResists(enemy, damage, tower.type, tower.id);
+            this.damageService.applyVenomStack(enemy, damage, tower.specialActive);
+            this.damageService.applyDamage(enemy, damage, tower.type, this.wave(), tower.id, this.recordDamage.bind(this));
         } else if (tower.type !== 6 || !tower.specialActive) {
-            this.applyDamageWithResists(enemy, damage, tower.type, tower.id);
+            this.damageService.applyDamage(enemy, damage, tower.type, this.wave(), tower.id, this.recordDamage.bind(this));
         }
 
         if (tower.type === 3) {
@@ -1420,8 +1310,8 @@ export class TowerDefenseEngineService {
                             speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
                         };
                         this.pushProjectile(chainProj);
-                        const secondaryDamage = Math.floor(tower.damage * damageMultiplier);
-                        this.applyDamageWithResists(target, secondaryDamage, tower.type, tower.id);
+                        const secondaryDamage = Math.floor(damage * damageMultiplier);
+                        this.damageService.applyDamage(target, secondaryDamage, tower.type, this.wave(), tower.id, this.recordDamage.bind(this));
                     }
                 }
             }
@@ -1430,10 +1320,10 @@ export class TowerDefenseEngineService {
         if (tower.specialActive && tower.type === 6) {
             const golden = this.getUpgradeLevel(6, 'golden');
             const sameTarget = tower.lastBeamTargetId === enemy.id;
-            const time = tower.beamTime ?? 0;
             const maxBonus = golden > 0 ? 3 : 1;
-            const ramp = 1 + Math.min(maxBonus, time * 0.5);
-            const mainDamage = Math.floor(tower.damage * ramp);
+            const ramp = 1 + Math.min(maxBonus, (tower.beamTime ?? 0) * 0.5);
+            // damage already has ramp applied!
+            const mainDamage = damage; 
             const targets: Enemy[] = [enemy];
             if (sameTarget) {
                 const rangeSq = tower.range * tower.range;
@@ -1461,14 +1351,19 @@ export class TowerDefenseEngineService {
             const spectrumActive = golden > 0;
             for (const target of targets) {
                 let dmg = mainDamage;
+                if (target !== enemy) {
+                    dmg = Math.floor(dmg * 0.5); // Secondary targets take 50%
+                }
                 if (target.prismVulnerableTime && target.prismVulnerableTime > 0) {
                     dmg = Math.floor(dmg * 1.15);
                 }
-                this.applyDamageWithResists(target, dmg, tower.type, tower.id);
+                this.damageService.applyDamage(target, dmg, tower.type, this.wave(), tower.id, this.recordDamage.bind(this));
                 if (spectrumActive) {
                     target.prismVulnerableTime = Math.max(target.prismVulnerableTime ?? 0, 0.25);
                 }
             }
+            enemy.prismVulnerableTime = 0.5; // Always apply to main target? Original code logic was slightly duplicated.
+            // Original code: "enemy.prismVulnerableTime = 0.5;" at end of block.
         }
 
         if (tower.type === 4) {
@@ -1512,7 +1407,7 @@ export class TowerDefenseEngineService {
                         if (closest.prismVulnerableTime && closest.prismVulnerableTime > 0) {
                             secondaryDamage = Math.floor(secondaryDamage * 1.15);
                         }
-                        this.applyDamageWithResists(closest, secondaryDamage, tower.type, tower.id);
+                        this.damageService.applyDamage(closest, secondaryDamage, tower.type, this.wave(), tower.id, this.recordDamage.bind(this));
                     }
                 }
             }

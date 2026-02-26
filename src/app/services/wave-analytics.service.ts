@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { SettingsService } from './settings.service';
 
 @Injectable({
     providedIn: 'root'
@@ -7,14 +8,16 @@ export class WaveAnalyticsService {
     // State for rolling analytics
     private waveDamageHistory: Record<number, number>[] = []; // Last 3 waves
     private lastWaveTotalStats: Record<number, number> = {};
-    
+    private lastMessageWave = 0;
+    private lastReportedType: number | null = null;
+
     // Counter Strategy State
     public activeCounterStrategy = signal<{ towerType: number; name: string; taunt: string } | null>(null);
     public consecutiveCounterWaves = 0;
     public currentWaveCounterType: number | null = null;
     public currentWaveCounterChance: number = 0;
 
-    constructor() {}
+    constructor(private _settings: SettingsService) { }
 
     /**
      * Checks if an enemy is resistant to a specific tower type.
@@ -50,7 +53,7 @@ export class WaveAnalyticsService {
      */
     updateRollingAnalytics(currentTotalStats: Record<number, number>) {
         const deltaStats: Record<number, number> = {};
-        
+
         // Calculate delta
         for (const [typeStr, totalDmg] of Object.entries(currentTotalStats)) {
             const type = parseInt(typeStr);
@@ -60,13 +63,13 @@ export class WaveAnalyticsService {
                 deltaStats[type] = delta;
             }
         }
-        
+
         // Update history
         this.waveDamageHistory.push(deltaStats);
         if (this.waveDamageHistory.length > 3) {
             this.waveDamageHistory.shift();
         }
-        
+
         // Snapshot current for next time
         this.lastWaveTotalStats = { ...currentTotalStats };
 
@@ -85,71 +88,133 @@ export class WaveAnalyticsService {
         this.currentWaveCounterType = null;
         this.currentWaveCounterChance = 0;
 
-        // Wave Threshold: No counter logic before wave 15
-        if (wave < 15) {
+        // Wave Threshold: No counter logic before wave 13
+        if (wave < 13) {
             this.consecutiveCounterWaves = 0;
             this.activeCounterStrategy.set(null);
             return;
         }
 
         const strategy = this.getDominantTowerType();
-        
+
         if (strategy) {
             const { type, ratio } = strategy;
-            let spawnChance = 0;
-            
-            // Logic: Smooth Difficulty Escalation
-            if (wave >= 15 && wave <= 20) {
-                spawnChance = 0.4;
-            } else if (wave >= 21 && wave <= 30) {
-                spawnChance = 0.6;
-            } else if (wave >= 31) {
-                spawnChance = 0.8;
-            }
-            
-            if (spawnChance > 0) {
-                this.consecutiveCounterWaves++;
-            } else {
-                this.consecutiveCounterWaves = 0;
-            }
-            
+            let spawnChance = wave >= 31 ? 0.8 : wave >= 21 ? 0.6 : 0.4;
+            this.consecutiveCounterWaves++;
             const towerNames: Record<number, string> = {
-                1: 'Ice', 
-                2: 'Lightning', 
-                3: 'Cannon', // User mapped Type 3 to Cannon/Agile
-                4: 'Sniper', 
-                5: 'Inferno', 
-                6: 'Prism', 
-                7: 'Venom'
+                1: this.getTowerName(1), 2: this.getTowerName(2), 3: this.getTowerName(3), 4: this.getTowerName(4), 5: this.getTowerName(5), 6: this.getTowerName(6), 7: this.getTowerName(7)
             };
-            
-            // Trigger UI only if consecutive >= 2
-            if (this.consecutiveCounterWaves >= 2) {
-                const taunts = [
+
+            const wavesSinceLastMessage = wave - this.lastMessageWave;
+            const typeChanged = type !== this.lastReportedType;
+
+            if (this.consecutiveCounterWaves >= 2 && (wavesSinceLastMessage >= 3 || typeChanged)) {
+                const isUk = this._settings.currentLang() === 'uk';
+                const taunts = isUk ? [
+                    // UA Taunts
+                    `Ваша тактика занадто передбачувана!`,
+                    `Ми адаптувалися до ваших веж ${towerNames[type]}!`,
+                    `Це все, на що ви здатні?`,
+                    `Активувати щити проти типу: ${towerNames[type]}!`,
+                    `Сектор посилено проти зброї типу ${towerNames[type]}.`,
+                    `Ваша оборона застаріла. Ми знаємо ваш наступний крок.`,
+                    `Протоколи захисту оновлено. ${towerNames[type]} більше не загроза.`,
+                    `Ви надто покладаєтесь на ${towerNames[type]}... Помилка.`,
+                    `Аналіз завершено: слабкі місця веж ${towerNames[type]} виявлено.`,
+                    `Наші корпуси тепер витримують атаки типу ${towerNames[type]}!`,
+
+                    // Холодна логіка
+                    `Аналіз завершено. Ефективність веж ${towerNames[type]} знижена на 75%.`,
+                    `Ваша стратегія обчислена. Коригуємо курс...`,
+                    `Захисні протоколи активовано. Тип загрози: ${towerNames[type]}.`,
+                    `Помилка: використання веж ${towerNames[type]} більше не приносить результату.`,
+
+                    // Глузування
+                    `Це все? Ми очікували більшого від вашої лінії ${towerNames[type]}.`,
+                    `Ви все ще сподіваєтесь на ${towerNames[type]}? Як наївно.`,
+                    `Ваша оборона розсипається на очах. Спробуйте щось інше.`,
+                    `Ми адаптуємось швидше, ніж ви будуєте.`,
+
+                    // Техногенні / Військові
+                    `Корпуси посилено термостійким покриттям проти ${towerNames[type]}.`,
+                    `Системи РЕБ налаштовані на частоту ваших веж ${towerNames[type]}.`,
+                    `Увага всім підрозділам: зброя ${towerNames[type]} ідентифікована як малоефективна.`,
+                    `Сектор 7 повністю захищено від атак типу ${towerNames[type]}.`,
+
+                    // Стратегічні
+                    `Ви самі підказали нам, як вас перемогти, використовуючи лише ${towerNames[type]}.`,
+                    `Різноманітність — не ваша сильна сторона, чи не так?`,
+                    `Ми вивчили кожен вольт і кожен постріл ваших ${towerNames[type]}.`,
+                    `Ваш ліміт веж ${towerNames[type]} вичерпано. Готуйтесь до поразки.`,
+
+                    // "Пасхалки" (рідкісні фрази)
+                    `Хтось казав вам, що ставити тільки ${towerNames[type]} — це погана ідея?`,
+                    `Наші сенсори фіксують відчай у вашій тактиці.`,
+                    `System.err: Strategy_Not_Found. Жарт. Ми просто стали сильнішими.`,
+                    `О, знову ${towerNames[type]}? Як... оригінально.`
+                ] : [
+                    // EN Taunts
                     `Your tactics are predictable!`,
-                    `We have adapted to your ${towerNames[type]}!`,
+                    `We have adapted to your ${towerNames[type]} towers!`,
                     `Is that all you have?`,
-                    `Shields up against ${towerNames[type]}!`
+                    `Shields up against ${towerNames[type]} weaponry!`,
+                    `Sector reinforced against ${towerNames[type]} damage.`,
+                    `Your defense is obsolete. We see your next move.`,
+                    `Defense protocols updated. ${towerNames[type]} is no longer a threat.`,
+                    `You rely too much on ${towerNames[type]}... Big mistake.`,
+                    `Analysis complete: ${towerNames[type]} weak points identified.`,
+                    `Our hulls are now reinforced against ${towerNames[type]} attacks!`,
+
+                    // Cold Logic
+                    `Analysis complete. Efficiency of ${towerNames[type]} towers reduced by 75%.`,
+                    `Your strategy has been calculated. Adjusting course...`,
+                    `Defense protocols activated. Threat type: ${towerNames[type]}.`,
+                    `Error: Using ${towerNames[type]} units is no longer effective.`,
+
+                    // Taunting
+                    `Is that all? We expected more from your ${towerNames[type]} line.`,
+                    `Still relying on ${towerNames[type]}? How naive.`,
+                    `Your defense is crumbling. Try something else.`,
+                    `We adapt faster than you can build.`,
+
+                    // Tech / Military
+                    `Hulls reinforced with specialized plating against ${towerNames[type]}.`,
+                    `Electronic warfare set to the frequency of your ${towerNames[type]} units.`,
+                    `Attention all units: ${towerNames[type]} weaponry identified as low-threat.`,
+                    `Sector 7 fully shielded against ${towerNames[type]} attacks.`,
+
+                    // Strategic
+                    `You've shown us exactly how to beat you by overusing ${towerNames[type]}.`,
+                    `Diversity isn't your strong suit, is it?`,
+                    `We've mapped every volt and shell of your ${towerNames[type]} towers.`,
+                    `Your ${towerNames[type]} quota has expired. Prepare for impact.`,
+
+                    // Rare / Easter Eggs
+                    `Did anyone tell you that massing ${towerNames[type]} was a bad idea?`,
+                    `Our sensors detect desperation in your tactics.`,
+                    `System.err: Strategy_Not_Found. Just kidding. We're just stronger now.`,
+                    `Oh, ${towerNames[type]} again? How... original.`
                 ];
+
                 const taunt = taunts[Math.floor(Math.random() * taunts.length)];
-                
-                // Set active strategy for UI
-                this.activeCounterStrategy.set({ towerType: type, name: towerNames[type], taunt });
-                
-                // Auto-hide toast after 7s
-                setTimeout(() => {
-                    this.activeCounterStrategy.set(null);
-                }, 7000);
+
+                this.activeCounterStrategy.set({
+                    towerType: type,
+                    name: towerNames[type],
+                    taunt
+                });
+
+                this.lastMessageWave = wave;
+                this.lastReportedType = type;
+
+                setTimeout(() => this.activeCounterStrategy.set(null), 8000);
             }
 
             this.currentWaveCounterType = type;
             this.currentWaveCounterChance = spawnChance;
-
-            console.log(`[WaveAnalytics] Strategy Detected: Type ${type} (${towerNames[type]}) with ratio ${ratio.toFixed(2)}. Spawn Chance: ${spawnChance}`);
         } else {
             this.consecutiveCounterWaves = 0;
             this.activeCounterStrategy.set(null);
-            console.log('[WaveAnalytics] No dominant strategy detected.');
         }
     }
 
@@ -157,7 +222,7 @@ export class WaveAnalyticsService {
         // Sum up recent history
         const recentStats: Record<number, number> = {};
         let totalRecentDamage = 0;
-        
+
         for (const waveStats of this.waveDamageHistory) {
             for (const [typeStr, dmg] of Object.entries(waveStats)) {
                 const type = parseInt(typeStr);
@@ -166,11 +231,11 @@ export class WaveAnalyticsService {
             }
         }
 
-        if (totalRecentDamage < 1000) return null; // Wait for significant data
+        if (totalRecentDamage < 10000) return null; // Wait for significant data
 
         let maxType = 0;
         let maxDmg = 0;
-        
+
         for (const [typeStr, dmg] of Object.entries(recentStats)) {
             const type = parseInt(typeStr);
             if (dmg > maxDmg) {
@@ -197,6 +262,20 @@ export class WaveAnalyticsService {
             case 6: return { isMirror: true };     // Type 6 (Prism) -> isMirror
             case 7: return { isSlime: true };      // Type 7 (Venom) -> isSlime
             default: return {};
+        }
+    }
+
+    getTowerName(type: number): string {
+        const isUk = this._settings.currentLang() === 'uk';
+
+        switch (type) {
+            case 1: return isUk ? 'Льодяна' : 'Ice';
+            case 2: return isUk ? 'Блискавка' : 'Lightning';
+            case 3: return isUk ? 'Розколювач' : 'Shatter';
+            case 4: return isUk ? 'Кат' : 'Executioner';
+            case 5: return isUk ? 'Інферно' : 'Inferno';
+            case 6: return isUk ? 'Призматичний промінь' : 'Prism Beam';
+            default: return isUk ? 'Нейротоксин' : 'Neurotoxin';
         }
     }
 }

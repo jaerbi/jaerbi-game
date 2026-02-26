@@ -12,6 +12,7 @@ import { AbbreviateNumberPipe } from './abbreviate-number.pipe';
 import { AppPrivacyPolicyComponent } from '../privacy-policy/privacy-policy.component';
 import { CampaignService } from '../../services/campaign.service';
 import { DragDropModule } from '@angular/cdk/drag-drop';
+import { WaveAnalyticsService } from '../../services/wave-analytics.service';
 
 @Component({
     selector: 'app-tower-defense',
@@ -251,7 +252,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         public firebase: FirebaseService,
         public router: Router,
         private cdr: ChangeDetectorRef,
-        public campaignService: CampaignService
+        public campaignService: CampaignService,
+        private _waveAnalyticsService: WaveAnalyticsService,
     ) { }
 
     ngOnInit() {
@@ -454,17 +456,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     getTowerName(type: number): string {
-        const isUk = this.settings.currentLang() === 'uk';
-
-        switch (type) {
-            case 1: return isUk ? 'Льодяна' : 'Ice';
-            case 2: return isUk ? 'Блискавка' : 'Lightning';
-            case 3: return isUk ? 'Розколювач' : 'Shatter';
-            case 4: return isUk ? 'Кат' : 'Executioner';
-            case 5: return isUk ? 'Інферно' : 'Inferno';
-            case 6: return isUk ? 'Призматичний промінь' : 'Prism Beam';
-            default: return isUk ? 'Нейротоксин' : 'Neurotoxin';
-        }
+        return this._waveAnalyticsService.getTowerName(type);
     }
 
     getTowerColor(type: number): string {
