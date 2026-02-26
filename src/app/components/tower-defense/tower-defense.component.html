@@ -195,7 +195,9 @@
     >
       <!-- Counter Strategy Warning -->
       @if (tdEngine.activeCounterStrategy(); as strategy) {
-        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-500">
+        <div
+          class="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-500"
+        >
           <div
             class="bg-rose-950/90 backdrop-blur-md border border-rose-500/30 px-6 py-3 rounded-xl shadow-2xl flex items-center gap-4 min-w-[300px]"
           >
@@ -212,7 +214,7 @@
               <span class="text-sm font-medium text-white leading-tight">"{{ strategy.taunt }}"</span>
 
               <span class="text-[10px] text-rose-300/80 mt-1 italic">
-                {{ settings.t('EFFICIENCY_OF')}}
+                {{ settings.t('EFFICIENCY_OF') }}
                 <span class="text-rose-200 font-bold uppercase">{{ strategy.name }}</span>
                 {{ settings.t('DECREASED_BY') }}
               </span>
@@ -977,6 +979,31 @@
               20x20
             </button>
           </div>
+        </div>
+
+        <div
+          class="flex items-center w-24 gap-1 px-1 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md"
+        >
+          <button
+            (click)="settings.setLang('uk')"
+            class="cursor-pointer text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full transition-all"
+            [class.bg-emerald-500/20]="settings.currentLang() === 'uk'"
+            [class.text-emerald-400]="settings.currentLang() === 'uk'"
+            [class.text-slate-500]="settings.currentLang() !== 'uk'"
+            [class.hover:text-slate-300]="settings.currentLang() !== 'uk'"
+          >
+            UA
+          </button>
+          <button
+            (click)="settings.setLang('en')"
+            class="cursor-pointer text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full transition-all"
+            [class.bg-emerald-500/20]="settings.currentLang() === 'en'"
+            [class.text-emerald-400]="settings.currentLang() === 'en'"
+            [class.text-slate-500]="settings.currentLang() !== 'en'"
+            [class.hover:text-slate-300]="settings.currentLang() !== 'en'"
+          >
+            EN
+          </button>
         </div>
 
         @if (false) {
