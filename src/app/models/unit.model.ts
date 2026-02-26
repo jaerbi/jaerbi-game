@@ -78,6 +78,9 @@ export interface Enemy {
     isMirror?: boolean;
     isSlime?: boolean;
     isBulwark?: boolean;
+    isFrost?: boolean; // Resists Ice
+    isGrounded?: boolean; // Resists Lightning/Physical
+    isAgile?: boolean; // Resists Cannon
 }
 
 export interface Projectile {

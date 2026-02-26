@@ -470,7 +470,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     getTowerColor(type: number): string {
         return type === 1 ? '#0ea5e9' :
             type === 2 ? '#a855f7' :
-                type === 3 ? '#f59e0b' :
+                type === 3 ? '#f5e50b' :
                     type === 4 ? '#ef4444' :
                         type === 5 ? '#ee822a' :
                             type === 6 ? '#22d3ee' :
@@ -890,7 +890,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const color =
             type === 1 ? '#0ea5e9' :
                 type === 2 ? '#a855f7' :
-                    type === 3 ? '#f59e0b' :
+                    type === 3 ? '#f5e50b' :
                         type === 4 ? '#ef4444' :
                             type === 5 ? '#ee822a' :
                                 type === 6 ? '#22d3ee' :
@@ -1032,21 +1032,41 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             let shadowBlur = isFastSpeed ? 0 : 10;
             let lineWidth = 2;
 
-            if (e.isMagma) {
+            if (e.isMagma) { // Inferno
                 strokeColor = '#f97316';
                 shadowColor = '#f97316';
                 shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 2;
-            } else if (e.isMirror) {
+                lineWidth = 3;
+            } else if (e.isMirror) { // Prism
                 strokeColor = '#f0f9ff';
                 shadowColor = '#0ea5e9';
                 shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 2;
-            } else if (e.isSlime) {
+                lineWidth = 3;
+            } else if (e.isSlime) { // Venom
                 strokeColor = '#22c55e';
                 shadowColor = '#22c55e';
                 shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 2;
+                lineWidth = 3;
+            } else if (e.isFrost) { // Ice
+                strokeColor = '#06b6d4'; // Cyan
+                shadowColor = '#06b6d4';
+                shadowBlur = isFastSpeed ? 0 : 15;
+                lineWidth = 3;
+            } else if (e.isGrounded) { // Lightning
+                strokeColor = '#854d0e'; // Brown/Yellow-ish
+                shadowColor = '#a16207';
+                shadowBlur = isFastSpeed ? 0 : 15;
+                lineWidth = 3;
+            } else if (e.isAgile) { // Cannon/Shatter
+                strokeColor = '#eab308'; // Yellow
+                shadowColor = '#facc15';
+                shadowBlur = isFastSpeed ? 0 : 15;
+                lineWidth = 3;
+            } else if (e.isBulwark) { // Sniper
+                strokeColor = '#94a3b8'; // Slate/Steel
+                shadowColor = '#cbd5e1';
+                shadowBlur = isFastSpeed ? 0 : 15;
+                lineWidth = 3;
             }
 
             ctx.shadowColor = shadowColor;
