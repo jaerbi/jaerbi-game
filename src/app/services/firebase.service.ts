@@ -193,7 +193,7 @@ export class FirebaseService {
                     }
                 }
             }
-            
+
             return Array.from(bestPerUser.values())
                 .sort((a, b) => b.maxWave - a.maxWave)
                 .slice(0, limitCount);
@@ -297,19 +297,7 @@ export class FirebaseService {
 
         if (!user) return;
 
-        /**
-         * CALCULATION LOGIC AND LIMITS (Sanity Check):
-         * 1. Campaign: XP is fixed (e.g. Level 5 = 40 XP).
-         * 2. Random Mode: XP = (Wave * 1.5) + Bonus.
-         * - Bonus is awarded after wave 20: (Wave - 20) * 2.
-         * * CALCULATION EXAMPLES:
-         * - Wave 10: (10 * 1.5) = 15 XP
-         * - Wave 20: (20 * 1.5) = 30 XP
-         * - Wave 40: (40 * 1.5) + (20 * 2) = 60 + 40 = 100 XP
-         * - Wave 80: (80 * 1.5) + (60 * 2) = 120 + 120 = 240 XP (Limit Limit)
-         * * LIMIT: 250 XP per session is a safe maximum.
-         */
-        const HARD_CAP = 250;
+        const HARD_CAP = 750;
 
         // Dynamic check: if more than HARD_CAP allows has arrived
         if (xp > HARD_CAP) {

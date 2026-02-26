@@ -118,27 +118,10 @@ export class TowerDefenseEngineService {
         const user = this.firebase.user$();
         if (!user) return;
 
-        // Campaign Completion Logic
+        // Centralized XP Calculation
+        const xpToAward = this.calculateEarnedXp();
         const config = this.currentLevelConfig();
-        let xpToAward = 0;
-        let levelId: string | undefined = undefined;
-
-        if (config && this.wave() >= config.waveCount) {
-            // Level Completed
-            xpToAward = config.xpReward;
-            levelId = config.id;
-        } else if (this.gameMode() === 'random') {
-            // Random Mode XP
-            const wavesCleared = this.wave();
-            if (wavesCleared >= 5) {
-                const base = wavesCleared * 1.5;
-                const bonus = wavesCleared > 20 ? (wavesCleared - 20) * 2 : 0;
-                xpToAward = Math.floor(base + bonus);
-            }
-        }
-
-        // Add Accumulated Bonus XP (e.g. from Bosses)
-        xpToAward += this.bonusXpAccumulated;
+        const levelId = config?.id;
 
         if (xpToAward > 0) {
             await this.firebase.awardTowerDefenseXp(xpToAward, levelId, this.wave());
@@ -254,22 +237,21 @@ export class TowerDefenseEngineService {
     public calculateEarnedXp(): number {
         if (this.gameMode() === 'campaign') {
             const config = this.currentLevelConfig();
-            if (config && this.wave() >= config.waveCount && this.isFirstTimeClear) {
-                return config.xpReward;
-            }
-            return 0;
+            return (config && this.wave() >= config.waveCount && this.isFirstTimeClear) ? config.xpReward : 0;
         }
 
-        // Random Mode
-        const wavesCleared = this.wave();
-        if (wavesCleared < 5) return 0;
+        const waves = this.wave();
+        if (waves < 5) return 0;
 
-        const base = wavesCleared * 1.5;
-        const bonus = wavesCleared > 20 ? (wavesCleared - 20) * 2 : 0;
-        const total = Math.floor(base + bonus);
+        let totalXp = waves * 0.5;
 
-        // HARD_CAP (250 XP), 
-        return Math.min(total, 250);
+        if (waves > 20) totalXp += (waves - 20) * 2;
+        if (waves > 40) totalXp += (waves - 40) * 5;
+
+        const cappedBonusXp = Math.min(this.bonusXpAccumulated, waves * 3);
+        totalXp += cappedBonusXp;
+
+        return Math.floor(Math.min(totalXp, 300));
     }
     initializeGame(level: number, campaignLevelId?: string) {
         // Reset state
