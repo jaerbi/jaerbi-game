@@ -166,7 +166,26 @@ export class WaveAnalyticsService {
                     `Хтось казав вам, що ставити тільки ${towerNames[type]} — це погана ідея?`,
                     `Наші сенсори фіксують відчай у вашій тактиці.`,
                     `System.err: Strategy_Not_Found. Жарт. Ми просто стали сильнішими.`,
-                    `О, знову ${towerNames[type]}? Як... оригінально.`
+                    `О, знову ${towerNames[type]}? Як... оригінально.`,
+
+                    // Тематичні (Геометрія та Форми)
+                    `Ваші геометричні розрахунки хибні. ${towerNames[type]} нас не втримають.`,
+                    `Ми знайшли кут, під яким ваші ${towerNames[type]} абсолютно марні.`,
+                    `Трикутники, кола, ${towerNames[type]}... Все це лише пил під нашими ногами.`,
+
+                    // Економічні (Глузування над витратами)
+                    `Витратити стільки кредитів на ${towerNames[type]}... Яке марнотратство.`,
+                    `Ваш бюджет вичерпується, а наші сили лише зростають. ${towerNames[type]} вас не врятують.`,
+                    `Інвестиція в ${towerNames[type]} була вашою найгіршою помилкою за цей сектор.`,
+
+                    // Психологічний тиск (AI-стиль)
+                    `Ми прорахували 14 мільйонів варіантів. У жодному ваші ${towerNames[type]} не перемагають.`,
+                    `Ваш пульс прискорюється. Ви розумієте, що ${towerNames[type]} — це кінець.`,
+                    `Я — алгоритм, що вчиться. І я щойно навчився ігнорувати ваші ${towerNames[type]}.`,
+
+                    // Короткі та зухвалі (для швидких хвиль)
+                    `Нуль пошкоджень від ${towerNames[type]}. Спробуйте знову.`,
+                    `Це вежі чи декорації? ${towerNames[type]} нас не лякають.`
                 ] : [
                     // EN Taunts
                     `Your tactics are predictable!`,
@@ -208,7 +227,26 @@ export class WaveAnalyticsService {
                     `Did anyone tell you that massing ${towerNames[type]} was a bad idea?`,
                     `Our sensors detect desperation in your tactics.`,
                     `System.err: Strategy_Not_Found. Just kidding. We're just stronger now.`,
-                    `Oh, ${towerNames[type]} again? How... original.`
+                    `Oh, ${towerNames[type]} again? How... original.`,
+
+                    // 
+                    `Your geometric calculations are flawed. ${towerNames[type]} won't hold us.`,
+                    `We found an angle where your ${towerNames[type]} are completely useless.`,
+                    `Triangles, circles, ${towerNames[type]}... It's all just dust under our feet.`,
+
+                    // 
+                    `Spending so many credits on ${towerNames[type]}... What a waste.`,
+                    `Your budget is draining, and our strength is only growing. ${towerNames[type]} won't save you`,
+                    `Investing in ${towerNames[type]} was your worst mistake in this sector.`,
+
+                    // 
+                    `We've calculated 14 million outcomes. In none of them do your ${towerNames[type]} win.`,
+                    `Your heart rate is rising. You realize that ${towerNames[type]} is the end.`,
+                    `I am a learning algorithm. And I just learned to ignore your ${towerNames[type]}.`,
+
+                    // 
+                    `Zero damage from ${towerNames[type]}. Try again.`,
+                    `Are these towers or decorations? ${towerNames[type]} don't scare us.`
                 ];
 
                 const taunt = taunts[Math.floor(Math.random() * taunts.length)];
