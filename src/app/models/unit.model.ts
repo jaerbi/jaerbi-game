@@ -58,6 +58,7 @@ export interface Enemy {
     isBoss?: boolean;
     hue: number;
     baseSpeed: number;
+    basePlayerDamage?: number;
     speedModifier: number;
     shatterStacks: number;
     isFrozen: boolean;

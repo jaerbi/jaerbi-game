@@ -588,6 +588,15 @@ export class TowerDefenseEngineService {
     }
     startWave() {
         if (this.isWaveInProgress() || this.gameOver()) return;
+
+        // Extra check: If we just finished the last wave of a campaign, don't start a new one
+        // unless it's Random mode (infinite)
+        const config = this.currentLevelConfig();
+        if (config && this.wave() >= config.waveCount) {
+            console.warn("Attempted to start wave beyond limit. Victory should have triggered.");
+            return;
+        }
+
         this.wave.update(w => w + 1);
         this.isWaveInProgress.set(true);
 
@@ -598,7 +607,6 @@ export class TowerDefenseEngineService {
         }
 
         // Scripted Logic for CURRENT Wave
-        const config = this.currentLevelConfig();
         const currentWave = this.wave();
 
         // Determine if this is a Boss Wave based on distribution
@@ -696,9 +704,16 @@ export class TowerDefenseEngineService {
             return;
         }
 
+        const effectiveDt = dt * this.gameSpeedMultiplier();
+        this.handleSpawning(effectiveDt);
+        this.updateEnemies(effectiveDt);
+        this.updateTowers(effectiveDt);
+        this.updateProjectiles(effectiveDt);
+
         // Campaign Victory Check
+        // Only trigger victory if enemies are CLEARED and we've completed the FINAL wave
         const config = this.currentLevelConfig();
-        if (config && this.wave() > config.waveCount && this.enemiesInternal.length === 0 && this.enemiesToSpawn === 0) {
+        if (config && this.wave() >= config.waveCount && this.enemiesInternal.length === 0 && this.enemiesToSpawn === 0) {
             // Victory!
             this.enemiesInternal = [];
             this.projectilesInternal = [];
@@ -714,12 +729,6 @@ export class TowerDefenseEngineService {
             this.gameEndedHard = true;
             return;
         }
-
-        const effectiveDt = dt * this.gameSpeedMultiplier();
-        this.handleSpawning(effectiveDt);
-        this.updateEnemies(effectiveDt);
-        this.updateTowers(effectiveDt);
-        this.updateProjectiles(effectiveDt);
 
         if (this.lives() <= 0 && !this.gameOver()) {
             this.enemiesInternal = [];
@@ -843,6 +852,7 @@ export class TowerDefenseEngineService {
         // Smart Boss Logic or Legacy Boss Logic
         let boss = false;
         if (this.isBossWaveActive) {
+            // In Campaign, only spawn ONE boss per boss wave, usually at the end
             const isLastOfWave = spawnedSoFar === total - 1;
             if (isLastOfWave) {
                 boss = true;
@@ -858,7 +868,8 @@ export class TowerDefenseEngineService {
         const hue = (this.wave() * 40) % 360;
 
         let enemyType: 'tank' | 'scout' | 'standard' | 'boss' = this.currentWaveType;
-        if (!this.currentScriptedWave && boss) {
+        // Force Boss type if boss flag is true
+        if (boss) {
             enemyType = 'boss';
         }
 
@@ -871,6 +882,7 @@ export class TowerDefenseEngineService {
             hpFinal = hp * levelMultiplier * 0.4;
             speedFinal = baseSpeed * 2.0;
         } else if (enemyType === 'boss') {
+            // Boss HP Calculation
             hpFinal = hp * levelMultiplier * 6;
             speedFinal = baseSpeed * 0.5;
         }
@@ -994,6 +1006,12 @@ export class TowerDefenseEngineService {
         for (let i = this.enemiesInternal.length - 1; i >= 0; i--) {
             const enemy = this.enemiesInternal[i];
             const isStunned = !!(enemy.stunTime && enemy.stunTime > 0);
+            
+            // Set base player damage based on type if not set
+            if (enemy.basePlayerDamage === undefined) {
+                enemy.basePlayerDamage = enemy.type === 'boss' ? 10 : 3;
+            }
+
             if (!isStunned) {
                 const base = enemy.baseSpeed;
                 const archetypeMultiplier =
@@ -1008,7 +1026,28 @@ export class TowerDefenseEngineService {
                     enemy.progress = 0;
 
                     if (enemy.pathIndex >= this.path().length - 1) {
-                        const damageToLives = enemy.type === 'boss' ? 5 : 1;
+                        // Dynamic Damage Calculation
+                        // Base: Boss = 10, Standard = 3
+                        // Boss Rules: >90% HP -> 10, 50-90% -> 8, 10-50% -> 4, <10% -> 1
+                        // Standard Rules: >90% HP -> 3, 50-90% -> 2, <50% -> 1
+                        
+                        let damageToLives = 1;
+                        const hpPercent = enemy.hp / enemy.maxHp;
+
+                        if (enemy.type === 'boss') {
+                            const baseDmg = 10;
+                            if (hpPercent > 0.9) damageToLives = 10;
+                            else if (hpPercent > 0.5) damageToLives = 8;
+                            else if (hpPercent > 0.1) damageToLives = 4;
+                            else damageToLives = 1;
+                        } else {
+                            // Standard, Tank, Scout
+                            const baseDmg = 3;
+                            if (hpPercent > 0.9) damageToLives = 3;
+                            else if (hpPercent > 0.5) damageToLives = 2;
+                            else damageToLives = 1;
+                        }
+
                         this.enemiesInternal.splice(i, 1);
                         this.ngZone.run(() => this.lives.update(l => Math.max(0, l - damageToLives)));
 
@@ -1534,6 +1573,65 @@ export class TowerDefenseEngineService {
         // console.groupEnd();
 
         this.firebase.saveBalanceLogs(logs);
+    }
+
+    // Logic for "Buy MAX"
+    // Calculates total cost to reach max level (4) or as high as possible
+    // Returns { levelsToAdd: number, totalCost: number }
+    calculateMaxUpgrade(tower: Tower): { levelsToAdd: number, totalCost: number } {
+        if (!tower || tower.level >= 4) return { levelsToAdd: 0, totalCost: 0 };
+
+        let currentLevel = tower.level;
+        let totalCost = 0;
+        let levelsToAdd = 0;
+        let money = this.money();
+        const baseCost = this.getTowerCost(tower.type);
+
+        while (currentLevel < 4) {
+            // Match logic in getUpgradeCost exactly
+            let multiplier = 0.5;
+            if (currentLevel === 2) multiplier = 0.6;
+            if (currentLevel === 3) multiplier = 0.7;
+            
+            const nextCost = Math.floor(baseCost * multiplier);
+
+            if (money >= nextCost) {
+                totalCost += nextCost;
+                money -= nextCost;
+                currentLevel++;
+                levelsToAdd++;
+            } else {
+                break;
+            }
+        }
+
+        return { levelsToAdd, totalCost };
+    }
+
+    upgradeTowerMax(towerId: string) {
+        const tower = this.towersInternal.find(t => t.id === towerId);
+        if (!tower) return;
+
+        const { levelsToAdd, totalCost } = this.calculateMaxUpgrade(tower);
+        if (levelsToAdd === 0) return;
+
+        this.money.update(m => m - totalCost);
+        
+        // Apply upgrades level by level to ensure correct stats
+        const baseCost = this.getTowerCost(tower.type);
+
+        for(let i=0; i<levelsToAdd; i++) {
+            // Calculate cost for this specific level step for invested tracking
+            let multiplier = 0.5;
+            if (tower.level === 2) multiplier = 0.6;
+            if (tower.level === 3) multiplier = 0.7;
+            const cost = Math.floor(baseCost * multiplier);
+
+            tower.level++;
+            tower.damage = Math.floor(tower.damage * 1.3); // Match standard upgrade (1.3x)
+            tower.range = parseFloat((tower.range * 1.1).toFixed(2)); // Match standard upgrade (1.1x)
+            tower.invested += cost;
+        }
     }
 
     getTowerCost(tier: number): number {

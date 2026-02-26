@@ -30,19 +30,20 @@ export class AdminGuard implements CanActivate {
         }
 
         return this.userStream$.pipe(
-            // 5. КЛЮЧОВИЙ МОМЕНТ: Чекаємо, поки Firebase вийде зі стану 'undefined'
-            // Ми ігноруємо початковий стан завантаження
+            // Чекаємо, поки Firebase перестане бути undefined (завантаження)
             filter(user => user !== undefined),
             take(1),
             map(user => {
-                // ТИМЧАСОВО: Дозволяємо доступ, якщо ми на localhost
-                const isLocalhost = window.location.hostname === 'localhost';
-                const isAllowed = (user && this.ALLOWED_ADMINS.includes(user.uid)) || isLocalhost;
-
-                if (isAllowed) {
-                    console.log('✅ Доступ дозволено (Localhost або Admin)');
-                    return true;
+                // Якщо user === null, значить Firebase точно сказав, що юзер НЕ залогінений
+                if (!user && window.location.hostname !== 'localhost') {
+                    console.warn('Redirect: User is not logged in at all');
+                    return this.router.parseUrl('/');
                 }
+
+                const isAllowed = (user && this.ALLOWED_ADMINS.includes(user.uid)) ||
+                    window.location.hostname === 'localhost';
+
+                if (isAllowed) return true;
 
                 return this.router.parseUrl('/');
             })

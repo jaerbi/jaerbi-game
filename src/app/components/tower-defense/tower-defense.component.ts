@@ -348,6 +348,10 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         }
     }
 
+    buyMaxUpgrade(towerId: string) {
+        this.tdEngine.upgradeTowerMax(towerId);
+    }
+
     getRangeStyle() {
         const tile = this.selectedTile();
         if (!tile || !tile.tower) return { display: 'none' };
@@ -1119,17 +1123,57 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     private drawProjectiles(ctx: CanvasRenderingContext2D, tile: number) {
+        // Speed Constraint: Only draw projectiles at 1x speed
         const speed = this.tdEngine.gameSpeedMultiplier();
         if (speed >= 2) return;
+
         const projs = this.tdEngine.getProjectilesRef();
-        ctx.fillStyle = '#fbbf24';
+        const towers = this.tdEngine.getTowersRef();
+        
         for (const p of projs) {
+            // Find source tower type to determine color
+            // Optimization: If we stored type on projectile, this would be O(1) instead of O(N)
+            // But for now, we can infer or use a default if we can't easily link back.
+            // Actually, p.from matches tower position.
+            
+            // Let's use a simple heuristic based on what fired it?
+            // Since we don't have type on Projectile interface, we'll use a default or try to match.
+            // Wait, we can just use a default 'energy' color or update Projectile interface.
+            // But to avoid big refactors now, let's just color code by "look".
+            
+            // Actually, we can check the tower at p.from!
+            const tx = Math.floor(p.from.x);
+            const ty = Math.floor(p.from.y);
+            const tower = towers.find(t => t.position.x === tx && t.position.y === ty);
+            const type = tower ? tower.type : 1;
+
             const x = p.from.x + (p.to.x - p.from.x) * p.progress;
             const y = p.from.y + (p.to.y - p.from.y) * p.progress;
+            const cx = x * tile + tile / 2;
+            const cy = y * tile + tile / 2;
+
             ctx.beginPath();
-            ctx.arc(x * tile + tile / 2, y * tile + tile / 2, 3, 0, Math.PI * 2);
+            
+            // Tower-Specific Colors
+            let color = '#fbbf24'; // Default Amber
+            let size = 3;
+
+            switch (type) {
+                case 1: color = '#a3def9'; break; // Ice (Blue)
+                case 2: color = '#d2a6fb'; break; // Lightning (Purple)
+                case 3: color = '#facc15'; break; // Cannon (Yellow/Heavy)
+                case 4: color = '#f04545'; break; // Sniper (Red/Thin)
+                case 5: color = '#f97316'; break; // Inferno (Orange)
+                case 6: color = '#22d3ee'; break; // Prism (Cyan - though usually beam)
+                case 7: color = '#84cc16'; break; // Venom (Green)
+            }
+
+            ctx.fillStyle = color;
+            ctx.arc(cx, cy, size, 0, Math.PI * 2);
             ctx.fill();
         }
+
+        // Draw Inferno Zones (always visible if low speed)
         const zones = this.tdEngine.getInfernoZonesRef();
         for (const z of zones) {
             if (z.dps <= 0) continue;
@@ -1139,10 +1183,10 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.save();
             ctx.beginPath();
             ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(248, 113, 113, 0.15)';
+            ctx.fillStyle = 'rgba(249, 115, 22, 0.15)'; // Orange tint
             ctx.fill();
             ctx.lineWidth = 1;
-            ctx.strokeStyle = 'rgba(248, 113, 113, 0.4)';
+            ctx.strokeStyle = 'rgba(249, 115, 22, 0.4)';
             ctx.setLineDash([4, 4]);
             ctx.stroke();
             ctx.restore();

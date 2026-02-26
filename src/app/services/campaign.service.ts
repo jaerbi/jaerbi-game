@@ -63,8 +63,8 @@ export class CampaignService {
                 gridSize: 10,
                 healthMultiplier: 1.0,
                 enemyTypes: ['Standard', 'Scout'],
-                waveTypeSequence: [1, 1, 1, 2, 1, 2, 1, 2, 1, 2],
-                bossCount: 1, // Only at the end
+                waveTypeSequence: [1, 1, 2, 1, 1, 2, 1, 1],
+                bossCount: 2, // Only at the end
                 // Simple S-shape
                 customPath: [
                     { x: 0, y: 2 }, { x: 1, y: 2 }, { x: 2, y: 2 }, { x: 3, y: 2 }, { x: 4, y: 2 },
@@ -78,9 +78,11 @@ export class CampaignService {
                     { x: 7, y: 5, type: 'range' }   // Trap: Looks nice, but it's too far from the entrance for the Turret
                 ],
                 waveModifiers: {
-                    4: [{ property: 'isFrost', chance: 0.2 }],
-                    5: [{ property: 'isFrost', chance: 0.3 }],
-                    6: [{ property: 'isFrost', chance: 0.6 }]
+                    3: [{ property: 'isFrost', chance: 0.8 }],
+                    5: [{ property: 'isFrost', chance: 0.4 }],
+                    6: [{ property: 'isFrost', chance: 1 }],
+                    7: [{ property: 'isFrost', chance: 0.8 }],
+                    8: [{ property: 'isFrost', chance: 1 }],
                 }
             },
             {
