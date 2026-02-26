@@ -71,7 +71,7 @@ export class TowerDefenseEngineService {
     private spawnInterval = 1000;
     private currentWaveType: 'tank' | 'scout' | 'standard' | 'boss' = 'standard';
     private isBossWaveActive = false;
-    
+
     // Counter Strategy handled by WaveAnalyticsService
     public get activeCounterStrategy() {
         return this.waveAnalytics.activeCounterStrategy;
@@ -109,7 +109,7 @@ export class TowerDefenseEngineService {
     ) {
         this.initGame();
     }
-    
+
     private bonusXpAccumulated = 0;
 
     private async saveResultIfLoggedIn() {
@@ -136,12 +136,12 @@ export class TowerDefenseEngineService {
                 xpToAward = Math.floor(base + bonus);
             }
         }
-        
+
         // Add Accumulated Bonus XP (e.g. from Bosses)
         xpToAward += this.bonusXpAccumulated;
 
         if (xpToAward > 0) {
-             await this.firebase.awardTowerDefenseXp(xpToAward, levelId, this.wave());
+            await this.firebase.awardTowerDefenseXp(xpToAward, levelId, this.wave());
         }
 
         const mapSizeLabel = this.gridSize === 20 ? '20x20' : '10x10';
@@ -342,35 +342,56 @@ export class TowerDefenseEngineService {
         }
         this.money.set(startMoney);
         const bonusTiles: { x: number, y: number, type: 'damage' | 'range' | 'bounty' | 'mastery' | 'speed' }[] = [];
-        const tempPath = this.generateRandomPath(); 
-        const randomBonusCount = Math.floor(Math.random() * 3) + 3; 
+        const tempPath = this.generateRandomPath();
+        const randomBonusCount = Math.floor(Math.random() * 3) + 3;
         this.path.set(tempPath);
-        
-        // Find valid spots for bonus tiles (not on path)
+
+        // Find valid spots for bonus tiles (strategic placement)
         const pathSet = new Set(tempPath.map(p => `${p.x},${p.y}`));
-        const validSpots: {x: number, y: number}[] = [];
-        for(let y=0; y<this.gridSize; y++) {
-            for(let x=0; x<this.gridSize; x++) {
-                if(!pathSet.has(`${x},${y}`)) {
-                    validSpots.push({x, y});
+        const validSpots: { x: number, y: number, score: number }[] = [];
+
+        for (let y = 0; y < this.gridSize; y++) {
+            for (let x = 0; x < this.gridSize; x++) {
+                if (pathSet.has(`${x},${y}`)) continue;
+
+                // 1. Distance Constraint: Must be within 2 cells of path (Chebyshev distance)
+                let minDistance = Infinity;
+                for (const p of tempPath) {
+                    const dist = Math.max(Math.abs(x - p.x), Math.abs(y - p.y));
+                    if (dist < minDistance) minDistance = dist;
+                    if (minDistance <= 1) break; // Optimization
                 }
+
+                if (minDistance > 2) continue; // Skip "dead zones"
+
+                // 2. Strategic Score: Priority to inner corners (surrounded by path)
+                let score = 0;
+                // Check immediate neighbors (Chebyshev distance 1) for path presence
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (dx === 0 && dy === 0) continue;
+                        if (pathSet.has(`${x + dx},${y + dy}`)) {
+                            score++;
+                        }
+                    }
+                }
+
+                // Add randomness to score to shuffle equal spots
+                score += Math.random();
+
+                validSpots.push({ x, y, score });
             }
         }
-        
-        // Shuffle valid spots
-        for (let i = validSpots.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [validSpots[i], validSpots[j]] = [validSpots[j], validSpots[i]];
-        }
-        
-        const types = ['damage', 'range', 'speed', 'bounty', 'mastery'] as const;
-        
-        for(let i=0; i<randomBonusCount && i<validSpots.length; i++) {
-            const spot = validSpots[i];
+
+        const shuffledSpots = validSpots.sort(() => Math.random() - 0.5);
+        for (let i = 0; i < randomBonusCount && shuffledSpots.length > 0; i++) {
+            const index = Math.floor(Math.pow(Math.random(), 1.5) * shuffledSpots.length);
+            const spot = shuffledSpots.splice(index, 1)[0];
+            const types = ['damage', 'range', 'speed', 'bounty', 'mastery'] as const;
             const type = types[Math.floor(Math.random() * types.length)];
             bonusTiles.push({ x: spot.x, y: spot.y, type });
         }
-        
+
         // Call generateMap with our random configuration
         this.generateMap({
             id: 'random',
@@ -586,17 +607,17 @@ export class TowerDefenseEngineService {
         if (this.isWaveInProgress() || this.gameOver()) return;
         this.wave.update(w => w + 1);
         this.isWaveInProgress.set(true);
-        
+
         // Analyze Strategy for this wave (Random Mode Only)
         if (this.gameMode() === 'random') {
-             this.waveAnalytics.updateRollingAnalytics(this.statsByTowerType());
-             this.waveAnalytics.analyzeAndSetStrategy(this.wave());
+            this.waveAnalytics.updateRollingAnalytics(this.statsByTowerType());
+            this.waveAnalytics.analyzeAndSetStrategy(this.wave());
         }
 
         // Scripted Logic for CURRENT Wave
         const config = this.currentLevelConfig();
         const currentWave = this.wave();
-        
+
         // Determine if this is a Boss Wave based on distribution
         let isBossWave = false;
         if (config && config.bossCount && config.waveCount) {
@@ -625,7 +646,7 @@ export class TowerDefenseEngineService {
             this.currentScriptedWave = null;
             this.currentWaveType = this.nextWaveEnemyType();
         }
-        
+
         // Override for Boss
         if (isBossWave) {
             this.isBossWaveActive = true;
@@ -635,11 +656,11 @@ export class TowerDefenseEngineService {
 
         // Scripted Logic for NEXT Wave (for UI prediction)
         if (config && config.waveTypeSequence && config.waveTypeSequence.length >= this.wave() + 1) {
-             const nextTypeId = config.waveTypeSequence[this.wave()];
-             const nextDef = this.mapScriptedWave(nextTypeId);
-             this.nextWaveEnemyType.set(nextDef.baseType);
+            const nextTypeId = config.waveTypeSequence[this.wave()];
+            const nextDef = this.mapScriptedWave(nextTypeId);
+            this.nextWaveEnemyType.set(nextDef.baseType);
         } else {
-             this.nextWaveEnemyType.set(this.determineWaveType(this.wave() + 1));
+            this.nextWaveEnemyType.set(this.determineWaveType(this.wave() + 1));
         }
 
         // Cap unit count, increase stats instead
@@ -815,7 +836,7 @@ export class TowerDefenseEngineService {
         let hpMultiplier: number;
         if (currentWave <= 10) {
             // Linear: 1.2, 1.4... 3.0
-            hpMultiplier = 1 + 0.2 * currentWave; 
+            hpMultiplier = 1 + 0.2 * currentWave;
         } else {
             const w = currentWave - 10;
             hpMultiplier = 3.0 * Math.pow(1.15, w);
@@ -832,10 +853,10 @@ export class TowerDefenseEngineService {
             }
         }
 
-        const baseSpeed = 0.5 + (currentWave * 0.02) + (Math.floor(currentWave / 5) * 0.1); 
+        const baseSpeed = 0.5 + (currentWave * 0.02) + (Math.floor(currentWave / 5) * 0.1);
         const total = this.currentWaveEnemyCount || (5 + this.wave() * 2);
         const spawnedSoFar = total - this.enemiesToSpawn;
-        
+
         // Smart Boss Logic or Legacy Boss Logic
         let boss = false;
         if (this.isBossWaveActive) {
@@ -850,7 +871,7 @@ export class TowerDefenseEngineService {
                 boss = isBossWave && isLastOfWave;
             }
         }
-        
+
         const hue = (this.wave() * 40) % 360;
 
         let enemyType: 'tank' | 'scout' | 'standard' | 'boss' = this.currentWaveType;
@@ -897,19 +918,19 @@ export class TowerDefenseEngineService {
         if (this.gameMode() === 'random' && this.waveAnalytics.currentWaveCounterType && !boss) {
             const spawnChance = this.waveAnalytics.currentWaveCounterChance;
             const counterType = this.waveAnalytics.currentWaveCounterType;
-            
+
             if (Math.random() < spawnChance) {
-                 const flags = this.waveAnalytics.getCounterFlag(counterType);
-                 Object.assign(newEnemy, flags);
-                 
-                 // Apply 1.2x HP bonus for Wave 31+
-                 if (this.wave() >= 31) {
-                     newEnemy.maxHp = Math.floor(newEnemy.maxHp * 1.2);
-                     newEnemy.hp = newEnemy.maxHp;
-                 }
-                 
-                 console.log(`[WAVE ${this.wave()}] Spawning enemy with resistance against Type ${counterType}`);
-             }
+                const flags = this.waveAnalytics.getCounterFlag(counterType);
+                Object.assign(newEnemy, flags);
+
+                // Apply 1.2x HP bonus for Wave 31+
+                if (this.wave() >= 31) {
+                    newEnemy.maxHp = Math.floor(newEnemy.maxHp * 1.2);
+                    newEnemy.hp = newEnemy.maxHp;
+                }
+
+                console.log(`[WAVE ${this.wave()}] Spawning enemy with resistance against Type ${counterType}`);
+            }
         }
 
         if (this.currentScriptedWave) {
@@ -934,7 +955,7 @@ export class TowerDefenseEngineService {
             if (enemy.prismVulnerableTime && enemy.prismVulnerableTime > 0) {
                 enemy.prismVulnerableTime = Math.max(0, enemy.prismVulnerableTime - dt);
             }
-            
+
             const venomDamage = this.damageService.processVenomTick(enemy, dt);
             if (venomDamage > 0) {
                 this.damageService.applyDamage(enemy, venomDamage, 7, this.wave());
@@ -987,12 +1008,12 @@ export class TowerDefenseEngineService {
                         const damageToLives = enemy.type === 'boss' ? 5 : 1;
                         this.enemiesInternal.splice(i, 1);
                         this.ngZone.run(() => this.lives.update(l => Math.max(0, l - damageToLives)));
-                        
+
                         // Check for Game Over
                         if (this.lives() <= 0) {
-                             this.endGame(false);
+                            this.endGame(false);
                         }
-                        
+
                         if (this.enemiesInternal.length === 0 && this.enemiesToSpawn === 0) {
                             this.currentWaveType = 'standard';
                         }
@@ -1040,31 +1061,31 @@ export class TowerDefenseEngineService {
                 // Base: 5 + wave. Decay: 1% less per wave after 10
                 const wave = this.wave();
                 let baseReward = 5 + wave;
-                
+
                 if (wave > 10) {
                     const decayFactor = Math.max(0.2, 1 - (wave - 10) * 0.01);
                     baseReward = Math.floor(baseReward * decayFactor);
                 }
-                
+
                 const goldMultiplier = this.getGoldKillMultiplier();
                 let reward = Math.floor(baseReward * goldMultiplier);
-                
+
                 // Boss Reward Bonus (5x)
                 if (enemy.type === 'boss') {
                     reward *= 5;
-                    this.bonusXpAccumulated += 50; 
+                    this.bonusXpAccumulated += 50;
                 }
 
-                
+
                 const bountyTowers = this.towersInternal.filter(t => {
                     const tile = this.grid()[t.position.y][t.position.x];
                     return tile.bonus === 'bounty';
                 });
-                
+
                 for (const bt of bountyTowers) {
                     const dx = bt.position.x - deathPos.x;
                     const dy = bt.position.y - deathPos.y;
-                    if (dx*dx + dy*dy <= bt.range * bt.range) {
+                    if (dx * dx + dy * dy <= bt.range * bt.range) {
                         reward += 2; // +2 Gold per kill near Bounty Tower
                         break; // Only once
                     }
@@ -1108,8 +1129,8 @@ export class TowerDefenseEngineService {
 
     private applyFrostAuras() {
         this.damageService.applyFrostAuras(
-            this.enemiesInternal, 
-            this.towersInternal.filter(t => t.type === 1 && t.specialActive), 
+            this.enemiesInternal,
+            this.towersInternal.filter(t => t.type === 1 && t.specialActive),
             (tier, type: 'damage' | 'range' | 'golden') => this.getUpgradeLevel(tier, type)
         );
     }
@@ -1209,11 +1230,11 @@ export class TowerDefenseEngineService {
             const current = this.damageTracking.get(sourceTowerId) || 0;
             this.damageTracking.set(sourceTowerId, current + amount);
         }
-        
+
         let typeToUpdate = type;
         if (!typeToUpdate && sourceTowerId) {
-             const t = this.towersInternal.find(t => t.id === sourceTowerId);
-             if (t) typeToUpdate = t.type;
+            const t = this.towersInternal.find(t => t.id === sourceTowerId);
+            if (t) typeToUpdate = t.type;
         }
 
         if (typeToUpdate) {
@@ -1239,8 +1260,8 @@ export class TowerDefenseEngineService {
         }
 
         const damage = this.damageService.calculateTowerDamage(
-            tower, 
-            enemy, 
+            tower,
+            enemy,
             (tier, type: 'damage' | 'range' | 'golden') => this.getUpgradeLevel(tier, type)
         );
 
@@ -1323,7 +1344,7 @@ export class TowerDefenseEngineService {
             const maxBonus = golden > 0 ? 3 : 1;
             const ramp = 1 + Math.min(maxBonus, (tower.beamTime ?? 0) * 0.5);
             // damage already has ramp applied!
-            const mainDamage = damage; 
+            const mainDamage = damage;
             const targets: Enemy[] = [enemy];
             if (sameTarget) {
                 const rangeSq = tower.range * tower.range;
@@ -1425,7 +1446,7 @@ export class TowerDefenseEngineService {
             }
         }
     }
-    
+
     // Analytics
     private endGame(victory: boolean) {
         if (this.gameOver()) return;
@@ -1434,17 +1455,17 @@ export class TowerDefenseEngineService {
         this.saveResultIfLoggedIn();
         this.logAnalytics(victory);
     }
-    
+
     private logAnalytics(victory: boolean) {
         const towers = this.towersInternal;
         if (towers.length === 0) return;
-        
+
         // 1. Group by Type and find MVP
         const mvpByType: Record<number, Tower> = {};
-        
+
         for (const tower of towers) {
             const currentDamage = this.damageTracking.get(tower.id) || 0;
-            
+
             const type = tower.type;
             const existingMVP = mvpByType[type];
             if (!existingMVP) {
@@ -1456,16 +1477,16 @@ export class TowerDefenseEngineService {
                 }
             }
         }
-        
+
         // 2. Calculate Total Pool
         let totalBestDamage = 0;
         const mvpList = Object.values(mvpByType);
         for (const t of mvpList) {
             totalBestDamage += (this.damageTracking.get(t.id) || 0);
         }
-        
+
         if (totalBestDamage === 0) return;
-        
+
         // 3. Prepare Data
         const gameId = Date.now().toString();
         const levelId = this.currentLevelConfig()?.id || 'random';
@@ -1473,10 +1494,10 @@ export class TowerDefenseEngineService {
         const userId = user?.uid || 'guest';
         const gameVersion = '0.0.1'; // TODO: Move to environment
         const isHardMode = this.isHardMode();
-        
+
         // console.group('Game Balance Analytics');
         // console.log(`Game ID: ${gameId}, Result: ${victory ? 'WIN' : 'LOSE'}`);
-        
+
         const logs = mvpList.map(t => {
             const dmg = this.damageTracking.get(t.id) || 0;
             const percent = (dmg / totalBestDamage) * 100;
@@ -1494,10 +1515,10 @@ export class TowerDefenseEngineService {
                 isHardMode
             };
         });
-        
+
         // console.table(logs);
         // console.groupEnd();
-        
+
         this.firebase.saveBalanceLogs(logs);
     }
 
@@ -1513,7 +1534,7 @@ export class TowerDefenseEngineService {
         }
 
         let cost = this.getTowerCost(tier);
-        
+
         if (this.money() < cost) return;
 
         this.grid.update(grid => {
