@@ -658,7 +658,13 @@ export class TowerDefenseEngineService {
         const wave = this.wave();
         const baseCount = 5 + wave * 2;
         const maxUnits = 50; // Hard cap
-        const actualCount = Math.min(baseCount, maxUnits);
+        let actualCount = Math.min(baseCount, maxUnits);
+        if (config && config.waveModifiers) {
+            const wm = config.waveModifiers[wave];
+            if (wm && typeof wm.count === 'number') {
+                actualCount = Math.min(Math.max(1, Math.floor(wm.count)), maxUnits);
+            }
+        }
         this.currentWaveEnemyCount = actualCount;
         this.enemiesToSpawn = actualCount;
         this.spawnTimer = 0;
@@ -945,9 +951,10 @@ export class TowerDefenseEngineService {
         // Apply Wave Modifiers from LevelConfig
         const config = this.currentLevelConfig();
         if (config && config.waveModifiers) {
-            const modifiers = config.waveModifiers[this.wave()];
-            if (modifiers) {
-                for (const mod of modifiers) {
+            const waveMod = config.waveModifiers[this.wave()];
+            const traits = waveMod?.traits;
+            if (traits && traits.length) {
+                for (const mod of traits) {
                     if (Math.random() < mod.chance) {
                         (newEnemy as any)[mod.property] = true;
                     }
@@ -1135,6 +1142,11 @@ export class TowerDefenseEngineService {
 
                 if (this.isHardMode()) {
                     reward = Math.floor(reward * 0.8);
+                }
+                {
+                    const cfg = this.currentLevelConfig();
+                    const bountyMultiplier = cfg?.bountyMultiplier ?? 1.0;
+                    reward = Math.floor(reward * bountyMultiplier);
                 }
                 this.ngZone.run(() => this.money.update(m => m + reward));
             }

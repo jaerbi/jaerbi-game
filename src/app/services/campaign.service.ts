@@ -11,6 +11,7 @@ export interface LevelConfig {
     mapLayout?: 'static' | 'random';
     difficulty: 'easy' | 'normal' | 'hard';
     xpReward: number;
+    bountyMultiplier?: number;
     gridSize?: number; // Custom grid size (e.g. 10, 12, 15)
     customPath?: { x: number; y: number }[]; // Explicit path coordinates
     bonusTiles?: { x: number; y: number; type: 'damage' | 'range' | 'bounty' | 'mastery' | 'speed' }[];
@@ -19,10 +20,13 @@ export interface LevelConfig {
     waveTypeSequence?: number[]; // 1=Standard, 2=Scout, 3=Tank, 4=Boss
     bossCount?: number; // Number of bosses to spawn during the campaign
     waveModifiers?: {
-        [waveIndex: number]: Array<{
-            property: 'isFrost' | 'isGrounded' | 'isAgile' | 'isBulwark' | 'isMagma' | 'isMirror' | 'isSlime';
-            chance: number;
-        }>
+        [waveIndex: number]: {
+            count?: number;
+            traits?: Array<{
+                property: 'isFrost' | 'isGrounded' | 'isAgile' | 'isBulwark' | 'isMagma' | 'isMirror' | 'isSlime';
+                chance: number;
+            }>;
+        }
     };
 }
 
@@ -78,11 +82,11 @@ export class CampaignService {
                     { x: 7, y: 5, type: 'range' }   // Trap: Looks nice, but it's too far from the entrance for the Turret
                 ],
                 waveModifiers: {
-                    3: [{ property: 'isFrost', chance: 0.8 }],
-                    5: [{ property: 'isFrost', chance: 0.4 }],
-                    6: [{ property: 'isFrost', chance: 1 }],
-                    7: [{ property: 'isFrost', chance: 0.8 }],
-                    8: [{ property: 'isFrost', chance: 1 }],
+                    3: { traits: [{ property: 'isFrost', chance: 0.8 }] },
+                    5: { traits: [{ property: 'isFrost', chance: 0.4 }] },
+                    6: { traits: [{ property: 'isFrost', chance: 1 }] },
+                    7: { traits: [{ property: 'isFrost', chance: 0.8 }] },
+                    8: { traits: [{ property: 'isFrost', chance: 1 }] },
                 }
             },
             {
