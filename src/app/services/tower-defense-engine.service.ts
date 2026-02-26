@@ -304,7 +304,8 @@ export class TowerDefenseEngineService {
     }
 
     private updateTileSize() {
-        this.tileSize = Math.floor(620 / this.gridSize);
+        // zoom works fine
+        // this.tileSize = Math.floor(620 / this.gridSize);
     }
 
     private setupRandomGame() {
