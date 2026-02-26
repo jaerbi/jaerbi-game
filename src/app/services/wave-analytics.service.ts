@@ -101,7 +101,7 @@ export class WaveAnalyticsService {
         if (strategy) {
             const { type, ratio } = strategy;
             let spawnChance = wave >= 31 ? 0.8 : wave >= 21 ? 0.6 : 0.4;
-            
+
             // Mono-Penalty: If ratio > 0.8, force 100% chance (Wave 15+)
             if (ratio > 0.8 && wave >= 15) {
                 spawnChance = 1.0;
@@ -185,7 +185,49 @@ export class WaveAnalyticsService {
 
                     // Короткі та зухвалі (для швидких хвиль)
                     `Нуль пошкоджень від ${towerNames[type]}. Спробуйте знову.`,
-                    `Це вежі чи декорації? ${towerNames[type]} нас не лякають.`
+                    `Це вежі чи декорації? ${towerNames[type]} нас не лякають.`,
+
+                    // 🧠 Еволюція / Навчання
+                    `Ми вчимося з кожної вашої помилки.`,
+                    `Алгоритм еволюціонує. ${towerNames[type]} більше не працюють.`,
+                    `Ваша стратегія — наш тренувальний полігон.`,
+                    `Оновлення завершено. ${towerNames[type]} класифіковано як неефективні.`,
+                    `Ми вже проходили цей сценарій. Ви програєте.`,
+
+                    //🩸 Домінування / Перевага
+                    `Це вже не битва. Це демонстрація переваги.`,
+                    `Ви граєте. Ми перемагаємо.`,
+                    `Опір марний.`,
+                    `Ми контролюємо цей сектор.`,
+                    `Ваші ${towerNames[type]} — лише статистика для нас.`,
+
+                    // ⚙️ Метакоментар (ніби гра знає, що це гра)
+                    `Складність занижена? Нам так не здається.`,
+                    `Спробуйте іншу стратегію. Або іншу гру.`,
+                    `Пора переглянути гайд по ${towerNames[type]}.`,
+                    `Нотатки до патчів: ${towerNames[type]} більше не імба.`,
+                    `AI > Player.`,
+
+                    // 🧊 Холодний кіберпанк стиль
+                    `Протокол 0xAF запущено проти ${towerNames[type]}.`,
+                    `Біти обчислено. Результат: поразка гравця.`,
+                    `Система стабільна. Гравець — ні.`,
+                    `Ваш код оборони застарів.`,
+                    `Сигнал ${towerNames[type]} перехоплено.`,
+
+                    // 😈 Знущання з повторного спаму однієї вежі
+                    `Ще одна ${towerNames[type]}? Серйозно?`,
+                    `Може, спробуємо щось інше, крім ${towerNames[type]}?`,
+                    `Ваш план: більше ${towerNames[type]}. Наш план: перемога.`,
+                    `Ми бачимо 87% ${towerNames[type]} у вашій стратегії.`,
+                    `Одноманітність — шлях до поразки.`,
+
+                    // 🎭 Трошки гумору (щоб було вірусно)
+                    `Ми навіть не активували складний режим.`,
+                    `Це навчальна хвиля, так?`,
+                    `Ви точно читали опис ${towerNames[type]}?`,
+                    `Ctrl + Z не працює.`,
+                    `Зберегти гру? Пізно.`,
                 ] : [
                     // EN Taunts
                     `Your tactics are predictable!`,
@@ -246,7 +288,49 @@ export class WaveAnalyticsService {
 
                     // 
                     `Zero damage from ${towerNames[type]}. Try again.`,
-                    `Are these towers or decorations? ${towerNames[type]} don't scare us.`
+                    `Are these towers or decorations? ${towerNames[type]} don't scare us.`,
+
+                    //
+                    `We learn from every mistake you make.`,
+                    `Algorithm evolving. ${towerNames[type]} no longer effective.`,
+                    `Your strategy is our training data.`,
+                    `Update complete. ${towerNames[type]} classified as inefficient.`,
+                    `We've simulated this scenario before. You lose.`,
+
+                    // 
+                    `This is no longer a battle. It's a demonstration.`,
+                    `You play. We win.`,
+                    `Resistance is irrelevant.`,
+                    `We control this sector.`,
+                    `Your ${towerNames[type]} are just statistics to us.`,
+
+                    //
+                    `Difficulty set too low? Doesn't look like it.`,
+                    `Try another strategy. Or another game.`,
+                    `Maybe re-read the ${towerNames[type]} guide.`,
+                    `Patch notes: ${towerNames[type]} no longer OP.`,
+                    `AI > Player.`,
+
+                    // 
+                    `Protocol 0xAF initiated against ${towerNames[type]}.`,
+                    `Bits calculated. Result: Player defeat.`,
+                    `System stable. Player unstable.`,
+                    `Your defense code is outdated.`,
+                    `Signal from ${towerNames[type]} intercepted.`,
+
+                    // 
+                    `Another ${towerNames[type]}? Really?`,
+                    `Maybe try something other than ${towerNames[type]}?`,
+                    `Your plan: more ${towerNames[type]}. Our plan: victory.`,
+                    `87% of your strategy is ${towerNames[type]}. Noted.`,
+                    `Monotony leads to defeat.`,
+
+                    //
+                    `We haven't even activated hard mode.`,
+                    `This is the tutorial wave, right?`,
+                    `Did you actually read what ${towerNames[type]} does?`,
+                    `Ctrl + Z doesn't work here.`,
+                    `Save game? Too late.`,
                 ];
 
                 const taunt = taunts[Math.floor(Math.random() * taunts.length)];

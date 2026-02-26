@@ -563,14 +563,14 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const canvas = this.gameCanvas?.nativeElement;
         const ctx = this.ctx;
         if (!canvas || !ctx) return;
-        
+
         // Ensure tile size is integer to avoid sub-pixel rendering artifacts
         const tile = Math.floor(this.tdEngine.tileSize);
         const gridSize = this.tdEngine.gridSize;
         const totalSize = gridSize * tile;
 
         this.clearCanvas(ctx, totalSize);
-        
+
         // Clip to valid grid area to prevent drawing outside
         ctx.save();
         ctx.beginPath();
@@ -586,9 +586,9 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         if (this.tdEngine.gameSpeedMultiplier() === 1) {
             this.drawProjectiles(ctx, tile);
         }
-        
+
         ctx.restore(); // Remove clip
-        
+
         this.drawRangeIndicator(ctx, tile);
     }
 
@@ -693,14 +693,14 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                         ctx.save();
                         // Inner glow/border
                         ctx.lineWidth = 2;
-                        
+
                         if (t.bonus === 'damage') {
                             // Red/Orange Cross Swords or Symbol
                             ctx.strokeStyle = '#ef4444'; // Red-500
                             ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
                             ctx.fillRect(px + 4, py + 4, size - 8, size - 8);
                             ctx.strokeRect(px + 4, py + 4, size - 8, size - 8);
-                            
+
                             // Icon: Sword
                             ctx.fillStyle = '#fca5a5';
                             ctx.font = `bold ${Math.floor(tile * 0.5)}px sans-serif`;
@@ -713,7 +713,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                             ctx.strokeStyle = '#3b82f6'; // Blue-500
                             ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
                             ctx.beginPath();
-                            ctx.arc(px + halfTile, py + halfTile, (size/2) - 4, 0, Math.PI * 2);
+                            ctx.arc(px + halfTile, py + halfTile, (size / 2) - 4, 0, Math.PI * 2);
                             ctx.fill();
                             ctx.stroke();
 
@@ -764,7 +764,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                             // Yellow Lightning
                             ctx.strokeStyle = '#facc15'; // Yellow-400
                             ctx.fillStyle = 'rgba(250, 204, 21, 0.2)';
-                            
+
                             // Draw lightning bolt shape or just a distinct box
                             ctx.beginPath();
                             ctx.moveTo(px + halfTile + 4, py + 4);
@@ -774,7 +774,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                             ctx.lineTo(px + halfTile + 4, py + halfTile);
                             ctx.lineTo(px + 8, py + halfTile + 4);
                             ctx.closePath();
-                            
+
                             ctx.fill();
                             ctx.stroke();
 
@@ -785,7 +785,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                             ctx.textBaseline = 'middle';
                             ctx.fillText('⚡', px + halfTile, py + halfTile);
                         }
-                        
+
                         ctx.restore();
                     }
                 }
@@ -1020,45 +1020,49 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             const cy = e.displayY ?? ((e.position.y + 0.5) * tile);
             ctx.fillStyle = e.bg || (e.isFrozen ? '#7dd3fc' : '#ef4444');
             let strokeColor = 'transparent';
-            let shadowColor = isFastSpeed ? 'transparent' : ctx.fillStyle;
-            let shadowBlur = isFastSpeed ? 0 : 10;
+            const getGlowColor = (hex: any, alpha = 0.5) => {
+                if (hex === 'transparent') return 'transparent';
+                return hex + Math.round(alpha * 255).toString(16).padStart(2, '0');
+            };
+            let shadowColor = isFastSpeed ? 'transparent' : getGlowColor(ctx.fillStyle, 0.4);
+            let shadowBlur = isFastSpeed ? 0 : 5;
             let lineWidth = 2;
 
-            if (e.isMagma) { // Inferno
+            if (e.isMagma) {
                 strokeColor = '#f97316';
-                shadowColor = '#f97316';
-                shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 3;
-            } else if (e.isMirror) { // Prism
+                shadowColor = getGlowColor(strokeColor, 0.6);
+                shadowBlur = isFastSpeed ? 0 : 8;
+                lineWidth = 2.5;
+            } else if (e.isMirror) {
                 strokeColor = '#f0f9ff';
-                shadowColor = '#0ea5e9';
-                shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 3;
-            } else if (e.isSlime) { // Venom
+                shadowColor = getGlowColor('#0ea5e9', 0.6);
+                shadowBlur = isFastSpeed ? 0 : 8;
+                lineWidth = 2.5;
+            } else if (e.isSlime) {
                 strokeColor = '#22c55e';
-                shadowColor = '#22c55e';
-                shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 3;
-            } else if (e.isFrost) { // Ice
-                strokeColor = '#06b6d4'; // Cyan
-                shadowColor = '#06b6d4';
-                shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 3;
-            } else if (e.isGrounded) { // Lightning
-                strokeColor = '#854d0e'; // Brown/Yellow-ish
-                shadowColor = '#a16207';
-                shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 3;
-            } else if (e.isAgile) { // Cannon/Shatter
-                strokeColor = '#eab308'; // Yellow
-                shadowColor = '#facc15';
-                shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 3;
-            } else if (e.isBulwark) { // Sniper
-                strokeColor = '#94a3b8'; // Slate/Steel
-                shadowColor = '#cbd5e1';
-                shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 3;
+                shadowColor = getGlowColor(strokeColor, 0.6);
+                shadowBlur = isFastSpeed ? 0 : 8;
+                lineWidth = 2.5;
+            } else if (e.isFrost) {
+                strokeColor = '#06b6d4';
+                shadowColor = getGlowColor(strokeColor, 0.6);
+                shadowBlur = isFastSpeed ? 0 : 8;
+                lineWidth = 2.5;
+            } else if (e.isGrounded) {
+                strokeColor = '#854d0e';
+                shadowColor = getGlowColor('#a16207', 0.6);
+                shadowBlur = isFastSpeed ? 0 : 8;
+                lineWidth = 2.5;
+            } else if (e.isAgile) {
+                strokeColor = '#eab308';
+                shadowColor = getGlowColor('#facc15', 0.6);
+                shadowBlur = isFastSpeed ? 0 : 8;
+                lineWidth = 2.5;
+            } else if (e.isBulwark) {
+                strokeColor = '#94a3b8';
+                shadowColor = getGlowColor('#cbd5e1', 0.6);
+                shadowBlur = isFastSpeed ? 0 : 8;
+                lineWidth = 2.5;
             }
 
             ctx.shadowColor = shadowColor;
@@ -1197,19 +1201,19 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
         const rect = this.gameCanvas?.nativeElement.getBoundingClientRect();
         if (!rect) return;
-        
+
         // Transform screen coordinates to canvas coordinates
         // getBoundingClientRect returns the visual box relative to viewport.
         // event.clientX/Y is also relative to viewport.
-        
+
         // Calculate offset within the visual canvas
         const offsetX = event.clientX - rect.left;
         const offsetY = event.clientY - rect.top;
-        
+
         // Since the canvas is scaled, we divide by the current zoom level to get internal coordinates.
         // We assume uniform scaling (zoomLevel applies to both X and Y).
         const scale = this.zoomLevel();
-        
+
         const canvasX = offsetX / scale;
         const canvasY = offsetY / scale;
 
@@ -1218,7 +1222,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const y = Math.floor(canvasY / tile);
         this.handleTileClick(x, y);
     }
-    
+
     // Zoom & Pan Handlers
     onWheel(event: WheelEvent) {
         event.preventDefault();
@@ -1236,8 +1240,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         // User requested "drag (pan)". Often left click is drag if not on interactable.
         // But left click is also select/build.
         // Let's use Left Click for drag, but distinguish click vs drag.
-        
-        if (event.button === 0 || event.button === 1) { 
+
+        if (event.button === 0 || event.button === 1) {
             this.isPanning = true;
             this.wasPanning = false; // Will be set to true if moved enough
             this.lastMouseX = event.clientX;
@@ -1247,20 +1251,20 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     pan(event: MouseEvent) {
         if (!this.isPanning) return;
-        
+
         const dx = event.clientX - this.lastMouseX;
         const dy = event.clientY - this.lastMouseY;
-        
+
         // Threshold to distinguish click from drag
         if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
             this.wasPanning = true;
         }
-        
+
         if (this.wasPanning) {
             this.panX.update(x => x + dx);
             this.panY.update(y => y + dy);
         }
-        
+
         this.lastMouseX = event.clientX;
         this.lastMouseY = event.clientY;
     }
@@ -1313,11 +1317,11 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         if (levelId === 'level_1') return true;
         const profile = this.firebase.masteryProfile();
         if (!profile || !profile.completedLevelIds) return false;
-        
+
         // Find index of this level
         const index = this.campaignService.levels.findIndex(l => l.id === levelId);
         if (index <= 0) return true; // Should be handled by level_1 check but safe guard
-        
+
         const prevLevel = this.campaignService.levels[index - 1];
         return profile.completedLevelIds.includes(prevLevel.id);
     }

@@ -352,4 +352,21 @@ export class FirebaseService {
             console.error('Error saving balance logs: ', e);
         }
     }
+
+    async getBalanceLogs(gameVersion: string, limitCount = 500): Promise<any[]> {
+        if (!this.db) return [];
+        try {
+            const q = query(
+                collection(this.db, 'balance_logs'),
+                where('gameVersion', '==', gameVersion),
+                orderBy('timestamp', 'desc'),
+                limit(limitCount)
+            );
+            const querySnapshot = await getDocs(q);
+            return querySnapshot.docs.map(doc => doc.data());
+        } catch (e) {
+            console.error('Error fetching balance logs: ', e);
+            return [];
+        }
+    }
 }
