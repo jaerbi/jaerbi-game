@@ -1492,7 +1492,7 @@ export class TowerDefenseEngineService {
         const levelId = this.currentLevelConfig()?.id || 'random';
         const user = this.firebase.user$();
         const userId = user?.uid || 'guest';
-        const gameVersion = '0.0.1'; // TODO: Move to environment
+        const gameVersion = '0.0.2';
         const isHardMode = this.isHardMode();
 
         // console.group('Game Balance Analytics');
