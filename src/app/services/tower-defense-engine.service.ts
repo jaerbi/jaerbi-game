@@ -14,7 +14,7 @@ const TIER_STATS = [
     { damage: 5, range: 1.5, fireInterval: 0.5 },
     { damage: 14, range: 2.5, fireInterval: 0.45 },
     { damage: 83, range: 1.5, fireInterval: 1 },
-    { damage: 666, range: 4.5, fireInterval: 5 },
+    { damage: 250, range: 3, fireInterval: 4.5 },
     { damage: 71, range: 1.5, fireInterval: 2.5 },
     { damage: 15, range: 2, fireInterval: 0.3 },
     { damage: 66, range: 1.5, fireInterval: 1 }
@@ -314,7 +314,7 @@ export class TowerDefenseEngineService {
         this.allowedTowers.set([1, 2, 3, 4, 5, 6, 7]);
         this.isFirstTimeClear = false;
 
-        let startMoney = 50000;
+        let startMoney = 55;
         if (this.isHardMode()) {
             startMoney = 40;
         }
@@ -1017,6 +1017,13 @@ export class TowerDefenseEngineService {
             if (venomDamage > 0) {
                 this.damageService.applyDamage(enemy, venomDamage, 7, this.wave());
             }
+
+            if (enemy.bleedDamagePerSec && enemy.bleedDamagePerSec > 0) {
+                const bleedDmg = this.damageService.processBleedTick(enemy, dt);
+                if (bleedDmg > 0) {
+                    this.damageService.applyDamage(enemy, bleedDmg, 4, this.wave());
+                }
+            }
         }
 
         for (let i = this.infernoZones.length - 1; i >= 0; i--) {
@@ -1227,22 +1234,25 @@ export class TowerDefenseEngineService {
     private findTargetForTower(tower: Tower, enemies: Enemy[]): Enemy | null {
         const stickyTypes = [3, 6];
 
+        const tX = tower.position.x + 0.5;
+        const tY = tower.position.y + 0.5;
+
         if (tower.targetEnemyId) {
             const currentTarget = enemies.find(e => e.id === tower.targetEnemyId);
 
             if (currentTarget && currentTarget.hp > 0) {
-                const dx = tower.position.x - currentTarget.position.x;
-                const dy = tower.position.y - currentTarget.position.y;
+                const dx = tX - currentTarget.position.x;
+                const dy = tY - currentTarget.position.y;
                 const distSq = dx * dx + dy * dy;
-                const effRange = tower.type === 1 ? this.getEffectiveRange(tower) : tower.range;
-                const rangeSq = effRange * effRange;
+
+                const baseRange = tower.type === 1 ? this.getEffectiveRange(tower) : tower.range;
+                const stickyRange = stickyTypes.includes(tower.type) ? baseRange + 0.5 : baseRange;
+                const rangeSq = stickyRange * stickyRange;
 
                 if (distSq <= rangeSq) {
                     if (tower.type === 7) {
-                        if ((tower.hitsOnTarget ?? 0) < 3) {
-                            return currentTarget;
-                        }
-                    } else if (stickyTypes.includes(tower.type)) {
+                        if ((tower.hitsOnTarget ?? 0) < 3) return currentTarget;
+                    } else {
                         return currentTarget;
                     }
                 }
@@ -1254,8 +1264,10 @@ export class TowerDefenseEngineService {
         const candidates: { enemy: Enemy; distSq: number; progressScore: number }[] = [];
 
         for (const enemy of enemies) {
-            const dx = tower.position.x - enemy.position.x;
-            const dy = tower.position.y - enemy.position.y;
+            if (enemy.hp <= 0) continue;
+
+            const dx = tX - enemy.position.x;
+            const dy = tY - enemy.position.y;
             const distSq = dx * dx + dy * dy;
 
             if (distSq > rangeSq) continue;
@@ -1266,12 +1278,12 @@ export class TowerDefenseEngineService {
 
             const idx = enemy.pathIndex ?? 0;
             const prog = enemy.progress ?? 0;
-            const progressScore = idx + prog;
-            candidates.push({ enemy, distSq, progressScore });
+            candidates.push({ enemy, distSq, progressScore: idx + prog });
         }
 
         if (candidates.length === 0) {
-            tower.hitsOnTarget = 0;
+            if (tower.type === 6) tower.beamTime = 0;
+            tower.targetEnemyId = undefined;
             return null;
         }
 
@@ -1279,6 +1291,7 @@ export class TowerDefenseEngineService {
 
         if (tower.targetEnemyId !== selectedEnemy.id) {
             tower.hitsOnTarget = 0;
+            if (tower.type === 6) tower.beamTime = 0;
         }
 
         return selectedEnemy;
@@ -1337,7 +1350,7 @@ export class TowerDefenseEngineService {
 
     // Renamed to internalFireAt to avoid conflict if any, or just update logic
     private fireAt(tower: Tower, enemy: Enemy) {
-        if (tower.type !== 6) {
+        if (tower.type !== 6 && tower.type !== 4) {
             const proj: Projectile = {
                 id: 'p' + (this.projectileIdCounter++),
                 from: { ...tower.position },
@@ -1451,61 +1464,38 @@ export class TowerDefenseEngineService {
             }
         }
 
-        if (tower.specialActive && tower.type === 6) {
-            const golden = this.getUpgradeLevel(6, 'golden');
-            const sameTarget = tower.lastBeamTargetId === enemy.id;
-            const maxBonus = golden > 0 ? 3 : 1;
-            const ramp = 1 + Math.min(maxBonus, (tower.beamTime ?? 0) * 0.5);
-            // damage already has ramp applied!
-            const mainDamage = damage;
-            const targets: Enemy[] = [enemy];
-            if (sameTarget) {
-                const rangeSq = tower.range * tower.range;
-                const candidates: { enemy: Enemy; distSq: number }[] = [];
-                for (const other of this.enemiesInternal) {
-                    if (other.id === enemy.id || other.hp <= 0) continue;
-                    const dx = tower.position.x - other.position.x;
-                    const dy = tower.position.y - other.position.y;
-                    const distSq = dx * dx + dy * dy;
-                    if (distSq <= rangeSq) {
-                        candidates.push({ enemy: other, distSq });
-                    }
-                }
-                if (candidates.length > 0) {
-                    candidates.sort((a, b) => a.distSq - b.distSq);
-                    const count = Math.min(2, candidates.length);
-                    tower.extraTargetIds = [];
-                    for (let i = 0; i < count; i++) {
-                        const target = candidates[i].enemy;
-                        targets.push(target);
-                        tower.extraTargetIds.push(target.id);
-                    }
-                }
-            }
-            const spectrumActive = golden > 0;
-            for (const target of targets) {
-                let dmg = mainDamage;
-                if (target !== enemy) {
-                    dmg = Math.floor(dmg * 0.5); // Secondary targets take 50%
-                }
-                if (target.prismVulnerableTime && target.prismVulnerableTime > 0) {
-                    dmg = Math.floor(dmg * 1.15);
-                }
-                this.damageService.applyDamage(target, dmg, tower.type, this.wave(), tower.id, this.recordDamage.bind(this));
-                if (spectrumActive) {
-                    target.prismVulnerableTime = Math.max(target.prismVulnerableTime ?? 0, 0.25);
-                }
-            }
-            enemy.prismVulnerableTime = 0.5; // Always apply to main target? Original code logic was slightly duplicated.
-            // Original code: "enemy.prismVulnerableTime = 0.5;" at end of block.
-        }
+        if (tower.type === 6 && tower.specialActive) {
+            this.damageService.applyDamage(enemy, damage, 6, this.wave());
+            const extraBeamsCount = 2;
+            const tX = tower.position.x + 0.5;
+            const tY = tower.position.y + 0.5;
 
+            const extraTargets = this.enemiesInternal
+                .filter(e => e.id !== enemy.id && e.hp > 0)
+                .filter(e => {
+                    const dx = tX - e.position.x;
+                    const dy = tY - e.position.y;
+                    return (dx * dx + dy * dy) <= (tower.range + 0.5) * (tower.range + 0.5);
+                })
+                .sort((a, b) => (b.progressScore ?? 0) - (a.progressScore ?? 0))
+                .slice(0, extraBeamsCount);
+
+            tower.extraTargetIds = extraTargets.map(t => t.id);
+
+            extraTargets.forEach(target => {
+                const secondaryDmg = Math.floor(damage * 0.5);
+                this.damageService.applyDamage(target, secondaryDmg, 6, this.wave());
+            });
+        } else if (tower.type === 6) {
+            tower.extraTargetIds = [];
+        }
         if (tower.type === 4) {
             const golden = this.getUpgradeLevel(4, 'golden');
             const extraTargetsCount = golden === 1 ? 2 : golden === 2 ? 4 : golden === 3 ? 5 : 0;
             const falloff = golden === 1 ? 0.5 : golden === 2 ? 0.7 : 0.8;
-            let currentDamage = tower.damage;
+            let baseDmg = damage;
             const hitEnemiesCount = 1 + extraTargetsCount;
+
             const targets = this.enemiesInternal
                 .filter(e => e.hp > 0)
                 .sort((a, b) => {
@@ -1516,8 +1506,10 @@ export class TowerDefenseEngineService {
                 .slice(0, hitEnemiesCount);
 
             targets.forEach((target, index) => {
-                const finalDamage = Math.floor(currentDamage * Math.pow(falloff, index));
-                this.damageService.applyDamage(target, finalDamage, tower.type, this.wave());
+                const finalDamage = Math.floor(baseDmg * Math.pow(falloff, index));
+
+                this.damageService.applyDamage(target, finalDamage, tower.type, this.wave(), tower.id, this.recordDamage.bind(this));
+
                 if (tower.specialActive) {
                     this.damageService.applyBleed(target, finalDamage);
                 }
@@ -1527,9 +1519,12 @@ export class TowerDefenseEngineService {
                     from: index === 0 ? { ...tower.position } : { ...targets[index - 1].position },
                     to: { ...target.position },
                     progress: 0,
-                    speedMultiplier: 5
+                    speedMultiplier: 1.5,
+                    isBeam: true
                 });
             });
+
+            return;
         }
     }
 

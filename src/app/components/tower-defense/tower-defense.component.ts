@@ -1166,6 +1166,26 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const towers = this.tdEngine.getTowersRef();
 
         for (const p of projs) {
+            if (p.isBeam) {
+                ctx.save();
+                ctx.beginPath();
+
+                const startX = (p.from.x + 0.5) * tile;
+                const startY = (p.from.y + 0.5) * tile;
+                const endX = (p.to.x + 0.5) * tile;
+                const endY = (p.to.y + 0.5) * tile;
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = Math.max(0, 1 - p.progress);
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = '#f61f1fb1';
+                ctx.stroke();
+                ctx.restore();
+                continue;
+            }
+
             // Actually, we can check the tower at p.from!
             const tx = Math.floor(p.from.x);
             const ty = Math.floor(p.from.y);

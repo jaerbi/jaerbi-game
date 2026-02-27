@@ -71,6 +71,7 @@ export interface Enemy {
     burnedByInferno?: boolean;
     lastInfernoDamage?: number;
     prismVulnerableTime?: number;
+    progressScore?: number;
     venomStacks?: number;
     venomDuration?: number;
     venomTickTimer?: number;
@@ -93,6 +94,7 @@ export interface Projectile {
     progress: number;
     speedMultiplier?: number;
     isExplosion?: boolean;
+    isBeam?: boolean;
 }
 
 export interface InfernoZone {

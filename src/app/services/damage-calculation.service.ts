@@ -72,15 +72,16 @@ export class DamageCalculationService {
 
         // 6. Prism Ramp
         if (tower.type === 6) {
-            const sameTarget = tower.lastBeamTargetId === target.id;
+            const isMainTarget = tower.targetEnemyId === target.id;
             const prevTime = tower.beamTime ?? 0;
-            const newTime = sameTarget ? prevTime + tower.fireInterval : tower.fireInterval;
-            tower.beamTime = newTime;
-            tower.lastBeamTargetId = target.id;
+
+            if (isMainTarget) {
+                tower.beamTime = prevTime + tower.fireInterval;
+            }
 
             const golden = getUpgradeLevel(6, 'golden');
             const maxBonus = golden > 0 ? this.PRISM_RAMP_MAX_BONUS_GOLDEN : this.PRISM_RAMP_MAX_BONUS;
-            const ramp = 1 + Math.min(maxBonus, newTime * 0.5);
+            const ramp = 1 + Math.min(maxBonus, (tower?.beamTime || 0) * 0.5);
             damage = Math.floor(damage * ramp);
         }
 
@@ -270,19 +271,25 @@ export class DamageCalculationService {
     * Applies Bleed stacks .
     */
     applyBleed(enemy: Enemy, hitDamage: number) {
-        const newBleed = hitDamage * this.BLEED_RATIO;
-
-        if (!enemy.bleedDamagePerSec || newBleed > enemy.bleedDamagePerSec) {
-            enemy.bleedDamagePerSec = newBleed;
+        const bleedAmount = hitDamage * this.BLEED_RATIO;
+        if (!enemy.bleedDamagePerSec) {
+            enemy.bleedDamagePerSec = bleedAmount;
+        } else {
+            enemy.bleedDamagePerSec += (bleedAmount * 0.5);
         }
     }
-
     /**
      * Processes Bleed DoT tick.
      * Returns damage to deal.
      */
     processBleedTick(enemy: Enemy, dt: number): number {
         if (!enemy.bleedDamagePerSec || enemy.bleedDamagePerSec <= 0) return 0;
+
+        if (enemy.hp <= 0) {
+            enemy.bleedDamagePerSec = 0;
+
+            return 0;
+        }
 
         return enemy.bleedDamagePerSec * dt;
     }

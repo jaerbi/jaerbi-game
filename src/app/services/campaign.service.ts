@@ -211,13 +211,13 @@ export class CampaignService {
                     ? 'Короткий шлях. Елітні вежі. Економіка вирішує все.'
                     : 'Short path. Elite towers. Economy is everything.',
                 waveCount: 25,
-                startingGold: 500, // Only enough for one steeplechase
+                startingGold: 5000, // Only enough for one steeplechase
                 allowedTowers: [4, 6, 7], // Sniper, Prism, Poison (High Tier)
                 mapLayout: 'static',
                 difficulty: 'hard',
                 xpReward: 50,
                 gridSize: 10,
-                healthMultiplier: 1.8,
+                healthMultiplier: 20.8,
                 enemyTypes: ['Tank', 'Scout', 'Standard'],
                 waveTypeSequence: [3, 3, 2, 3, 2, 1, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2],
                 bossCount: 5, // 5, 10, 15, 20, 25
@@ -231,7 +231,12 @@ export class CampaignService {
                     { x: 3, y: 4, type: 'damage' }, //Norm
                     { x: 4, y: 4, type: 'bounty' },//The key to victory is to place the first tower here.
                     { x: 1, y: 1, type: 'speed' } // Trap
-                ]
+                ],
+                waveModifiers: {
+                    1: { count: 50 },
+                    2: { count: 50 },
+                    3: { count: 50 },
+                }
             }
         ];
     }
