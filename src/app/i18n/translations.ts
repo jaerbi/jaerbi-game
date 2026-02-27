@@ -205,9 +205,15 @@ export type TranslationKey =
     | 'ENGAGED'
     | 'CREDITS'
     | 'SHIELDS'
+    | 'SYSTEM_ALERT_ADAPT'
+    | 'EFFICIENCY_OF'
+    | 'DECREASED_BY'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    EFFICIENCY_OF: { en: 'Efficiency of', uk: `Ефективність` },
+    DECREASED_BY: { en: 'decreased by 75%', uk: `знизилася на 75%` },
+    SYSTEM_ALERT_ADAPT: { en: 'System Alert: Adaptation', uk: `Системне сповіщення: Адаптація` },
     SHIELDS: { en: 'Shields', uk: `Щити` },
     CREDITS: { en: 'Credits', uk: `Кредити` },
     ENGAGED: { en: 'In Battle', uk: `У бою` },

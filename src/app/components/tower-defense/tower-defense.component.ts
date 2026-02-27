@@ -12,6 +12,7 @@ import { AbbreviateNumberPipe } from './abbreviate-number.pipe';
 import { AppPrivacyPolicyComponent } from '../privacy-policy/privacy-policy.component';
 import { CampaignService } from '../../services/campaign.service';
 import { DragDropModule } from '@angular/cdk/drag-drop';
+import { WaveAnalyticsService } from '../../services/wave-analytics.service';
 
 @Component({
     selector: 'app-tower-defense',
@@ -154,44 +155,6 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
         .group:hover {
         box-shadow: 0 0 40px rgba(56, 189, 248, 0.15);
         }
-    @media (max-width: 900px) {
-      .td-layout {
-        flex-direction: column;
-      }
-      .td-main-area {
-        width: 100vw;
-        max-width: 100vw;
-        margin-left: -1rem;
-        margin-right: -1rem;
-        padding: 0.5rem;
-        min-height: auto;
-      }
-      .td-sidebar {
-        width: 100%;
-      }
-      .td-canvas {
-        width: 100vw;
-        max-width: 100vw;
-        touch-action: none;
-      }
-      .td-shop-list {
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 0.5rem;
-        overflow-x: auto;
-        padding-bottom: 0.5rem;
-      }
-      .td-shop-list .shop-btn {
-        min-width: 72px;
-        min-height: 50px;
-      }
-      .td-shop-actions {
-        position: sticky;
-        bottom: 0;
-        background: rgba(15, 23, 42, 0.96);
-        padding-top: 0.5rem;
-      }
-    }
   `]
 })
 export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
@@ -222,13 +185,21 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     @HostListener('window:keydown', ['$event'])
     onKeyDown(event: KeyboardEvent) {
-        if (this.tdEngine.isWaveInProgress()) { return; }
-
         const key = event.key;
 
+        if (key === ' ' || key === 'Spacebar') {
+            if (this.tdEngine.isWaveInProgress()) {
+                event.preventDefault();
+                this.togglePause();
+            }
+            return;
+        }
+
         if (key === 'Enter') {
-            event.preventDefault();
-            this.tdEngine.startWave();
+            if (!this.tdEngine.isWaveInProgress()) {
+                event.preventDefault();
+                this.tdEngine.startWave();
+            }
             return;
         }
 
@@ -251,7 +222,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         public firebase: FirebaseService,
         public router: Router,
         private cdr: ChangeDetectorRef,
-        public campaignService: CampaignService
+        public campaignService: CampaignService,
+        private _waveAnalyticsService: WaveAnalyticsService,
     ) { }
 
     ngOnInit() {
@@ -376,6 +348,10 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         }
     }
 
+    buyMaxUpgrade(towerId: string) {
+        this.tdEngine.upgradeTowerMax(towerId);
+    }
+
     getRangeStyle() {
         const tile = this.selectedTile();
         if (!tile || !tile.tower) return { display: 'none' };
@@ -454,23 +430,13 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     getTowerName(type: number): string {
-        const isUk = this.settings.currentLang() === 'uk';
-
-        switch (type) {
-            case 1: return isUk ? 'Льодяна' : 'Ice';
-            case 2: return isUk ? 'Блискавка' : 'Lightning';
-            case 3: return isUk ? 'Розколювач' : 'Shatter';
-            case 4: return isUk ? 'Кат' : 'Executioner';
-            case 5: return isUk ? 'Інферно' : 'Inferno';
-            case 6: return isUk ? 'Призматичний промінь' : 'Prism Beam';
-            default: return isUk ? 'Нейротоксин' : 'Neurotoxin';
-        }
+        return this._waveAnalyticsService.getTowerName(type);
     }
 
     getTowerColor(type: number): string {
         return type === 1 ? '#0ea5e9' :
             type === 2 ? '#a855f7' :
-                type === 3 ? '#f59e0b' :
+                type === 3 ? '#f5e50b' :
                     type === 4 ? '#ef4444' :
                         type === 5 ? '#ee822a' :
                             type === 6 ? '#22d3ee' :
@@ -571,14 +537,14 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const canvas = this.gameCanvas?.nativeElement;
         const ctx = this.ctx;
         if (!canvas || !ctx) return;
-        
+
         // Ensure tile size is integer to avoid sub-pixel rendering artifacts
         const tile = Math.floor(this.tdEngine.tileSize);
         const gridSize = this.tdEngine.gridSize;
         const totalSize = gridSize * tile;
 
         this.clearCanvas(ctx, totalSize);
-        
+
         // Clip to valid grid area to prevent drawing outside
         ctx.save();
         ctx.beginPath();
@@ -594,9 +560,9 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         if (this.tdEngine.gameSpeedMultiplier() === 1) {
             this.drawProjectiles(ctx, tile);
         }
-        
+
         ctx.restore(); // Remove clip
-        
+
         this.drawRangeIndicator(ctx, tile);
     }
 
@@ -701,14 +667,14 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                         ctx.save();
                         // Inner glow/border
                         ctx.lineWidth = 2;
-                        
+
                         if (t.bonus === 'damage') {
                             // Red/Orange Cross Swords or Symbol
                             ctx.strokeStyle = '#ef4444'; // Red-500
                             ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
                             ctx.fillRect(px + 4, py + 4, size - 8, size - 8);
                             ctx.strokeRect(px + 4, py + 4, size - 8, size - 8);
-                            
+
                             // Icon: Sword
                             ctx.fillStyle = '#fca5a5';
                             ctx.font = `bold ${Math.floor(tile * 0.5)}px sans-serif`;
@@ -721,7 +687,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                             ctx.strokeStyle = '#3b82f6'; // Blue-500
                             ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
                             ctx.beginPath();
-                            ctx.arc(px + halfTile, py + halfTile, (size/2) - 4, 0, Math.PI * 2);
+                            ctx.arc(px + halfTile, py + halfTile, (size / 2) - 4, 0, Math.PI * 2);
                             ctx.fill();
                             ctx.stroke();
 
@@ -772,7 +738,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                             // Yellow Lightning
                             ctx.strokeStyle = '#facc15'; // Yellow-400
                             ctx.fillStyle = 'rgba(250, 204, 21, 0.2)';
-                            
+
                             // Draw lightning bolt shape or just a distinct box
                             ctx.beginPath();
                             ctx.moveTo(px + halfTile + 4, py + 4);
@@ -782,7 +748,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                             ctx.lineTo(px + halfTile + 4, py + halfTile);
                             ctx.lineTo(px + 8, py + halfTile + 4);
                             ctx.closePath();
-                            
+
                             ctx.fill();
                             ctx.stroke();
 
@@ -793,7 +759,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                             ctx.textBaseline = 'middle';
                             ctx.fillText('⚡', px + halfTile, py + halfTile);
                         }
-                        
+
                         ctx.restore();
                     }
                 }
@@ -890,7 +856,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const color =
             type === 1 ? '#0ea5e9' :
                 type === 2 ? '#a855f7' :
-                    type === 3 ? '#f59e0b' :
+                    type === 3 ? '#f5e50b' :
                         type === 4 ? '#ef4444' :
                             type === 5 ? '#ee822a' :
                                 type === 6 ? '#22d3ee' :
@@ -1028,25 +994,49 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             const cy = e.displayY ?? ((e.position.y + 0.5) * tile);
             ctx.fillStyle = e.bg || (e.isFrozen ? '#7dd3fc' : '#ef4444');
             let strokeColor = 'transparent';
-            let shadowColor = isFastSpeed ? 'transparent' : ctx.fillStyle;
-            let shadowBlur = isFastSpeed ? 0 : 10;
+            const getGlowColor = (hex: any, alpha = 0.5) => {
+                if (hex === 'transparent') return 'transparent';
+                return hex + Math.round(alpha * 255).toString(16).padStart(2, '0');
+            };
+            let shadowColor = isFastSpeed ? 'transparent' : getGlowColor(ctx.fillStyle, 0.4);
+            let shadowBlur = isFastSpeed ? 0 : 5;
             let lineWidth = 2;
 
             if (e.isMagma) {
                 strokeColor = '#f97316';
-                shadowColor = '#f97316';
-                shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 2;
+                shadowColor = getGlowColor(strokeColor, 0.6);
+                shadowBlur = isFastSpeed ? 0 : 8;
+                lineWidth = 2.5;
             } else if (e.isMirror) {
                 strokeColor = '#f0f9ff';
-                shadowColor = '#0ea5e9';
-                shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 2;
+                shadowColor = getGlowColor('#0ea5e9', 0.6);
+                shadowBlur = isFastSpeed ? 0 : 8;
+                lineWidth = 2.5;
             } else if (e.isSlime) {
                 strokeColor = '#22c55e';
-                shadowColor = '#22c55e';
-                shadowBlur = isFastSpeed ? 0 : 15;
-                lineWidth = 2;
+                shadowColor = getGlowColor(strokeColor, 0.6);
+                shadowBlur = isFastSpeed ? 0 : 8;
+                lineWidth = 2.5;
+            } else if (e.isFrost) {
+                strokeColor = '#06b6d4';
+                shadowColor = getGlowColor(strokeColor, 0.6);
+                shadowBlur = isFastSpeed ? 0 : 8;
+                lineWidth = 2.5;
+            } else if (e.isGrounded) {
+                strokeColor = '#854d0e';
+                shadowColor = getGlowColor('#a16207', 0.6);
+                shadowBlur = isFastSpeed ? 0 : 8;
+                lineWidth = 2.5;
+            } else if (e.isAgile) {
+                strokeColor = '#eab308';
+                shadowColor = getGlowColor('#facc15', 0.6);
+                shadowBlur = isFastSpeed ? 0 : 8;
+                lineWidth = 2.5;
+            } else if (e.isBulwark) {
+                strokeColor = '#94a3b8';
+                shadowColor = getGlowColor('#cbd5e1', 0.6);
+                shadowBlur = isFastSpeed ? 0 : 8;
+                lineWidth = 2.5;
             }
 
             ctx.shadowColor = shadowColor;
@@ -1092,24 +1082,28 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.fillStyle = '#10b981';
             const pct = Math.max(0, Math.min(1, e.hp / e.maxHp));
             ctx.fillRect(cx - r, cy - r - 10, barW * pct, barH);
-            const stacks = e.venomStacks || 0;
-
-            if (speed === 1 && stacks > 0) {
-                ctx.save();
-                const tickW = 3;
-                const tickH = 6;
+            // Venom stacks visualization
+            if (e.venomStacks && e.venomStacks > 0) {
+                const stackH = 4;
+                const stackW = 8;
                 const gap = 2;
-                const startX = cx - r;
-                const tickY = barY - tickH - 2;
-
+                const startY = cy - r + 5;
                 ctx.fillStyle = '#84cc16';
-                ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                ctx.shadowBlur = 2;
-
-                for (let i = 0; i < stacks; i++) {
-                    ctx.fillRect(startX + i * (tickW + gap), tickY, tickW, tickH);
+                for (let i = 0; i < e.venomStacks; i++) {
+                    ctx.fillRect(cx + r + 2, startY + i * (stackH + gap), stackW, stackH);
                 }
-                ctx.restore();
+            }
+
+            // Shatter stacks visualization (Left Side)
+            if (e.shatterStacks && e.shatterStacks > 0) {
+                const stackH = 4;
+                const stackW = 8;
+                const gap = 2;
+                const startY = cy - r + 5;
+                ctx.fillStyle = '#f5e50b'; // Cannon Yellow
+                for (let i = 0; i < e.shatterStacks; i++) {
+                    ctx.fillRect(cx - r - stackW - 2, startY + i * (stackH + gap), stackW, stackH);
+                }
             }
         }
     }
@@ -1129,17 +1123,57 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     private drawProjectiles(ctx: CanvasRenderingContext2D, tile: number) {
+        // Speed Constraint: Only draw projectiles at 1x speed
         const speed = this.tdEngine.gameSpeedMultiplier();
         if (speed >= 2) return;
+
         const projs = this.tdEngine.getProjectilesRef();
-        ctx.fillStyle = '#fbbf24';
+        const towers = this.tdEngine.getTowersRef();
+        
         for (const p of projs) {
+            // Find source tower type to determine color
+            // Optimization: If we stored type on projectile, this would be O(1) instead of O(N)
+            // But for now, we can infer or use a default if we can't easily link back.
+            // Actually, p.from matches tower position.
+            
+            // Let's use a simple heuristic based on what fired it?
+            // Since we don't have type on Projectile interface, we'll use a default or try to match.
+            // Wait, we can just use a default 'energy' color or update Projectile interface.
+            // But to avoid big refactors now, let's just color code by "look".
+            
+            // Actually, we can check the tower at p.from!
+            const tx = Math.floor(p.from.x);
+            const ty = Math.floor(p.from.y);
+            const tower = towers.find(t => t.position.x === tx && t.position.y === ty);
+            const type = tower ? tower.type : 1;
+
             const x = p.from.x + (p.to.x - p.from.x) * p.progress;
             const y = p.from.y + (p.to.y - p.from.y) * p.progress;
+            const cx = x * tile + tile / 2;
+            const cy = y * tile + tile / 2;
+
             ctx.beginPath();
-            ctx.arc(x * tile + tile / 2, y * tile + tile / 2, 3, 0, Math.PI * 2);
+            
+            // Tower-Specific Colors
+            let color = '#fbbf24'; // Default Amber
+            let size = 3;
+
+            switch (type) {
+                case 1: color = '#a3def9'; break; // Ice (Blue)
+                case 2: color = '#d2a6fb'; break; // Lightning (Purple)
+                case 3: color = '#facc15'; break; // Cannon (Yellow/Heavy)
+                case 4: color = '#f04545'; break; // Sniper (Red/Thin)
+                case 5: color = '#f97316'; break; // Inferno (Orange)
+                case 6: color = '#22d3ee'; break; // Prism (Cyan - though usually beam)
+                case 7: color = '#84cc16'; break; // Venom (Green)
+            }
+
+            ctx.fillStyle = color;
+            ctx.arc(cx, cy, size, 0, Math.PI * 2);
             ctx.fill();
         }
+
+        // Draw Inferno Zones (always visible if low speed)
         const zones = this.tdEngine.getInfernoZonesRef();
         for (const z of zones) {
             if (z.dps <= 0) continue;
@@ -1149,10 +1183,10 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.save();
             ctx.beginPath();
             ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(248, 113, 113, 0.15)';
+            ctx.fillStyle = 'rgba(249, 115, 22, 0.15)'; // Orange tint
             ctx.fill();
             ctx.lineWidth = 1;
-            ctx.strokeStyle = 'rgba(248, 113, 113, 0.4)';
+            ctx.strokeStyle = 'rgba(249, 115, 22, 0.4)';
             ctx.setLineDash([4, 4]);
             ctx.stroke();
             ctx.restore();
@@ -1185,19 +1219,19 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
         const rect = this.gameCanvas?.nativeElement.getBoundingClientRect();
         if (!rect) return;
-        
+
         // Transform screen coordinates to canvas coordinates
         // getBoundingClientRect returns the visual box relative to viewport.
         // event.clientX/Y is also relative to viewport.
-        
+
         // Calculate offset within the visual canvas
         const offsetX = event.clientX - rect.left;
         const offsetY = event.clientY - rect.top;
-        
+
         // Since the canvas is scaled, we divide by the current zoom level to get internal coordinates.
         // We assume uniform scaling (zoomLevel applies to both X and Y).
         const scale = this.zoomLevel();
-        
+
         const canvasX = offsetX / scale;
         const canvasY = offsetY / scale;
 
@@ -1206,7 +1240,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const y = Math.floor(canvasY / tile);
         this.handleTileClick(x, y);
     }
-    
+
     // Zoom & Pan Handlers
     onWheel(event: WheelEvent) {
         event.preventDefault();
@@ -1224,8 +1258,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         // User requested "drag (pan)". Often left click is drag if not on interactable.
         // But left click is also select/build.
         // Let's use Left Click for drag, but distinguish click vs drag.
-        
-        if (event.button === 0 || event.button === 1) { 
+
+        if (event.button === 0 || event.button === 1) {
             this.isPanning = true;
             this.wasPanning = false; // Will be set to true if moved enough
             this.lastMouseX = event.clientX;
@@ -1235,20 +1269,20 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     pan(event: MouseEvent) {
         if (!this.isPanning) return;
-        
+
         const dx = event.clientX - this.lastMouseX;
         const dy = event.clientY - this.lastMouseY;
-        
+
         // Threshold to distinguish click from drag
         if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
             this.wasPanning = true;
         }
-        
+
         if (this.wasPanning) {
             this.panX.update(x => x + dx);
             this.panY.update(y => y + dy);
         }
-        
+
         this.lastMouseX = event.clientX;
         this.lastMouseY = event.clientY;
     }
@@ -1301,11 +1335,11 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         if (levelId === 'level_1') return true;
         const profile = this.firebase.masteryProfile();
         if (!profile || !profile.completedLevelIds) return false;
-        
+
         // Find index of this level
         const index = this.campaignService.levels.findIndex(l => l.id === levelId);
         if (index <= 0) return true; // Should be handled by level_1 check but safe guard
-        
+
         const prevLevel = this.campaignService.levels[index - 1];
         return profile.completedLevelIds.includes(prevLevel.id);
     }

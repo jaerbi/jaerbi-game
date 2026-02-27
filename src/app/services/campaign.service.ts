@@ -11,6 +11,7 @@ export interface LevelConfig {
     mapLayout?: 'static' | 'random';
     difficulty: 'easy' | 'normal' | 'hard';
     xpReward: number;
+    bountyMultiplier?: number;
     gridSize?: number; // Custom grid size (e.g. 10, 12, 15)
     customPath?: { x: number; y: number }[]; // Explicit path coordinates
     bonusTiles?: { x: number; y: number; type: 'damage' | 'range' | 'bounty' | 'mastery' | 'speed' }[];
@@ -18,6 +19,15 @@ export interface LevelConfig {
     enemyTypes?: string[]; // E.g. ['Standard', 'Magma', 'Mirror']
     waveTypeSequence?: number[]; // 1=Standard, 2=Scout, 3=Tank, 4=Boss
     bossCount?: number; // Number of bosses to spawn during the campaign
+    waveModifiers?: {
+        [waveIndex: number]: {
+            count?: number;
+            traits?: Array<{
+                property: 'isFrost' | 'isGrounded' | 'isAgile' | 'isBulwark' | 'isMagma' | 'isMirror' | 'isSlime';
+                chance: number;
+            }>;
+        }
+    };
 }
 
 @Injectable({
@@ -28,13 +38,14 @@ export class CampaignService {
     levels: LevelConfig[] = [];
 
     // TOWER IDs REFERENCE:
-    // 1: Turret (Basic)
-    // 2: Cannon (Splash)
-    // 3: Ice (Slow)
-    // 4: Sniper (Long Range)
-    // 5: Inferno (AOE/Burn)
-    // 6: Prism (Laser/Buff)
-    // 7: Poison (DoT)
+    // Type 1 (Ice) -> isFrost | base 15 | full price (4lvl) 41 | abilities price 60
+    // Type 2 (Lightning) -> isGrounded | 50 | 140 | 200
+    // Type 3 (Cannon) -> isAgile | 250 | 700 | 1000 
+    // Type 4 (Sniper) -> isBulwark | 500 | 1400 | 2000
+    // Type 5 (Inferno) -> isMagma (AOE/Burn) | 500 | 1400 | 2000
+    // Type 6 (Prism) -> isMirror | 500 | 1400 | 2000
+    // Type 7 (Venom) -> isSlime (DoT) | 500 | 1400 | 2000
+
 
     constructor(private _settings: SettingsService) { this.initLevels(); }
 
@@ -55,9 +66,10 @@ export class CampaignService {
                 difficulty: 'easy',
                 xpReward: 20,
                 gridSize: 10,
-                healthMultiplier: 1.0,
+                bountyMultiplier: 0.3,
+                healthMultiplier: 0.6,
                 enemyTypes: ['Standard', 'Scout'],
-                waveTypeSequence: [1, 1, 1, 2, 1, 2, 1, 2, 1, 2],
+                waveTypeSequence: [1, 1, 2, 1, 1, 2, 1, 1],
                 bossCount: 1, // Only at the end
                 // Simple S-shape
                 customPath: [
@@ -70,7 +82,15 @@ export class CampaignService {
                 bonusTiles: [
                     { x: 2, y: 3, type: 'damage' }, // Strategic point, covers two lines
                     { x: 7, y: 5, type: 'range' }   // Trap: Looks nice, but it's too far from the entrance for the Turret
-                ]
+                ],
+                waveModifiers: {
+                    2: { count: 14, traits: [{ property: 'isFrost', chance: 0.2 }] },
+                    3: { count: 15, traits: [{ property: 'isFrost', chance: 0.8 }] },
+                    5: { count: 20, traits: [{ property: 'isFrost', chance: 0.4 }] },
+                    6: { count: 25, traits: [{ property: 'isFrost', chance: 1 }] },
+                    7: { count: 35, traits: [{ property: 'isFrost', chance: 0.8 }] },
+                    8: { count: 40, traits: [{ property: 'isFrost', chance: 1 }] },
+                }
             },
             {
                 id: 'level_2',
@@ -80,14 +100,15 @@ export class CampaignService {
                     : 'Enemies swarm together. Use AoE damage to wipe them out at once.',
                 waveCount: 12,
                 startingGold: 60,
-                allowedTowers: [1, 2], // Turret, Cannon
+                allowedTowers: [1, 2],
                 mapLayout: 'static',
                 difficulty: 'normal',
                 xpReward: 25,
                 gridSize: 12,
                 healthMultiplier: 1.1,
+                bountyMultiplier: 0.5,
                 enemyTypes: ['Standard', 'Tank'],
-                waveTypeSequence: [1, 1, 1, 1, 1, 1, 3, 1, 1, 3, 1, 1, 3, 1, 3],
+                waveTypeSequence: [1, 1, 2, 3, 1, 2, 3, 1, 1, 3, 1, 3],
                 bossCount: 2, // Wave 6 and 12
                 // Tight spiral/snake
                 customPath: [
@@ -100,8 +121,21 @@ export class CampaignService {
                 ],
                 bonusTiles: [
                     { x: 2, y: 1, type: 'damage' }, // Perfect for a cannon, hits 3 lines
-                    { x: 7, y: 3, type: 'bounty' }  // For the greedy
-                ]
+                    { x: 7, y: 5, type: 'bounty' }  // For the greedy
+                ],
+                waveModifiers: {
+                    2: { count: 14, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.2 }] },
+                    3: { count: 18, traits: [{ property: 'isFrost', chance: 0.8 }, { property: 'isGrounded', chance: 0.2 }] },
+                    4: { count: 15 },
+                    5: { count: 20, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.4 }] },
+                    6: { count: 25, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.6 }] },
+                    7: { count: 25, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.5 }] },
+                    8: { count: 25, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.2 }] },
+                    9: { count: 35, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.4 }] },
+                    10: { count: 30, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.4 }] },
+                    11: { count: 40, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.4 }] },
+                    12: { count: 50, traits: [{ property: 'isFrost', chance: 0.1 }, { property: 'isGrounded', chance: 0.8 }] },
+                }
             },
             {
                 id: 'level_3',

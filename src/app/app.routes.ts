@@ -7,11 +7,18 @@ import { TowerDefenseComponent } from './components/tower-defense/tower-defense.
 import { TowerDefenseLeaderboardComponent } from './components/tower-defense-leaderboard/tower-defense-leaderboard.component';
 import { MasteriesComponent } from './components/masteries/masteries.component';
 import { canLeaveGameGuard } from './guards/can-leave-game-guard.guard';
+import { AdminAnalyticsComponent } from './components/admin-analytics/admin-analytics.component';
+import { AdminGuard } from './guards/admin.guard';
 
 export const routes: Routes = [
     {
         path: '',
         component: LandingPageComponent,
+    },
+    {
+        path: 'admin/analytics',
+        component: AdminAnalyticsComponent,
+        // canActivate: [AdminGuard]
     },
     {
         path: 'shape-tactics',

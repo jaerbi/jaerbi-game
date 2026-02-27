@@ -60,7 +60,7 @@
 
         <div class="flex flex-col items-center select-none">
           <span class="text-[9px] text-emerald-500 font-black uppercase tracking-[0.2em] mb-1">
-            {{ settings.t('CREDITS')}}
+            {{ settings.t('CREDITS') }}
           </span>
           <div class="flex items-center gap-2">
             <span class="text-2xl font-mono font-black text-white drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]">
@@ -124,24 +124,24 @@
       </div>
 
       @if (false) {
-          <div class="bg-slate-950/40 backdrop-blur-md p-1 rounded-2xl border border-white/10 flex shadow-xl">
-            <button
-              (click)="setGameMode('random')"
-              [class.bg-sky-500]="tdEngine.gameMode() === 'random'"
-              [class.text-white]="tdEngine.gameMode() === 'random'"
-              class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter text-slate-500 transition-all"
-            >
-              Random
-            </button>
-            <button
-              (click)="setGameMode('campaign')"
-              [class.bg-indigo-500]="tdEngine.gameMode() === 'campaign'"
-              [class.text-white]="tdEngine.gameMode() === 'campaign'"
-              class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter text-slate-500 transition-all"
-            >
-              Campaign
-            </button>
-          </div>
+        <div class="bg-slate-950/40 backdrop-blur-md p-1 rounded-2xl border border-white/10 flex shadow-xl">
+          <button
+            (click)="setGameMode('random')"
+            [class.bg-sky-500]="tdEngine.gameMode() === 'random'"
+            [class.text-white]="tdEngine.gameMode() === 'random'"
+            class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter text-slate-500 transition-all"
+          >
+            Random
+          </button>
+          <button
+            (click)="setGameMode('campaign')"
+            [class.bg-indigo-500]="tdEngine.gameMode() === 'campaign'"
+            [class.text-white]="tdEngine.gameMode() === 'campaign'"
+            class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter text-slate-500 transition-all"
+          >
+            Campaign
+          </button>
+        </div>
       }
     </div>
   </div>
@@ -193,7 +193,37 @@
       (mouseleave)="endPan()"
       (wheel)="onWheel($event)"
     >
-      <div 
+      <!-- Counter Strategy Warning -->
+      @if (tdEngine.activeCounterStrategy(); as strategy) {
+        <div
+          class="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-500"
+        >
+          <div
+            class="bg-rose-950/90 backdrop-blur-md border border-rose-500/30 px-6 py-3 rounded-xl shadow-2xl flex items-center gap-4 min-w-[300px]"
+          >
+            <div class="relative">
+              <span class="text-3xl animate-pulse">⚠️</span>
+              <div class="absolute inset-0 bg-rose-500 blur-lg opacity-20 animate-pulse"></div>
+            </div>
+
+            <div class="flex flex-col">
+              <span class="text-[10px] font-black text-rose-400 uppercase tracking-[0.2em]">
+                {{ settings.t('SYSTEM_ALERT_ADAPT') }}
+              </span>
+
+              <span class="text-sm font-medium text-white leading-tight">"{{ strategy.taunt }}"</span>
+
+              <span class="text-[10px] text-rose-300/80 mt-1 italic">
+                {{ settings.t('EFFICIENCY_OF') }}
+                <span class="text-rose-200 font-bold uppercase">{{ strategy.name }}</span>
+                {{ settings.t('DECREASED_BY') }}
+              </span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <div
         class="origin-center transition-transform duration-75 ease-out"
         [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px) scale(' + zoomLevel() + ')'"
       >
@@ -242,7 +272,7 @@
                 </div>
 
                 <div class="w-24 text-right font-mono text-sm font-bold" [style.color]="item.color">
-                  {{ item.damage | number: '1.0-0' }}
+                  {{ item.damage | abbreviateNumber }}
                 </div>
               </div>
             }
@@ -454,14 +484,27 @@
                   </div>
                 </div>
                 @if (tile.tower.level < 4) {
-                  <button
-                    (click)="upgradeTower()"
-                    [disabled]="tdEngine.money() < tdEngine.getUpgradeCost(tile.tower)"
-                    class="cursor-pointer w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 rounded font-bold transition-all flex justify-between px-4 items-center"
-                  >
-                    <span>{{ settings.t('UPGRADE') }}</span>
-                    <span class="font-mono">{{ tdEngine.getUpgradeCost(tile.tower) }}</span>
-                  </button>
+                  <div class="flex gap-2">
+                    <button
+                      (click)="upgradeTower()"
+                      [disabled]="tdEngine.money() < tdEngine.getUpgradeCost(tile.tower)"
+                      class="flex-1 cursor-pointer py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 rounded font-bold transition-all flex justify-between px-3 items-center"
+                    >
+                      <span class="text-xs">{{ settings.t('UPGRADE') }}</span>
+                      <span class="font-mono text-xs">{{ tdEngine.getUpgradeCost(tile.tower) }}</span>
+                    </button>
+                    
+                    @let maxInfo = tdEngine.calculateMaxUpgrade(tile.tower);
+                    <button
+                      (click)="buyMaxUpgrade(tile.tower.id)"
+                      [disabled]="maxInfo.levelsToAdd === 0"
+                      class="w-20 cursor-pointer py-3 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 disabled:text-slate-500 rounded font-bold transition-all flex flex-col justify-center items-center leading-none border border-amber-400/30"
+                      [title]="'Buy ' + maxInfo.levelsToAdd + ' levels'"
+                    >
+                      <span class="text-[10px] uppercase font-black tracking-tighter">MAX</span>
+                      <span class="font-mono text-[10px] opacity-80">{{ maxInfo.totalCost > 0 ? maxInfo.totalCost : '-' }}</span>
+                    </button>
+                  </div>
                 } @else {
                   <div
                     class="w-full py-3 bg-slate-900 text-slate-500 rounded text-center font-bold border border-slate-700"
@@ -682,16 +725,20 @@
             <div class="relative flex gap-1 bg-slate-900/50 p-1 rounded-2xl border border-white/10 backdrop-blur-sm">
               <button
                 (click)="tdEngine.startWave()"
-                [disabled]="tdEngine.isWaveInProgress()"
+                [disabled]="tdEngine.isWaveInProgress() || (tdEngine.gameMode() === 'campaign' && tdEngine.currentLevelConfig() && tdEngine.wave() >= tdEngine.currentLevelConfig()!.waveCount)"
                 class="flex-1 py-3 rounded-xl font-black text-[11px] uppercase tracking-[0.2em] transition-all overflow-hidden relative"
-                [class.bg-emerald-600]="!tdEngine.isWaveInProgress()"
-                [class.text-white]="!tdEngine.isWaveInProgress()"
-                [class.bg-slate-800/50]="tdEngine.isWaveInProgress()"
-                [class.text-slate-500]="tdEngine.isWaveInProgress()"
+                [class.bg-emerald-600]="!tdEngine.isWaveInProgress() && !(tdEngine.gameMode() === 'campaign' && tdEngine.currentLevelConfig() && tdEngine.wave() >= tdEngine.currentLevelConfig()!.waveCount)"
+                [class.text-white]="!tdEngine.isWaveInProgress() && !(tdEngine.gameMode() === 'campaign' && tdEngine.currentLevelConfig() && tdEngine.wave() >= tdEngine.currentLevelConfig()!.waveCount)"
+                [class.bg-slate-800/50]="tdEngine.isWaveInProgress() || (tdEngine.gameMode() === 'campaign' && tdEngine.currentLevelConfig() && tdEngine.wave() >= tdEngine.currentLevelConfig()!.waveCount)"
+                [class.text-slate-500]="tdEngine.isWaveInProgress() || (tdEngine.gameMode() === 'campaign' && tdEngine.currentLevelConfig() && tdEngine.wave() >= tdEngine.currentLevelConfig()!.waveCount)"
               >
-                {{ tdEngine.isWaveInProgress() ? settings.t('ENGAGED') : settings.t('COMMENCE') }}
+                @if (tdEngine.gameMode() === 'campaign' && tdEngine.currentLevelConfig() && tdEngine.wave() >= tdEngine.currentLevelConfig()!.waveCount && !tdEngine.isWaveInProgress()) {
+                   FINAL WAVE
+                } @else {
+                   {{ tdEngine.isWaveInProgress() ? settings.t('ENGAGED') : settings.t('COMMENCE') }}
+                }
                 <div
-                  *ngIf="!tdEngine.isWaveInProgress()"
+                  *ngIf="!tdEngine.isWaveInProgress() && !(tdEngine.gameMode() === 'campaign' && tdEngine.currentLevelConfig() && tdEngine.wave() >= tdEngine.currentLevelConfig()!.waveCount)"
                   class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"
                 ></div>
               </button>
@@ -717,7 +764,7 @@
               (click)="onRestart()"
               class="py-2 bg-rose-500/5 hover:bg-rose-500/10 text-rose-500/70 hover:text-rose-500 border border-rose-500/10 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all"
             >
-              {{ settings.t('RESET')}}
+              {{ settings.t('RESET') }}
             </button>
             <button
               (click)="toggleStatsPanel()"
@@ -949,6 +996,31 @@
               20x20
             </button>
           </div>
+        </div>
+
+        <div
+          class="flex items-center w-24 gap-1 px-1 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md"
+        >
+          <button
+            (click)="settings.setLang('uk')"
+            class="cursor-pointer text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full transition-all"
+            [class.bg-emerald-500/20]="settings.currentLang() === 'uk'"
+            [class.text-emerald-400]="settings.currentLang() === 'uk'"
+            [class.text-slate-500]="settings.currentLang() !== 'uk'"
+            [class.hover:text-slate-300]="settings.currentLang() !== 'uk'"
+          >
+            UA
+          </button>
+          <button
+            (click)="settings.setLang('en')"
+            class="cursor-pointer text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full transition-all"
+            [class.bg-emerald-500/20]="settings.currentLang() === 'en'"
+            [class.text-emerald-400]="settings.currentLang() === 'en'"
+            [class.text-slate-500]="settings.currentLang() !== 'en'"
+            [class.hover:text-slate-300]="settings.currentLang() !== 'en'"
+          >
+            EN
+          </button>
         </div>
 
         @if (false) {
