@@ -262,16 +262,16 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     T1_GOLDEN_DESC: { en: 'Slow enemies by an extra 10% and increase aura radius.', uk: 'Уповільнює ворогів на додаткові 10% та збільшує радіус аури.' },
     // Tier 2
     T2_NAME: {
-        en: 'Tier 2 – Precision',
-        uk: 'Тир 2 – Точність',
+        en: 'Tier 2 – Electro',
+        uk: 'Тир 2 – Електро',
     },
     T2_GOLDEN_TITLE: {
-        en: 'Critical Focus',
-        uk: 'Критичне фокусування',
+        en: 'High voltage',
+        uk: 'Висока напруга',
     },
     T2_GOLDEN_DESC: {
-        en: 'Boosts Ricochet: higher trigger chance and up to 150%+ damage.',
-        uk: 'Підсилює рикошет: вищий шанс активації та до 150%+ шкоди.',
+        en: 'Deals critical damage to enemies under slow effects and increases the number of chain targets.',
+        uk: 'Наносить критичну шкоду ворогам під ефектами сповільнення та збільшує кількість цілей ланцюга.',
     },
 
     // Tier 3

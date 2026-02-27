@@ -12,7 +12,7 @@ const TOWER_COSTS = [15, 50, 250, 500, 500, 500, 500] as const;
 
 const TIER_STATS = [
     { damage: 5, range: 1.5, fireInterval: 0.5 },
-    { damage: 21, range: 2.2, fireInterval: 0.7 },
+    { damage: 14, range: 2.5, fireInterval: 0.45 },
     { damage: 83, range: 1.5, fireInterval: 1 },
     { damage: 350, range: 2.1, fireInterval: 1.7 },
     { damage: 71, range: 1.5, fireInterval: 2.5 },
@@ -1030,7 +1030,7 @@ export class TowerDefenseEngineService {
         for (let i = this.enemiesInternal.length - 1; i >= 0; i--) {
             const enemy = this.enemiesInternal[i];
             const isStunned = !!(enemy.stunTime && enemy.stunTime > 0);
-            
+
             // Set base player damage based on type if not set
             if (enemy.basePlayerDamage === undefined) {
                 enemy.basePlayerDamage = enemy.type === 'boss' ? 10 : 3;
@@ -1054,7 +1054,7 @@ export class TowerDefenseEngineService {
                         // Base: Boss = 10, Standard = 3
                         // Boss Rules: >90% HP -> 10, 50-90% -> 8, 10-50% -> 4, <10% -> 1
                         // Standard Rules: >90% HP -> 3, 50-90% -> 2, <50% -> 1
-                        
+
                         let damageToLives = 1;
                         const hpPercent = enemy.hp / enemy.maxHp;
 
@@ -1369,7 +1369,7 @@ export class TowerDefenseEngineService {
                 // Golden Mastery - "Concussive Blasts"
                 // Logic: If enemy has shatter stacks, boost stun chance and duration
                 const shatterStacks = enemy.shatterStacks || 0;
-                
+
                 let stunChance = 0.15 + golden * 0.05;
                 let durationBonus = 0;
 
@@ -1385,37 +1385,37 @@ export class TowerDefenseEngineService {
             }
         }
 
-        if (tower.specialActive && tower.type === 2) {
+        if (tower.type === 2 && tower.specialActive) {
             const golden = this.getUpgradeLevel(2, 'golden');
-            const triggerChance = 0.25 + golden * 0.1;
-            const damageMultiplier = 1.5 + golden * 0.5;
-            if (Math.random() < triggerChance) {
-                const candidates: { enemy: Enemy; distSq: number }[] = [];
-                for (const other of this.enemiesInternal) {
-                    if (other.id === enemy.id || other.hp <= 0) continue;
-                    const dx = enemy.position.x - other.position.x;
-                    const dy = enemy.position.y - other.position.y;
-                    const distSq = dx * dx + dy * dy;
-                    if (distSq <= 9) {
-                        candidates.push({ enemy: other, distSq });
-                    }
-                }
-                if (candidates.length > 0) {
-                    candidates.sort((a, b) => a.distSq - b.distSq);
-                    const count = Math.min(2, candidates.length);
-                    for (let i = 0; i < count; i++) {
-                        const target = candidates[i].enemy;
-                        const chainProj: Projectile = {
-                            id: 'p' + (this.projectileIdCounter++),
-                            from: { ...tower.position },
-                            to: { ...target.position },
-                            progress: 0,
-                            speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
-                        };
-                        this.pushProjectile(chainProj);
-                        const secondaryDamage = Math.floor(damage * damageMultiplier);
-                        this.damageService.applyDamage(target, secondaryDamage, tower.type, this.wave(), tower.id, this.recordDamage.bind(this));
-                    }
+            const maxChainTargets = 2 + golden;
+            // Lightning jump radius (3 cells is distSq 9)
+            const jumpRangeSq = 9;
+            let chainCount = 0;
+            const hitEnemies = new Set([enemy.id]);
+
+            for (const potentialTarget of this.enemiesInternal) {
+                if (chainCount >= maxChainTargets) break;
+                if (hitEnemies.has(potentialTarget.id) || potentialTarget.hp <= 0) continue;
+
+                const dx = enemy.position.x - potentialTarget.position.x;
+                const dy = enemy.position.y - potentialTarget.position.y;
+                const distSq = dx * dx + dy * dy;
+
+                if (distSq <= jumpRangeSq) {
+                    hitEnemies.add(potentialTarget.id);
+                    chainCount++;
+
+                    this.pushProjectile({
+                        id: 'p' + (this.projectileIdCounter++),
+                        from: { ...enemy.position },
+                        to: { ...potentialTarget.position },
+                        progress: 0,
+                        speedMultiplier: 2
+                    });
+
+                    const chainDmgMultiplier = 0.7 + (golden * 0.1);
+                    const chainDamage = Math.floor(tower.damage * chainDmgMultiplier);
+                    this.damageService.applyDamage(potentialTarget, chainDamage, tower.type, this.wave(), tower.id, this.recordDamage.bind(this));
                 }
             }
         }
@@ -1621,7 +1621,7 @@ export class TowerDefenseEngineService {
             let multiplier = 0.5;
             if (currentLevel === 2) multiplier = 0.6;
             if (currentLevel === 3) multiplier = 0.7;
-            
+
             const nextCost = Math.floor(baseCost * multiplier);
 
             if (money >= nextCost) {
@@ -1645,11 +1645,11 @@ export class TowerDefenseEngineService {
         if (levelsToAdd === 0) return;
 
         this.money.update(m => m - totalCost);
-        
+
         // Apply upgrades level by level to ensure correct stats
         const baseCost = this.getTowerCost(tower.type);
 
-        for(let i=0; i<levelsToAdd; i++) {
+        for (let i = 0; i < levelsToAdd; i++) {
             // Calculate cost for this specific level step for invested tracking
             let multiplier = 0.5;
             if (tower.level === 2) multiplier = 0.6;

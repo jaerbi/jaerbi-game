@@ -32,7 +32,7 @@ export class DamageCalculationService {
     readonly PRISM_VULNERABILITY_BONUS = 1.15;
 
     // Golden Bonuses (% Current HP)
-    readonly LIGHTNING_GOLDEN_PERCENT = 0.01;
+    readonly LIGHTNING_GOLDEN_PERCENT = 0.005;
     readonly SNIPER_GOLDEN_PERCENT = 0.02;
 
     constructor(private waveAnalytics: WaveAnalyticsService) { }
@@ -91,6 +91,12 @@ export class DamageCalculationService {
             const golden = getUpgradeLevel(2, 'golden');
             const bonus = target.hp * (0.01 + golden * this.LIGHTNING_GOLDEN_PERCENT);
             damage += bonus;
+
+            //if (Slow || Bleed || Venom), add +30% dps for each Golden level
+            if (target.isFrozen || (target.venomStacks && target.venomStacks > 0)) {
+                const focusMultiplier = 1 + (golden * 0.3);
+                damage = Math.floor(damage * focusMultiplier);
+            }
         } else if (tower.type === 4) { // Sniper
             const golden = getUpgradeLevel(4, 'golden');
             const bonus = target.hp * (0.05 + golden * this.SNIPER_GOLDEN_PERCENT);
