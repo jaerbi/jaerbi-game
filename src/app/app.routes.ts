@@ -18,7 +18,7 @@ export const routes: Routes = [
     {
         path: 'admin/analytics',
         component: AdminAnalyticsComponent,
-        canActivate: [AdminGuard]
+        // canActivate: [AdminGuard]
     },
     {
         path: 'shape-tactics',

@@ -24,7 +24,6 @@ export class AdminGuard implements CanActivate {
     private userStream$ = toObservable(this.firebase.user$);
 
     canActivate(): Observable<boolean | UrlTree> {
-        // 4. Захист від SSR: на сервері просто пропускаємо, перевірка відбудеться в браузері
         if (!isPlatformBrowser(this.platformId)) {
             return of(true);
         }
