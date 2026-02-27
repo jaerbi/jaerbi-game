@@ -1382,8 +1382,8 @@ export class TowerDefenseEngineService {
                     basePos,
                     'z' + (this.projectileIdCounter++),
                     radius,
-                    3.0,
-                    Math.floor(damage * 0.4)
+                    4.0,
+                    Math.floor(damage * 0.15)
                 );
                 this.infernoZones.push(napalmZone);
             }

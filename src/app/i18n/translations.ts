@@ -337,29 +337,29 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         en: 'Neurotoxin causes stronger slow and heavier stacking poison over time.',
         uk: 'Нейротоксин сильніше сповільнює та посилює накопичення отрути з часом.',
     },
-    FINAL_STRIKE_INFO: {
-        en: 'Execute: Crit on enemies below 50% HP. Bosses take even more damage.',
-        uk: `Екзекуція: критичний удар по ворогах з HP нижче 50%. Боси отримують ще більше шкоди.`,
-    },
     FINAL_STRIKE: {
-        en: 'Final Strike',
-        uk: `Останній удар`,
+        en: 'Executioner’s Strike',
+        uk: 'Удар Ката',
+    },
+    FINAL_STRIKE_INFO: {
+        en: 'Executes targets below 50% HP (x2 damage, x3 for Bosses) and applies a bleeding effect based on hit damage.',
+        uk: 'Добиває цілі з HP нижче 50% (x2 шкоди, x3 по Босах) та накладає ефект кровотечі від нанесеної шкоди.',
     },
     SHATTER_INFO: {
-        en: 'Each hit adds 1 stack (Max 5). Damage is multiplied by (1 + stacks * 0.20). (Stack up to +100% dmg).',
-        uk: `Кожен удар додає 1 заряд (максимум 5). Шкода множиться на (1 + заряди * 0.20). (Накопичується до +100% шкоди).`,
+        en: 'Each hit adds 1 stack (Max 5). Damage is multiplied from all types of elements on (1 + stacks * 0.20). (Stack up to +100% dmg).',
+        uk: `Кожен удар додає 1 заряд (максимум 5). Шкода множиться від усіх типів стихій на (1 + заряди * 0.20). (Накопичується до +100% шкоди).`,
     },
     SHATTER: {
         en: 'Shatter',
         uk: `Розколоти`,
     },
-    CHAIN_LIGHTNING_INFO: {
-        en: 'Chance for shots to ricochet and deal up to 150% damage to nearby enemies.',
-        uk: `Шанс рикошету пострілу та нанесення до 150% шкоди сусіднім ворогам.`,
-    },
     CHAIN_LIGHTNING: {
         en: 'Chain Lightning',
-        uk: `Ланцюгова блискавка`,
+        uk: 'Ланцюгова блискавка',
+    },
+    CHAIN_LIGHTNING_INFO: {
+        en: 'Shots chain to additional targets (up to 2-5(masteries)). Deals increased damage to Frozen or Poisoned enemies.',
+        uk: 'Постріли вражають додаткові цілі ланцюгом (від 2 до 5 (ямайстерність)). Завдає підвищену шкоду замороженим або отруєним ворогам.',
     },
     FROST_AURA_INFO: {
         en: 'Apply 30% slow to enemies in range.',
@@ -372,7 +372,7 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     REFRACTION_BEAM: { en: 'Refraction Beam', uk: `Заломлення променя` },
     REFRACTION_BEAM_INFO: { en: 'Allows attacking up to 3 targets simultaneously. Each beam benefits from the laser ramp-up bonus.', uk: `Дозволяє атакувати до 3 цілей одночасно. Кожна ціль отримує бонус від наростання потужності лазера.` },
     NAPALM_STRIKE: { en: 'Напалмовий удар', uk: `Напалмовий удар` },
-    NAPALM_STRIKE_INFO: { en: 'Leaves a fire zone for 4s, dealing 50% tower damage per second to all enemies in the blast radius.', uk: `Залишає вогняну зону на 4 сек., що наносить 50% шкодау щосекунди всім ворогам у радіусі вибуху.` },
+    NAPALM_STRIKE_INFO: { en: 'Leaves a fire zone for 4s, dealing 15% tower damage per second to all enemies in the blast radius.', uk: `Залишає вогняну зону на 4 сек., що наносить 15% шкодау щосекунди всім ворогам у радіусі вибуху.` },
     NEUROTOXIN: { en: 'Neurotoxin', uk: `Нейротоксин` },
     NEUROTOXIN_INFO: { en: 'Poison now slows enemies by 20%.', uk: `Отрута тепер уповільнює ворогів на 20%.` },
     BUY_ABILITY: {
