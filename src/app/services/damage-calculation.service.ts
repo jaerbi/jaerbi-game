@@ -250,13 +250,19 @@ export class DamageCalculationService {
         return damageToDeal;
     }
 
-    createInfernoZone(target: Position, id: string, radius: number): InfernoZone {
+    createInfernoZone(
+        target: Position,
+        id: string,
+        radius: number,
+        duration: number = 0.3,
+        dps: number = 0
+    ): InfernoZone {
         return {
             id,
             position: { ...target },
             radius,
-            remaining: 0.3,
-            dps: 0 // Visual only, or handled by direct hit?
+            remaining: duration,
+            dps: dps
         };
     }
 

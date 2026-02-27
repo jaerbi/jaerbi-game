@@ -310,8 +310,8 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         uk: 'Ланцюгова реакція',
     },
     T5_GOLDEN_DESC: {
-        en: 'Kills from Inferno or Napalm cause explosions for 50% of max HP.',
-        uk: 'Убивства від Інферно чи напалму спричиняють вибухи на 50% від макс. HP.',
+        en: 'Kills from Inferno or Napalm cause explosions for 30% dps. + 10% for extra point',
+        uk: 'Убивства від Інферно чи напалму спричиняють вибухи на 30% урону. + 10% за кожен поінт',
     },
     T6_NAME: {
         en: 'Tier 6 – Prism',

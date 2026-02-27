@@ -69,6 +69,7 @@ export interface Enemy {
     stunTime?: number;
     type?: 'tank' | 'scout' | 'standard' | 'boss';
     burnedByInferno?: boolean;
+    lastInfernoDamage?: number;
     prismVulnerableTime?: number;
     venomStacks?: number;
     venomDuration?: number;
@@ -91,6 +92,7 @@ export interface Projectile {
     to: Position;
     progress: number;
     speedMultiplier?: number;
+    isExplosion?: boolean;
 }
 
 export interface InfernoZone {

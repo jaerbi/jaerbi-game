@@ -175,13 +175,13 @@ export class CampaignService {
                     ? 'Вороги занадто живучі. Сповільніть їх, щоб вони згоріли.'
                     : 'Enemies are tough. Slow them down so they burn to ashes.',
                 waveCount: 20,
-                startingGold: 350,
+                startingGold: 50000,
                 allowedTowers: [1, 5], // Ice, Inferno
                 mapLayout: 'static',
                 difficulty: 'hard',
                 xpReward: 40,
                 gridSize: 12,
-                healthMultiplier: 1.5, // Дуже живучі
+                healthMultiplier: 10.5, // Дуже живучі
                 enemyTypes: ['Standard', 'Tank', 'Scout'],
                 waveTypeSequence: [1, 1, 3, 1, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2],
                 bossCount: 4, // 5, 10, 15, 20
@@ -197,7 +197,12 @@ export class CampaignService {
                     { x: 2, y: 2, type: 'mastery' }, // norm
                     { x: 5, y: 5, type: 'damage' }, // norm
                     { x: 8, y: 8, type: 'speed' } // norm
-                ]
+                ],
+                waveModifiers: {
+                    1: { count: 50 },
+                    2: { count: 50 },
+                    3: { count: 50 },
+                }
             },
             {
                 id: 'level_5',

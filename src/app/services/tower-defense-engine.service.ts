@@ -314,7 +314,7 @@ export class TowerDefenseEngineService {
         this.allowedTowers.set([1, 2, 3, 4, 5, 6, 7]);
         this.isFirstTimeClear = false;
 
-        let startMoney = 50;
+        let startMoney = 50000;
         if (this.isHardMode()) {
             startMoney = 40;
         }
@@ -813,21 +813,39 @@ export class TowerDefenseEngineService {
         return 1;
     }
 
-    private triggerInfernoChainReaction(pos: Position, maxHp: number) {
+    private triggerInfernoChainReaction(pos: Position, sourceDamage: number) {
         const golden = this.getUpgradeLevel(5, 'golden');
-        if (golden <= 0) return;
-        const damage = Math.floor(maxHp * 0.5);
-        const radius = 2;
+        if (golden <= 0 || sourceDamage <= 0) return;
+
+        const damageMultiplier = 0.3 + (golden * 0.1);
+        const explosionDamage = Math.floor(sourceDamage * damageMultiplier);
+
+        const radius = 1.0;
         const radiusSq = radius * radius;
+
         for (const enemy of this.enemiesInternal) {
+            if (enemy.hp <= 0) continue;
+
             const dx = pos.x - enemy.position.x;
             const dy = pos.y - enemy.position.y;
+
             if (dx * dx + dy * dy <= radiusSq) {
-                this.damageService.applyDamage(enemy, damage, 5, this.wave(), undefined, (id, amt) => this.recordDamage(id, amt, 5));
+                this.damageService.applyDamage(
+                    enemy,
+                    explosionDamage,
+                    5,
+                    this.wave(),
+                    undefined,
+                    (id, amt) => this.recordDamage(id, amt, 5)
+                );
+                enemy.burnedByInferno = true;
+                enemy.lastInfernoDamage = sourceDamage;
             }
         }
-        const explosion = this.damageService.createInfernoZone(pos, 'z' + (this.projectileIdCounter++), radius);
-        this.infernoZones.push(explosion);
+
+        this.infernoZones.push(
+            this.damageService.createInfernoZone(pos, 'exp' + (this.projectileIdCounter++), radius, 0.4, 0)
+        );
     }
 
     // Track total damage for analytics (MVP)
@@ -987,7 +1005,7 @@ export class TowerDefenseEngineService {
             const enemy = this.enemiesInternal[i];
             enemy.speedModifier = 1;
             enemy.isFrozen = false;
-            enemy.burnedByInferno = false;
+
             if (enemy.stunTime && enemy.stunTime > 0) {
                 enemy.stunTime = Math.max(0, enemy.stunTime - dt);
             }
@@ -1016,8 +1034,11 @@ export class TowerDefenseEngineService {
         for (const zone of this.infernoZones) {
             const radiusSq = zone.radius * zone.radius;
             for (const enemy of this.enemiesInternal) {
+                if (enemy.hp <= 0) continue;
+
                 const dx = zone.position.x - enemy.position.x;
                 const dy = zone.position.y - enemy.position.y;
+
                 if (dx * dx + dy * dy <= radiusSq) {
                     if (zone.dps > 0) {
                         this.damageService.applyDamage(enemy, zone.dps * dt, 5, this.wave());
@@ -1050,23 +1071,16 @@ export class TowerDefenseEngineService {
                     enemy.progress = 0;
 
                     if (enemy.pathIndex >= this.path().length - 1) {
-                        // Dynamic Damage Calculation
-                        // Base: Boss = 10, Standard = 3
-                        // Boss Rules: >90% HP -> 10, 50-90% -> 8, 10-50% -> 4, <10% -> 1
-                        // Standard Rules: >90% HP -> 3, 50-90% -> 2, <50% -> 1
-
                         let damageToLives = 1;
                         const hpPercent = enemy.hp / enemy.maxHp;
 
                         if (enemy.type === 'boss') {
-                            const baseDmg = 10;
                             if (hpPercent > 0.9) damageToLives = 10;
                             else if (hpPercent > 0.5) damageToLives = 8;
                             else if (hpPercent > 0.1) damageToLives = 4;
                             else damageToLives = 1;
                         } else {
                             // Standard, Tank, Scout
-                            const baseDmg = 3;
                             if (hpPercent > 0.9) damageToLives = 3;
                             else if (hpPercent > 0.5) damageToLives = 2;
                             else damageToLives = 1;
@@ -1118,6 +1132,11 @@ export class TowerDefenseEngineService {
             if (enemy.hp <= 0) {
                 const diedBurning = !!enemy.burnedByInferno;
                 const deathPos = { ...enemy.position };
+                const sourceDmg = enemy.lastInfernoDamage || 0;
+                this.enemiesInternal.splice(i, 1);
+                if (diedBurning && sourceDmg > 0) {
+                    this.triggerInfernoChainReaction(deathPos, sourceDmg);
+                }
                 const deathMaxHp = enemy.maxHp;
                 this.enemiesInternal.splice(i, 1);
                 if (diedBurning) {
@@ -1136,10 +1155,10 @@ export class TowerDefenseEngineService {
                 const goldMultiplier = this.getGoldKillMultiplier();
                 let reward = Math.floor(baseReward * goldMultiplier);
 
-                // Boss Reward Bonus (5x)
+                // Boss Reward Bonus (10x)
                 if (enemy.type === 'boss') {
-                    reward *= 5;
-                    this.bonusXpAccumulated += 50;
+                    reward *= 10;
+                    // this.bonusXpAccumulated += 50;
                 }
 
 
@@ -1196,7 +1215,6 @@ export class TowerDefenseEngineService {
             }
         }
     }
-
 
     private applyFrostAuras() {
         this.damageService.applyFrostAuras(
@@ -1337,9 +1355,14 @@ export class TowerDefenseEngineService {
         );
 
         if (tower.type === 5) {
-            const radius = tower.specialActive ? 2.5 : 1.5;
-            const radiusSq = radius * radius;
+            const radius = tower.specialActive ? 1.2 : 0.8;
             const basePos = enemy.position;
+            const radiusSq = radius * radius;
+
+            this.infernoZones.push(
+                this.damageService.createInfernoZone(basePos, 'hit' + Math.random(), radius, 0.2, 0)
+            );
+
             for (const other of this.enemiesInternal) {
                 const dx = basePos.x - other.position.x;
                 const dy = basePos.y - other.position.y;
@@ -1350,11 +1373,19 @@ export class TowerDefenseEngineService {
                     }
                     this.damageService.applyDamage(other, aoeDamage, 5, this.wave(), tower.id, this.recordDamage.bind(this));
                     other.burnedByInferno = true;
+                    other.lastInfernoDamage = damage;
                 }
             }
+
             if (tower.specialActive) {
-                const zone = this.damageService.createInfernoZone(basePos, 'z' + (this.projectileIdCounter++), radius);
-                this.infernoZones.push(zone);
+                const napalmZone = this.damageService.createInfernoZone(
+                    basePos,
+                    'z' + (this.projectileIdCounter++),
+                    radius,
+                    3.0,
+                    Math.floor(damage * 0.4)
+                );
+                this.infernoZones.push(napalmZone);
             }
         } else if (tower.type === 7) {
             this.damageService.applyVenomStack(enemy, damage, tower.specialActive);
@@ -1470,7 +1501,7 @@ export class TowerDefenseEngineService {
         }
 
         if (tower.type === 4) {
-            const golden = this.getUpgradeLevel(4, 'golden'); 
+            const golden = this.getUpgradeLevel(4, 'golden');
             const extraTargetsCount = golden === 1 ? 2 : golden === 2 ? 4 : golden === 3 ? 5 : 0;
             const falloff = golden === 1 ? 0.5 : golden === 2 ? 0.7 : 0.8;
             let currentDamage = tower.damage;

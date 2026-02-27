@@ -1076,7 +1076,6 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             const cy = e.displayY ?? ((e.position.y + 0.5) * tile);
             const barW = size;
             const barH = 4;
-            const barY = cy - r - 10;
             ctx.fillStyle = '#0f172a';
             ctx.fillRect(cx - r, cy - r - 10, barW, barH);
             ctx.fillStyle = '#10b981';
@@ -1113,12 +1112,32 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 const dropY = cy + r + 2;
                 ctx.save();
                 ctx.shadowBlur = 0;
-                ctx.fillStyle = '#ef4444'; 
+                ctx.fillStyle = '#ef4444';
                 ctx.beginPath();
                 ctx.arc(dropX, dropY, dropSize / 2, 0, Math.PI);
                 ctx.lineTo(dropX, dropY - dropSize);
                 ctx.closePath();
                 ctx.fill();
+                ctx.restore();
+            }
+
+            // Inferno Burn Visualization (Оптимізовано для швидкості)
+            if (e.burnedByInferno) {
+                ctx.save();
+                if (!isFastSpeed) {
+                    ctx.shadowBlur = 3;
+                    ctx.shadowColor = '#f97316';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r + 2, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(249, 115, 22, 0.5)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+                const fireSize = Math.floor(tile * 0.22);
+                ctx.font = `${fireSize}px serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('🔥', cx, cy - r - 8);
                 ctx.restore();
             }
         }
@@ -1147,16 +1166,6 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const towers = this.tdEngine.getTowersRef();
 
         for (const p of projs) {
-            // Find source tower type to determine color
-            // Optimization: If we stored type on projectile, this would be O(1) instead of O(N)
-            // But for now, we can infer or use a default if we can't easily link back.
-            // Actually, p.from matches tower position.
-
-            // Let's use a simple heuristic based on what fired it?
-            // Since we don't have type on Projectile interface, we'll use a default or try to match.
-            // Wait, we can just use a default 'energy' color or update Projectile interface.
-            // But to avoid big refactors now, let's just color code by "look".
-
             // Actually, we can check the tower at p.from!
             const tx = Math.floor(p.from.x);
             const ty = Math.floor(p.from.y);
@@ -1179,7 +1188,19 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 case 2: color = '#d2a6fb'; break; // Lightning (Purple)
                 case 3: color = '#facc15'; break; // Cannon (Yellow/Heavy)
                 case 4: color = '#f04545'; break; // Sniper (Red/Thin)
-                case 5: color = '#f97316'; break; // Inferno (Orange)
+                case 5: color = '#f97316';
+                    if (p.isExplosion) {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, tile * 1.5, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(251, 146, 60, 0.3)';
+                        ctx.fill();
+                        ctx.strokeStyle = '#f97316';
+                        ctx.stroke();
+                        ctx.restore();
+                        return;
+                    }
+                    break; // Inferno (Orange)
                 case 6: color = '#22d3ee'; break; // Prism (Cyan - though usually beam)
                 case 7: color = '#84cc16'; break; // Venom (Green)
             }
