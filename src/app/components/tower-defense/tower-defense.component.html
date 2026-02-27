@@ -93,6 +93,12 @@
               {{ tdEngine.wave() }}
             </span>
           </div>
+          @if (tdEngine.gameMode() === 'campaign' && !tdEngine.masteriesActiveForCurrentWave()) {
+            <div class="mt-1 text-[10px] text-slate-400 italic flex items-center gap-1">
+              <span>🚫✨</span>
+              <span>Masteries Disabled</span>
+            </div>
+          }
         </div>
       </div>
 

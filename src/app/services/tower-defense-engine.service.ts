@@ -400,6 +400,7 @@ export class TowerDefenseEngineService {
     }
 
     private getGoldMasteryLevel(): number {
+        if (!this.areMasteriesActiveForWave(this.wave())) return 0;
         const profile = this.firebase.masteryProfile();
         const v = profile && profile.upgrades ? profile.upgrades['gold_mastery'] : 0;
         return typeof v === 'number' ? v : 0;
@@ -672,6 +673,21 @@ export class TowerDefenseEngineService {
         this.startGameLoop();
     }
 
+    public masteriesActiveForCurrentWave(): boolean {
+        return this.areMasteriesActiveForWave(this.wave());
+    }
+
+    private areMasteriesActiveForWave(wave?: number): boolean {
+        if (this.gameMode() !== 'campaign') return true;
+        const cfg = this.currentLevelConfig();
+        if (!cfg) return true;
+        const globalEnabled = cfg.masteriesEnabled !== false;
+        const w = typeof wave === 'number' ? wave : this.wave();
+        const override = cfg.waveModifiers?.[w]?.masteryOverride;
+        if (typeof override === 'boolean') return override;
+        return globalEnabled;
+    }
+
     private startGameLoop() {
         this.stopGameLoop();
         this.lastUpdateTime = performance.now();
@@ -781,6 +797,7 @@ export class TowerDefenseEngineService {
     }
 
     private getUpgradeLevel(tier: number, kind: 'damage' | 'range' | 'golden'): number {
+        if (!this.areMasteriesActiveForWave(this.wave())) return 0;
         const profile = this.firebase.masteryProfile();
         if (!profile) return 0;
         const key = `t${tier}_${kind}`;

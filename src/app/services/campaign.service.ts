@@ -12,6 +12,7 @@ export interface LevelConfig {
     difficulty: 'easy' | 'normal' | 'hard';
     xpReward: number;
     bountyMultiplier?: number;
+    masteriesEnabled?: boolean;
     gridSize?: number; // Custom grid size (e.g. 10, 12, 15)
     customPath?: { x: number; y: number }[]; // Explicit path coordinates
     bonusTiles?: { x: number; y: number; type: 'damage' | 'range' | 'bounty' | 'mastery' | 'speed' }[];
@@ -22,6 +23,7 @@ export interface LevelConfig {
     waveModifiers?: {
         [waveIndex: number]: {
             count?: number;
+            masteryOverride?: boolean;
             traits?: Array<{
                 property: 'isFrost' | 'isGrounded' | 'isAgile' | 'isBulwark' | 'isMagma' | 'isMirror' | 'isSlime';
                 chance: number;
