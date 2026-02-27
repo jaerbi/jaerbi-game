@@ -14,7 +14,7 @@ const TIER_STATS = [
     { damage: 5, range: 1.5, fireInterval: 0.5 },
     { damage: 14, range: 2.5, fireInterval: 0.45 },
     { damage: 83, range: 1.5, fireInterval: 1 },
-    { damage: 350, range: 2.1, fireInterval: 1.7 },
+    { damage: 666, range: 4.5, fireInterval: 5 },
     { damage: 71, range: 1.5, fireInterval: 2.5 },
     { damage: 15, range: 2, fireInterval: 0.3 },
     { damage: 66, range: 1.5, fireInterval: 1 }
@@ -1470,50 +1470,35 @@ export class TowerDefenseEngineService {
         }
 
         if (tower.type === 4) {
-            const golden = this.getUpgradeLevel(4, 'golden');
-            if (golden > 0) {
-                let chainChance = 0.1;
-                if (golden === 2) chainChance = 0.15;
-                else if (golden >= 3) chainChance = 0.2;
+            const golden = this.getUpgradeLevel(4, 'golden'); 
+            const extraTargetsCount = golden === 1 ? 2 : golden === 2 ? 4 : golden === 3 ? 5 : 0;
+            const falloff = golden === 1 ? 0.5 : golden === 2 ? 0.7 : 0.8;
+            let currentDamage = tower.damage;
+            const hitEnemiesCount = 1 + extraTargetsCount;
+            const targets = this.enemiesInternal
+                .filter(e => e.hp > 0)
+                .sort((a, b) => {
+                    const distA = Math.hypot(a.position.x - enemy.position.x, a.position.y - enemy.position.y);
+                    const distB = Math.hypot(b.position.x - enemy.position.x, b.position.y - enemy.position.y);
+                    return distA - distB;
+                })
+                .slice(0, hitEnemiesCount);
 
-                if (Math.random() < chainChance) {
-                    let closest: Enemy | null = null;
-                    let minDist = Infinity;
-                    for (const other of this.enemiesInternal) {
-                        if (other.id === enemy.id || other.hp <= 0) continue;
-                        const dx = enemy.position.x - other.position.x;
-                        const dy = enemy.position.y - other.position.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist <= 3 && dist < minDist) {
-                            minDist = dist;
-                            closest = other;
-                        }
-                    }
-                    if (closest) {
-                        const chainProj: Projectile = {
-                            id: 'p' + (this.projectileIdCounter++),
-                            from: { ...tower.position },
-                            to: { ...closest.position },
-                            progress: 0,
-                            speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
-                        };
-                        this.pushProjectile(chainProj);
-
-                        let secondaryDamage = tower.damage;
-                        if (tower.specialActive) {
-                            const ratio2 = closest.hp / closest.maxHp;
-                            if (ratio2 < 0.3) {
-                                const multiplier2 = closest.isBoss ? 3 : 2;
-                                secondaryDamage = Math.floor(tower.damage * multiplier2);
-                            }
-                        }
-                        if (closest.prismVulnerableTime && closest.prismVulnerableTime > 0) {
-                            secondaryDamage = Math.floor(secondaryDamage * 1.15);
-                        }
-                        this.damageService.applyDamage(closest, secondaryDamage, tower.type, this.wave(), tower.id, this.recordDamage.bind(this));
-                    }
+            targets.forEach((target, index) => {
+                const finalDamage = Math.floor(currentDamage * Math.pow(falloff, index));
+                this.damageService.applyDamage(target, finalDamage, tower.type, this.wave());
+                if (tower.specialActive) {
+                    this.damageService.applyBleed(target, finalDamage);
                 }
-            }
+
+                this.pushProjectile({
+                    id: 'snip' + Math.random(),
+                    from: index === 0 ? { ...tower.position } : { ...targets[index - 1].position },
+                    to: { ...target.position },
+                    progress: 0,
+                    speedMultiplier: 5
+                });
+            });
         }
     }
 
@@ -1783,8 +1768,8 @@ export class TowerDefenseEngineService {
                 return isUk ? 'Посилює шкоду за рахунок ефекту розколу'
                     : 'Amplifies damage with shatter stacks';
             case 4:
-                return isUk ? 'Завдає бонусну шкоду по поранених ворогах'
-                    : 'Deals bonus damage to weakened enemies';
+                return isUk ? 'Глибока рана. Спричиняє постійну кровотечу.'
+                    : 'Deep Wound. Inflicts permanent bleeding.';
             case 5:
                 return isUk ? 'AOE шкода по області та зони горіння'
                     : 'Splash AOE damage and burning zones';

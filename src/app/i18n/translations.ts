@@ -290,16 +290,16 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
 
     // Tier 4
     T4_NAME: {
-        en: 'Tier 4 – Storm',
-        uk: 'Тир 4 – Шторм',
+        en: 'Tier 4 – Piercer',
+        uk: 'Тир 4 – Прошивач',
     },
     T4_GOLDEN_TITLE: {
-        en: 'Chain Lightning',
-        uk: 'Ланцюгова блискавка',
+        en: 'Piercing Round',
+        uk: 'Бронебійний набій',
     },
     T4_GOLDEN_DESC: {
-        en: 'Chance to chain attack and strike an additional target.',
-        uk: 'Шанс на ланцюгову атаку по додатковій цілі.',
+        en: 'Projectiles pierce through multiple enemies.',
+        uk: 'Снаряди пробивають крізь кількох ворогів.',
     },
     T5_NAME: {
         en: 'Tier 5 – Inferno',

@@ -1105,6 +1105,22 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                     ctx.fillRect(cx - r - stackW - 2, startY + i * (stackH + gap), stackW, stackH);
                 }
             }
+
+            // Bleed visualization (Bottom Right Droplet)
+            if (e.bleedDamagePerSec && e.bleedDamagePerSec > 0) {
+                const dropSize = 5;
+                const dropX = cx + r - dropSize;
+                const dropY = cy + r + 2;
+                ctx.save();
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#ef4444'; 
+                ctx.beginPath();
+                ctx.arc(dropX, dropY, dropSize / 2, 0, Math.PI);
+                ctx.lineTo(dropX, dropY - dropSize);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
         }
     }
 
@@ -1129,18 +1145,18 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
         const projs = this.tdEngine.getProjectilesRef();
         const towers = this.tdEngine.getTowersRef();
-        
+
         for (const p of projs) {
             // Find source tower type to determine color
             // Optimization: If we stored type on projectile, this would be O(1) instead of O(N)
             // But for now, we can infer or use a default if we can't easily link back.
             // Actually, p.from matches tower position.
-            
+
             // Let's use a simple heuristic based on what fired it?
             // Since we don't have type on Projectile interface, we'll use a default or try to match.
             // Wait, we can just use a default 'energy' color or update Projectile interface.
             // But to avoid big refactors now, let's just color code by "look".
-            
+
             // Actually, we can check the tower at p.from!
             const tx = Math.floor(p.from.x);
             const ty = Math.floor(p.from.y);
@@ -1153,7 +1169,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             const cy = y * tile + tile / 2;
 
             ctx.beginPath();
-            
+
             // Tower-Specific Colors
             let color = '#fbbf24'; // Default Amber
             let size = 3;

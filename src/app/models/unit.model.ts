@@ -75,6 +75,7 @@ export interface Enemy {
     venomTickTimer?: number;
     venomBaseDamage?: number;
     venomSlowActive?: boolean;
+    bleedDamagePerSec?: number;
     isMagma?: boolean;
     isMirror?: boolean;
     isSlime?: boolean;

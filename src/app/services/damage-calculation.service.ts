@@ -35,6 +35,9 @@ export class DamageCalculationService {
     readonly LIGHTNING_GOLDEN_PERCENT = 0.005;
     readonly SNIPER_GOLDEN_PERCENT = 0.02;
 
+    // Bleed 
+    readonly BLEED_RATIO = 0.2; // 20%
+
     constructor(private waveAnalytics: WaveAnalyticsService) { }
 
     /**
@@ -255,5 +258,26 @@ export class DamageCalculationService {
             remaining: 0.3,
             dps: 0 // Visual only, or handled by direct hit?
         };
+    }
+
+    /**
+    * Applies Bleed stacks .
+    */
+    applyBleed(enemy: Enemy, hitDamage: number) {
+        const newBleed = hitDamage * this.BLEED_RATIO;
+
+        if (!enemy.bleedDamagePerSec || newBleed > enemy.bleedDamagePerSec) {
+            enemy.bleedDamagePerSec = newBleed;
+        }
+    }
+
+    /**
+     * Processes Bleed DoT tick.
+     * Returns damage to deal.
+     */
+    processBleedTick(enemy: Enemy, dt: number): number {
+        if (!enemy.bleedDamagePerSec || enemy.bleedDamagePerSec <= 0) return 0;
+
+        return enemy.bleedDamagePerSec * dt;
     }
 }
