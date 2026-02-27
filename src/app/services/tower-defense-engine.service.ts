@@ -971,8 +971,6 @@ export class TowerDefenseEngineService {
                     newEnemy.maxHp = Math.floor(newEnemy.maxHp * hpBonus);
                     newEnemy.hp = newEnemy.maxHp;
                 }
-
-                console.log(`[WAVE ${this.wave()}] Spawning enemy with resistance against Type ${counterType}`);
             }
         }
 
@@ -1580,16 +1578,12 @@ export class TowerDefenseEngineService {
 
         if (totalBestDamage === 0) return;
 
-        // 3. Prepare Data
         const gameId = Date.now().toString();
         const levelId = this.currentLevelConfig()?.id || 'random';
         const user = this.firebase.user$();
         const userId = user?.uid || 'guest';
-        const gameVersion = '0.0.2';
+        const gameVersion = '0.0.3';
         const isHardMode = this.isHardMode();
-
-        // console.group('Game Balance Analytics');
-        // console.log(`Game ID: ${gameId}, Result: ${victory ? 'WIN' : 'LOSE'}`);
 
         const logs = mvpList.map(t => {
             const dmg = this.damageTracking.get(t.id) || 0;
@@ -1598,7 +1592,7 @@ export class TowerDefenseEngineService {
                 gameId,
                 levelId,
                 towerType: t.type,
-                towerTier: t.level, // Assuming 'level' is upgrade tier 1-4
+                towerTier: t.level,
                 damagePercent: parseFloat(percent.toFixed(2)),
                 damageRaw: dmg,
                 userId,
@@ -1608,9 +1602,6 @@ export class TowerDefenseEngineService {
                 isHardMode
             };
         });
-
-        // console.table(logs);
-        // console.groupEnd();
 
         this.firebase.saveBalanceLogs(logs);
     }

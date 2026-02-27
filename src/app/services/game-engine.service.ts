@@ -3145,7 +3145,6 @@ export class GameEngineService {
                 map.set(u.id, until);
             }
             this.ignoreForgeUntilTurnSignal.set(map);
-            // console.log(`[AI Spawn] Created ${placed.length} unit(s) of T${tier}.`);
         }
         return created;
     }

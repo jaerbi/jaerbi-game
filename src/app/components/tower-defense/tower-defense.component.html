@@ -130,7 +130,7 @@
       </div>
 
       @if (true) {
-        <div class="bg-slate-950/40 backdrop-blur-md p-1 rounded-2xl border border-white/10 flex shadow-xl">
+        <div class="bg-slate-950/40 backdrop-blur-md p-1 rounded-2xl border border-white/10 flex shadow-xl" style="display: none;">
           <button
             (click)="setGameMode('random')"
             [class.bg-sky-500]="tdEngine.gameMode() === 'random'"
@@ -1029,7 +1029,7 @@
           </button>
         </div>
 
-        @if (true) {
+        @if (false) {
           <div class="pt-4 border-t border-slate-800">
             <button
               (click)="showDevTools = !showDevTools"

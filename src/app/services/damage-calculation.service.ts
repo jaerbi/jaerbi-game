@@ -148,9 +148,6 @@ export class DamageCalculationService {
             recordStats(sourceTowerId, dmg);
         }
 
-        // Debug Log (Optional)
-        // console.log(`[Damage] Type ${towerType} -> Enemy ${enemy.id}: ${amount.toFixed(1)} -> ${dmg.toFixed(1)}`);
-
         return dmg;
     }
 

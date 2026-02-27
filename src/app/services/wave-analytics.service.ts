@@ -73,9 +73,6 @@ export class WaveAnalyticsService {
 
         // Snapshot current for next time
         this.lastWaveTotalStats = { ...currentTotalStats };
-
-        // Debug Log
-        console.log('[WaveAnalytics] Updated Rolling History:', this.waveDamageHistory);
     }
 
     /**
