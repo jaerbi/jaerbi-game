@@ -1,4 +1,4 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { NgZone } from '@angular/core';
 import { FirebaseService } from './firebase.service';
 import { Enemy, InfernoZone, Position, Projectile, TDTile, TileType, Tower } from '../models/unit.model';
@@ -1379,9 +1379,6 @@ export class TowerDefenseEngineService {
                 const dy = basePos.y - other.position.y;
                 if (dx * dx + dy * dy <= radiusSq) {
                     let aoeDamage = damage;
-                    if (other.prismVulnerableTime && other.prismVulnerableTime > 0) {
-                        aoeDamage = Math.floor(aoeDamage * 1.15);
-                    }
                     this.damageService.applyDamage(other, aoeDamage, 5, this.wave(), tower.id, this.recordDamage.bind(this));
                     other.burnedByInferno = true;
                     other.lastInfernoDamage = damage;

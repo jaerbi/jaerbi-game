@@ -46,8 +46,8 @@ interface TowerStats {
               (change)="setVersion($any($event.target).value)"
               class="bg-slate-950 border border-slate-700 rounded px-3 py-1 text-sm focus:outline-none focus:border-sky-500"
             >
-              <option value="0.0.1">0.0.1</option>
               <option value="0.0.2">0.0.2</option>
+              <option value="0.0.3">0.0.3</option>
             </select>
           </div>
           
@@ -133,7 +133,7 @@ interface TowerStats {
   `
 })
 export class AdminAnalyticsComponent implements OnInit {
-  currentVersion = signal('0.0.2');
+  currentVersion = signal('0.0.3');
   loading = signal(false);
   stats = signal<TowerStats[]>([]);
   sortField = signal<keyof TowerStats>('pickRate');
