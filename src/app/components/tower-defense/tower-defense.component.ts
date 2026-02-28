@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener, signal, computed, ChangeDetectionStrategy, ChangeDetectorRef, AfterViewInit, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener, signal, computed, ChangeDetectionStrategy, ChangeDetectorRef, AfterViewInit, effect, inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { HITBOX_OFFSET, TowerDefenseEngineService } from '../../services/tower-defense-engine.service';
 import { TDTile } from '../../models/unit.model';
@@ -175,6 +175,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     selectedDifficulty: 'easy' | 'normal' | 'hard' = 'normal';
     showStatsPanel = false;
     showStats = false; // For draggable modal
+    private platformId = inject(PLATFORM_ID);
+    public windowWidth = signal<number>(1200);
 
     // Zoom & Pan State
     zoomLevel = signal(1);
@@ -183,6 +185,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     isPanning = false;
     lastMouseX = 0;
     lastMouseY = 0;
+    targeting: TranslationKey[] = ['FIRST', 'WEAKEST', 'STRONGEST', 'RANDOM']
 
     @HostListener('window:keydown', ['$event'])
     onKeyDown(event: KeyboardEvent) {
@@ -216,6 +219,13 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         }
     }
 
+    @HostListener('window:resize')
+    onResize() {
+        if (isPlatformBrowser(this.platformId)) {
+            this.windowWidth.set(window.innerWidth);
+        }
+    }
+
     constructor(
         public tdEngine: TowerDefenseEngineService,
         public settings: SettingsService,
@@ -231,6 +241,9 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.tdEngine.updateRandomQuote();
             }
         });
+        if (isPlatformBrowser(this.platformId)) {
+            this.windowWidth.set(window.innerWidth);
+        }
     }
 
     ngOnInit() {

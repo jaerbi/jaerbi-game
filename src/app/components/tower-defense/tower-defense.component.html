@@ -113,70 +113,113 @@
       }
     </div>
 
-    <div class="absolute bottom-6 left-6 pointer-events-auto flex gap-3">
-      <div class="bg-slate-950/40 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 flex gap-1 shadow-xl">
-        <button
-          (click)="router.navigate(['/tower-defense-leaderboard'])"
-          class="px-4 py-2 hover:bg-white/5 rounded-xl text-[10px] font-bold text-slate-400 hover:text-white transition-all uppercase tracking-widest"
-        >
-          {{ settings.t('RANKING') }}
-        </button>
-        <button
-          (click)="router.navigate(['/masteries'])"
-          class="px-4 py-2 bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 rounded-xl text-[10px] font-bold transition-all uppercase tracking-widest border border-amber-600/30"
-        >
-          {{ settings.t('MASTERIES') }}
-        </button>
-      </div>
-
-      @if (false) {
-        <div
-          class="bg-slate-950/40 backdrop-blur-md p-1 rounded-2xl border border-white/10 flex shadow-xl"
-          style="display: none"
-        >
+    @if (!(windowWidth() < 768)) {
+      <div class="absolute bottom-6 left-6 pointer-events-auto flex gap-3">
+        <div class="bg-slate-950/40 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 flex gap-1 shadow-xl">
           <button
-            (click)="setGameMode('random')"
-            [class.bg-sky-500]="tdEngine.gameMode() === 'random'"
-            [class.text-white]="tdEngine.gameMode() === 'random'"
-            class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter text-slate-500 transition-all"
+            (click)="router.navigate(['/tower-defense-leaderboard'])"
+            class="px-4 py-2 hover:bg-white/5 rounded-xl text-[10px] font-bold text-slate-400 hover:text-white transition-all uppercase tracking-widest"
           >
-            Random
+            {{ settings.t('RANKING') }}
           </button>
           <button
-            (click)="setGameMode('campaign')"
-            [class.bg-indigo-500]="tdEngine.gameMode() === 'campaign'"
-            [class.text-white]="tdEngine.gameMode() === 'campaign'"
-            class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter text-slate-500 transition-all"
+            (click)="router.navigate(['/masteries'])"
+            class="px-4 py-2 bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 rounded-xl text-[10px] font-bold transition-all uppercase tracking-widest border border-amber-600/30"
           >
-            Campaign
+            {{ settings.t('MASTERIES') }}
           </button>
         </div>
-      }
-    </div>
+
+        @if (false) {
+          <div
+            class="bg-slate-950/40 backdrop-blur-md p-1 rounded-2xl border border-white/10 flex shadow-xl"
+            style="display: none"
+          >
+            <button
+              (click)="setGameMode('random')"
+              [class.bg-sky-500]="tdEngine.gameMode() === 'random'"
+              [class.text-white]="tdEngine.gameMode() === 'random'"
+              class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter text-slate-500 transition-all"
+            >
+              Random
+            </button>
+            <button
+              (click)="setGameMode('campaign')"
+              [class.bg-indigo-500]="tdEngine.gameMode() === 'campaign'"
+              [class.text-white]="tdEngine.gameMode() === 'campaign'"
+              class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter text-slate-500 transition-all"
+            >
+              Campaign
+            </button>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="absolute top-2 right-4 pointer-events-auto flex gap-3">
+        <div class="bg-slate-950/40 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 flex gap-1 shadow-xl">
+          <button
+            (click)="router.navigate(['/tower-defense-leaderboard'])"
+            class="px-3 py-1 hover:bg-white/5 rounded-xl text-[10px] font-bold text-slate-400 hover:text-white transition-all uppercase tracking-widest"
+          >
+            {{ settings.t('RANKING') }}
+          </button>
+          <button
+            (click)="router.navigate(['/masteries'])"
+            class="px-3 py-1 bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 rounded-xl text-[10px] font-bold transition-all uppercase tracking-widest border border-amber-600/30"
+          >
+            {{ settings.t('MASTERIES') }}
+          </button>
+        </div>
+      </div>
+    }
   </div>
 
   <div class="relative flex gap-4 flex-1 min-h-0 td-layout">
-    <div
-      class="flex items-center gap-2 px-3 py-2 rounded bg-white/5 border border-white/10 absolute bottom-16 left-2 z-5"
-    >
-      <span class="text-xs text-slate-300">Next:</span>
-      <span class="text-xs font-bold text-slate-100 capitalize">{{ tdEngine.nextWaveEnemyType() }}</span>
-      <span
-        class="shape-preview"
-        [ngClass]="{
-          'shape-circle': tdEngine.nextWaveEnemyType() === 'tank',
-          'shape-triangle': tdEngine.nextWaveEnemyType() === 'scout',
-          'shape-square': tdEngine.nextWaveEnemyType() === 'standard',
-        }"
-        [style.background]="
-          tdEngine.nextWaveEnemyType() === 'tank'
-            ? 'hsl(330,70%,60%)'
-            : tdEngine.nextWaveEnemyType() === 'scout'
-              ? 'hsl(50,90%,60%)'
-              : 'hsl(200,70%,60%)'
-        "
-      ></span>
-    </div>
+    @if (!(windowWidth() < 768)) {
+      <div
+        class="flex items-center gap-2 px-3 py-2 rounded bg-white/5 border border-white/10 absolute bottom-16 left-2 z-5"
+      >
+        <span class="text-xs text-slate-300">Next:</span>
+        <span class="text-xs font-bold text-slate-100 capitalize">{{ tdEngine.nextWaveEnemyType() }}</span>
+        <span
+          class="shape-preview"
+          [ngClass]="{
+            'shape-circle': tdEngine.nextWaveEnemyType() === 'tank',
+            'shape-triangle': tdEngine.nextWaveEnemyType() === 'scout',
+            'shape-square': tdEngine.nextWaveEnemyType() === 'standard',
+          }"
+          [style.background]="
+            tdEngine.nextWaveEnemyType() === 'tank'
+              ? 'hsl(330,70%,60%)'
+              : tdEngine.nextWaveEnemyType() === 'scout'
+                ? 'hsl(50,90%,60%)'
+                : 'hsl(200,70%,60%)'
+          "
+        ></span>
+      </div>
+    } @else {
+      <div
+        class="flex items-center gap-2 px-3 py-2 rounded bg-white/5 border border-white/10 absolute top-16 left-2 z-5"
+      >
+        <span class="text-xs text-slate-300">Next:</span>
+        <span class="text-xs font-bold text-slate-100 capitalize">{{ tdEngine.nextWaveEnemyType() }}</span>
+        <span
+          class="shape-preview"
+          [ngClass]="{
+            'shape-circle': tdEngine.nextWaveEnemyType() === 'tank',
+            'shape-triangle': tdEngine.nextWaveEnemyType() === 'scout',
+            'shape-square': tdEngine.nextWaveEnemyType() === 'standard',
+          }"
+          [style.background]="
+            tdEngine.nextWaveEnemyType() === 'tank'
+              ? 'hsl(330,70%,60%)'
+              : tdEngine.nextWaveEnemyType() === 'scout'
+                ? 'hsl(50,90%,60%)'
+                : 'hsl(200,70%,60%)'
+          "
+        ></span>
+      </div>
+    }
     <button
       (click)="navigateToFeedback()"
       class="absolute bottom-26 left-0 z-5 cursor-pointer flex items-center gap-2 px-4 py-1.5 rounded-full hover:bg-white/5 text-stone-400 hover:text-indigo-300 transition-all group"
@@ -191,6 +234,7 @@
       </svg>
       <span class="text-[14px] font-bold uppercase tracking-tighter">{{ settings.t('FEEDBACK_MODULE') }}</span>
     </button>
+
     <!-- Main Game Area Container with Zoom/Pan -->
     <div
       class="flex-1 relative bg-slate-900 rounded-lg overflow-hidden border flex items-center justify-center p-4 min-h-[400px] td-main-area cursor-grab active:cursor-grabbing"
@@ -205,7 +249,7 @@
       <!-- Counter Strategy Warning -->
       @if (tdEngine.activeCounterStrategy(); as strategy) {
         <div
-          class="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-500"
+          class="absolute bottom-4 left-1/2 -translate-x-1/2 z-71 animate-in slide-in-from-top-4 fade-in duration-500"
         >
           <div
             class="bg-rose-950/90 backdrop-blur-md border border-rose-500/30 px-6 py-3 rounded-xl shadow-2xl flex items-center gap-4 min-w-[300px]"
@@ -299,172 +343,58 @@
     <!-- Sidebar Controls -->
     <div
       cdkDrag
-      cdkDragBoundary=".fixed"
-      class="absolute top-4 right-6 flex flex-col pointer-events-auto z-[70] w-72 max-h-[90vh]"
+      [cdkDragDisabled]="windowWidth() < 768"
+      class="fixed z-[70] min-[1040px]:top-4 min-[1040px]:right-6 min-[1040px]:w-72 min-[1040px]:max-h-[90vh] max-[1039px]:top-2 max-[1039px]:right-2 max-[1039px]:w-64 max-[1039px]:max-h-[95vh] max-[767px]:bottom-0 max-[767px]:top-auto max-[767px]:right-0 max-[767px]:left-0 max-[767px]:w-full"
     >
       <div
-        class="flex-1 bg-slate-950/80 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden flex flex-col pointer-events-auto"
+        class="flex flex-col h-full bg-slate-950/90 backdrop-blur-xl border-white/10 shadow-2xl overflow-hidden pointer-events-auto max-md:rounded-t-2xl max-md:border-t md:rounded-3xl md:border"
       >
-        <div cdkDragHandle class="h-8 w-full flex items-center justify-center cursor-grab active:cursor-grabbing group">
+        <div
+          cdkDragHandle
+          class="hidden md:flex h-6 w-full items-center justify-center cursor-grab active:cursor-grabbing group shrink-0 bg-white/5"
+        >
           <div class="flex gap-1">
             <div class="w-1 h-1 rounded-full bg-white/20 group-hover:bg-white/40 transition-colors"></div>
             <div class="w-1 h-1 rounded-full bg-white/20 group-hover:bg-white/40 transition-colors"></div>
             <div class="w-1 h-1 rounded-full bg-white/20 group-hover:bg-white/40 transition-colors"></div>
           </div>
         </div>
-        <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
-          @if (selectedTile(); as tile) {
-            @if (!tile.tower) {
-              <h3
-                class="text-xs font-bold text-slate-400 mb-4 uppercase tracking-wider flex justify-between items-center"
-              >
-                {{ settings.t('BUY_DEFENDER') }}
-                <span class="text-[10px] font-normal normal-case text-slate-500">Balance: {{ tdEngine.money() }}</span>
-              </h3>
 
-              @if (tile.bonus) {
-                <div
-                  class="mb-4 bg-slate-900 border border-slate-700 p-3 rounded-lg animate-in fade-in slide-in-from-left-2"
-                >
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="text-xs">
-                      @if (tile.bonus === 'damage') {
-                        ⚔️
-                      } @else if (tile.bonus === 'range') {
-                        🔭
-                      } @else if (tile.bonus === 'bounty') {
-                        💰
-                      } @else if (tile.bonus === 'mastery') {
-                        ✨
-                      } @else if (tile.bonus === 'speed') {
-                        ⚡
-                      }
-                    </span>
-                    <span class="text-sm font-bold text-white uppercase tracking-wide">
-                      @if (tile.bonus === 'bounty') {
-                        REWARD ZONE
-                      } @else {
-                        Strategic Point
-                      }
-                    </span>
-                  </div>
-                  <div class="text-xs text-slate-400 leading-relaxed">
-                    @if (tile.bonus === 'damage') {
-                      Increases tower
-                      <span class="text-rose-400 font-bold">Damage</span>
-                      by 20% (flat).
-                    } @else if (tile.bonus === 'range') {
-                      Increases tower
-                      <span class="text-sky-400 font-bold">Range</span>
-                      by 0.5 tiles.
-                    } @else if (tile.bonus === 'bounty') {
-                      Increases gold gained from enemies defeated by towers placed on this tile.
-                    } @else if (tile.bonus === 'mastery') {
-                      Grants
-                      <span class="text-purple-400 font-bold">Damage Bonus</span>
-                      (+10%) to this tower.
-                    } @else if (tile.bonus === 'speed') {
-                      Increases
-                      <span class="text-lime-400 font-bold">Attack Speed</span>
-                      by 35%.
-                    }
-                  </div>
+        @if (selectedTile(); as tile) {
+          <div class="flex-1 overflow-y-auto px-4 py-1 custom-scrollbar min-h-0">
+            @if (windowWidth() < 768) {
+              @if (!tile.tower) {
+                <div class="flex justify-between items-center mb-2">
+                  <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    {{ settings.t('BUY_DEFENDER') }}
+                  </h3>
+                  <span class="text-[10px] text-emerald-400 font-mono">💰 {{ tdEngine.money() }}</span>
                 </div>
-              }
 
-              <div class="flex flex-col gap-1.5 td-shop-list px-1">
-                @for (cost of tdEngine.towerCosts; track $index) {
-                  @let tier = $index + 1;
-                  @let canAfford = tdEngine.money() >= cost;
-                  @let allowed = tdEngine.allowedTowers().includes(tier);
-
-                  @if (allowed) {
-                    <button
-                      (click)="buyTower(tier)"
-                      [disabled]="!canAfford"
-                      class="group relative flex items-center p-2 rounded-lg border transition-all duration-200 w-full overflow-hidden"
-                      [class.bg-slate-800\/60]="canAfford"
-                      [class.border-slate-700\/50]="canAfford"
-                      [class.hover:border-sky-500\/50]="canAfford"
-                      [class.hover:bg-slate-700]="canAfford"
-                      [class.opacity-40]="!canAfford"
-                      [class.bg-slate-950/40]="!canAfford"
-                      [class.border-transparent]="!canAfford"
-                    >
-                      <div
-                        class="absolute left-0 top-0 bottom-0 w-1"
-                        [style.background-color]="getTowerColor(tier)"
-                      ></div>
-
-                      <div
-                        class="flex-shrink-0 w-8 h-8 flex flex-col items-center justify-center rounded bg-slate-900/80 border border-slate-700/50 mr-3"
+                <div class="grid grid-cols-4 gap-2">
+                  @for (cost of tdEngine.towerCosts; track $index) {
+                    @let tier = $index + 1;
+                    @let canAfford = tdEngine.money() >= cost;
+                    @if (tdEngine.allowedTowers().includes(tier)) {
+                      <button
+                        (click)="buyTower(tier)"
+                        [disabled]="!canAfford"
+                        class="flex justify-center gap-2 items-center p-2 rounded-lg border border-white/5 transition-all"
+                        [class.bg-slate-800]="canAfford"
+                        [class.opacity-30]="!canAfford"
                       >
-                        <span class="text-[9px] text-slate-500 font-black leading-none uppercase">T{{ tier }}</span>
-                        <div
-                          class="w-1.5 h-1.5 rounded-full mt-0.5"
-                          [style.background-color]="getTowerColor(tier)"
-                        ></div>
-                      </div>
-
-                      <div class="flex-grow min-w-0">
-                        <div class="flex justify-between items-center mb-0.5">
-                          <h3 class="font-bold text-[12px] text-slate-100 truncate pr-1 uppercase tracking-tight">
-                            {{ getTowerName(tier) }}
-                          </h3>
-
-                          <div class="flex items-center gap-0.5 text-emerald-400 font-mono font-bold text-[12px]">
-                            <span>{{ cost }}</span>
-                          </div>
-                        </div>
-
-                        <p class="text-[10px] text-left text-slate-400 truncate group-hover:text-slate-200">
-                          {{ tdEngine.getTowerDescription(tier) }}
-                        </p>
-                      </div>
-
-                      <div
-                        class="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                      ></div>
-                    </button>
+                        <div class="w-4 h-4 rounded-full mb-1" [style.background-color]="getTowerColor(tier)"></div>
+                        <span class="text-[10px] font-mono font-bold text-white">{{ cost }}</span>
+                      </button>
+                    }
                   }
-                }
-              </div>
-            } @else {
-              <h3 class="text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider">
-                {{ settings.t('DEFENDER_INFO') }}
-              </h3>
-              <div class="bg-slate-900 rounded p-3 mb-4">
-                <div class="flex justify-between mb-1">
-                  <span class="text-xs text-slate-500">{{ settings.t('TIER') }}</span>
-                  <span class="text-xs font-bold">{{ tile.tower.type }}</span>
                 </div>
-                <div class="flex justify-between mb-1">
-                  <span class="text-xs text-slate-500">{{ settings.t('LEVEL') }}</span>
-                  <span class="text-xs font-bold">{{ tile.tower.level }} / 4</span>
-                </div>
-                <div class="flex justify-between mb-1">
-                  <span class="text-xs text-slate-500">{{ settings.t('DAMAGE') }}</span>
-                  <span class="text-xs font-bold text-rose-400">{{ tile.tower.damage | number: '1.0-2' }}</span>
-                </div>
-                <div class="flex justify-between mb-1">
-                  <span class="text-xs text-slate-500">{{ settings.t('RANGE') }}</span>
-                  <span class="text-xs font-bold text-sky-400">{{ tile.tower.range | number: '1.0-2' }}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-xs text-slate-500">{{ settings.t('SPEED') }}</span>
-                  <span class="text-xs font-bold text-lime-400">{{ tile.tower.fireInterval | number: '1.0-2' }}</span>
-                </div>
-                @if (tile.tower.description) {
-                  <div class="mt-3 text-[11px] text-slate-300 leading-snug">
-                    {{ tile.tower.description }}
-                  </div>
-                }
-              </div>
-
-              <div class="flex flex-col gap-2 td-shop-actions">
-                <div class="bg-slate-900 rounded p-3 mb-2">
-                  <div class="text-xs text-slate-500 mb-1">{{ settings.t('TARGETING') }}</div>
-                  <div class="flex flex-wrap gap-1">
+              } @else {
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center gap-3 overflow-x-auto pb-1 no-scrollbar">
+                    <div class="text-[10px] text-slate-500 uppercase tracking-wider">
+                      {{ settings.t('TARGETING') }}:
+                    </div>
                     <button
                       class="px-2 py-1 text-[10px] rounded-full border border-slate-600"
                       [class.bg-sky-600]="tile.tower.strategy === 'first' || !tile.tower.strategy"
@@ -473,6 +403,7 @@
                     >
                       {{ settings.t('FIRST') }}
                     </button>
+
                     <button
                       class="px-2 py-1 text-[10px] rounded-full border border-slate-600"
                       [class.bg-sky-600]="tile.tower.strategy === 'weakest'"
@@ -481,6 +412,7 @@
                     >
                       {{ settings.t('WEAKEST') }}
                     </button>
+
                     <button
                       class="px-2 py-1 text-[10px] rounded-full border border-slate-600"
                       [class.bg-sky-600]="tile.tower.strategy === 'strongest'"
@@ -489,6 +421,7 @@
                     >
                       {{ settings.t('STRONGEST') }}
                     </button>
+
                     <button
                       class="px-2 py-1 text-[10px] rounded-full border border-slate-600"
                       [class.bg-sky-600]="tile.tower.strategy === 'random'"
@@ -497,250 +430,395 @@
                     >
                       {{ settings.t('RANDOM') }}
                     </button>
-                  </div>
-                </div>
-                @if (tile.tower.level < 4) {
-                  <div class="flex gap-2">
-                    <button
-                      (click)="upgradeTower()"
-                      [disabled]="tdEngine.money() < tdEngine.getUpgradeCost(tile.tower)"
-                      class="flex-1 cursor-pointer py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 rounded font-bold transition-all flex justify-between px-3 items-center"
-                    >
-                      <span class="text-xs">{{ settings.t('UPGRADE') }}</span>
-                      <span class="font-mono text-xs">{{ tdEngine.getUpgradeCost(tile.tower) }}</span>
-                    </button>
-
-                    @let maxInfo = tdEngine.calculateMaxUpgrade(tile.tower);
-                    <button
-                      (click)="buyMaxUpgrade(tile.tower.id)"
-                      [disabled]="maxInfo.levelsToAdd === 0"
-                      class="w-20 cursor-pointer py-3 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 disabled:text-slate-500 rounded font-bold transition-all flex flex-col justify-center items-center leading-none border border-amber-400/30"
-                      [title]="'Buy ' + maxInfo.levelsToAdd + ' levels'"
-                    >
-                      <span class="text-[10px] uppercase font-black tracking-tighter">MAX</span>
-                      <span class="font-mono text-[10px] opacity-80">
-                        {{ maxInfo.totalCost > 0 ? maxInfo.totalCost : '-' }}
-                      </span>
-                    </button>
-                  </div>
-                } @else {
-                  <div
-                    class="w-full py-3 bg-slate-900 text-slate-500 rounded text-center font-bold border border-slate-700"
-                  >
-                    {{ settings.t('MAX_LEVEL') }}
-                  </div>
-                }
-                <button
-                  (click)="sellTower()"
-                  class="cursor-pointer w-full py-3 bg-rose-700 hover:bg-rose-600 rounded font-bold transition-all flex justify-center items-center text-sm"
-                >
-                  {{ settings.t('SELL') }} (60% REFUND)
-                </button>
-                @if (tile.tower.level === 4) {
-                  <button
-                    (click)="buyAbility()"
-                    [disabled]="tile.tower.specialActive || tdEngine.money() < tdEngine.getSpecialCost(tile.tower)"
-                    class="cursor-pointer w-full py-3 rounded font-bold transition-all flex justify-between px-4 items-center"
-                    [class.bg-purple-600]="
-                      !tile.tower.specialActive && tdEngine.money() >= tdEngine.getSpecialCost(tile.tower)
-                    "
-                    [class.hover:bg-purple-500]="
-                      !tile.tower.specialActive && tdEngine.money() >= tdEngine.getSpecialCost(tile.tower)
-                    "
-                    [class.bg-slate-700]="
-                      tile.tower.specialActive || tdEngine.money() < tdEngine.getSpecialCost(tile.tower)
-                    "
-                  >
-                    <span>
-                      {{ tile.tower.specialActive ? settings.t('ABILITY_ACTIVE') : settings.t('BUY_ABILITY') }}
-                    </span>
-                    @if (!tile.tower.specialActive) {
-                      <span class="font-mono">{{ tdEngine.getSpecialCost(tile.tower) }}</span>
-                    }
-                  </button>
-                  <div class="mt-4 pt-4 border-t border-white/10 space-y-2">
-                    @if (tile.tower.type === 1) {
-                      <div class="text-blue-400 font-bold tracking-wide uppercase text-sm">
-                        {{ settings.t('FROST_AURA') }}
-                      </div>
-                      <div class="text-gray-400 text-sm leading-relaxed">
-                        {{ settings.t('FROST_AURA_INFO') }}
-                      </div>
-                    }
-
-                    @if (tile.tower.type === 2) {
-                      <div class="text-yellow-400 font-bold tracking-wide uppercase text-sm">
-                        {{ settings.t('CHAIN_LIGHTNING') }}
-                      </div>
-                      <div class="text-gray-400 text-sm leading-relaxed">
-                        {{ settings.t('CHAIN_LIGHTNING_INFO') }}
-                      </div>
-                    }
-
-                    @if (tile.tower.type === 3) {
-                      <div class="text-red-400 font-bold tracking-wide uppercase text-sm">
-                        {{ settings.t('SHATTER') }}
-                      </div>
-                      <div class="text-gray-400 text-sm leading-relaxed">
-                        {{ settings.t('SHATTER_INFO') }}
-                      </div>
-                    }
-
-                    @if (tile.tower.type === 4) {
-                      <div class="text-purple-400 font-bold tracking-wide uppercase text-sm">
-                        {{ settings.t('FINAL_STRIKE') }}
-                      </div>
-                      <div class="text-gray-400 text-sm leading-relaxed">
-                        {{ settings.t('FINAL_STRIKE_INFO') }}
-                      </div>
-                    }
-                    @if (tile.tower.type === 5) {
-                      <div class="text-purple-400 font-bold tracking-wide uppercase text-sm">
-                        {{ settings.t('NAPALM_STRIKE') }}
-                      </div>
-                      <div class="text-gray-400 text-sm leading-relaxed">
-                        {{ settings.t('NAPALM_STRIKE_INFO') }}
-                      </div>
-                    }
-                    @if (tile.tower.type === 6) {
-                      <div class="text-purple-400 font-bold tracking-wide uppercase text-sm">
-                        {{ settings.t('REFRACTION_BEAM') }}
-                      </div>
-                      <div class="text-gray-400 text-sm leading-relaxed">
-                        {{ settings.t('REFRACTION_BEAM_INFO') }}
-                      </div>
-                    }
-                    @if (tile.tower.type === 7) {
-                      <div class="text-purple-400 font-bold tracking-wide uppercase text-sm">
-                        {{ settings.t('NEUROTOXIN') }}
-                      </div>
-
-                      <div class="text-gray-400 text-sm leading-relaxed">
-                        {{ settings.t('NEUROTOXIN_INFO') }}
-                      </div>
-                    }
-                  </div>
-                }
-              </div>
-            }
-          } @else {
-            <div
-              class="h-full w-full flex flex-col p-5 bg-slate-900/40 backdrop-blur-sm rounded-xl border border-slate-700/50 shadow-inner text-slate-300"
-            >
-              <div class="mb-2">
-                <div class="flex items-center gap-2">
-                  <span class="text-xl">📊</span>
-                  <h3 class="text-lg font-black tracking-tight text-white uppercase italic">
-                    {{ settings.t('DAMAGE_STATS') }}
-                  </h3>
-                </div>
-                <p class="text-[11px] text-slate-500 leading-tight mt-1">
-                  {{ settings.t('DAMAGE_STATS_DESC') }}
-                </p>
-              </div>
-
-              @let statsView = getDamageStatsView();
-
-              <div class="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
-                <div class="flex justify-between items-center mb-4">
-                  <span class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">
-                    {{ settings.currentLang() === 'uk' ? 'Всього нанесено:' : 'Total Output:' }}
-                  </span>
-                  <span class="text-xs font-mono text-white font-bold">
-                    {{ getTotalDamage(statsView.list) | abbreviateNumber }}
-                  </span>
-                </div>
-                @for (item of statsView.list; track item.type) {
-                  <div class="group flex flex-col gap-1.5 transition-all duration-300 hover:translate-x-1">
-                    <div class="flex justify-between items-end">
-                      <div class="flex items-center gap-2">
-                        <div
-                          class="w-1.5 h-1.5 rounded-full shadow-[0_0_8px]"
-                          [style.background-color]="item.color"
-                          [style.box-shadow]="'0 0 8px ' + item.color"
-                        ></div>
-                        <span
-                          class="text-xs font-bold uppercase tracking-wide text-slate-200 group-hover:text-white transition-colors"
-                        >
-                          {{ item.name }}
+                    <div class="grid grid-cols-4 gap-2 bg-slate-900/50 p-2 rounded-lg border border-white/5">
+                      <div class="flex flex-col italic">
+                        <span class="text-[8px] text-slate-500 uppercase flex justify-center">Dmg</span>
+                        <span class="text-xs font-bold text-rose-400 flex justify-center">
+                          {{ tile.tower.damage | abbreviateNumber }}
                         </span>
                       </div>
-                      <span class="font-mono text-xs font-bold" [style.color]="item.color">
-                        {{ item.damage | abbreviateNumber }}
-                      </span>
-                    </div>
-
-                    <div
-                      class="relative h-2.5 w-full bg-slate-800/80 rounded-full overflow-hidden border border-slate-700/30"
-                    >
-                      <div class="absolute inset-0 opacity-10" [style.background-color]="item.color"></div>
-
-                      <div
-                        class="h-full rounded-full shadow-lg transition-all duration-700 ease-out relative"
-                        [style.width.%]="statsView.max > 0 ? (item.damage / statsView.max) * 100 : 0"
-                        [style.background]="'linear-gradient(90deg, ' + item.color + 'dd, ' + item.color + ')'"
-                      >
-                        <div class="absolute inset-0 bg-white/10 w-full h-[1px] top-0"></div>
+                      <div class="flex flex-col italic">
+                        <span class="text-[8px] text-slate-500 uppercase flex justify-center">Rng</span>
+                        <span class="text-xs font-bold text-sky-400 flex justify-center">
+                          {{ tile.tower.range | abbreviateNumber }}
+                        </span>
+                      </div>
+                      <div class="flex flex-col italic">
+                        <span class="text-[8px] text-slate-500 uppercase flex justify-center">Lvl</span>
+                        <span class="text-xs font-bold text-white flex justify-center">{{ tile.tower.level }}/4</span>
+                      </div>
+                      <div class="flex flex-col italic">
+                        <span class="text-[8px] text-slate-500 uppercase flex justify-center">Spd</span>
+                        <span class="text-xs font-bold text-lime-400 flex justify-center">
+                          {{ tile.tower.fireInterval | abbreviateNumber }}
+                        </span>
                       </div>
                     </div>
                   </div>
-                } @empty {
-                  <div class="h-full flex flex-col items-center justify-center opacity-30 italic text-sm">
-                    <p>{{ settings.t('NO_DATA') }}</p>
+
+                  <div class="flex gap-2 justify-between">
+                    @if (tile.tower.level < 4) {
+                      <div class="flex gap-2 w-100">
+                        <button
+                          (click)="upgradeTower()"
+                          [disabled]="tdEngine.money() < tdEngine.getUpgradeCost(tile.tower)"
+                          class="flex-1 min-w-30 py-1 bg-emerald-600 rounded-lg text-[10px] font-bold uppercase flex justify-between px-2 items-center"
+                        >
+                          <span class="text-xs uppercase">{{ settings.t('UPGRADE') }}</span>
+                          <span class="font-mono">{{ tdEngine.getUpgradeCost(tile.tower) }}</span>
+                        </button>
+                        @let maxInfo = tdEngine.calculateMaxUpgrade(tile.tower);
+                        <button
+                          (click)="buyMaxUpgrade(tile.tower.id)"
+                          [disabled]="maxInfo.levelsToAdd === 0"
+                          class="w-16 md:w-20 cursor-pointer py-1 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 disabled:text-slate-500 rounded-lg font-bold transition-all flex justify-center gap-1 items-center leading-none border border-amber-400/30"
+                          [title]="'Buy ' + maxInfo.levelsToAdd + ' levels'"
+                        >
+                          <span class="text-[10px] uppercase font-black tracking-tighter">MAX</span>
+                        </button>
+                      </div>
+                    }
+                    <button
+                      (click)="sellTower()"
+                      class="px-3 py-1 bg-rose-950/40 text-rose-400 border border-rose-900/30 rounded-lg text-[10px] font-bold uppercase"
+                    >
+                      {{ settings.t('SELL') }}
+                    </button>
+                  </div>
+                </div>
+              }
+            } @else {}
+          </div>
+        }
+
+        @if (!(windowWidth() < 768)) {
+          <div class="flex-1 overflow-y-auto p-4 custom-scrollbar min-h-0">
+            @if (selectedTile(); as tile) {
+              @if (!tile.tower) {
+                <h3
+                  class="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider flex justify-between items-center sticky top-0 bg-slate-950/90 py-1 z-10 backdrop-blur-sm"
+                >
+                  {{ settings.t('BUY_DEFENDER') }}
+                  <span class="text-[10px] font-normal normal-case text-slate-500">
+                    Balance: {{ tdEngine.money() }}
+                  </span>
+                </h3>
+
+                @if (tile.bonus) {
+                  <div
+                    class="mb-4 bg-slate-900 border border-slate-700 p-3 rounded-lg animate-in fade-in slide-in-from-left-2"
+                  >
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="text-xs">
+                        @if (tile.bonus === 'damage') {
+                          ⚔️
+                        } @else if (tile.bonus === 'range') {
+                          🔭
+                        } @else if (tile.bonus === 'bounty') {
+                          💰
+                        } @else if (tile.bonus === 'mastery') {
+                          ✨
+                        } @else if (tile.bonus === 'speed') {
+                          ⚡
+                        }
+                      </span>
+                      <span class="text-sm font-bold text-white uppercase tracking-wide">
+                        @if (tile.bonus === 'bounty') {
+                          REWARD ZONE
+                        } @else {
+                          Strategic Point
+                        }
+                      </span>
+                    </div>
+                    <div class="text-xs text-slate-400 leading-relaxed">
+                      @if (tile.bonus === 'damage') {
+                        Increases tower
+                        <span class="text-rose-400 font-bold">Damage</span>
+                        by 20%.
+                      } @else if (tile.bonus === 'range') {
+                        Increases tower
+                        <span class="text-sky-400 font-bold">Range</span>
+                        .
+                      } @else if (tile.bonus === 'bounty') {
+                        Increases gold gain.
+                      } @else if (tile.bonus === 'mastery') {
+                        Grants
+                        <span class="text-purple-400 font-bold">Damage Bonus</span>
+                        .
+                      } @else if (tile.bonus === 'speed') {
+                        Increases
+                        <span class="text-lime-400 font-bold">Attack Speed</span>
+                        .
+                      }
+                    </div>
                   </div>
                 }
+
+                <div class="grid grid-cols-2 gap-2 md:flex md:flex-col md:gap-1.5 td-shop-list px-1">
+                  @for (cost of tdEngine.towerCosts; track $index) {
+                    @let tier = $index + 1;
+                    @let canAfford = tdEngine.money() >= cost;
+                    @let allowed = tdEngine.allowedTowers().includes(tier);
+
+                    @if (allowed) {
+                      <button
+                        (click)="buyTower(tier)"
+                        [disabled]="!canAfford"
+                        class="group relative flex flex-col min-[768px]:flex-row items-center p-2 rounded-xl border transition-all"
+                        [class.bg-slate-800\/60]="canAfford"
+                        [class.opacity-40]="!canAfford"
+                      >
+                        <div
+                          class="max-[767px]:w-full max-[767px]:h-1.5 max-[767px]:mb-1 min-[768px]:absolute min-[768px]:left-0 min-[768px]:top-2 min-[768px]:bottom-2 min-[768px]:w-1 rounded-full"
+                          [style.background-color]="getTowerColor(tier)"
+                        ></div>
+
+                        <div class="flex-grow min-[768px]:ml-2 w-full text-center min-[768px]:text-left">
+                          <div class="flex flex-col min-[768px]:flex-row min-[768px]:justify-between items-center">
+                            <span
+                              class="hidden min-[768px]:block font-bold text-[11px] text-slate-100 uppercase truncate mr-1"
+                            >
+                              {{ getTowerName(tier) }}
+                            </span>
+                            <span class="text-emerald-400 font-mono font-bold text-[10px] min-[768px]:text-[11px]">
+                              {{ cost }}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    }
+                  }
+                </div>
+              } @else {
+                <h3
+                  class="text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider sticky top-0 bg-slate-950 z-10"
+                >
+                  {{ settings.t('DEFENDER_INFO') }}
+                </h3>
+                <div class="bg-slate-900 rounded p-3 mb-4">
+                  <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+                    <div class="flex justify-between">
+                      <span class="text-xs text-slate-500">{{ settings.t('TIER') }}</span>
+                      <span class="text-xs font-bold">{{ tile.tower.type }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-xs text-slate-500">{{ settings.t('LEVEL') }}</span>
+                      <span class="text-xs font-bold">{{ tile.tower.level }} / 4</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-xs text-slate-500">{{ settings.t('DAMAGE') }}</span>
+                      <span class="text-xs font-bold text-rose-400">{{ tile.tower.damage | abbreviateNumber }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-xs text-slate-500">{{ settings.t('RANGE') }}</span>
+                      <span class="text-xs font-bold text-sky-400">{{ tile.tower.range | abbreviateNumber }}</span>
+                    </div>
+                    <div class="flex justify-between col-span-2">
+                      <span class="text-xs text-slate-500">{{ settings.t('SPEED') }}</span>
+                      <span class="text-xs font-bold text-lime-400">
+                        {{ tile.tower.fireInterval | abbreviateNumber }}
+                      </span>
+                    </div>
+                  </div>
+
+                  @if (tile.tower.description) {
+                    <div class="mt-3 text-[11px] text-slate-300 leading-snug border-t border-white/5 pt-2">
+                      {{ tile.tower.description }}
+                    </div>
+                  }
+                </div>
+
+                <div class="flex flex-col gap-2 td-shop-actions">
+                  <div class="bg-slate-900 rounded p-2 mb-2">
+                    <div class="text-[10px] text-slate-500 mb-1 uppercase tracking-wider">
+                      {{ settings.t('TARGETING') }}
+                    </div>
+                    <div class="flex flex-wrap gap-1">
+                      <button
+                        class="px-2 py-1 text-[10px] rounded-full border border-slate-600"
+                        [class.bg-sky-600]="tile.tower.strategy === 'first' || !tile.tower.strategy"
+                        [class.text-white]="tile.tower.strategy === 'first' || !tile.tower.strategy"
+                        (click)="setTowerStrategy('first')"
+                      >
+                        {{ settings.t('FIRST') }}
+                      </button>
+
+                      <button
+                        class="px-2 py-1 text-[10px] rounded-full border border-slate-600"
+                        [class.bg-sky-600]="tile.tower.strategy === 'weakest'"
+                        [class.text-white]="tile.tower.strategy === 'weakest'"
+                        (click)="setTowerStrategy('weakest')"
+                      >
+                        {{ settings.t('WEAKEST') }}
+                      </button>
+
+                      <button
+                        class="px-2 py-1 text-[10px] rounded-full border border-slate-600"
+                        [class.bg-sky-600]="tile.tower.strategy === 'strongest'"
+                        [class.text-white]="tile.tower.strategy === 'strongest'"
+                        (click)="setTowerStrategy('strongest')"
+                      >
+                        {{ settings.t('STRONGEST') }}
+                      </button>
+
+                      <button
+                        class="px-2 py-1 text-[10px] rounded-full border border-slate-600"
+                        [class.bg-sky-600]="tile.tower.strategy === 'random'"
+                        [class.text-white]="tile.tower.strategy === 'random'"
+                        (click)="setTowerStrategy('random')"
+                      >
+                        {{ settings.t('RANDOM') }}
+                      </button>
+                    </div>
+                  </div>
+
+                  @if (tile.tower.level < 4) {
+                    <div class="flex gap-2">
+                      <button
+                        (click)="upgradeTower()"
+                        [disabled]="tdEngine.money() < tdEngine.getUpgradeCost(tile.tower)"
+                        class="flex-1 cursor-pointer py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 rounded-lg font-bold transition-all flex flex-col md:flex-row justify-center md:justify-between px-3 items-center"
+                      >
+                        <span class="text-xs uppercase">{{ settings.t('UPGRADE') }}</span>
+                        <span class="font-mono text-xs">{{ tdEngine.getUpgradeCost(tile.tower) }}</span>
+                      </button>
+
+                      @let maxInfo = tdEngine.calculateMaxUpgrade(tile.tower);
+                      <button
+                        (click)="buyMaxUpgrade(tile.tower.id)"
+                        [disabled]="maxInfo.levelsToAdd === 0"
+                        class="w-16 md:w-20 cursor-pointer py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 disabled:text-slate-500 rounded-lg font-bold transition-all flex flex-col justify-center items-center leading-none border border-amber-400/30"
+                        [title]="'Buy ' + maxInfo.levelsToAdd + ' levels'"
+                      >
+                        <span class="text-[10px] uppercase font-black tracking-tighter">MAX</span>
+                        <span class="font-mono text-[10px] opacity-80 mt-0.5">
+                          {{ maxInfo.totalCost > 0 ? maxInfo.totalCost : '-' }}
+                        </span>
+                      </button>
+                    </div>
+                  } @else {
+                    <div
+                      class="w-full py-2 bg-slate-900 text-slate-500 rounded text-center text-xs font-bold border border-slate-700"
+                    >
+                      {{ settings.t('MAX_LEVEL') }}
+                    </div>
+                  }
+
+                  <button
+                    (click)="sellTower()"
+                    class="cursor-pointer w-full py-2 bg-rose-950/50 border border-rose-900/50 text-rose-400 hover:bg-rose-900/50 rounded font-bold transition-all flex justify-center items-center text-xs uppercase tracking-wider"
+                  >
+                    {{ settings.t('SELL') }} (60%)
+                  </button>
+
+                  @if (tile.tower.level === 4) {
+                    <button
+                      (click)="buyAbility()"
+                      [disabled]="tile.tower.specialActive || tdEngine.money() < tdEngine.getSpecialCost(tile.tower)"
+                      class="cursor-pointer w-full py-3 rounded font-bold transition-all flex justify-between px-4 items-center mt-2"
+                      [class.bg-purple-600]="
+                        !tile.tower.specialActive && tdEngine.money() >= tdEngine.getSpecialCost(tile.tower)
+                      "
+                      [class.bg-slate-700]="
+                        tile.tower.specialActive || tdEngine.money() < tdEngine.getSpecialCost(tile.tower)
+                      "
+                    >
+                      <span class="text-xs">
+                        {{ tile.tower.specialActive ? settings.t('ABILITY_ACTIVE') : settings.t('BUY_ABILITY') }}
+                      </span>
+                      @if (!tile.tower.specialActive) {
+                        <span class="font-mono text-xs">{{ tdEngine.getSpecialCost(tile.tower) }}</span>
+                      }
+                    </button>
+                  }
+                </div>
+              }
+            } @else {
+              <div
+                class="h-full w-full flex flex-col p-4 bg-slate-900/40 backdrop-blur-sm rounded-xl border border-slate-700/50 shadow-inner text-slate-300"
+              >
+                <div class="mb-2 flex items-center gap-2 border-b border-white/5 pb-2">
+                  <span class="text-xl">📊</span>
+                  <div>
+                    <h3 class="text-sm font-black tracking-tight text-white uppercase italic">
+                      {{ settings.t('DAMAGE_STATS') }}
+                    </h3>
+                    <p class="text-[10px] text-slate-500 leading-tight">{{ settings.t('DAMAGE_STATS_DESC') }}</p>
+                  </div>
+                </div>
+
+                @let statsView = getDamageStatsView();
+                <div class="flex-1 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold">
+                      {{ settings.currentLang() === 'uk' ? 'Всього:' : 'Total:' }}
+                    </span>
+                    <span class="text-xs font-mono text-white font-bold">
+                      {{ getTotalDamage(statsView.list) | abbreviateNumber }}
+                    </span>
+                  </div>
+                  @for (item of statsView.list; track item.type) {
+                    <div class="flex flex-col gap-1">
+                      <div class="flex justify-between text-[10px]">
+                        <span [style.color]="item.color" class="font-bold uppercase">{{ item.name }}</span>
+                        <span class="font-mono text-slate-300">{{ item.damage | abbreviateNumber }}</span>
+                      </div>
+                      <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          class="h-full"
+                          [style.width.%]="statsView.max > 0 ? (item.damage / statsView.max) * 100 : 0"
+                          [style.background-color]="item.color"
+                        ></div>
+                      </div>
+                    </div>
+                  }
+                </div>
               </div>
+            }
+          </div>
+        }
 
-              <div class="mt-2 pt-2 mb-2 pb-2 border-t border-slate-800 text-center">
-                <p class="text-[10px] text-slate-600 uppercase tracking-[0.2em]">
-                  {{ settings.t('SELECT_TILE_TO_BUILD') }}
-                </p>
-              </div>
-            </div>
-          }
-        </div>
+        <div class="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent shrink-0"></div>
 
-        <div class="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-
-        <div class="p-4 bg-black/40 space-y-4">
+        <div class="px-3 py-1 bg-black/60 shrink-0 space-y-3 z-20">
           <div class="flex items-center justify-between gap-2">
-            <div class="flex gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
+            <div class="flex gap-1 bg-black/40 p-1 rounded-lg border border-white/5">
               <button
                 *ngFor="let s of [1, 2, 4]"
                 (click)="setSpeed(s)"
-                [class.bg-white/10]="tdEngine.gameSpeedMultiplier() === s"
+                [class.bg-emerald-600]="tdEngine.gameSpeedMultiplier() === s"
                 [class.text-white]="tdEngine.gameSpeedMultiplier() === s"
-                class="w-7 h-7 flex items-center justify-center rounded-lg text-[10px] font-black text-slate-500 hover:text-slate-200 transition-all"
+                [class.text-slate-500]="tdEngine.gameSpeedMultiplier() !== s"
+                class="w-8 h-7 flex items-center justify-center rounded text-[11px] font-black transition-all hover:text-slate-200"
               >
                 {{ s }}x
               </button>
             </div>
 
-            <label class="flex items-center gap-2 cursor-pointer group">
-              <span class="text-[8px] font-black uppercase tracking-tighter text-slate-500 group-hover:text-slate-300">
-                Auto
-              </span>
-              <div class="relative scale-75">
+            <label
+              class="flex items-center gap-2 cursor-pointer bg-black/40 px-2 py-1 rounded-lg border border-white/5"
+            >
+              <span class="text-[9px] font-black uppercase tracking-wide text-slate-400">Auto</span>
+              <div class="relative scale-75 flex items-center">
                 <input type="checkbox" [checked]="autoWave()" (change)="autoWave.set(!autoWave())" class="sr-only" />
                 <div
-                  class="w-10 h-5 bg-slate-800 rounded-full border border-white/10"
+                  class="w-8 h-4 bg-slate-700 rounded-full transition-colors"
                   [class.bg-emerald-600]="autoWave()"
                 ></div>
                 <div
-                  class="absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform"
-                  [class.translate-x-5]="autoWave()"
+                  class="absolute left-0 w-4 h-4 bg-white rounded-full transition-transform shadow-sm"
+                  [class.translate-x-4]="autoWave()"
                 ></div>
               </div>
             </label>
           </div>
 
-          <div class="relative group">
-            <div
-              *ngIf="!tdEngine.isWaveInProgress()"
-              class="absolute -inset-0.5 bg-emerald-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition transition-all"
-            ></div>
-
-            <div class="relative flex gap-1 bg-slate-900/50 p-1 rounded-2xl border border-white/10 backdrop-blur-sm">
+          <div class="flex gap-2">
+            <div class="relative flex-1 group">
+              <div
+                *ngIf="!tdEngine.isWaveInProgress()"
+                class="absolute -inset-0.5 bg-emerald-500 rounded-xl blur opacity-20 group-hover:opacity-40 transition animate-pulse"
+              ></div>
               <button
                 (click)="tdEngine.startWave()"
                 [disabled]="
@@ -749,35 +827,11 @@
                     tdEngine.currentLevelConfig() &&
                     tdEngine.wave() >= tdEngine.currentLevelConfig()!.waveCount)
                 "
-                class="flex-1 py-3 rounded-xl font-black text-[11px] uppercase tracking-[0.2em] transition-all overflow-hidden relative"
-                [class.bg-emerald-600]="
-                  !tdEngine.isWaveInProgress() &&
-                  !(
-                    tdEngine.gameMode() === 'campaign' &&
-                    tdEngine.currentLevelConfig() &&
-                    tdEngine.wave() >= tdEngine.currentLevelConfig()!.waveCount
-                  )
-                "
-                [class.text-white]="
-                  !tdEngine.isWaveInProgress() &&
-                  !(
-                    tdEngine.gameMode() === 'campaign' &&
-                    tdEngine.currentLevelConfig() &&
-                    tdEngine.wave() >= tdEngine.currentLevelConfig()!.waveCount
-                  )
-                "
-                [class.bg-slate-800/50]="
-                  tdEngine.isWaveInProgress() ||
-                  (tdEngine.gameMode() === 'campaign' &&
-                    tdEngine.currentLevelConfig() &&
-                    tdEngine.wave() >= tdEngine.currentLevelConfig()!.waveCount)
-                "
-                [class.text-slate-500]="
-                  tdEngine.isWaveInProgress() ||
-                  (tdEngine.gameMode() === 'campaign' &&
-                    tdEngine.currentLevelConfig() &&
-                    tdEngine.wave() >= tdEngine.currentLevelConfig()!.waveCount)
-                "
+                class="relative w-full h-8 rounded-xl font-black text-xs uppercase tracking-[0.15em] transition-all flex items-center justify-center border border-white/5 shadow-lg overflow-hidden"
+                [class.bg-emerald-600]="!tdEngine.isWaveInProgress()"
+                [class.text-white]="!tdEngine.isWaveInProgress()"
+                [class.bg-slate-800]="tdEngine.isWaveInProgress()"
+                [class.text-slate-500]="tdEngine.isWaveInProgress()"
               >
                 @if (
                   tdEngine.gameMode() === 'campaign' &&
@@ -789,45 +843,34 @@
                 } @else {
                   {{ tdEngine.isWaveInProgress() ? settings.t('ENGAGED') : settings.t('COMMENCE') }}
                 }
-                <div
-                  *ngIf="
-                    !tdEngine.isWaveInProgress() &&
-                    !(
-                      tdEngine.gameMode() === 'campaign' &&
-                      tdEngine.currentLevelConfig() &&
-                      tdEngine.wave() >= tdEngine.currentLevelConfig()!.waveCount
-                    )
-                  "
-                  class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"
-                ></div>
-              </button>
-
-              <button
-                (click)="togglePause()"
-                [disabled]="!tdEngine.isWaveInProgress()"
-                class="px-4 rounded-xl transition-all"
-                [class.bg-amber-500]="tdEngine.isWaveInProgress() && !tdEngine.isPaused()"
-                [class.bg-emerald-500]="tdEngine.isWaveInProgress() && tdEngine.isPaused()"
-                [class.opacity-10]="!tdEngine.isWaveInProgress()"
-              >
-                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path *ngIf="!tdEngine.isPaused()" d="M6 4h4v16H6V4zm8 0h4v16h4V4z" />
-                  <path *ngIf="tdEngine.isPaused()" d="M8 5v14l11-7z" />
-                </svg>
               </button>
             </div>
+
+            <button
+              (click)="togglePause()"
+              [disabled]="!tdEngine.isWaveInProgress()"
+              class="w-10 h-8 flex items-center justify-center rounded-xl transition-all border border-white/5"
+              [class.bg-amber-500]="tdEngine.isWaveInProgress() && !tdEngine.isPaused()"
+              [class.bg-emerald-500]="tdEngine.isWaveInProgress() && tdEngine.isPaused()"
+              [class.bg-slate-800]="!tdEngine.isWaveInProgress()"
+              [class.opacity-50]="!tdEngine.isWaveInProgress()"
+            >
+              <span class="font-black text-white text-lg">
+                {{ tdEngine.isPaused() ? '▶' : 'II' }}
+              </span>
+            </button>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
             <button
               (click)="onRestart()"
-              class="py-2 bg-rose-500/5 hover:bg-rose-500/10 text-rose-500/70 hover:text-rose-500 border border-rose-500/10 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all"
+              class="py-1.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-lg text-[9px] font-bold uppercase hover:bg-rose-500 hover:text-white transition-colors"
             >
               {{ settings.t('RESET') }}
             </button>
             <button
               (click)="toggleStatsPanel()"
-              class="py-2 bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-400/70 hover:text-indigo-400 border border-indigo-500/10 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all"
+              class="py-1.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg text-[9px] font-bold uppercase hover:bg-indigo-500 hover:text-white transition-colors"
             >
               {{ settings.t('INTEL') }}
             </button>

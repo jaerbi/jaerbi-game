@@ -114,7 +114,7 @@ export class TowerDefenseEngineService {
     }
 
     public updateRandomQuote() {
-        const totalQuotes = 21;
+        const totalQuotes = 26;
         const randomIndex = Math.floor(Math.random() * totalQuotes) + 1;
         this.currentQuoteKey.set(<TranslationKey>`GAME_OVER_INFO_${randomIndex}`);
     }

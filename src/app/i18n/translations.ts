@@ -229,9 +229,19 @@ export type TranslationKey =
     | 'GAME_OVER_INFO_8'
     | 'GAME_OVER_INFO_9'
     | 'GAME_OVER_INFO_21'
+    | 'GAME_OVER_INFO_22'
+    | 'GAME_OVER_INFO_23'
+    | 'GAME_OVER_INFO_24'
+    | 'GAME_OVER_INFO_25'
+    | 'GAME_OVER_INFO_26'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    GAME_OVER_INFO_26: { en: 'Prediction confirmed. Player defeat.', uk: `Прогноз підтверджено. Поразка гравця.` },
+    GAME_OVER_INFO_25: { en: 'Outcome: Suboptimal. Recommend retry.', uk: `Результат: субоптимальний. Рекомендовано повтор.` },
+    GAME_OVER_INFO_24: { en: 'Defense integrity: 0%. Hope integrity: unknown.', uk: `Цілісність оборони: 0%. Цілісність надії: невідома.` },
+    GAME_OVER_INFO_23: { en: 'You lasted longer than expected.', uk: `Ти протримався довше, ніж очікувалось.` },
+    GAME_OVER_INFO_22: { en: 'Learning from defeat increases win probability.', uk: `Навчання на поразці підвищує ймовірність перемоги.` },
     GAME_OVER_INFO_21: { en: 'Defeat is just a new opportunity to start over.', uk: `Поразка — це лише нова можливість почати спочатку` },
     GAME_OVER_INFO_20: { en: 'Defeat is just a new opportunity to start over.', uk: `Поразка — це лише нова можливість почати спочатку.` },
     GAME_OVER_INFO_19: { en: 'Every loss makes your next defense stronger.', uk: `Кожна поразка робить твою наступну оборону сильнішою.` },
@@ -265,10 +275,10 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     DAMAGE_STATS: { en: 'Damage Statistics', uk: `Статистика шкоди` },
     NO_DATA: { en: 'No data yet', uk: `Дані відсутні` },
     DAMAGE_STATS_DESC: { en: 'Cumulative damage dealt by each tower type', uk: `Сумарна шкода за типами веж` },
-    RANDOM: { en: 'Random', uk: `Випадковий` },
-    STRONGEST: { en: 'Strongest', uk: `Найсильніший` },
-    WEAKEST: { en: 'Weakest', uk: `Найслабший` },
-    FIRST: { en: 'First', uk: `Перший` },
+    RANDOM: { en: 'Rnd', uk: `Вип.` },
+    STRONGEST: { en: 'Max', uk: `Макс` },
+    WEAKEST: { en: 'Min', uk: `Мін` },
+    FIRST: { en: '1st', uk: `1-й` },
     SPEED: { en: 'Speed', uk: `Швидкість` },
     TARGETING: { en: 'Targeting', uk: `Таргетинг` },
     SOCIAL_FEEDBACK: { en: 'Social & Feedback', uk: `Соціальні мережі та зворотний зв'язок` },
@@ -458,8 +468,8 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         uk: `МАКС РІВЕНЬ`,
     },
     UPGRADE: {
-        en: 'UPGRADE',
-        uk: `ОНОВЛЕННЯ`,
+        en: 'Upgrade',
+        uk: `Покращення`,
     },
     TIER: {
         en: 'Tier',

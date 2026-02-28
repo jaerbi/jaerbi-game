@@ -38,3 +38,6 @@ button { cursor: pointer; }
   -ms-user-select: none;     /* IE 10+ */
   user-select: none;         
 }
+.cdk-drag-dragging {
+  transition: none !important;
+}
