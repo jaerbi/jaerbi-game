@@ -51,6 +51,19 @@ export class DamageCalculationService {
     ): number {
         let damage = tower.damage;
 
+        if (tower.type === 1) {
+            const golden = getUpgradeLevel(1, 'golden');
+
+            if (target.isFrozen) {
+                const frostMultiplier = 2.0 + (golden * 0.2);
+                damage = Math.floor(damage * frostMultiplier);
+
+                if (target.isBoss) {
+                    damage += Math.floor(tower.damage * 0.25);
+                }
+            }
+        }
+
         // 4. Sniper Execute (Special)
         if (tower.specialActive && tower.type === 4) {
             const ratio = target.hp / target.maxHp;
@@ -72,6 +85,10 @@ export class DamageCalculationService {
 
         // 6. Prism Ramp
         if (tower.type === 6) {
+            if (tower.lastBeamTargetId !== target.id) {
+                tower.beamTime = 0;
+                tower.lastBeamTargetId = target.id;
+            }
             const isMainTarget = tower.targetEnemyId === target.id;
             const prevTime = tower.beamTime ?? 0;
 

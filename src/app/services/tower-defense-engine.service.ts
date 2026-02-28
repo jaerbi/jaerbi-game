@@ -1138,7 +1138,6 @@ export class TowerDefenseEngineService {
                 const diedBurning = !!enemy.burnedByInferno;
                 const deathPos = { ...enemy.position };
                 const sourceDmg = enemy.lastInfernoDamage || 0;
-                this.enemiesInternal.splice(i, 1);
                 if (diedBurning && sourceDmg > 0) {
                     this.triggerInfernoChainReaction(deathPos, sourceDmg);
                 }
@@ -1147,8 +1146,7 @@ export class TowerDefenseEngineService {
                 if (diedBurning) {
                     this.triggerInfernoChainReaction(deathPos, deathMaxHp);
                 }
-                // Diminishing Gold Returns (Bounty Decay)
-                // Base: 5 + wave. Decay: 1% less per wave after 10
+
                 const wave = this.wave();
                 let baseReward = 5 + wave;
 
@@ -1160,10 +1158,9 @@ export class TowerDefenseEngineService {
                 const goldMultiplier = this.getGoldKillMultiplier();
                 let reward = Math.floor(baseReward * goldMultiplier);
 
-                // Boss Reward Bonus (10x)
+                // Boss Reward Bonus
                 if (enemy.type === 'boss') {
-                    reward *= 10;
-                    // this.bonusXpAccumulated += 50;
+                    reward *= 10 + (this.wave() * 2);
                 }
 
 
@@ -1176,8 +1173,8 @@ export class TowerDefenseEngineService {
                     const dx = bt.position.x - deathPos.x;
                     const dy = bt.position.y - deathPos.y;
                     if (dx * dx + dy * dy <= bt.range * bt.range) {
-                        reward += 2; // +2 Gold per kill near Bounty Tower
-                        break; // Only once
+                        reward += 2;
+                        break;
                     }
                 }
 
@@ -1502,7 +1499,6 @@ export class TowerDefenseEngineService {
 
             targets.forEach((target, index) => {
                 const finalDamage = Math.floor(baseDmg * Math.pow(falloff, index));
-
                 this.damageService.applyDamage(target, finalDamage, tower.type, this.wave(), tower.id, this.recordDamage.bind(this));
 
                 if (tower.specialActive) {
@@ -1510,7 +1506,7 @@ export class TowerDefenseEngineService {
                 }
 
                 this.pushProjectile({
-                    id: 'snip' + Math.random(),
+                    id: `beam-${tower.id}-${index}`,
                     from: index === 0 ? { ...tower.position } : { ...targets[index - 1].position },
                     to: { ...target.position },
                     progress: 0,
