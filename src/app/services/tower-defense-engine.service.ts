@@ -13,7 +13,7 @@ const TOWER_COSTS = [15, 50, 400, 600, 250, 450, 500] as const;
 
 const TIER_STATS = [
     { damage: 5, range: 1.5, fireInterval: 0.5 },
-    { damage: 12, range: 2.5, fireInterval: 0.45 },
+    { damage: 12, range: 2.5, fireInterval: 0.65 },
     { damage: 78, range: 1.5, fireInterval: 1 },
     { damage: 250, range: 3, fireInterval: 4.5 },
     { damage: 66, range: 1.5, fireInterval: 2.5 },
@@ -23,6 +23,7 @@ const TIER_STATS = [
 
 import { WaveAnalyticsService } from './wave-analytics.service';
 import { DamageCalculationService } from './damage-calculation.service';
+import { TranslationKey } from '../i18n/translations';
 
 @Injectable({
     providedIn: 'root'
@@ -50,6 +51,7 @@ export class TowerDefenseEngineService {
     gameMode = signal<'random' | 'campaign'>('random');
     campaignMapId = signal<number>(1);
     campaignDifficulty = signal<'easy' | 'normal' | 'hard'>('normal');
+    currentQuoteKey = signal<TranslationKey>('GAME_OVER_INFO_1');
 
     currentLevelConfig = signal<LevelConfig | null>(null);
     allowedTowers = signal<number[]>([1, 2, 3, 4, 5, 6, 7]);
@@ -109,6 +111,12 @@ export class TowerDefenseEngineService {
         private damageService: DamageCalculationService
     ) {
         this.initGame();
+    }
+
+    public updateRandomQuote() {
+        const totalQuotes = 21;
+        const randomIndex = Math.floor(Math.random() * totalQuotes) + 1;
+        this.currentQuoteKey.set(<TranslationKey>`GAME_OVER_INFO_${randomIndex}`);
     }
 
     private bonusXpAccumulated = 0;
@@ -754,6 +762,7 @@ export class TowerDefenseEngineService {
             this.ngZone.run(() => {
                 this.isWaveInProgress.set(false);
                 this.gameOver.set(true);
+                this.updateRandomQuote();
             });
             if (!this.savedResult) {
                 this.savedResult = true;
@@ -773,6 +782,7 @@ export class TowerDefenseEngineService {
                 this.projectiles.set([]);
                 this.isWaveInProgress.set(false);
                 this.gameOver.set(true);
+                this.updateRandomQuote();
             });
             if (!this.savedResult) {
                 this.savedResult = true;
@@ -1550,7 +1560,9 @@ export class TowerDefenseEngineService {
     // Analytics
     private endGame(victory: boolean) {
         if (this.gameOver()) return;
+
         this.gameOver.set(true);
+        this.updateRandomQuote();
         this.isWaveInProgress.set(false);
         this.saveResultIfLoggedIn();
         this.logAnalytics(victory);

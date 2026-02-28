@@ -208,11 +208,51 @@ export type TranslationKey =
     | 'SYSTEM_ALERT_ADAPT'
     | 'EFFICIENCY_OF'
     | 'DECREASED_BY'
-    | 'GAME_OVER_INFO'
+    | 'GAME_OVER_INFO_19'
+    | 'GAME_OVER_INFO_18'
+    | 'GAME_OVER_INFO_17'
+    | 'GAME_OVER_INFO_16'
+    | 'GAME_OVER_INFO_15'
+    | 'GAME_OVER_INFO_14'
+    | 'GAME_OVER_INFO_13'
+    | 'GAME_OVER_INFO_12'
+    | 'GAME_OVER_INFO_11'
+    | 'GAME_OVER_INFO_10'
+    | 'GAME_OVER_INFO_20'
+    | 'GAME_OVER_INFO_1'
+    | 'GAME_OVER_INFO_2'
+    | 'GAME_OVER_INFO_3'
+    | 'GAME_OVER_INFO_4'
+    | 'GAME_OVER_INFO_5'
+    | 'GAME_OVER_INFO_6'
+    | 'GAME_OVER_INFO_7'
+    | 'GAME_OVER_INFO_8'
+    | 'GAME_OVER_INFO_9'
+    | 'GAME_OVER_INFO_21'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
-    GAME_OVER_INFO: { en: 'Defeat is just a new opportunity to start over.', uk: `Поразка — це лише нова можливість почати спочатку` },
+    GAME_OVER_INFO_21: { en: 'Defeat is just a new opportunity to start over.', uk: `Поразка — це лише нова можливість почати спочатку` },
+    GAME_OVER_INFO_20: { en: 'Defeat is just a new opportunity to start over.', uk: `Поразка — це лише нова можливість почати спочатку.` },
+    GAME_OVER_INFO_19: { en: 'Every loss makes your next defense stronger.', uk: `Кожна поразка робить твою наступну оборону сильнішою.` },
+    GAME_OVER_INFO_18: { en: 'Adapt. Rebuild. Try again.', uk: `Адаптуйся. Відбудуйся. Спробуй знову.` },
+    GAME_OVER_INFO_17: { en: 'The enemy evolved. So can you.', uk: `Ворог еволюціонував. Ти теж можеш.` },
+    GAME_OVER_INFO_16: { en: 'Your strategy failed. Your potential did not.', uk: `Твоя стратегія провалилась. Твій потенціал — ні.` },
+    GAME_OVER_INFO_15: { en: 'Simulation ended. Ready for another run?', uk: `Симуляцію завершено. Готовий до нового запуску?` },
+    GAME_OVER_INFO_14: { en: 'You were close. Closer than you think.', uk: `Ти був ближче, ніж думаєш.` },
+    GAME_OVER_INFO_13: { en: 'Recalculate. Rebuild. Revenge.', uk: `Перерахуй. Перебудуй. Помстись.` },
+    GAME_OVER_INFO_12: { en: 'Even the best defenses fall eventually.', uk: `Навіть найкраща оборона колись падає.` },
+    GAME_OVER_INFO_11: { en: 'Failure detected. Experience gained.', uk: `Зафіксовано поразку. Досвід отримано.` },
+    GAME_OVER_INFO_10: { en: 'Your towers fell. Your will should not.', uk: `Твої вежі впали. Твоя воля — ні.` },
+    GAME_OVER_INFO_9: { en: 'The sector is lost. The war is not.', uk: `Сектор втрачено. Війна — ні.` },
+    GAME_OVER_INFO_8: { en: 'Every master was once defeated.', uk: `Кожен майстер колись зазнавав поразки.` },
+    GAME_OVER_INFO_7: { en: 'One more wave. One more chance.', uk: `Ще одна хвиля. Ще один шанс.` },
+    GAME_OVER_INFO_6: { en: 'Game Over is not the end. It is data.', uk: `Game Over — це не кінець. Це дані.` },
+    GAME_OVER_INFO_5: { en: 'Strategy update required.', uk: `Потрібне оновлення стратегії.` },
+    GAME_OVER_INFO_4: { en: 'They broke through. Now break back.', uk: `Вони прорвалися. Тепер прорвися ти.` },
+    GAME_OVER_INFO_3: { en: 'Your defenses collapsed. Your resolve must not.', uk: `Оборона впала. Рішучість — ні.` },
+    GAME_OVER_INFO_2: { en: 'Retry is the strongest upgrade.', uk: `Повтор — це найсильніше покращення.` },
+    GAME_OVER_INFO_1: { en: 'Victory belongs to the persistent.', uk: `Перемога належить наполегливим.` },
     EFFICIENCY_OF: { en: 'Efficiency of', uk: `Ефективність` },
     DECREASED_BY: { en: 'decreased by 75%', uk: `знизилася на 75%` },
     SYSTEM_ALERT_ADAPT: { en: 'System Alert: Adaptation', uk: `Системне сповіщення: Адаптація` },

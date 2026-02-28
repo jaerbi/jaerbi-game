@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener, signal, computed, ChangeDetectionStrategy, ChangeDetectorRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener, signal, computed, ChangeDetectionStrategy, ChangeDetectorRef, AfterViewInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { HITBOX_OFFSET, TowerDefenseEngineService } from '../../services/tower-defense-engine.service';
@@ -13,6 +13,7 @@ import { AppPrivacyPolicyComponent } from '../privacy-policy/privacy-policy.comp
 import { CampaignService } from '../../services/campaign.service';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { WaveAnalyticsService } from '../../services/wave-analytics.service';
+import { TranslationKey } from '../../i18n/translations';
 
 @Component({
     selector: 'app-tower-defense',
@@ -224,7 +225,13 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         private cdr: ChangeDetectorRef,
         public campaignService: CampaignService,
         private _waveAnalyticsService: WaveAnalyticsService,
-    ) { }
+    ) {
+        effect(() => {
+            if (this.tdEngine.gameOver()) {
+                this.tdEngine.updateRandomQuote();
+            }
+        });
+    }
 
     ngOnInit() {
         this.tdEngine.initializeGame(this.mapLevel());
