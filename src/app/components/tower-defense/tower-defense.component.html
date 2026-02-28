@@ -487,6 +487,26 @@
                         </button>
                       </div>
                     }
+                    @if (tile.tower.level === 4) {
+                      <button
+                        (click)="buyAbility()"
+                        [disabled]="tile.tower.specialActive || tdEngine.money() < tdEngine.getSpecialCost(tile.tower)"
+                        class="cursor-pointer w-full py-1 rounded font-bold transition-all flex justify-between px-2 items-center"
+                        [class.bg-purple-600]="
+                          !tile.tower.specialActive && tdEngine.money() >= tdEngine.getSpecialCost(tile.tower)
+                        "
+                        [class.bg-slate-700]="
+                          tile.tower.specialActive || tdEngine.money() < tdEngine.getSpecialCost(tile.tower)
+                        "
+                      >
+                        <span class="text-xs">
+                          {{ tile.tower.specialActive ? settings.t('ABILITY_ACTIVE') : settings.t('BUY_ABILITY') }}
+                        </span>
+                        @if (!tile.tower.specialActive) {
+                          <span class="font-mono text-xs">{{ tdEngine.getSpecialCost(tile.tower) }}</span>
+                        }
+                      </button>
+                    }
                     <button
                       (click)="sellTower()"
                       class="px-3 py-1 bg-rose-950/40 text-rose-400 border border-rose-900/30 rounded-lg text-[10px] font-bold uppercase"
