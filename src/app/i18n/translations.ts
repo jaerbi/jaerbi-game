@@ -208,9 +208,11 @@ export type TranslationKey =
     | 'SYSTEM_ALERT_ADAPT'
     | 'EFFICIENCY_OF'
     | 'DECREASED_BY'
+    | 'GAME_OVER_INFO'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    GAME_OVER_INFO: { en: 'Defeat is just a new opportunity to start over.', uk: `Поразка — це лише нова можливість почати спочатку` },
     EFFICIENCY_OF: { en: 'Efficiency of', uk: `Ефективність` },
     DECREASED_BY: { en: 'decreased by 75%', uk: `знизилася на 75%` },
     SYSTEM_ALERT_ADAPT: { en: 'System Alert: Adaptation', uk: `Системне сповіщення: Адаптація` },

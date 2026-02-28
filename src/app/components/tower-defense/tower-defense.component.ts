@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener, signal, computed, ChangeDetectionStrategy, ChangeDetectorRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { TowerDefenseEngineService } from '../../services/tower-defense-engine.service';
+import { HITBOX_OFFSET, TowerDefenseEngineService } from '../../services/tower-defense-engine.service';
 import { TDTile } from '../../models/unit.model';
 import { SettingsService } from '../../services/settings.service';
 import { FirebaseService } from '../../services/firebase.service';
@@ -337,7 +337,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const tile = this.selectedTile();
         if (tile) {
             this.tdEngine.buyTower(tile.x, tile.y, tier);
-            this.selectedTile.set(null);
+            this.selectedTile.set(tile);
         }
     }
 
@@ -1158,7 +1158,6 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     private drawProjectiles(ctx: CanvasRenderingContext2D, tile: number) {
-        // Speed Constraint: Only draw projectiles at 1x speed
         const speed = this.tdEngine.gameSpeedMultiplier();
         if (speed >= 2) return;
 
@@ -1169,7 +1168,6 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             if (p.isBeam) {
                 ctx.save();
                 ctx.beginPath();
-
                 const startX = (p.from.x + 0.5) * tile;
                 const startY = (p.from.y + 0.5) * tile;
                 const endX = (p.to.x + 0.5) * tile;
@@ -1186,28 +1184,24 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 continue;
             }
 
-            // Actually, we can check the tower at p.from!
             const tx = Math.floor(p.from.x);
             const ty = Math.floor(p.from.y);
             const tower = towers.find(t => t.position.x === tx && t.position.y === ty);
             const type = tower ? tower.type : 1;
-
             const x = p.from.x + (p.to.x - p.from.x) * p.progress;
             const y = p.from.y + (p.to.y - p.from.y) * p.progress;
-            const cx = x * tile + tile / 2;
-            const cy = y * tile + tile / 2;
+            const cx = x * tile;
+            const cy = y * tile;
 
             ctx.beginPath();
-
-            // Tower-Specific Colors
-            let color = '#fbbf24'; // Default Amber
+            let color = '#fbbf24';
             let size = 3;
 
             switch (type) {
-                case 1: color = '#a3def9'; break; // Ice (Blue)
-                case 2: color = '#d2a6fb'; break; // Lightning (Purple)
-                case 3: color = '#facc15'; break; // Cannon (Yellow/Heavy)
-                case 4: color = '#f04545'; break; // Sniper (Red/Thin)
+                case 1: color = '#a3def9'; break;
+                case 2: color = '#d2a6fb'; break;
+                case 3: color = '#facc15'; size = 4; break;
+                case 4: color = '#f04545'; size = 2; break;
                 case 5: color = '#f97316';
                     if (p.isExplosion) {
                         ctx.save();
@@ -1220,9 +1214,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                         ctx.restore();
                         return;
                     }
-                    break; // Inferno (Orange)
-                case 6: color = '#22d3ee'; break; // Prism (Cyan - though usually beam)
-                case 7: color = '#84cc16'; break; // Venom (Green)
+                    break;
+                case 7: color = '#84cc16'; break;
             }
 
             ctx.fillStyle = color;
@@ -1230,17 +1223,16 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.fill();
         }
 
-        // Draw Inferno Zones (always visible if low speed)
         const zones = this.tdEngine.getInfernoZonesRef();
         for (const z of zones) {
             if (z.dps <= 0) continue;
-            const cx = z.position.x * tile + tile / 2;
-            const cy = z.position.y * tile + tile / 2;
+            const cx = (z.position.x + 0.5) * tile;
+            const cy = (z.position.y + 0.5) * tile;
             const r = z.radius * tile;
             ctx.save();
             ctx.beginPath();
             ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(249, 115, 22, 0.15)'; // Orange tint
+            ctx.fillStyle = 'rgba(249, 115, 22, 0.15)';
             ctx.fill();
             ctx.lineWidth = 1;
             ctx.strokeStyle = 'rgba(249, 115, 22, 0.4)';
@@ -1252,12 +1244,14 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     private drawRangeIndicator(ctx: CanvasRenderingContext2D, tile: number) {
         const tileSel = this.selectedTile();
+
         if (!tileSel || !tileSel.tower) return;
         const t = tileSel.tower;
         const cx = t.position.x * tile + tile / 2;
         const cy = t.position.y * tile + tile / 2;
-        const range = t.type === 1 ? this.tdEngine.getEffectiveRange(t) : t.range;
-        const radius = range * tile;
+        const baseRange = t.type === 1 ? this.tdEngine.getEffectiveRange(t) : t.range;
+        const radius = (baseRange + HITBOX_OFFSET) * tile;
+        ctx.save();
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(56, 189, 248, 0.12)';
@@ -1265,7 +1259,41 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         ctx.lineWidth = 2;
         ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
         ctx.stroke();
+        ctx.restore();
+        // DEBUG ONLY
+        // this.drawDebugLines(ctx);
     }
+    // DEBUG ONLY
+    private drawDebugLines(ctx: CanvasRenderingContext2D) {
+        const tile = Math.floor(this.tdEngine.tileSize);
+        const tileSel = this.selectedTile();
+        if (!tileSel || !tileSel.tower || !tileSel.tower.targetEnemyId) return;
+
+        const t = tileSel.tower;
+        const enemies = this.tdEngine.getEnemiesRef();
+        const enemy = enemies.find(e => e.id === t.targetEnemyId);
+        if (!enemy) return;
+
+        const tx = (t.position.x + 0.5) * tile;
+        const ty = (t.position.y + 0.5) * tile;
+        const ex = (enemy.position.x + 0.5) * tile;
+        const ey = (enemy.position.y + 0.5) * tile;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(ex, ey);
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+        ctx.setLineDash([5, 5]);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(ex, ey, 4, 0, Math.PI * 2);
+        ctx.fillStyle = 'red';
+        ctx.fill();
+        ctx.restore();
+    }
+    // DEBUG END
 
     onCanvasClick(event: MouseEvent) {
         // If panning occurred, ignore click

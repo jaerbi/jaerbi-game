@@ -7,17 +7,18 @@ import { SettingsService } from './settings.service';
 
 import { CampaignService, LevelConfig } from './campaign.service';
 
+export const HITBOX_OFFSET = 0.4;
 // Immutable Constants for Security
-const TOWER_COSTS = [15, 50, 250, 500, 500, 500, 500] as const;
+const TOWER_COSTS = [15, 50, 400, 600, 250, 450, 500] as const;
 
 const TIER_STATS = [
     { damage: 5, range: 1.5, fireInterval: 0.5 },
-    { damage: 14, range: 2.5, fireInterval: 0.45 },
-    { damage: 83, range: 1.5, fireInterval: 1 },
+    { damage: 12, range: 2.5, fireInterval: 0.45 },
+    { damage: 78, range: 1.5, fireInterval: 1 },
     { damage: 250, range: 3, fireInterval: 4.5 },
-    { damage: 71, range: 1.5, fireInterval: 2.5 },
-    { damage: 15, range: 2, fireInterval: 0.3 },
-    { damage: 66, range: 1.5, fireInterval: 1 }
+    { damage: 66, range: 1.5, fireInterval: 2.5 },
+    { damage: 35, range: 2, fireInterval: 0.2 },
+    { damage: 54, range: 1.5, fireInterval: 1 }
 ] as const;
 
 import { WaveAnalyticsService } from './wave-analytics.service';
@@ -1236,12 +1237,14 @@ export class TowerDefenseEngineService {
             const currentTarget = enemies.find(e => e.id === tower.targetEnemyId);
 
             if (currentTarget && currentTarget.hp > 0) {
-                const dx = tX - currentTarget.position.x;
-                const dy = tY - currentTarget.position.y;
+                const dx = tX - (currentTarget.position.x + 0.5);
+                const dy = tY - (currentTarget.position.y + 0.5);
                 const distSq = dx * dx + dy * dy;
-
                 const baseRange = tower.type === 1 ? this.getEffectiveRange(tower) : tower.range;
-                const stickyRange = stickyTypes.includes(tower.type) ? baseRange + 0.5 : baseRange;
+                let stickyRange = baseRange + HITBOX_OFFSET;
+                if (stickyTypes.includes(tower.type)) {
+                    stickyRange += 0.5;
+                }
                 const rangeSq = stickyRange * stickyRange;
 
                 if (distSq <= rangeSq) {
@@ -1255,14 +1258,16 @@ export class TowerDefenseEngineService {
         }
 
         const effRange = tower.type === 1 ? this.getEffectiveRange(tower) : tower.range;
-        const rangeSq = effRange * effRange;
+        const effectiveFiringRange = effRange + HITBOX_OFFSET;
+        const rangeSq = effectiveFiringRange * effectiveFiringRange;
+
         const candidates: { enemy: Enemy; distSq: number; progressScore: number }[] = [];
 
         for (const enemy of enemies) {
             if (enemy.hp <= 0) continue;
 
-            const dx = tX - enemy.position.x;
-            const dy = tY - enemy.position.y;
+            const dx = tX - (enemy.position.x + 0.5);
+            const dy = tY - (enemy.position.y + 0.5);
             const distSq = dx * dx + dy * dy;
 
             if (distSq > rangeSq) continue;
@@ -1287,6 +1292,7 @@ export class TowerDefenseEngineService {
         if (tower.targetEnemyId !== selectedEnemy.id) {
             tower.hitsOnTarget = 0;
             if (tower.type === 6) tower.beamTime = 0;
+            tower.targetEnemyId = selectedEnemy.id;
         }
 
         return selectedEnemy;
@@ -1348,8 +1354,8 @@ export class TowerDefenseEngineService {
         if (tower.type !== 6 && tower.type !== 4) {
             const proj: Projectile = {
                 id: 'p' + (this.projectileIdCounter++),
-                from: { ...tower.position },
-                to: { ...enemy.position },
+                from: { x: tower.position.x + 0.5, y: tower.position.y + 0.5 },
+                to: { x: enemy.position.x + 0.5, y: enemy.position.y + 0.5 },
                 progress: 0,
                 speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
             };
@@ -1443,8 +1449,8 @@ export class TowerDefenseEngineService {
 
                     this.pushProjectile({
                         id: 'p' + (this.projectileIdCounter++),
-                        from: { ...enemy.position },
-                        to: { ...potentialTarget.position },
+                        from: { x: enemy.position.x + 0.5, y: enemy.position.y + 0.5 },
+                        to: { x: potentialTarget.position.x + 0.5, y: potentialTarget.position.y + 0.5 },
                         progress: 0,
                         speedMultiplier: 2
                     });

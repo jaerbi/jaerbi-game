@@ -211,13 +211,13 @@ export class CampaignService {
                     ? 'Короткий шлях. Елітні вежі. Економіка вирішує все.'
                     : 'Short path. Elite towers. Economy is everything.',
                 waveCount: 25,
-                startingGold: 500, // Only enough for one steeplechase
+                startingGold: 500000, // Only enough for one steeplechase
                 allowedTowers: [4, 6, 7], // Sniper, Prism, Poison (High Tier)
                 mapLayout: 'static',
                 difficulty: 'hard',
                 xpReward: 50,
                 gridSize: 10,
-                healthMultiplier: 1.8,
+                healthMultiplier: 20.8,
                 enemyTypes: ['Tank', 'Scout', 'Standard'],
                 waveTypeSequence: [3, 3, 2, 3, 2, 1, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2],
                 bossCount: 5, // 5, 10, 15, 20, 25
