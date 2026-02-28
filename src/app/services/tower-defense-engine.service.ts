@@ -410,11 +410,21 @@ export class TowerDefenseEngineService {
     private getGoldKillMultiplier(): number {
         const level = this.getGoldMasteryLevel();
         if (level <= 0) return 1;
+
+        // Stage 1 (1-7 рівні): +3% за рівень (було 5)
         const stage1 = Math.min(level, 7);
+
+        // Stage 2 (8-14 рівні): +5% за рівень (було 10)
         const stage2 = Math.max(0, Math.min(level - 7, 7));
+
+        // Stage 3 (15+ рівні): +7% за рівень (було 15)
         const stage3 = Math.max(0, level - 14);
-        const bonus = stage1 * 0.05 + stage2 * 0.1 + stage3 * 0.15;
-        return 1 + bonus;
+
+        const bonus = (stage1 * 0.03) + (stage2 * 0.05) + (stage3 * 0.07);
+
+        // Додаємо Hard Cap: бонус не може перевищувати +200% (тобто множник макс 3.0)
+        // Навіть якщо рівень дуже високий, економіка не зламається.
+        return Math.min(1 + bonus, 3.0);
     }
 
     private generateRandomPath(): Position[] {
@@ -783,8 +793,8 @@ export class TowerDefenseEngineService {
             });
             const goldLevel = this.getGoldMasteryLevel();
             if (goldLevel >= 15) {
-                const bonus = (goldLevel - 14) * 5;
-                this.money.update(m => m + bonus);
+                const endOfWaveBonus = (goldLevel - 14) * 10;
+                this.money.update(m => m + endOfWaveBonus);
             }
         }
     }
@@ -1149,9 +1159,9 @@ export class TowerDefenseEngineService {
                 }
 
                 const wave = this.wave();
-                let baseReward = 5 + wave;
+                let baseReward = 5 + Math.floor(wave * 0.5);
 
-                if (wave > 10) {
+                if (wave > 15) {
                     const decayFactor = Math.max(0.2, 1 - (wave - 10) * 0.01);
                     baseReward = Math.floor(baseReward * decayFactor);
                 }
