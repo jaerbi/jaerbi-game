@@ -182,6 +182,11 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     zoomLevel = signal(1);
     panX = signal(0);
     panY = signal(0);
+    private lastTouchDistance = 0;
+    private initialZoom = 1;
+    private isTouching = false;
+    private lastTouchX = 0;
+    private lastTouchY = 0;
     isPanning = false;
     lastMouseX = 0;
     lastMouseY = 0;
@@ -1354,6 +1359,46 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const delta = event.deltaY > 0 ? 0.9 : 1.1;
         const newZoom = Math.max(0.5, Math.min(3, this.zoomLevel() * delta));
         this.zoomLevel.set(newZoom);
+    }
+
+    onTouchStart(event: TouchEvent) {
+        if (event.touches.length === 1) {
+            this.isPanning = true;
+            this.lastTouchX = event.touches[0].clientX;
+            this.lastTouchY = event.touches[0].clientY;
+            this.wasPanning = false;
+        } else if (event.touches.length === 2) {
+            this.isPanning = false;
+            this.lastTouchDistance = this.getDistance(event.touches);
+            this.initialZoom = this.zoomLevel();
+        }
+    }
+
+    onTouchMove(event: TouchEvent) {
+        if (event.touches.length === 1 && this.isPanning) {
+            const touch = event.touches[0];
+            const dx = touch.clientX - this.lastTouchX;
+            const dy = touch.clientY - this.lastTouchY;
+            this.panX.update(x => x + dx);
+            this.panY.update(y => y + dy);
+            this.lastTouchX = touch.clientX;
+            this.lastTouchY = touch.clientY;
+            this.wasPanning = true;
+        } else if (event.touches.length === 2) {
+            const currentDistance = this.getDistance(event.touches);
+            const scale = currentDistance / this.lastTouchDistance;
+            this.zoomLevel.set(Math.max(0.5, Math.min(3, this.initialZoom * scale)));
+        }
+    }
+
+    onTouchEnd() {
+        this.isPanning = false;
+    }
+
+    private getDistance(touches: TouchList): number {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     private wasPanning = false;

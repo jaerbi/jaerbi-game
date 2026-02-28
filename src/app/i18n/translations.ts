@@ -278,7 +278,7 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     RANDOM: { en: 'Rnd', uk: `Вип.` },
     STRONGEST: { en: 'Max', uk: `Макс` },
     WEAKEST: { en: 'Min', uk: `Мін` },
-    FIRST: { en: '1st', uk: `1-й` },
+    FIRST: { en: '1', uk: `1` },
     SPEED: { en: 'Speed', uk: `Швидкість` },
     TARGETING: { en: 'Targeting', uk: `Таргетинг` },
     SOCIAL_FEEDBACK: { en: 'Social & Feedback', uk: `Соціальні мережі та зворотний зв'язок` },
