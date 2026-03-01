@@ -8,6 +8,7 @@ import { SettingsService } from './settings.service';
 import { CampaignService, LevelConfig } from './campaign.service';
 
 export const HITBOX_OFFSET = 0.4;
+export const HARD_CAP = 750;
 // Immutable Constants for Security
 const TOWER_COSTS = [15, 50, 400, 600, 250, 450, 500] as const;
 
@@ -214,7 +215,7 @@ export class TowerDefenseEngineService {
             const row: TDTile[] = [];
             for (let x = 0; x < this.gridSize; x++) {
                 let type: TileType = 'void';
-                let bonus: 'none' | 'damage' | 'range' | 'bounty' | 'mastery' | 'speed' | undefined = undefined;
+                let bonus: 'none' | 'damage' | 'range' | 'prime' | 'bounty' | 'mastery' | 'speed' | undefined = undefined;
 
                 if (pathSet.has(`${x},${y}`)) {
                     type = 'path';
@@ -243,6 +244,34 @@ export class TowerDefenseEngineService {
         }
         this.grid.set(newGrid);
     }
+    private spawnRandomBonusTile() {
+        this.grid.update(grid => {
+            const buildableTiles: { x: number, y: number }[] = [];
+
+            for (let y = 0; y < this.gridSize; y++) {
+                for (let x = 0; x < this.gridSize; x++) {
+                    const tile = grid[y][x];
+                    if (tile.type !== 'path' && !tile.bonus) {
+                        buildableTiles.push({ x, y });
+                    }
+                }
+            }
+
+            if (buildableTiles.length > 0) {
+                const randomPos = buildableTiles[Math.floor(Math.random() * buildableTiles.length)];
+                const bonuses: ('damage' | 'range' | 'speed' | 'bounty' | 'mastery' | 'prime')[] =
+                    ['damage', 'range', 'speed',  'bounty', 'mastery', 'prime'];
+
+                const randomBonus = bonuses[Math.floor(Math.random() * bonuses.length)];
+
+                grid[randomPos.y][randomPos.x].type = 'buildable';
+                grid[randomPos.y][randomPos.x].bonus = randomBonus;
+
+                console.log(`New bonus spawned at ${randomPos.x},${randomPos.y}: ${randomBonus}`);
+            }
+            return [...grid];
+        });
+    }
     public calculateEarnedXp(): number {
         if (this.gameMode() === 'campaign') {
             const config = this.currentLevelConfig();
@@ -260,7 +289,7 @@ export class TowerDefenseEngineService {
         const cappedBonusXp = Math.min(this.bonusXpAccumulated, waves * 3);
         totalXp += cappedBonusXp;
 
-        return Math.floor(Math.min(totalXp, 300));
+        return Math.floor(Math.min(totalXp, HARD_CAP));
     }
     initializeGame(level: number, campaignLevelId?: string) {
         // Reset state
@@ -333,7 +362,7 @@ export class TowerDefenseEngineService {
             startMoney += bonus;
         }
         this.money.set(startMoney);
-        const bonusTiles: { x: number, y: number, type: 'damage' | 'range' | 'bounty' | 'mastery' | 'speed' }[] = [];
+        const bonusTiles: { x: number, y: number, type: 'damage' | 'range' | 'prime' | 'bounty' | 'mastery' | 'speed' }[] = [];
         const tempPath = this.generateRandomPath();
         const randomBonusCount = Math.floor(Math.random() * 3) + 3;
         this.path.set(tempPath);
@@ -379,7 +408,7 @@ export class TowerDefenseEngineService {
         for (let i = 0; i < randomBonusCount && shuffledSpots.length > 0; i++) {
             const index = Math.floor(Math.pow(Math.random(), 1.5) * shuffledSpots.length);
             const spot = shuffledSpots.splice(index, 1)[0];
-            const types = ['damage', 'range', 'speed', 'bounty', 'mastery'] as const;
+            const types = ['damage', 'range', 'speed', 'prime', 'bounty', 'mastery'] as const;
             const type = types[Math.floor(Math.random() * types.length)];
             bonusTiles.push({ x: spot.x, y: spot.y, type });
         }
@@ -618,6 +647,9 @@ export class TowerDefenseEngineService {
         }
 
         this.wave.update(w => w + 1);
+        if (this.wave() > 1 && this.wave() % 10 === 0) {
+            this.spawnRandomBonusTile();
+        }
         this.isWaveInProgress.set(true);
 
         // Analyze Strategy for this wave (Random Mode Only)
@@ -1704,7 +1736,7 @@ export class TowerDefenseEngineService {
                 const goldenLevel = this.getUpgradeLevel(tier, 'golden');
                 let damageMultiplier = 1 + dmgLevel * 0.05;
                 let rangeBonus = rangeLevel * 0.05;
-
+                let finalFireInterval = stats.fireInterval;
                 // Apply Tile Bonuses
                 if (tile.bonus === 'damage') {
                     damageMultiplier += 0.2;
@@ -1712,9 +1744,13 @@ export class TowerDefenseEngineService {
                     rangeBonus += 1;
                 } else if (tile.bonus === 'mastery') {
                     damageMultiplier += 0.1;
+                } else if (tile.bonus === 'prime') {
+                    damageMultiplier += 0.12;       // Сила (менше ніж 20%)
+                    rangeBonus += 0.4;             // Радіус (менше ніж 1.0)
+                    finalFireInterval *= 0.85;
                 }
                 const isOnMasteryTile = tile.bonus === 'mastery';
-                let finalFireInterval = stats.fireInterval;
+
                 if (tile.bonus === 'speed') {
                     finalFireInterval *= 0.65; // -35% Cooldown (35% faster)
                 }

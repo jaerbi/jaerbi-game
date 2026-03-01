@@ -549,6 +549,8 @@
                           ✨
                         } @else if (tile.bonus === 'speed') {
                           ⚡
+                        } @else if (tile.bonus === 'prime') {
+                          💎
                         }
                       </span>
                       <span class="text-sm font-bold text-white uppercase tracking-wide">
@@ -577,6 +579,11 @@
                       } @else if (tile.bonus === 'speed') {
                         Increases
                         <span class="text-lime-400 font-bold">Attack Speed</span>
+                        .
+                      } @else if (tile.bonus === 'prime') {
+                        <span class="text-teal-400 font-bold">Prime Node</span>
+                        : Balanced boost to
+                        <span class="text-white">Damage, Range, and Speed</span>
                         .
                       }
                     </div>

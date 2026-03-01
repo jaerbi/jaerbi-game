@@ -5,6 +5,7 @@ import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User, Auth } from 'firebase/auth';
 import { environmentFirebase } from '../../environments/environment.firebase';
 import { Difficulty, MapSize } from './settings.service';
+import { HARD_CAP } from './tower-defense-engine.service';
 
 export interface ScoreEntry {
     playerName: string;
@@ -316,9 +317,8 @@ export class FirebaseService {
 
         if (!user) return;
 
-        const HARD_CAP = 750;
-
         // Dynamic check: if more than HARD_CAP allows has arrived
+        // wave 128 = 750 (Max Cap)
         if (xp > HARD_CAP) {
             console.error(`Security Alert: XP Award Rejected. Attempted: ${xp}, Max Allowed: ${HARD_CAP}`);
             return;
@@ -329,14 +329,11 @@ export class FirebaseService {
             const current = this.masteryProfile() ?? { totalXp: 0, usedPoints: 0, upgrades: {}, completedLevelIds: [] };
 
             // Preventing XP re-farming for campaign levels
-            if (levelId && current.completedLevelIds?.includes(levelId)) {
-                console.warn(`XP skipped: Level ${levelId} already completed.`);
-                return;
-            }
+            const currentCompleted = current.completedLevelIds || [];
 
-            const nextCompleted = levelId && !current.completedLevelIds?.includes(levelId)
-                ? [...(current.completedLevelIds || []), levelId]
-                : current.completedLevelIds;
+            const nextCompleted = levelId && !currentCompleted.includes(levelId)
+                ? [...currentCompleted, levelId]
+                : currentCompleted;
 
             const next: MasteryProfile = {
                 totalXp: current.totalXp + xp,

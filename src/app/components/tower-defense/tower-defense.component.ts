@@ -785,6 +785,23 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
                             ctx.fillText('⚡', px + halfTile, py + halfTile);
+                        } 
+                        else if (t.bonus === 'prime') {
+                            const gradient = ctx.createLinearGradient(px, py, px + size, py + size);
+                            gradient.addColorStop(0, 'rgba(239, 68, 68, 0.2)'); 
+                            gradient.addColorStop(0.5, 'rgba(250, 204, 21, 0.2)');
+                            gradient.addColorStop(1, 'rgba(59, 130, 246, 0.2)');
+                            ctx.fillStyle = gradient;
+                            ctx.strokeStyle = '#94a3b8';
+                            ctx.beginPath();
+                            ctx.roundRect(px + 4, py + 4, size - 8, size - 8, 8);
+                            ctx.fill();
+                            ctx.stroke();
+                            ctx.fillStyle = '#ffffff';
+                            ctx.font = `bold ${Math.floor(tile * 0.5)}px sans-serif`;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText('💎', px + halfTile, py + halfTile);
                         }
 
                         ctx.restore();
