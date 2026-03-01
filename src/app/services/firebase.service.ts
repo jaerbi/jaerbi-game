@@ -183,7 +183,8 @@ export class FirebaseService {
                         });
                     } else {
                         const data = bestSnap.data() as TowerDefenseScore;
-                        const shouldUpdate = typeof data?.maxWave !== 'number' || entry.maxWave > data.maxWave;
+                        const currentWave = Number(entry.maxWave);
+                        const shouldUpdate = typeof data?.maxWave !== 'number' || currentWave > data.maxWave;
                         if (shouldUpdate) {
                             await setDoc(bestRef, {
                                 userId: entry.userId,
@@ -386,5 +387,44 @@ export class FirebaseService {
             console.error('Error fetching balance logs: ', e);
             return [];
         }
+    }
+
+    async migrateHistoricalScores() {
+        // if (!this.db) return;
+        // console.log('🚀 Starting optimized migration...');
+
+        // try {
+        //     const snapshot = await getDocs(collection(this.db, 'towerDefenseLeaderboards'));
+        //     const allRuns = snapshot.docs.map(d => d.data() as TowerDefenseScore);
+
+        //     // Сортуємо: старі спочатку, щоб новіші рекорди перетирали їх
+        //     allRuns.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+
+        //     // Використовуємо локальний Map для збору найкращих результатів перед записом
+        //     const bestMap = new Map<string, TowerDefenseScore>();
+
+        //     for (const run of allRuns) {
+        //         if (!run.userId || !run.mapSize) continue;
+        //         const key = `${run.userId}_${run.mapSize}`;
+        //         const existing = bestMap.get(key);
+
+        //         if (!existing || run.maxWave >= existing.maxWave) {
+        //             bestMap.set(key, run);
+        //         }
+        //     }
+
+        //     console.log(`📊 Found ${bestMap.size} unique best scores to migrate.`);
+
+        //     // Записуємо результати
+        //     for (const [docId, bestData] of bestMap) {
+        //         const bestRef = doc(this.db, 'towerDefenseBestScores', docId);
+        //         await setDoc(bestRef, bestData);
+        //         console.log(`✅ Migrated: ${docId}`);
+        //     }
+
+        //     console.log('🎉 Migration complete!');
+        // } catch (error) {
+        //     console.error('❌ Migration failed:', error);
+        // }
     }
 }

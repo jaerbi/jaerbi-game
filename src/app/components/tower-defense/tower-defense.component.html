@@ -572,7 +572,7 @@
                         Increases gold gain.
                       } @else if (tile.bonus === 'mastery') {
                         Grants
-                        <span class="text-purple-400 font-bold">Damage Bonus</span>
+                        <span class="text-purple-400 font-bold">Abilities</span>
                         .
                       } @else if (tile.bonus === 'speed') {
                         Increases
@@ -1178,6 +1178,9 @@
           >
             UA
           </button>
+          <!-- <button (click)="firebase.migrateHistoricalScores()" class="opacity-10 hover:opacity-100">
+  Admin: Sync Data
+</button> -->
           <button
             (click)="settings.setLang('en')"
             class="cursor-pointer text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full transition-all"

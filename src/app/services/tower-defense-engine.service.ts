@@ -834,7 +834,7 @@ export class TowerDefenseEngineService {
         return 1;
     }
 
-    private triggerInfernoChainReaction(pos: Position, sourceDamage: number) {
+    private triggerInfernoChainReaction(pos: Position, sourceDamage: number, sourceTowerId: string) {
         const golden = this.getUpgradeLevel(5, 'golden');
         if (golden <= 0 || sourceDamage <= 0) return;
 
@@ -856,8 +856,8 @@ export class TowerDefenseEngineService {
                     explosionDamage,
                     5,
                     this.wave(),
-                    undefined,
-                    (id, amt) => this.recordDamage(id, amt, 5)
+                    sourceTowerId,
+                    this.recordDamage.bind(this)
                 );
                 enemy.burnedByInferno = true;
                 enemy.lastInfernoDamage = sourceDamage;
@@ -1034,13 +1034,13 @@ export class TowerDefenseEngineService {
 
             const venomDamage = this.damageService.processVenomTick(enemy, dt);
             if (venomDamage > 0) {
-                this.damageService.applyDamage(enemy, venomDamage, 7, this.wave());
+                this.damageService.applyDamage(enemy, venomDamage, 7, this.wave(), enemy.lastVenomSourceId, this.recordDamage.bind(this));
             }
 
             if (enemy.bleedDamagePerSec && enemy.bleedDamagePerSec > 0) {
                 const bleedDmg = this.damageService.processBleedTick(enemy, dt);
                 if (bleedDmg > 0) {
-                    this.damageService.applyDamage(enemy, bleedDmg, 4, this.wave());
+                    this.damageService.applyDamage(enemy, bleedDmg, 4, this.wave(), enemy.lastBleedSourceId, this.recordDamage.bind(this));
                 }
             }
         }
@@ -1159,13 +1159,14 @@ export class TowerDefenseEngineService {
                 const diedBurning = !!enemy.burnedByInferno;
                 const deathPos = { ...enemy.position };
                 const sourceDmg = enemy.lastInfernoDamage || 0;
+                const sourceId = enemy.lastInfernoSourceId || '';
                 if (diedBurning && sourceDmg > 0) {
-                    this.triggerInfernoChainReaction(deathPos, sourceDmg);
+                    this.triggerInfernoChainReaction(deathPos, sourceDmg, sourceId);
                 }
                 const deathMaxHp = enemy.maxHp;
                 this.enemiesInternal.splice(i, 1);
                 if (diedBurning) {
-                    this.triggerInfernoChainReaction(deathPos, deathMaxHp);
+                    this.triggerInfernoChainReaction(deathPos, deathMaxHp, sourceId);
                 }
 
                 const wave = this.wave();
@@ -1260,7 +1261,7 @@ export class TowerDefenseEngineService {
                 const dx = tX - (currentTarget.position.x + 0.5);
                 const dy = tY - (currentTarget.position.y + 0.5);
                 const distSq = dx * dx + dy * dy;
-                const baseRange = tower.type === 1 ? this.getEffectiveRange(tower) : tower.range;
+                const baseRange = tower.range;
                 let stickyRange = baseRange + HITBOX_OFFSET;
                 if (stickyTypes.includes(tower.type)) {
                     stickyRange += 0.5;
@@ -1277,7 +1278,7 @@ export class TowerDefenseEngineService {
             }
         }
 
-        const effRange = tower.type === 1 ? this.getEffectiveRange(tower) : tower.range;
+        const effRange = tower.range;
         const effectiveFiringRange = effRange + HITBOX_OFFSET;
         const rangeSq = effectiveFiringRange * effectiveFiringRange;
 
@@ -1316,14 +1317,6 @@ export class TowerDefenseEngineService {
         }
 
         return selectedEnemy;
-    }
-
-    getEffectiveRange(tower: Tower): number {
-        if (tower.type === 1) {
-            const golden = this.getUpgradeLevel(1, 'golden');
-            return tower.range * (1 + golden * 0.1);
-        }
-        return tower.range;
     }
 
     private applyStrategy(tower: Tower, candidates: any[]): Enemy {
@@ -1405,6 +1398,7 @@ export class TowerDefenseEngineService {
                     this.damageService.applyDamage(other, aoeDamage, 5, this.wave(), tower.id, this.recordDamage.bind(this));
                     other.burnedByInferno = true;
                     other.lastInfernoDamage = damage;
+                    other.lastInfernoSourceId = tower.id;
                 }
             }
 
@@ -1483,7 +1477,7 @@ export class TowerDefenseEngineService {
         }
 
         if (tower.type === 6 && tower.specialActive) {
-            this.damageService.applyDamage(enemy, damage, 6, this.wave());
+            this.damageService.applyDamage(enemy, damage, 6, this.wave(), tower.id, this.recordDamage.bind(this));
             const extraBeamsCount = 2;
             const tX = tower.position.x + 0.5;
             const tY = tower.position.y + 0.5;
@@ -1502,7 +1496,7 @@ export class TowerDefenseEngineService {
 
             extraTargets.forEach(target => {
                 const secondaryDmg = Math.floor(damage * 0.5);
-                this.damageService.applyDamage(target, secondaryDmg, 6, this.wave());
+                this.damageService.applyDamage(target, secondaryDmg, 6, this.wave(), tower.id, this.recordDamage.bind(this));
             });
         } else if (tower.type === 6) {
             tower.extraTargetIds = [];
@@ -1709,13 +1703,13 @@ export class TowerDefenseEngineService {
                 const rangeLevel = this.getUpgradeLevel(tier, 'range');
                 const goldenLevel = this.getUpgradeLevel(tier, 'golden');
                 let damageMultiplier = 1 + dmgLevel * 0.05;
-                let rangeBonus = rangeLevel * 0.1;
+                let rangeBonus = rangeLevel * 0.05;
 
                 // Apply Tile Bonuses
                 if (tile.bonus === 'damage') {
-                    damageMultiplier += 0.2; // +20% Damage
+                    damageMultiplier += 0.2;
                 } else if (tile.bonus === 'range') {
-                    rangeBonus += 0.5; // +0.5 Range
+                    rangeBonus += 1;
                 } else if (tile.bonus === 'mastery') {
                     damageMultiplier += 0.1;
                 }

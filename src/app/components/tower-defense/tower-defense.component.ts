@@ -385,7 +385,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
         const tower = tile.tower;
         const tileSize = this.tdEngine.tileSize;
-        const range = tower.type === 1 ? this.tdEngine.getEffectiveRange(tower) : tower.range;
+        const range = tower.range;
         const size = range * 2 * tileSize;
         return {
             left: `${tower.position.x * tileSize + tileSize / 2}px`,
@@ -1300,7 +1300,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const t = tileSel.tower;
         const cx = t.position.x * tile + tile / 2;
         const cy = t.position.y * tile + tile / 2;
-        const baseRange = t.type === 1 ? this.tdEngine.getEffectiveRange(t) : t.range;
+        const baseRange = t.range;
         const radius = (baseRange + HITBOX_OFFSET) * tile;
         ctx.save();
         ctx.beginPath();

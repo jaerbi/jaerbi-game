@@ -70,6 +70,7 @@ export interface Enemy {
     type?: 'tank' | 'scout' | 'standard' | 'boss';
     burnedByInferno?: boolean;
     lastInfernoDamage?: number;
+    lastInfernoSourceId?: string;
     prismVulnerableTime?: number;
     progressScore?: number;
     venomStacks?: number;
@@ -77,7 +78,9 @@ export interface Enemy {
     venomTickTimer?: number;
     venomBaseDamage?: number;
     venomSlowActive?: boolean;
+    lastVenomSourceId?: string;
     bleedDamagePerSec?: number;
+    lastBleedSourceId?: string;
     isMagma?: boolean;
     isMirror?: boolean;
     isSlime?: boolean;
