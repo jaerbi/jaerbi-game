@@ -395,6 +395,7 @@ export class WaveAnalyticsService {
             case 5: return { isMagma: true };      // Type 5 (Inferno) -> isMagma
             case 6: return { isMirror: true };     // Type 6 (Prism) -> isMirror
             case 7: return { isSlime: true };      // Type 7 (Venom) -> isSlime
+            case 8: return { isAgile: true };      // Type 8 (Earthquake) -> neutral
             default: return {};
         }
     }
@@ -409,7 +410,9 @@ export class WaveAnalyticsService {
             case 4: return isUk ? 'Кат' : 'Executioner';
             case 5: return isUk ? 'Інферно' : 'Inferno';
             case 6: return isUk ? 'Призматичний промінь' : 'Prism Beam';
-            default: return isUk ? 'Нейротоксин' : 'Neurotoxin';
+            case 7: return isUk ? 'Нейротоксин' : 'Neurotoxin';
+            case 8: return isUk ? 'Землетрус' : 'Earthquake';
+            default: return isUk ? 'Вежа' : 'Tower';
         }
     }
 }

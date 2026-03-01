@@ -176,6 +176,9 @@ export type TranslationKey =
     | 'T7_NAME'
     | 'T7_GOLDEN_TITLE'
     | 'T7_GOLDEN_DESC'
+    | 'T8_NAME'
+    | 'T8_GOLDEN_TITLE'
+    | 'T8_GOLDEN_DESC'
     | 'GOLD_MASTERY'
     | 'GOLD_MASTERY_INFO'
     | 'THANK_SUPPORTING'
@@ -388,6 +391,18 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     T7_GOLDEN_DESC: {
         en: 'Neurotoxin causes stronger slow and heavier stacking poison over time.',
         uk: 'Нейротоксин сильніше сповільнює та посилює накопичення отрути з часом.',
+    },
+    T8_NAME: {
+        en: 'Tier 8 – Earthquake',
+        uk: 'Тир 8 – Землетрус',
+    },
+    T8_GOLDEN_TITLE: {
+        en: 'Tectonic Rift',
+        uk: 'Тектонічний розлом',
+    },
+    T8_GOLDEN_DESC: {
+        en: 'Seismic waves strike additional targets, creating a chain reaction of knockbacks.',
+        uk: 'Сейсмічні хвилі вражають додаткові цілі, створюючи ланцюгову реакцію відкидання.',
     },
     FINAL_STRIKE: {
         en: 'Executioner’s Strike',

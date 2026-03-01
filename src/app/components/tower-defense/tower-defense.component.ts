@@ -467,12 +467,13 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                     type === 4 ? '#ef4444' :
                         type === 5 ? '#ee822a' :
                             type === 6 ? '#22d3ee' :
-                                '#84cc16';
+                                type === 7 ? '#84cc16' :
+                                    '#a16207';
     }
 
     getDamageStatsView() {
         const stats = this.tdEngine.statsByTowerType();
-        const list = [1, 2, 3, 4, 5, 6, 7].map(type => ({
+        const list = [1, 2, 3, 4, 5, 6, 7, 8].map(type => ({
             type,
             name: this.getTowerName(type),
             color: this.getTowerColor(type),
@@ -785,10 +786,10 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
                             ctx.fillText('⚡', px + halfTile, py + halfTile);
-                        } 
+                        }
                         else if (t.bonus === 'prime') {
                             const gradient = ctx.createLinearGradient(px, py, px + size, py + size);
-                            gradient.addColorStop(0, 'rgba(239, 68, 68, 0.2)'); 
+                            gradient.addColorStop(0, 'rgba(239, 68, 68, 0.2)');
                             gradient.addColorStop(0.5, 'rgba(250, 204, 21, 0.2)');
                             gradient.addColorStop(1, 'rgba(59, 130, 246, 0.2)');
                             ctx.fillStyle = gradient;
@@ -904,7 +905,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                         type === 4 ? '#ef4444' :
                             type === 5 ? '#ee822a' :
                                 type === 6 ? '#22d3ee' :
-                                    '#84cc16';
+                                    type === 7 ? '#84cc16' :
+                                        '#a16207';
 
         const lineWidth = 2.5;
         const lv = Math.max(1, Math.min(4, level || 1));
@@ -974,6 +976,31 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.lineTo(cx - r, cy - r * thickness);
             ctx.lineTo(cx - r * thickness, cy - r * thickness);
             ctx.closePath();
+        } else if (type === 8) {
+            const r = baseSize * 0.5;
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8 - Math.PI / 2;
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+        }
+        else if (type === 9) {
+            ctx.fillStyle = '#a16207';
+            const r = baseSize * 0.5;
+            ctx.beginPath();
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8 - Math.PI / 2;
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
         }
 
         if (lv >= 2) {
@@ -1233,6 +1260,28 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const towers = this.tdEngine.getTowersRef();
 
         for (const p of projs) {
+            if (p.isExplosion && !p.isBeam) {
+                const currentGridX = p.from.x + (p.to.x - p.from.x) * p.progress;
+                const currentGridY = p.from.y + (p.to.y - p.from.y) * p.progress;
+                const cx = currentGridX * tile;
+                const cy = currentGridY * tile;
+                // const radius = 6 + 10 * p.progress;
+                const radius = 4 + 14 * p.progress;
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                ctx.strokeStyle = '#78350f';
+                ctx.lineWidth = 4 * (1 - p.progress);
+                ctx.globalAlpha = Math.max(0, 0.8 * (1 - p.progress));
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius * 0.6, 0, Math.PI * 2);
+                ctx.strokeStyle = '#a16207';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.restore();
+                continue;
+            }
             if (p.isBeam) {
                 ctx.save();
                 ctx.beginPath();
@@ -1258,8 +1307,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             const type = tower ? tower.type : 1;
             const x = p.from.x + (p.to.x - p.from.x) * p.progress;
             const y = p.from.y + (p.to.y - p.from.y) * p.progress;
-            const cx = x * tile;
-            const cy = y * tile;
+            const cx = x * tile + tile / 2;
+            const cy = y * tile + tile / 2;
 
             ctx.beginPath();
             let color = '#fbbf24';
@@ -1284,6 +1333,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                     }
                     break;
                 case 7: color = '#84cc16'; break;
+                case 8: color = '#78350f'; size = 4; break;
             }
 
             ctx.fillStyle = color;
@@ -1373,21 +1423,11 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const rect = this.gameCanvas?.nativeElement.getBoundingClientRect();
         if (!rect) return;
 
-        // Transform screen coordinates to canvas coordinates
-        // getBoundingClientRect returns the visual box relative to viewport.
-        // event.clientX/Y is also relative to viewport.
-
-        // Calculate offset within the visual canvas
         const offsetX = event.clientX - rect.left;
         const offsetY = event.clientY - rect.top;
-
-        // Since the canvas is scaled, we divide by the current zoom level to get internal coordinates.
-        // We assume uniform scaling (zoomLevel applies to both X and Y).
         const scale = this.zoomLevel();
-
         const canvasX = offsetX / scale;
         const canvasY = offsetY / scale;
-
         const tile = this.tdEngine.tileSize;
         const x = Math.floor(canvasX / tile);
         const y = Math.floor(canvasY / tile);
@@ -1397,8 +1437,6 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     // Zoom & Pan Handlers
     onWheel(event: WheelEvent) {
         event.preventDefault();
-        // Zoom towards center (simplified) or pointer?
-        // For now, center zoom is safer with simple translate/scale.
         const delta = event.deltaY > 0 ? 0.9 : 1.1;
         const newZoom = Math.max(0.5, Math.min(3, this.zoomLevel() * delta));
         this.zoomLevel.set(newZoom);

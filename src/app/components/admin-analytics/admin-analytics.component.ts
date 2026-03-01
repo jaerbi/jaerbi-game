@@ -48,6 +48,7 @@ interface TowerStats {
             >
               <option value="0.0.2">0.0.2</option>
               <option value="0.0.3">0.0.3</option>
+              <option value="0.0.3">0.0.4</option>
             </select>
           </div>
           
@@ -133,7 +134,7 @@ interface TowerStats {
   `
 })
 export class AdminAnalyticsComponent implements OnInit {
-  currentVersion = signal('0.0.3');
+  currentVersion = signal('0.0.4');
   loading = signal(false);
   stats = signal<TowerStats[]>([]);
   sortField = signal<keyof TowerStats>('pickRate');
@@ -201,7 +202,7 @@ export class AdminAnalyticsComponent implements OnInit {
 
     // 3. Aggregate
     const results: TowerStats[] = [];
-    const towerTypes = [1, 2, 3, 4, 5, 6, 7];
+    const towerTypes = [1, 2, 3, 4, 5, 6, 7, 8];
 
     for (const type of towerTypes) {
         const typeLogs = grouped.get(type) || [];
@@ -252,6 +253,7 @@ export class AdminAnalyticsComponent implements OnInit {
     //     case 5: return 'Inferno';
     //     case 6: return 'Prism';
     //     case 7: return 'Venom';
+    //     case 8: return 'Earthquake';
     //     default: return 'Unknown';
     // }
   }
@@ -265,6 +267,7 @@ export class AdminAnalyticsComponent implements OnInit {
         case 5: return '🔥';
         case 6: return '🌈';
         case 7: return '☠️';
+        case 8: return '🌋';
         default: return '❓';
     }
   }

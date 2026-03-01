@@ -10,16 +10,17 @@ import { CampaignService, LevelConfig } from './campaign.service';
 export const HITBOX_OFFSET = 0.4;
 export const HARD_CAP = 750;
 // Immutable Constants for Security
-const TOWER_COSTS = [15, 50, 400, 600, 250, 450, 500] as const;
+const TOWER_COSTS = [15, 50, 400, 600, 250, 450, 500, 850] as const;
 
 const TIER_STATS = [
     { damage: 5, range: 1.5, fireInterval: 0.5 },
-    { damage: 12, range: 2.5, fireInterval: 0.65 },
+    { damage: 12, range: 2, fireInterval: 0.7 },
     { damage: 78, range: 1.5, fireInterval: 1 },
     { damage: 250, range: 3, fireInterval: 4.5 },
     { damage: 66, range: 1.5, fireInterval: 2.5 },
-    { damage: 35, range: 2, fireInterval: 0.2 },
-    { damage: 54, range: 1.5, fireInterval: 1 }
+    { damage: 38, range: 2, fireInterval: 0.2 },
+    { damage: 59, range: 1.6, fireInterval: 1 },
+    { damage: 22, range: 1.5, fireInterval: 2.5 }
 ] as const;
 
 import { WaveAnalyticsService } from './wave-analytics.service';
@@ -55,7 +56,7 @@ export class TowerDefenseEngineService {
     currentQuoteKey = signal<TranslationKey>('GAME_OVER_INFO_1');
 
     currentLevelConfig = signal<LevelConfig | null>(null);
-    allowedTowers = signal<number[]>([1, 2, 3, 4, 5, 6, 7]);
+    allowedTowers = signal<number[]>([1, 2, 3, 4, 5, 6, 7, 8]);
     public isFirstTimeClear = false;
 
     private enemiesInternal: Enemy[] = [];
@@ -260,7 +261,7 @@ export class TowerDefenseEngineService {
             if (buildableTiles.length > 0) {
                 const randomPos = buildableTiles[Math.floor(Math.random() * buildableTiles.length)];
                 const bonuses: ('damage' | 'range' | 'speed' | 'bounty' | 'mastery' | 'prime')[] =
-                    ['damage', 'range', 'speed',  'bounty', 'mastery', 'prime'];
+                    ['damage', 'range', 'speed', 'bounty', 'mastery', 'prime'];
 
                 const randomBonus = bonuses[Math.floor(Math.random() * bonuses.length)];
 
@@ -349,10 +350,10 @@ export class TowerDefenseEngineService {
     private setupRandomGame() {
         this.currentLevelConfig.set(null);
         this.gameMode.set('random');
-        this.allowedTowers.set([1, 2, 3, 4, 5, 6, 7]);
+        this.allowedTowers.set([1, 2, 3, 4, 5, 6, 7, 8]);
         this.isFirstTimeClear = false;
 
-        let startMoney = 55;
+        let startMoney = 55000;
         if (this.isHardMode()) {
             startMoney = 40;
         }
@@ -420,7 +421,7 @@ export class TowerDefenseEngineService {
             description: 'Procedurally generated zone.',
             waveCount: 999,
             startingGold: startMoney,
-            allowedTowers: [1, 2, 3, 4, 5, 6, 7],
+            allowedTowers: [1, 2, 3, 4, 5, 6, 7, 8],
             mapLayout: 'random',
             difficulty: this.isHardMode() ? 'hard' : 'normal',
             xpReward: 0,
@@ -446,21 +447,15 @@ export class TowerDefenseEngineService {
 
     private getGoldKillMultiplier(): number {
         const level = this.getGoldMasteryLevel();
+
         if (level <= 0) return 1;
 
-        // Stage 1 (1-7 рівні): +3% за рівень (було 5)
         const stage1 = Math.min(level, 7);
-
-        // Stage 2 (8-14 рівні): +5% за рівень (було 10)
         const stage2 = Math.max(0, Math.min(level - 7, 7));
-
-        // Stage 3 (15+ рівні): +7% за рівень (було 15)
         const stage3 = Math.max(0, level - 14);
-
         const bonus = (stage1 * 0.03) + (stage2 * 0.05) + (stage3 * 0.07);
 
-        // Додаємо Hard Cap: бонус не може перевищувати +200% (тобто множник макс 3.0)
-        // Навіть якщо рівень дуже високий, економіка не зламається.
+
         return Math.min(1 + bonus, 3.0);
     }
 
@@ -928,7 +923,7 @@ export class TowerDefenseEngineService {
             hpMultiplier = 3.0 * Math.pow(1.15, w);
         }
 
-        const hp = 50 * hpMultiplier;
+        const hp = 500 * hpMultiplier;
 
         // Apply Level Specific Multiplier
         let levelMultiplier = 1;
@@ -1396,7 +1391,7 @@ export class TowerDefenseEngineService {
 
     // Renamed to internalFireAt to avoid conflict if any, or just update logic
     private fireAt(tower: Tower, enemy: Enemy) {
-        if (tower.type !== 6 && tower.type !== 4) {
+        if (tower.type !== 6 && tower.type !== 4 && tower.type !== 8) {
             const proj: Projectile = {
                 id: 'p' + (this.projectileIdCounter++),
                 from: { x: tower.position.x + 0.5, y: tower.position.y + 0.5 },
@@ -1444,7 +1439,52 @@ export class TowerDefenseEngineService {
                 );
                 this.infernoZones.push(napalmZone);
             }
-        } else if (tower.type === 7) {
+        }
+        else if (tower.type === 8) {
+            const pushBackAmount = 0.5;
+            const golden = this.getUpgradeLevel(8, 'golden');
+            const extraCount = 2 + (golden * 2);
+            this.applyEarthquakeEffect(enemy, pushBackAmount, damage, tower);
+
+            this.pushProjectile({
+                id: 'p' + (this.projectileIdCounter++),
+                from: { x: tower.position.x + 0.5, y: tower.position.y + 0.5 },
+                to: { x: enemy.position.x + 0.5, y: enemy.position.y + 0.5 },
+                progress: 0,
+                speedMultiplier: 0.6,
+                isExplosion: true
+            });
+
+            const rangeSq = (tower.range + 0.5) * (tower.range + 0.5);
+            const basePos = enemy.position;
+
+            const extraTargets = this.enemiesInternal
+                .filter(e => e.id !== enemy.id && e.hp > 0)
+                .filter(e => {
+                    const dx = tower.position.x + 0.5 - e.position.x;
+                    const dy = tower.position.y + 0.5 - e.position.y;
+                    return (dx * dx + dy * dy) <= rangeSq;
+                })
+                .sort((a, b) => {
+                    const distA = Math.hypot(basePos.x - a.position.x, basePos.y - a.position.y);
+                    const distB = Math.hypot(basePos.x - b.position.x, basePos.y - b.position.y);
+                    return distA - distB;
+                })
+                .slice(0, extraCount);
+
+            for (const t of extraTargets) {
+                this.applyEarthquakeEffect(t, pushBackAmount, damage, tower);
+                this.pushProjectile({
+                    id: 'p' + (this.projectileIdCounter++),
+                    from: { x: enemy.position.x + 0.5, y: enemy.position.y + 0.5 },
+                    to: { x: t.position.x + 0.5, y: t.position.y + 0.5 },
+                    progress: 0,
+                    speedMultiplier: 0.7,
+                    isExplosion: true
+                });
+            }
+        }
+        else if (tower.type === 7) {
             this.damageService.applyVenomStack(enemy, damage, tower.specialActive);
             this.damageService.applyDamage(enemy, damage, tower.type, this.wave(), tower.id, this.recordDamage.bind(this));
         } else if (tower.type !== 6 || !tower.specialActive) {
@@ -1569,6 +1609,16 @@ export class TowerDefenseEngineService {
 
             return;
         }
+    }
+
+    private applyEarthquakeEffect(e: Enemy, amount: number, dmg: number, tower: Tower) {
+        e.progress = Math.max(0, e.progress - amount);
+        if (e.progress < 0) {
+            const newAbs = Math.max(0, (e.pathIndex - 1) + e.progress);
+            e.pathIndex = Math.floor(newAbs);
+            e.progress = newAbs - e.pathIndex;
+        }
+        this.damageService.applyDamage(e, dmg, 8, this.wave(), tower.id, this.recordDamage.bind(this));
     }
 
     private updateProjectiles(dt: number) {
@@ -1845,6 +1895,10 @@ export class TowerDefenseEngineService {
             case 7:
                 return isUk ? 'Накладає ефекти отрути з поступовим зростанням шкоди'
                     : 'Applies venom stacks and poison DOT';
+            case 8:
+                return isUk
+                    ? 'Створює локальний землетрус, що відкидає ворогів назад.'
+                    : 'Creates a local earthquake that knocks enemies back.';
             default:
                 return isUk ? 'Стандартна вежа'
                     : 'Standard tower';

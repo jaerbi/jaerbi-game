@@ -7,7 +7,7 @@ export interface LevelConfig {
     description: string;
     waveCount: number;
     startingGold: number;
-    allowedTowers: number[]; // Array of tower types (1-7)
+    allowedTowers: number[]; // Array of tower types (1-8)
     mapLayout?: 'static' | 'random';
     difficulty: 'easy' | 'normal' | 'hard';
     xpReward: number;

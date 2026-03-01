@@ -1,6 +1,6 @@
 {
   "name": "shape-tactics",
-  "version": "2.7.19",
+  "version": "2.7.21",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
