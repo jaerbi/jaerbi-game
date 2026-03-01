@@ -14,6 +14,7 @@ import { CampaignService } from '../../services/campaign.service';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { WaveAnalyticsService } from '../../services/wave-analytics.service';
 import { TranslationKey } from '../../i18n/translations';
+import { DamageCalculationService } from '../../services/damage-calculation.service';
 
 @Component({
     selector: 'app-tower-defense',
@@ -239,6 +240,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         public router: Router,
         private cdr: ChangeDetectorRef,
         public campaignService: CampaignService,
+        private _damageCalculationService: DamageCalculationService,
         private _waveAnalyticsService: WaveAnalyticsService,
     ) {
         effect(() => {
@@ -988,19 +990,43 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         ctx.restore();
     }
 
+    // private drawFrostAuras(ctx: CanvasRenderingContext2D, tile: number) {
+    //     const towers = this.tdEngine.getTowersRef();
+    //     for (const t of towers) {
+    //         if (t.type === 1 && t.specialActive) {
+    //             const cx = t.position.x * tile + tile / 2;
+    //             const cy = t.position.y * tile + tile / 2;
+    //             const radius = 2 * tile;
+    //             ctx.beginPath();
+    //             ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    //             ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
+    //             ctx.fill();
+    //             ctx.lineWidth = 1
+    //             ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
+    //             ctx.stroke();
+    //         }
+    //     }
+    // }
     private drawFrostAuras(ctx: CanvasRenderingContext2D, tile: number) {
         const towers = this.tdEngine.getTowersRef();
+
+        const golden = this.tdEngine.getUpgradeLevel(1, 'golden');
+        const auraMultiplier = 1 + golden * 0.1;
+        const dynamicRadius = this._damageCalculationService.FROST_AURA_RADIUS_BASE * auraMultiplier * tile;
+
         for (const t of towers) {
             if (t.type === 1 && t.specialActive) {
                 const cx = t.position.x * tile + tile / 2;
                 const cy = t.position.y * tile + tile / 2;
-                const radius = 2 * tile;
                 ctx.beginPath();
-                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
+                ctx.arc(cx, cy, dynamicRadius, 0, Math.PI * 2);
+                ctx.fillStyle = golden > 0
+                    ? 'rgba(56, 189, 248, 0.1)'
+                    : 'rgba(56, 189, 248, 0.05)';
+
                 ctx.fill();
-                ctx.lineWidth = 1
-                ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
                 ctx.stroke();
             }
         }

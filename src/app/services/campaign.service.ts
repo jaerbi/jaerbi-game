@@ -175,13 +175,13 @@ export class CampaignService {
                     ? 'Вороги занадто живучі. Сповільніть їх, щоб вони згоріли.'
                     : 'Enemies are tough. Slow them down so they burn to ashes.',
                 waveCount: 20,
-                startingGold: 500,
+                startingGold: 350,
                 allowedTowers: [1, 5], // Ice, Inferno
                 mapLayout: 'static',
                 difficulty: 'hard',
                 xpReward: 40,
                 gridSize: 12,
-                healthMultiplier: 10.5, // Дуже живучі
+                healthMultiplier: 1.5, // Дуже живучі
                 enemyTypes: ['Standard', 'Tank', 'Scout'],
                 waveTypeSequence: [1, 1, 3, 1, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2],
                 bossCount: 4, // 5, 10, 15, 20
@@ -197,12 +197,7 @@ export class CampaignService {
                     { x: 2, y: 2, type: 'mastery' }, // norm
                     { x: 5, y: 5, type: 'damage' }, // norm
                     { x: 8, y: 8, type: 'speed' } // norm
-                ],
-                waveModifiers: {
-                    1: { count: 50 },
-                    2: { count: 50 },
-                    3: { count: 50 },
-                }
+                ]
             },
             {
                 id: 'level_5',
@@ -211,13 +206,13 @@ export class CampaignService {
                     ? 'Короткий шлях. Елітні вежі. Економіка вирішує все.'
                     : 'Short path. Elite towers. Economy is everything.',
                 waveCount: 25,
-                startingGold: 500000, // Only enough for one steeplechase
+                startingGold: 500, // Only enough for one steeplechase
                 allowedTowers: [4, 6, 7], // Sniper, Prism, Poison (High Tier)
                 mapLayout: 'static',
                 difficulty: 'hard',
                 xpReward: 50,
                 gridSize: 10,
-                healthMultiplier: 20.8,
+                healthMultiplier: 1.8,
                 enemyTypes: ['Tank', 'Scout', 'Standard'],
                 waveTypeSequence: [3, 3, 2, 3, 2, 1, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2],
                 bossCount: 5, // 5, 10, 15, 20, 25
@@ -231,12 +226,7 @@ export class CampaignService {
                     { x: 3, y: 4, type: 'damage' }, //Norm
                     { x: 4, y: 4, type: 'bounty' },//The key to victory is to place the first tower here.
                     { x: 1, y: 1, type: 'speed' } // Trap
-                ],
-                waveModifiers: {
-                    1: { count: 50 },
-                    2: { count: 50 },
-                    3: { count: 50 },
-                }
+                ]
             }
         ];
     }

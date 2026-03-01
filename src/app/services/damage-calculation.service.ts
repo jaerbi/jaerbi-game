@@ -182,7 +182,9 @@ export class DamageCalculationService {
         const auraMultiplier = 1 + golden * 0.1;
         const radius = this.FROST_AURA_RADIUS_BASE * auraMultiplier;
         const radiusSq = radius * radius;
-
+        for (const tower of frostTowers) {
+            (tower as any).currentAuraRadius = radius;
+        }
         const slowAmount = this.FROST_SLOW_BASE + golden * this.FROST_SLOW_PER_LEVEL;
         const slowMultiplier = Math.max(0.1, 1 - slowAmount);
 

@@ -143,6 +143,7 @@ export class FirebaseService {
         try {
             console.count('FIREBASE_CALL: saveTowerDefenseScore');
             let userTotalXp: number | undefined = undefined;
+            const querySize = entry.mapSize;
             if (entry.userId) {
                 try {
                     const ref = doc(this.db, 'towerDefenseMasteries', entry.userId);
@@ -162,6 +163,49 @@ export class FirebaseService {
                 timestamp: serverTimestamp()
             };
             await addDoc(collection(this.db, 'towerDefenseLeaderboards'), payload);
+
+            // Update personal bests collection
+            if (entry.userId) {
+                const bestId = `${entry.userId}_${querySize}`;
+                const bestRef = doc(this.db, 'towerDefenseBestScores', bestId);
+                try {
+                    const bestSnap = await getDoc(bestRef);
+                    if (!bestSnap.exists()) {
+                        await setDoc(bestRef, {
+                            userId: entry.userId,
+                            displayName: entry.displayName,
+                            maxWave: entry.maxWave,
+                            totalMoney: entry.totalMoney,
+                            mapSize: querySize,
+                            gridSize: entry.gridSize,
+                            userTotalXp,
+                            timestamp: serverTimestamp()
+                        });
+                    } else {
+                        const data = bestSnap.data() as TowerDefenseScore;
+                        const shouldUpdate = typeof data?.maxWave !== 'number' || entry.maxWave > data.maxWave;
+                        if (shouldUpdate) {
+                            await setDoc(bestRef, {
+                                userId: entry.userId,
+                                displayName: entry.displayName,
+                                maxWave: entry.maxWave,
+                                totalMoney: entry.totalMoney,
+                                mapSize: querySize,
+                                gridSize: entry.gridSize,
+                                userTotalXp,
+                                timestamp: serverTimestamp()
+                            }, { merge: true });
+                        } else {
+                            // Ensure displayName stays in sync even if not a new max
+                            if (data.displayName !== entry.displayName) {
+                                await setDoc(bestRef, { displayName: entry.displayName, timestamp: serverTimestamp() }, { merge: true });
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error updating best TD score: ', e);
+                }
+            }
         } catch (e) {
             console.error('Error adding TD score: ', e);
         }
@@ -171,32 +215,14 @@ export class FirebaseService {
         if (!this.db) return [];
         const querySize = `${size}x${size}`;
         try {
-            // First get raw list
             const q = query(
-                collection(this.db, 'towerDefenseLeaderboards'),
+                collection(this.db, 'towerDefenseBestScores'),
                 where('mapSize', '==', querySize),
                 orderBy('maxWave', 'desc'),
-                limit(limitCount * 4) // Fetch more to filter duplicates
+                limit(limitCount)
             );
             const querySnapshot = await getDocs(q);
-            const allScores = querySnapshot.docs.map(doc => doc.data() as TowerDefenseScore);
-
-            // Filter to keep only best per user
-            const bestPerUser = new Map<string, TowerDefenseScore>();
-            for (const s of allScores) {
-                if (!bestPerUser.has(s.userId)) {
-                    bestPerUser.set(s.userId, s);
-                } else {
-                    const existing = bestPerUser.get(s.userId)!;
-                    if (s.maxWave > existing.maxWave) {
-                        bestPerUser.set(s.userId, s);
-                    }
-                }
-            }
-
-            return Array.from(bestPerUser.values())
-                .sort((a, b) => b.maxWave - a.maxWave)
-                .slice(0, limitCount);
+            return querySnapshot.docs.map(docSnap => docSnap.data() as TowerDefenseScore);
 
         } catch (e) {
             console.error('Error fetching TD scores: ', e);
@@ -225,19 +251,11 @@ export class FirebaseService {
         if (!this.db) return null;
         const querySize = `${size}x${size}`;
         try {
-            const q = query(
-                collection(this.db, 'towerDefenseLeaderboards'),
-                where('userId', '==', userId),
-                where('mapSize', '==', querySize),
-                orderBy('maxWave', 'desc'),
-                orderBy('timestamp', 'desc'),
-                limit(1)
-            );
-            const querySnapshot = await getDocs(q);
-            if (querySnapshot.empty) {
-                return null;
-            }
-            return querySnapshot.docs[0].data() as TowerDefenseScore;
+            const bestId = `${userId}_${querySize}`;
+            const ref = doc(this.db, 'towerDefenseBestScores', bestId);
+            const snap = await getDoc(ref);
+            if (!snap.exists()) return null;
+            return snap.data() as TowerDefenseScore;
         } catch {
             return null;
         }

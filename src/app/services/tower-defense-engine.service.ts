@@ -817,7 +817,7 @@ export class TowerDefenseEngineService {
         this.isPaused.set(false);
     }
 
-    private getUpgradeLevel(tier: number, kind: 'damage' | 'range' | 'golden'): number {
+    public getUpgradeLevel(tier: number, kind: 'damage' | 'range' | 'golden'): number {
         if (!this.areMasteriesActiveForWave(this.wave())) return 0;
         const profile = this.firebase.masteryProfile();
         if (!profile) return 0;
@@ -1717,11 +1717,10 @@ export class TowerDefenseEngineService {
                 } else if (tile.bonus === 'range') {
                     rangeBonus += 0.5; // +0.5 Range
                 } else if (tile.bonus === 'mastery') {
-                    // Mastery bonus logic can be applied here or in specific tower logic
-                    // For now, let's treat it as a small global buff for this tower
                     damageMultiplier += 0.1;
                 }
-
+                const isOnMasteryTile = tile.bonus === 'mastery';
+                const isSpecialActive = goldenLevel > 0 || isOnMasteryTile;
                 let finalFireInterval = stats.fireInterval;
                 if (tile.bonus === 'speed') {
                     finalFireInterval *= 0.65; // -35% Cooldown (35% faster)
@@ -1738,7 +1737,7 @@ export class TowerDefenseEngineService {
                     range: stats.range + rangeBonus,
                     fireInterval: finalFireInterval,
                     cooldown: 0,
-                    specialActive: false,
+                    specialActive: isSpecialActive,
                     strategy: 'first',
                     hasGolden: goldenLevel > 0,
                     description: this.getTowerDescription(tier)

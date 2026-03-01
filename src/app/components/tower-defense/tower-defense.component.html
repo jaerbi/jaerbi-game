@@ -443,13 +443,13 @@
                       <div class="flex flex-col italic">
                         <span class="text-[8px] text-slate-500 uppercase flex justify-center">Dmg</span>
                         <span class="text-xs font-bold text-rose-400 flex justify-center">
-                          {{ tile.tower.damage | abbreviateNumber }}
+                          {{ tile.tower.damage | number: '1.0-2' }}
                         </span>
                       </div>
                       <div class="flex flex-col italic">
                         <span class="text-[8px] text-slate-500 uppercase flex justify-center">Rng</span>
                         <span class="text-xs font-bold text-sky-400 flex justify-center">
-                          {{ tile.tower.range | abbreviateNumber }}
+                          {{ tile.tower.range | number: '1.0-2' }}
                         </span>
                       </div>
                       <div class="flex flex-col italic">
@@ -459,7 +459,7 @@
                       <div class="flex flex-col italic">
                         <span class="text-[8px] text-slate-500 uppercase flex justify-center">Spd</span>
                         <span class="text-xs font-bold text-lime-400 flex justify-center">
-                          {{ tile.tower.fireInterval | abbreviateNumber }}
+                          {{ tile.tower.fireInterval | number: '1.0-2' }}
                         </span>
                       </div>
                     </div>
@@ -636,16 +636,16 @@
                     </div>
                     <div class="flex justify-between">
                       <span class="text-xs text-slate-500">{{ settings.t('DAMAGE') }}</span>
-                      <span class="text-xs font-bold text-rose-400">{{ tile.tower.damage | abbreviateNumber }}</span>
+                      <span class="text-xs font-bold text-rose-400">{{ tile.tower.damage | number: '1.0-2' }}</span>
                     </div>
                     <div class="flex justify-between">
                       <span class="text-xs text-slate-500">{{ settings.t('RANGE') }}</span>
-                      <span class="text-xs font-bold text-sky-400">{{ tile.tower.range | abbreviateNumber }}</span>
+                      <span class="text-xs font-bold text-sky-400">{{ tile.tower.range | number: '1.0-2' }}</span>
                     </div>
                     <div class="flex justify-between col-span-2">
                       <span class="text-xs text-slate-500">{{ settings.t('SPEED') }}</span>
                       <span class="text-xs font-bold text-lime-400">
-                        {{ tile.tower.fireInterval | abbreviateNumber }}
+                        {{ tile.tower.fireInterval | number: '1.0-2' }}
                       </span>
                     </div>
                   </div>
