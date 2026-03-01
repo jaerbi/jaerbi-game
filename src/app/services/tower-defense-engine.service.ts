@@ -1720,7 +1720,6 @@ export class TowerDefenseEngineService {
                     damageMultiplier += 0.1;
                 }
                 const isOnMasteryTile = tile.bonus === 'mastery';
-                const isSpecialActive = goldenLevel > 0 || isOnMasteryTile;
                 let finalFireInterval = stats.fireInterval;
                 if (tile.bonus === 'speed') {
                     finalFireInterval *= 0.65; // -35% Cooldown (35% faster)
@@ -1737,7 +1736,7 @@ export class TowerDefenseEngineService {
                     range: stats.range + rangeBonus,
                     fireInterval: finalFireInterval,
                     cooldown: 0,
-                    specialActive: isSpecialActive,
+                    specialActive: isOnMasteryTile,
                     strategy: 'first',
                     hasGolden: goldenLevel > 0,
                     description: this.getTowerDescription(tier)

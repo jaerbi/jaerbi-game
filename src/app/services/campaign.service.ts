@@ -69,6 +69,7 @@ export class CampaignService {
                 xpReward: 20,
                 gridSize: 10,
                 bountyMultiplier: 0.3,
+                masteriesEnabled: false,
                 healthMultiplier: 0.6,
                 enemyTypes: ['Standard', 'Scout'],
                 waveTypeSequence: [1, 1, 2, 1, 1, 2, 1, 1],
