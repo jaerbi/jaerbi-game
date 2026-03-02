@@ -144,6 +144,9 @@ export class TowerDefenseEngineService {
             }
             return;
         } else {
+            if (xpToAward > 0) {
+                await this.firebase.awardTowerDefenseXp(xpToAward, undefined, this.wave());
+            }
             const mapSizeLabel = this.gridSize === 20 ? '20x20' : '10x10';
             const payload = {
                 userId: user.uid,
