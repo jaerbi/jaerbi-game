@@ -1415,8 +1415,8 @@ export class TowerDefenseEngineService {
         if (tower.type !== 6 && tower.type !== 4 && tower.type !== 8) {
             const proj: Projectile = {
                 id: 'p' + (this.projectileIdCounter++),
-                from: { x: tower.position.x + 0.5, y: tower.position.y + 0.5 },
-                to: { x: enemy.position.x + 0.5, y: enemy.position.y + 0.5 },
+                from: { x: tower.position.x, y: tower.position.y },
+                to: { x: enemy.position.x, y: enemy.position.y },
                 progress: 0,
                 speedMultiplier: this.getProjectileSpeedMultiplierForTower(tower)
             };
@@ -1677,7 +1677,7 @@ export class TowerDefenseEngineService {
     // Analytics
     private endGame(victory: boolean) {
         if (this.gameOver()) return;
-        
+
         this.gameOver.set(true);
         this.updateRandomQuote();
         this.isWaveInProgress.set(false);

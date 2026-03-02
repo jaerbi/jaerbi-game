@@ -88,7 +88,7 @@ export class CampaignService {
                 ],
                 waveModifiers: {
                     2: { count: 14, traits: [{ property: 'isFrost', chance: 0.2 }] },
-                    3: { count: 15, traits: [{ property: 'isFrost', chance: 0.8 }] },
+                    3: { count: 17, traits: [{ property: 'isFrost', chance: 0.8 }] },
                     5: { count: 20, traits: [{ property: 'isFrost', chance: 0.4 }] },
                     6: { count: 25, traits: [{ property: 'isFrost', chance: 1 }] },
                     7: { count: 35, traits: [{ property: 'isFrost', chance: 0.8 }] },
