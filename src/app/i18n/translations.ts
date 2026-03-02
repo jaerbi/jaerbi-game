@@ -211,6 +211,8 @@ export type TranslationKey =
     | 'SYSTEM_ALERT_ADAPT'
     | 'EFFICIENCY_OF'
     | 'DECREASED_BY'
+    | 'TACTICAL_ADVICE'
+    | 'USE_STRATEGY_HINT'
     | 'GAME_OVER_INFO_19'
     | 'GAME_OVER_INFO_18'
     | 'GAME_OVER_INFO_17'
@@ -274,6 +276,14 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     DECREASED_BY: {
         en: 'armored against this type. Seek vulnerability.',
         uk: 'адаптувалися до цього типу. Шукайте слабку зону.'
+    },
+    USE_STRATEGY_HINT: {
+        en: 'Try bypassing defenses with',
+        uk: 'Спробуйте обійти захист за допомогою'
+    },
+    TACTICAL_ADVICE: {
+        en: 'Tactical Advice',
+        uk: 'Тактичні поради'
     },
     SHIELDS: { en: 'Shields', uk: `Щити` },
     CREDITS: { en: 'Credits', uk: `Кредити` },

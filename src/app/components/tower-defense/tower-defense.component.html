@@ -137,9 +137,7 @@
         </div>
 
         @if (false) {
-          <div
-            class="bg-slate-950/40 backdrop-blur-md p-1 rounded-2xl border border-white/10 flex shadow-xl"
-          >
+          <div class="bg-slate-950/40 backdrop-blur-md p-1 rounded-2xl border border-white/10 flex shadow-xl">
             <button
               (click)="setGameMode('random')"
               [class.bg-sky-500]="tdEngine.gameMode() === 'random'"
@@ -328,6 +326,7 @@
                   {{ settings.t('EFFICIENCY_OF') }}
                   <span class="text-rose-400 font-bold tracking-wider">{{ strategy.name }}</span>
                 </div>
+
                 <div
                   class="text-sky-400 font-semibold uppercase tracking-tight flex items-center gap-1"
                   [class.text-[8px]]="windowWidth() < 768"
@@ -335,6 +334,29 @@
                 >
                   <span class="w-1 h-1 bg-sky-400 rounded-full animate-pulse"></span>
                   {{ settings.t('DECREASED_BY') }}
+                </div>
+
+                <div class="mt-1 pt-1 border-t border-slate-800/50 flex flex-col" *ngIf="strategy.recommendedTower">
+                  <div
+                    class="text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1"
+                    [class.text-[8px]]="windowWidth() < 768"
+                    [class.text-[10px]]="windowWidth() >= 768"
+                  >
+                    <span class="text-xs">⚡</span>
+                    {{ settings.t('TACTICAL_ADVICE') || 'Tactical Advice' }}:
+                  </div>
+                  <div
+                    class="text-slate-200 font-medium italic"
+                    [class.text-[10px]]="windowWidth() < 768"
+                    [class.text-[12px]]="windowWidth() >= 768"
+                  >
+                    {{ settings.t('USE_STRATEGY_HINT') }}
+                    <span
+                      class="text-emerald-400 font-bold not-italic underline decoration-emerald-500/30 underline-offset-2"
+                    >
+                      {{ strategy.recommendedTower }}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -531,7 +553,7 @@
                         <button
                           (click)="upgradeTower()"
                           [disabled]="tdEngine.money() < tdEngine.getUpgradeCost(tile.tower)"
-                          class="flex-1 min-w-30 py-1 bg-emerald-600  disabled:bg-slate-700 disabled:text-slate-500 rounded-lg text-[10px] font-bold uppercase flex justify-between px-2 items-center"
+                          class="flex-1 min-w-30 py-1 bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-500 rounded-lg text-[10px] font-bold uppercase flex justify-between px-2 items-center"
                         >
                           <span class="text-xs uppercase">{{ settings.t('UPGRADE') }}</span>
                           <span class="font-mono">{{ tdEngine.getUpgradeCost(tile.tower) }}</span>

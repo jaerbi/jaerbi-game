@@ -659,7 +659,7 @@ export class TowerDefenseEngineService {
         }
 
         this.wave.update(w => w + 1);
-        if (this.wave() > 1 && this.wave() % 10 === 0) {
+        if (this.gameMode() !== 'campaign' && this.wave() > 1 && this.wave() % 10 === 0) {
             this.spawnRandomBonusTile();
         }
         this.isWaveInProgress.set(true);

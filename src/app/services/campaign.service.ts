@@ -87,12 +87,13 @@ export class CampaignService {
                     { x: 7, y: 5, type: 'range' }   // Trap: Looks nice, but it's too far from the entrance for the Turret
                 ],
                 waveModifiers: {
-                    2: { count: 14, traits: [{ property: 'isFrost', chance: 0.2 }] },
-                    3: { count: 17, traits: [{ property: 'isFrost', chance: 0.8 }] },
-                    5: { count: 20, traits: [{ property: 'isFrost', chance: 0.4 }] },
+                    1: { count: 9},
+                    2: { count: 14, traits: [{ property: 'isFrost', chance: 0.1 }] },
+                    3: { count: 20, traits: [{ property: 'isFrost', chance: 0.8 }] },
+                    5: { count: 18, traits: [{ property: 'isFrost', chance: 0.4 }] },
                     6: { count: 25, traits: [{ property: 'isFrost', chance: 1 }] },
-                    7: { count: 35, traits: [{ property: 'isFrost', chance: 0.8 }] },
-                    8: { count: 40, traits: [{ property: 'isFrost', chance: 1 }] },
+                    7: { count: 33, traits: [{ property: 'isFrost', chance: 0.8 }] },
+                    8: { count: 38, traits: [{ property: 'isFrost', chance: 1 }] },
                 }
             },
             {
@@ -110,6 +111,7 @@ export class CampaignService {
                 gridSize: 12,
                 healthMultiplier: 1.1,
                 bountyMultiplier: 0.5,
+                masteriesEnabled: false,
                 enemyTypes: ['Standard', 'Tank'],
                 waveTypeSequence: [1, 1, 2, 3, 1, 2, 3, 1, 1, 3, 1, 3],
                 bossCount: 2, // Wave 6 and 12
@@ -127,17 +129,18 @@ export class CampaignService {
                     { x: 7, y: 5, type: 'bounty' }  // For the greedy
                 ],
                 waveModifiers: {
+                    1: { count: 9 },
                     2: { count: 14, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.2 }] },
-                    3: { count: 18, traits: [{ property: 'isFrost', chance: 0.8 }, { property: 'isGrounded', chance: 0.2 }] },
+                    3: { count: 25, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.2 }] },
                     4: { count: 15 },
-                    5: { count: 20, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.4 }] },
-                    6: { count: 25, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.6 }] },
-                    7: { count: 25, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.5 }] },
+                    5: { count: 18, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.4 }] },
+                    6: { count: 30, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.6 }] },
+                    7: { count: 20, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.5 }] },
                     8: { count: 25, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.2 }] },
                     9: { count: 35, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.4 }] },
-                    10: { count: 30, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.4 }] },
+                    10: { count: 28, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.4 }] },
                     11: { count: 40, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.4 }] },
-                    12: { count: 50, traits: [{ property: 'isFrost', chance: 0.1 }, { property: 'isGrounded', chance: 0.8 }] },
+                    12: { count: 50, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.7 }] },
                 }
             },
             {

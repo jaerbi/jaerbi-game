@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { SettingsService } from './settings.service';
+import { DamageCalculationService } from './damage-calculation.service';
 
 @Injectable({
     providedIn: 'root'
@@ -12,14 +13,26 @@ export class WaveAnalyticsService {
     private lastReportedType: number | null = null;
 
     // Counter Strategy State
-    public activeCounterStrategy = signal<{ towerType: number; name: string; taunt: string } | null>(null);
+    public activeCounterStrategy = signal<{ towerType: number; name: string; taunt: string, recommendedTower: string, recommendedId: number } | null>(null);
     public consecutiveCounterWaves = 0;
     public currentWaveCounterType: number | null = null;
     public currentWaveCounterChance: number = 0;
     public currentDominanceRatio: number = 0;
     public BALANCE_VERSION: string = '0.0.4';
+    readonly COUNTER_RECOMMENDATIONS: Record<number, { id: number, name: string }> = {}
 
-    constructor(private _settings: SettingsService) { }
+    constructor(private _settings: SettingsService) {
+        this.COUNTER_RECOMMENDATIONS = {
+            1: { id: 5, name: this.getTowerName(5) },  // Frost (1) слабкий -> Треба Fire (5)
+            2: { id: 8, name: this.getTowerName(8) }, // Slime/Poison (2) слабкий -> Треба Earth (8) 
+            3: { id: 6, name: this.getTowerName(6) },     // Cannon (3) слабкий -> Треба Prism (6)
+            4: { id: 7, name: this.getTowerName(7) },     // Sniper (4) слабкий -> Треба Venom (7)
+            5: { id: 1, name: this.getTowerName(1) },     // Inferno (5) слабкий -> Треба Frost (1)
+            6: { id: 4, name: this.getTowerName(4) },    // Prism (6) слабкий -> Треба Sniper (4)
+            7: { id: 2, name: this.getTowerName(2) }, // Venom (7) слабкий -> Треба Lightning (2)
+            8: { id: 3, name: this.getTowerName(3) }      // Earth (8) слабкий -> Треба Cannon (3)
+        };
+    }
 
     /**
      * Checks if an enemy is resistant to a specific tower type.
@@ -330,19 +343,21 @@ export class WaveAnalyticsService {
                     `Ctrl + Z doesn't work here.`,
                     `Save game? Too late.`,
                 ];
-
+                const recommendation = this.COUNTER_RECOMMENDATIONS[type];
                 const taunt = taunts[Math.floor(Math.random() * taunts.length)];
 
                 this.activeCounterStrategy.set({
                     towerType: type,
                     name: towerNames[type],
-                    taunt
+                    taunt,
+                    recommendedTower: recommendation?.name || 'Unknown',
+                    recommendedId: recommendation?.id
                 });
 
                 this.lastMessageWave = wave;
                 this.lastReportedType = type;
 
-                setTimeout(() => this.activeCounterStrategy.set(null), 8000);
+                setTimeout(() => this.activeCounterStrategy.set(null), 10000);
             }
 
             this.currentWaveCounterType = type;

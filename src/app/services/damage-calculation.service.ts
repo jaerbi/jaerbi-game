@@ -38,7 +38,7 @@ export class DamageCalculationService {
 
     // Bleed 
     readonly BLEED_RATIO = 0.2;
-
+    
     constructor(private waveAnalytics: WaveAnalyticsService) { }
 
     /**
@@ -177,7 +177,7 @@ export class DamageCalculationService {
             (enemy.isAgile && towerType === 6) ||      // 3 Agile -> 6 Prism
             (enemy.isBulwark && towerType === 7) ||    // 4 Armored -> 7 Poison
             (enemy.isMagma && towerType === 1) ||      // 5 Magma -> 1 Ice
-            (enemy.isMirror && towerType === 4) ||     // 6 Mirror -> 4 Sniper
+            (enemy.isMirror && towerType === 4) ||     // 6 Prism -> 4 Sniper
             (enemy.isSlime && towerType === 2) ||      // 7 Slime -> 2 Lightning
             (enemy.isLevitating && towerType === 3);   // 8 Levitation -> 3 Cannon
 
