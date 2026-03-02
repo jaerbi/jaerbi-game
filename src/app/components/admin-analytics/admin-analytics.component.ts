@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FirebaseService } from '../../services/firebase.service';
 import { RouterLink } from '@angular/router';
 import { WaveAnalyticsService } from '../../services/wave-analytics.service';
+import { BALANCE_VERSION } from '../../services/tower-defense-engine.service';
 
 interface TowerStats {
   type: number;
@@ -134,7 +135,7 @@ interface TowerStats {
   `
 })
 export class AdminAnalyticsComponent implements OnInit {
-  currentVersion = signal('0.0.4');
+  currentVersion = signal(BALANCE_VERSION);
   loading = signal(false);
   stats = signal<TowerStats[]>([]);
   sortField = signal<keyof TowerStats>('pickRate');

@@ -237,9 +237,11 @@ export type TranslationKey =
     | 'GAME_OVER_INFO_24'
     | 'GAME_OVER_INFO_25'
     | 'GAME_OVER_INFO_26'
+    | 'CONFIRM_RESTART_MSG'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    CONFIRM_RESTART_MSG: { en: `Are you sure? This wave's progress and towers built will be lost.`, uk: `Ви впевнені? Прогрес цієї хвилі та побудовані вежі будуть втрачені.` },
     GAME_OVER_INFO_26: { en: 'Prediction confirmed. Player defeat.', uk: `Прогноз підтверджено. Поразка гравця.` },
     GAME_OVER_INFO_25: { en: 'Outcome: Suboptimal. Recommend retry.', uk: `Результат: субоптимальний. Рекомендовано повтор.` },
     GAME_OVER_INFO_24: { en: 'Defense integrity: 0%. Hope integrity: unknown.', uk: `Цілісність оборони: 0%. Цілісність надії: невідома.` },
@@ -266,9 +268,13 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     GAME_OVER_INFO_3: { en: 'Your defenses collapsed. Your resolve must not.', uk: `Оборона впала. Рішучість — ні.` },
     GAME_OVER_INFO_2: { en: 'Retry is the strongest upgrade.', uk: `Повтор — це найсильніше покращення.` },
     GAME_OVER_INFO_1: { en: 'Victory belongs to the persistent.', uk: `Перемога належить наполегливим.` },
-    EFFICIENCY_OF: { en: 'Efficiency of', uk: `Ефективність` },
-    DECREASED_BY: { en: 'decreased by 75%', uk: `знизилася на 75%` },
-    SYSTEM_ALERT_ADAPT: { en: 'System Alert: Adaptation', uk: `Системне сповіщення: Адаптація` },
+    SYSTEM_ALERT_ADAPT: { en: 'Strategic Adaptation', uk: 'Стратегічна Адаптація' },
+    EFFICIENCY_OF: { en: 'Analysis:', uk: 'Аналіз:' },
+    // Тепер це загальна фраза, яка натякає на зміну тактики
+    DECREASED_BY: {
+        en: 'armored against this type. Seek vulnerability.',
+        uk: 'адаптувалися до цього типу. Шукайте слабку зону.'
+    },
     SHIELDS: { en: 'Shields', uk: `Щити` },
     CREDITS: { en: 'Credits', uk: `Кредити` },
     ENGAGED: { en: 'In Battle', uk: `У бою` },

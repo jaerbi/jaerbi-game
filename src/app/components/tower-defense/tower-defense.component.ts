@@ -30,6 +30,13 @@ import { DamageCalculationService } from '../../services/damage-calculation.serv
       background: #0f172a;
       color: white;
     }
+    @keyframes scan {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    .animate-scan {
+        animation: scan 3s linear infinite;
+    }
     .td-grid {
       display: grid;
       grid-template-columns: repeat(10, 60px);
@@ -297,8 +304,21 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         this.tdEngine.resetEngine();
         this.router.navigate(['/']);
     }
+    canResetOrLeave(): boolean {
+        const hasTowers = this.tdEngine.getTowersRef().length > 0;
+        const isPlaying = this.tdEngine.isWaveInProgress();
+        const isGameOver = this.tdEngine.gameOver();
 
+        if (isGameOver) return true;
+
+        if (hasTowers || isPlaying) {
+            return confirm(this.settings.t('CONFIRM_RESTART_MSG'));
+        }
+        return true;
+    }
     onRestart() {
+        if (!this.canResetOrLeave()) return;
+
         if (this.tdEngine.gameMode() === 'campaign') {
             const config = this.tdEngine.currentLevelConfig();
             if (config) {

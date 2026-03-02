@@ -9,6 +9,7 @@ import { CampaignService, LevelConfig } from './campaign.service';
 
 export const HITBOX_OFFSET = 0.4;
 export const HARD_CAP = 750;
+export const BALANCE_VERSION = '0.0.4';
 // Immutable Constants for Security
 const TOWER_COSTS = [15, 50, 400, 600, 250, 450, 500, 850] as const;
 
@@ -247,29 +248,36 @@ export class TowerDefenseEngineService {
     }
     private spawnRandomBonusTile() {
         this.grid.update(grid => {
-            const buildableTiles: { x: number, y: number }[] = [];
+            const buildableTiles: { x: number, y: number, dist: number }[] = [];
+            const currentPath = this.path();
 
             for (let y = 0; y < this.gridSize; y++) {
                 for (let x = 0; x < this.gridSize; x++) {
                     const tile = grid[y][x];
-                    if (tile.type !== 'path' && !tile.bonus) {
-                        buildableTiles.push({ x, y });
+                    if (tile.type !== 'path' && !tile.bonus && !tile?.tower?.id) {
+                        let minDist = Infinity;
+                        for (const p of currentPath) {
+                            const d = Math.abs(p.x - x) + Math.abs(p.y - y);
+                            if (d < minDist) minDist = d;
+                        }
+                        buildableTiles.push({ x, y, dist: minDist });
                     }
                 }
             }
 
             if (buildableTiles.length > 0) {
-                const randomPos = buildableTiles[Math.floor(Math.random() * buildableTiles.length)];
+                buildableTiles.sort((a, b) => a.dist - b.dist);
+                const minAvailableDist = buildableTiles[0].dist;
+                const candidates = buildableTiles.filter(t => t.dist === minAvailableDist);
+                const chosen = candidates[Math.floor(Math.random() * candidates.length)];
                 const bonuses: ('damage' | 'range' | 'speed' | 'bounty' | 'mastery' | 'prime')[] =
                     ['damage', 'range', 'speed', 'bounty', 'mastery', 'prime'];
-
                 const randomBonus = bonuses[Math.floor(Math.random() * bonuses.length)];
-
-                grid[randomPos.y][randomPos.x].type = 'buildable';
-                grid[randomPos.y][randomPos.x].bonus = randomBonus;
-
-                console.log(`New bonus spawned at ${randomPos.x},${randomPos.y}: ${randomBonus}`);
+                grid[chosen.y][chosen.x].type = 'buildable';
+                grid[chosen.y][chosen.x].bonus = randomBonus;
+                console.log(`Bonus spawned at ${chosen.x},${chosen.y} (dist: ${chosen.dist}): ${randomBonus}`);
             }
+
             return [...grid];
         });
     }
@@ -353,7 +361,7 @@ export class TowerDefenseEngineService {
         this.allowedTowers.set([1, 2, 3, 4, 5, 6, 7, 8]);
         this.isFirstTimeClear = false;
 
-        let startMoney = 55000;
+        let startMoney = 55;
         if (this.isHardMode()) {
             startMoney = 40;
         }
@@ -923,7 +931,7 @@ export class TowerDefenseEngineService {
             hpMultiplier = 3.0 * Math.pow(1.15, w);
         }
 
-        const hp = 500 * hpMultiplier;
+        const hp = 50 * hpMultiplier;
 
         // Apply Level Specific Multiplier
         let levelMultiplier = 1;
@@ -1052,6 +1060,11 @@ export class TowerDefenseEngineService {
             enemy.speedModifier = 1;
             enemy.isFrozen = false;
 
+            if (enemy.cannonSlowTimer && enemy.cannonSlowTimer > 0) {
+                enemy.cannonSlowTimer -= dt;
+                enemy.speedModifier *= 0.8;
+                if (enemy.cannonSlowTimer < 0) enemy.cannonSlowTimer = 0;
+            }
             if (enemy.stunTime && enemy.stunTime > 0) {
                 enemy.stunTime = Math.max(0, enemy.stunTime - dt);
             }
@@ -1441,46 +1454,56 @@ export class TowerDefenseEngineService {
             }
         }
         else if (tower.type === 8) {
-            const pushBackAmount = 0.5;
+            const pushBackAmount = 1;
             const golden = this.getUpgradeLevel(8, 'golden');
             const extraCount = 2 + (golden * 2);
-            this.applyEarthquakeEffect(enemy, pushBackAmount, damage, tower);
 
-            this.pushProjectile({
-                id: 'p' + (this.projectileIdCounter++),
-                from: { x: tower.position.x + 0.5, y: tower.position.y + 0.5 },
-                to: { x: enemy.position.x + 0.5, y: enemy.position.y + 0.5 },
-                progress: 0,
-                speedMultiplier: 0.6,
-                isExplosion: true
-            });
-
-            const rangeSq = (tower.range + 0.5) * (tower.range + 0.5);
-            const basePos = enemy.position;
-
-            const extraTargets = this.enemiesInternal
-                .filter(e => e.id !== enemy.id && e.hp > 0)
-                .filter(e => {
-                    const dx = tower.position.x + 0.5 - e.position.x;
-                    const dy = tower.position.y + 0.5 - e.position.y;
-                    return (dx * dx + dy * dy) <= rangeSq;
-                })
-                .sort((a, b) => {
-                    const distA = Math.hypot(basePos.x - a.position.x, basePos.y - a.position.y);
-                    const distB = Math.hypot(basePos.x - b.position.x, basePos.y - b.position.y);
-                    return distA - distB;
-                })
-                .slice(0, extraCount);
-
-            for (const t of extraTargets) {
-                this.applyEarthquakeEffect(t, pushBackAmount, damage, tower);
+            if (tower.specialActive) {
+                this.applyEarthquakeEffect(enemy, pushBackAmount, damage, tower);
                 this.pushProjectile({
                     id: 'p' + (this.projectileIdCounter++),
-                    from: { x: enemy.position.x + 0.5, y: enemy.position.y + 0.5 },
-                    to: { x: t.position.x + 0.5, y: t.position.y + 0.5 },
+                    from: { x: tower.position.x + 0.5, y: tower.position.y + 0.5 },
+                    to: { x: enemy.position.x + 0.5, y: enemy.position.y + 0.5 },
+                    progress: 0,
+                    speedMultiplier: 0.6,
+                    isExplosion: true
+                });
+                const rangeSq = (tower.range + 0.5) * (tower.range + 0.5);
+                const basePos = enemy.position;
+                const extraTargets = this.enemiesInternal
+                    .filter(e => e.id !== enemy.id && e.hp > 0)
+                    .filter(e => {
+                        const dx = tower.position.x + 0.5 - e.position.x;
+                        const dy = tower.position.y + 0.5 - e.position.y;
+                        return (dx * dx + dy * dy) <= rangeSq;
+                    })
+                    .sort((a, b) => {
+                        const distA = Math.hypot(basePos.x - a.position.x, basePos.y - a.position.y);
+                        const distB = Math.hypot(basePos.x - b.position.x, basePos.y - b.position.y);
+                        return distA - distB;
+                    })
+                    .slice(0, extraCount);
+
+                for (const t of extraTargets) {
+                    this.applyEarthquakeEffect(t, pushBackAmount, damage, tower);
+                    this.pushProjectile({
+                        id: 'p' + (this.projectileIdCounter++),
+                        from: { x: enemy.position.x + 0.5, y: enemy.position.y + 0.5 },
+                        to: { x: t.position.x + 0.5, y: t.position.y + 0.5 },
+                        progress: 0,
+                        speedMultiplier: 0.7,
+                        isExplosion: true
+                    });
+                }
+            } else {
+                this.damageService.applyDamage(enemy, damage, 8, this.wave(), tower.id, this.recordDamage.bind(this));
+                this.pushProjectile({
+                    id: 'p' + (this.projectileIdCounter++),
+                    from: { x: tower.position.x + 0.5, y: tower.position.y + 0.5 },
+                    to: { x: enemy.position.x + 0.5, y: enemy.position.y + 0.5 },
                     progress: 0,
                     speedMultiplier: 0.7,
-                    isExplosion: true
+                    isExplosion: false
                 });
             }
         }
@@ -1494,22 +1517,25 @@ export class TowerDefenseEngineService {
         if (tower.type === 3) {
             const golden = this.getUpgradeLevel(3, 'golden');
             if (golden > 0) {
-                // Golden Mastery - "Concussive Blasts"
-                // Logic: If enemy has shatter stacks, boost stun chance and duration
-                const shatterStacks = enemy.shatterStacks || 0;
+                if (enemy.isBoss) {
+                    enemy.cannonSlowTimer = Math.max(enemy.cannonSlowTimer ?? 0, 1.5);
+                } else {
+                    const shatterStacks = enemy.shatterStacks || 0;
 
-                let stunChance = 0.15 + golden * 0.05;
-                let durationBonus = 0;
+                    let stunChance = 0.15 + golden * 0.05;
+                    let durationBonus = 0;
 
-                if (shatterStacks > 0) {
-                    stunChance += 0.15; // +15% Chance
-                    durationBonus = shatterStacks * 0.5; // +0.5s per stack
+                    if (shatterStacks > 0) {
+                        stunChance += 0.15; // +15% Chance
+                        durationBonus = shatterStacks * 0.5; // +0.5s per stack
+                    }
+
+                    if (Math.random() < stunChance) {
+                        const baseDuration = ((0.5 + golden * 0.2) * 1.2) + durationBonus;
+                        enemy.stunTime = Math.max(enemy.stunTime ?? 0, baseDuration);
+                    }
                 }
 
-                if (Math.random() < stunChance) {
-                    const baseDuration = ((0.5 + golden * 0.2) * 1.2) + durationBonus;
-                    enemy.stunTime = Math.max(enemy.stunTime ?? 0, baseDuration);
-                }
             }
         }
 
@@ -1612,12 +1638,19 @@ export class TowerDefenseEngineService {
     }
 
     private applyEarthquakeEffect(e: Enemy, amount: number, dmg: number, tower: Tower) {
-        e.progress = Math.max(0, e.progress - amount);
-        if (e.progress < 0) {
-            const newAbs = Math.max(0, (e.pathIndex - 1) + e.progress);
-            e.pathIndex = Math.floor(newAbs);
-            e.progress = newAbs - e.pathIndex;
+        const isImmune = e.isBoss;
+        if (!isImmune) {
+            e.progress -= amount;
+            while (e.progress < 0 && e.pathIndex > 0) {
+                e.pathIndex -= 1;
+                e.progress += 1;
+            }
+
+            if (e.pathIndex === 0 && e.progress < 0) {
+                e.progress = 0;
+            }
         }
+
         this.damageService.applyDamage(e, dmg, 8, this.wave(), tower.id, this.recordDamage.bind(this));
     }
 
@@ -1679,7 +1712,6 @@ export class TowerDefenseEngineService {
         const levelId = this.currentLevelConfig()?.id || 'random';
         const user = this.firebase.user$();
         const userId = user?.uid || 'guest';
-        const gameVersion = '0.0.3';
         const isHardMode = this.isHardMode();
 
         const logs = mvpList.map(t => {
@@ -1693,7 +1725,7 @@ export class TowerDefenseEngineService {
                 damagePercent: parseFloat(percent.toFixed(2)),
                 damageRaw: dmg,
                 userId,
-                gameVersion,
+                BALANCE_VERSION,
                 result: victory ? 'WIN' : 'LOSE',
                 timestamp: new Date(),
                 isHardMode

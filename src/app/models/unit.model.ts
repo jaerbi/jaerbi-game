@@ -67,6 +67,7 @@ export interface Enemy {
     bg?: string;
     scale?: number;
     stunTime?: number;
+    cannonSlowTimer?: number;
     type?: 'tank' | 'scout' | 'standard' | 'boss';
     burnedByInferno?: boolean;
     lastInfernoDamage?: number;
@@ -88,6 +89,7 @@ export interface Enemy {
     isFrost?: boolean; // Resists Ice
     isGrounded?: boolean; // Resists Lightning/Physical
     isAgile?: boolean; // Resists Cannon
+    isLevitating?: boolean; // Resists Earthquake
 }
 
 export interface Projectile {

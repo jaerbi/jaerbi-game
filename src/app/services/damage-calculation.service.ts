@@ -9,8 +9,9 @@ export class DamageCalculationService {
     // ========================================================================
     // SINGLE SOURCE OF TRUTH: BALANCE CONSTANTS
     // ========================================================================
-    readonly RESISTANCE_MULTIPLIER = 0.25; // 75% Reduction
+    readonly RESISTANCE_MULTIPLIER = 0.45; // 55% Reduction
     readonly BOSS_RESISTANCE_MULTIPLIER = 0.3; // 70% Resistance
+    readonly VULNERABILITY_MULTIPLIER = 1.5; // +50% damage to a vulnerable enemy
 
     // Frost
     readonly FROST_SLOW_BASE = 0.30;
@@ -36,7 +37,7 @@ export class DamageCalculationService {
     readonly SNIPER_GOLDEN_PERCENT = 0.02;
 
     // Bleed 
-    readonly BLEED_RATIO = 0.2; // 20%
+    readonly BLEED_RATIO = 0.2;
 
     constructor(private waveAnalytics: WaveAnalyticsService) { }
 
@@ -114,7 +115,7 @@ export class DamageCalculationService {
             damage += bonus;
 
             //if (Slow || Bleed || Venom), add +30% dps for each Golden level
-            if (target.isFrozen || (target.venomStacks && target.venomStacks > 0)) {
+            if (target.isFrozen || (target.venomStacks && target.venomStacks > 0) || (target.bleedDamagePerSec && target.bleedDamagePerSec > 0)) {
                 const focusMultiplier = 1 + (golden * 0.3);
                 damage = Math.floor(damage * focusMultiplier);
             }
@@ -140,21 +141,18 @@ export class DamageCalculationService {
         recordStats?: (id: string, amount: number) => void
     ): number {
         let dmg = amount;
+        const vulnerability = this.getVulnerabilityMultiplier(enemy, towerType);
+        dmg *= vulnerability;
 
-        // Counter Strategy Resistance (Wave 10+)
-        if (currentWave >= 10) {
+        if (currentWave >= 5) {
             if (this.waveAnalytics.isResistant(enemy, towerType)) {
-                // Scaling Resistance based on Dominance Ratio
-                // If ratio > 0.9 (90% dominance), apply 90% reduction (multiplier 0.1)
-                // Otherwise apply standard 75% reduction (multiplier 0.25)
                 const dominance = this.waveAnalytics.currentDominanceRatio || 0;
-                const multiplier = dominance > 0.9 ? 0.1 : this.RESISTANCE_MULTIPLIER;
+                const multiplier = dominance > 0.85 ? 0.2 : this.RESISTANCE_MULTIPLIER;
 
                 dmg = Math.floor(dmg * multiplier);
             }
         }
 
-        // Boss Resistances
         if (enemy.isBoss) {
             dmg = Math.floor(dmg * this.BOSS_RESISTANCE_MULTIPLIER);
         }
@@ -166,6 +164,24 @@ export class DamageCalculationService {
         }
 
         return dmg;
+    }
+
+    /**
+     *Determines whether an enemy is vulnerable to this tower type due to its current "resistance"
+     */
+    private getVulnerabilityMultiplier(enemy: Enemy, towerType: number): number {
+        // if X, then more dps to Y
+        const isVulnerable =
+            (enemy.isFrost && towerType === 5) ||      // 1 Ice -> 5 Fire
+            (enemy.isGrounded && towerType === 8) ||   // 2 Grounded -> 8 Earth
+            (enemy.isAgile && towerType === 6) ||      // 3 Agile -> 6 Prism
+            (enemy.isBulwark && towerType === 7) ||    // 4 Armored -> 7 Poison
+            (enemy.isMagma && towerType === 1) ||      // 5 Magma -> 1 Ice
+            (enemy.isMirror && towerType === 4) ||     // 6 Mirror -> 4 Sniper
+            (enemy.isSlime && towerType === 2) ||      // 7 Slime -> 2 Lightning
+            (enemy.isLevitating && towerType === 3);   // 8 Levitation -> 3 Cannon
+
+        return isVulnerable ? this.VULNERABILITY_MULTIPLIER : 1.0;
     }
 
     /**
