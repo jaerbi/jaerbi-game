@@ -17,6 +17,7 @@ export class WaveAnalyticsService {
     public currentWaveCounterType: number | null = null;
     public currentWaveCounterChance: number = 0;
     public currentDominanceRatio: number = 0;
+    public BALANCE_VERSION: string = '0.0.4';
 
     constructor(private _settings: SettingsService) { }
 

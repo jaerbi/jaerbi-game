@@ -255,10 +255,21 @@
       <!-- Counter Strategy Warning -->
       @if (tdEngine.activeCounterStrategy(); as strategy) {
         <div
-          class="absolute bottom-8 left-1/2 -translate-x-1/2 z-71 animate-in slide-in-from-bottom-4 fade-in duration-700"
+          [class]="
+            'absolute left-1/2 -translate-x-1/2 z-71 animate-in fade-in duration-700 ' +
+            (windowWidth() < 768
+              ? 'top-4 w-[90%] slide-in-from-top-4'
+              : 'bottom-8 min-w-[380px] slide-in-from-bottom-4')
+          "
         >
           <div
-            class="bg-slate-950/95 backdrop-blur-xl border-t-2 border-rose-500/50 px-6 py-4 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.7)] flex items-start gap-5 min-w-[380px] overflow-hidden"
+            class="bg-slate-950/95 backdrop-blur-xl border-rose-500/50 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.7)] flex items-start overflow-hidden border-t-2"
+            [class.px-4]="windowWidth() < 768"
+            [class.py-3]="windowWidth() < 768"
+            [class.px-6]="windowWidth() >= 768"
+            [class.py-4]="windowWidth() >= 768"
+            [class.gap-3]="windowWidth() < 768"
+            [class.gap-5]="windowWidth() >= 768"
           >
             <div
               class="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-rose-500 to-transparent animate-scan"
@@ -266,33 +277,63 @@
 
             <div class="flex-shrink-0 mt-1">
               <div
-                class="relative flex items-center justify-center w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30"
+                class="relative flex items-center justify-center rounded-full bg-rose-500/10 border border-rose-500/30"
+                [class.w-9]="windowWidth() < 768"
+                [class.h-9]="windowWidth() < 768"
+                [class.w-12]="windowWidth() >= 768"
+                [class.h-12]="windowWidth() >= 768"
               >
-                <span class="text-2xl drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]">📡</span>
+                <span
+                  [class.text-lg]="windowWidth() < 768"
+                  [class.text-2xl]="windowWidth() >= 768"
+                  class="drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]"
+                >
+                  📡
+                </span>
                 <div class="absolute inset-0 rounded-full border border-rose-500/50 animate-ping opacity-20"></div>
               </div>
             </div>
 
-            <div class="flex flex-col gap-1">
+            <div class="flex flex-col gap-0.5">
               <div class="flex items-center gap-2">
-                <span class="text-[10px] font-black text-rose-500 uppercase tracking-[0.25em] leading-none">
+                <span
+                  class="font-black text-rose-500 uppercase tracking-[0.2em] leading-none"
+                  [class.text-[8px]]="windowWidth() < 768"
+                  [class.text-[10px]]="windowWidth() >= 768"
+                >
                   {{ settings.t('SYSTEM_ALERT_ADAPT') }}
                 </span>
-                <div class="h-[1px] w-12 bg-rose-500/30"></div>
+                <div
+                  class="h-[1px] bg-rose-500/30"
+                  [class.w-8]="windowWidth() < 768"
+                  [class.w-12]="windowWidth() >= 768"
+                ></div>
               </div>
 
-              <div class="py-1">
-                <span class="text-sm italic font-medium text-slate-200 leading-relaxed tracking-wide">
+              <div class="py-0.5">
+                <span
+                  class="font-medium text-slate-200 leading-tight tracking-wide italic"
+                  [class.text-xs]="windowWidth() < 768"
+                  [class.text-sm]="windowWidth() >= 768"
+                >
                   "{{ strategy.taunt }}"
                 </span>
               </div>
 
-              <div class="flex flex-col border-l-2 border-slate-700 pl-3 mt-1 gap-0.5">
-                <div class="text-[11px] text-slate-400">
+              <div class="flex flex-col border-l-2 border-slate-700 pl-2 mt-0.5 gap-0">
+                <div
+                  class="text-slate-400"
+                  [class.text-[9px]]="windowWidth() < 768"
+                  [class.text-[11px]]="windowWidth() >= 768"
+                >
                   {{ settings.t('EFFICIENCY_OF') }}
                   <span class="text-rose-400 font-bold tracking-wider">{{ strategy.name }}</span>
                 </div>
-                <div class="text-[10px] text-sky-400 font-semibold uppercase tracking-tight flex items-center gap-1">
+                <div
+                  class="text-sky-400 font-semibold uppercase tracking-tight flex items-center gap-1"
+                  [class.text-[8px]]="windowWidth() < 768"
+                  [class.text-[10px]]="windowWidth() >= 768"
+                >
                   <span class="w-1 h-1 bg-sky-400 rounded-full animate-pulse"></span>
                   {{ settings.t('DECREASED_BY') }}
                 </div>
@@ -491,7 +532,7 @@
                         <button
                           (click)="upgradeTower()"
                           [disabled]="tdEngine.money() < tdEngine.getUpgradeCost(tile.tower)"
-                          class="flex-1 min-w-30 py-1 bg-emerald-600 rounded-lg text-[10px] font-bold uppercase flex justify-between px-2 items-center"
+                          class="flex-1 min-w-30 py-1 bg-emerald-600  disabled:bg-slate-700 disabled:text-slate-500 rounded-lg text-[10px] font-bold uppercase flex justify-between px-2 items-center"
                         >
                           <span class="text-xs uppercase">{{ settings.t('UPGRADE') }}</span>
                           <span class="font-mono">{{ tdEngine.getUpgradeCost(tile.tower) }}</span>

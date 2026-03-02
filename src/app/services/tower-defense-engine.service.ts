@@ -1725,7 +1725,7 @@ export class TowerDefenseEngineService {
                 damagePercent: parseFloat(percent.toFixed(2)),
                 damageRaw: dmg,
                 userId,
-                BALANCE_VERSION,
+                gameVersion: this.waveAnalytics.BALANCE_VERSION,
                 result: victory ? 'WIN' : 'LOSE',
                 timestamp: new Date(),
                 isHardMode

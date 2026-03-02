@@ -3,27 +3,26 @@ import { CommonModule } from '@angular/common';
 import { FirebaseService } from '../../services/firebase.service';
 import { RouterLink } from '@angular/router';
 import { WaveAnalyticsService } from '../../services/wave-analytics.service';
-import { BALANCE_VERSION } from '../../services/tower-defense-engine.service';
 
 interface TowerStats {
-  type: number;
-  name: string;
-  pickCount: number;
-  totalDamagePercent: number;
-  totalRawDamage: number;
-  totalTier: number;
-  avgDamagePercent: number;
-  avgRawDamage: number;
-  avgTier: number;
-  pickRate: number;
-  verdict: 'OP' | 'Weak' | 'Balanced';
+    type: number;
+    name: string;
+    pickCount: number;
+    totalDamagePercent: number;
+    totalRawDamage: number;
+    totalTier: number;
+    avgDamagePercent: number;
+    avgRawDamage: number;
+    avgTier: number;
+    pickRate: number;
+    verdict: 'OP' | 'Weak' | 'Balanced';
 }
 
 @Component({
-  selector: 'app-admin-analytics',
-  standalone: true,
-  imports: [CommonModule, RouterLink],
-  template: `
+    selector: 'app-admin-analytics',
+    standalone: true,
+    imports: [CommonModule, RouterLink],
+    template: `
     <div class="min-h-screen bg-slate-950 text-slate-200 p-8 font-sans">
       <div class="max-w-7xl mx-auto">
         <header class="flex justify-between items-center mb-8">
@@ -47,9 +46,7 @@ interface TowerStats {
               (change)="setVersion($any($event.target).value)"
               class="bg-slate-950 border border-slate-700 rounded px-3 py-1 text-sm focus:outline-none focus:border-sky-500"
             >
-              <option value="0.0.2">0.0.2</option>
-              <option value="0.0.3">0.0.3</option>
-              <option value="0.0.3">0.0.4</option>
+              <option *ngFor="let v of availableVersions()" [value]="v">{{ v }}</option>
             </select>
           </div>
           
@@ -135,147 +132,176 @@ interface TowerStats {
   `
 })
 export class AdminAnalyticsComponent implements OnInit {
-  currentVersion = signal(BALANCE_VERSION);
-  loading = signal(false);
-  stats = signal<TowerStats[]>([]);
-  sortField = signal<keyof TowerStats>('pickRate');
-  sortDesc = signal(true);
+    currentVersion = signal('0.0.4');
+    availableVersions = signal(['0.0.2', '0.0.3', '0.0.4']);
+    loading = signal(false);
+    stats = signal<TowerStats[]>([]);
+    sortField = signal<keyof TowerStats>('pickRate');
+    sortDesc = signal(true);
 
-  sortedStats = computed(() => {
-    const s = [...this.stats()];
-    const field = this.sortField();
-    const desc = this.sortDesc();
-    
-    return s.sort((a, b) => {
-      const valA = a[field];
-      const valB = b[field];
-      if (typeof valA === 'number' && typeof valB === 'number') {
-        return desc ? valB - valA : valA - valB;
-      }
-      return 0;
-    });
-  });
+    sortedStats = computed(() => {
+        const s = [...this.stats()];
+        const field = this.sortField();
+        const desc = this.sortDesc();
 
-  constructor(private firebase: FirebaseService, private _waveAnalyticsService: WaveAnalyticsService) {}
-
-  ngOnInit() {
-    this.loadData();
-  }
-
-  setVersion(v: string) {
-    this.currentVersion.set(v);
-    this.loadData();
-  }
-
-  setSort(field: keyof TowerStats) {
-    if (this.sortField() === field) {
-      this.sortDesc.update(d => !d);
-    } else {
-      this.sortField.set(field);
-      this.sortDesc.set(true);
-    }
-  }
-
-  getSortIcon(field: keyof TowerStats) {
-    if (this.sortField() !== field) return '';
-    return this.sortDesc() ? '↓' : '↑';
-  }
-
-  async loadData() {
-    this.loading.set(true);
-    const logs = await this.firebase.getBalanceLogs(this.currentVersion(), 1000);
-    this.processLogs(logs);
-    this.loading.set(false);
-  }
-
-  private processLogs(logs: any[]) {
-    // 1. Group by gameId to count total games
-    const gameIds = new Set(logs.map(l => l.gameId));
-    const totalGames = gameIds.size || 1; // Avoid div by zero
-
-    // 2. Group by Tower Type
-    const grouped = new Map<number, any[]>();
-    for (const log of logs) {
-        const t = log.towerType;
-        if (!grouped.has(t)) grouped.set(t, []);
-        grouped.get(t)?.push(log);
-    }
-
-    // 3. Aggregate
-    const results: TowerStats[] = [];
-    const towerTypes = [1, 2, 3, 4, 5, 6, 7, 8];
-
-    for (const type of towerTypes) {
-        const typeLogs = grouped.get(type) || [];
-        const pickCount = typeLogs.length;
-        
-        // Sums
-        const totalDmgPct = typeLogs.reduce((sum, l) => sum + (l.damagePercent || 0), 0);
-        const totalRaw = typeLogs.reduce((sum, l) => sum + (l.damageRaw || 0), 0);
-        const totalTier = typeLogs.reduce((sum, l) => sum + (l.towerTier || 1), 0);
-
-        // Averages
-        const avgDamagePercent = pickCount > 0 ? totalDmgPct / pickCount : 0;
-        const avgRawDamage = pickCount > 0 ? totalRaw / pickCount : 0;
-        const avgTier = pickCount > 0 ? totalTier / pickCount : 0;
-        const pickRate = pickCount / totalGames;
-
-        // Verdict
-        let verdict: 'OP' | 'Weak' | 'Balanced' = 'Balanced';
-        if (pickRate > 0.7 && avgDamagePercent > 30) verdict = 'OP';
-        else if (pickRate < 0.1 || avgDamagePercent < 5) verdict = 'Weak';
-
-        results.push({
-            type,
-            name: this.getTowerName(type),
-            pickCount,
-            totalDamagePercent: totalDmgPct,
-            totalRawDamage: totalRaw,
-            totalTier: totalTier,
-            avgDamagePercent,
-            avgRawDamage,
-            avgTier,
-            pickRate,
-            verdict
+        return s.sort((a, b) => {
+            const valA = a[field];
+            const valB = b[field];
+            if (typeof valA === 'number' && typeof valB === 'number') {
+                return desc ? valB - valA : valA - valB;
+            }
+            return 0;
         });
+    });
+
+    constructor(private firebase: FirebaseService, private _waveAnalyticsService: WaveAnalyticsService) {
+        const v = this._waveAnalyticsService.BALANCE_VERSION;
+        this.currentVersion.set(v);
+
+        if (!this.availableVersions().includes(v)) {
+            this.availableVersions.update(list => [...list, v].sort());
+        }
     }
 
-    this.stats.set(results);
-  }
-
-  getTowerName(type: number): string {
-    return this._waveAnalyticsService.getTowerName(type);
-
-    // switch (type) {
-    //     case 1: return 'Ice';
-    //     case 2: return 'Lightning';
-    //     case 3: return 'Cannon';
-    //     case 4: return 'Sniper';
-    //     case 5: return 'Inferno';
-    //     case 6: return 'Prism';
-    //     case 7: return 'Venom';
-    //     case 8: return 'Earthquake';
-    //     default: return 'Unknown';
-    // }
-  }
-
-  getTowerIcon(type: number): string {
-    switch (type) {
-        case 1: return '❄️';
-        case 2: return '⚡';
-        case 3: return '💣';
-        case 4: return '🎯';
-        case 5: return '🔥';
-        case 6: return '🌈';
-        case 7: return '☠️';
-        case 8: return '🌋';
-        default: return '❓';
+    ngOnInit() {
+        setTimeout(() => {
+            this.loadData();
+        }, 1000);
     }
-  }
 
-  getScaleColor(value: number, high: number, low: number): string {
-    if (value >= high) return 'text-emerald-400 font-bold';
-    if (value <= low) return 'text-red-400 font-bold';
-    return 'text-slate-300';
-  }
+    setVersion(v: string) {
+        this.currentVersion.set(v);
+        this.loadData();
+    }
+
+    setSort(field: keyof TowerStats) {
+        if (this.sortField() === field) {
+            this.sortDesc.update(d => !d);
+        } else {
+            this.sortField.set(field);
+            this.sortDesc.set(true);
+        }
+    }
+
+    getSortIcon(field: keyof TowerStats) {
+        if (this.sortField() !== field) return '';
+        return this.sortDesc() ? '↓' : '↑';
+    }
+    async loadData() {
+        const user = this.firebase.user$();
+
+        if (!user) {
+            console.error("Access Denied: You must be logged in to view analytics.");
+            this.loading.set(false);
+            return;
+        }
+
+        const adminIds = ['S3Rek5fUgrTHtcKENOkHAl1mXCn2', 'CknIzJbGE3ffWWrzM4fWgZvzpLk2'];
+        if (!adminIds.includes(user.uid)) {
+            console.error("Access Denied: Your UID is not in the allowed list.");
+            this.loading.set(false);
+            return;
+        }
+
+        this.loading.set(true);
+        try {
+            const logs = await this.firebase.getBalanceLogs(this.currentVersion(), 1000);
+            this.processLogs(logs);
+        } catch (e) {
+            console.error("Firebase Error:", e);
+        } finally {
+            this.loading.set(false);
+        }
+    }
+
+    private processLogs(logs: any[]) {
+        // 1. Group by gameId to count total games
+        const gameIds = new Set(logs.map(l => l.gameId));
+        const totalGames = gameIds.size || 1; // Avoid div by zero
+
+        // 2. Group by Tower Type
+        const grouped = new Map<number, any[]>();
+        for (const log of logs) {
+            const t = log.towerType;
+            if (!grouped.has(t)) grouped.set(t, []);
+            grouped.get(t)?.push(log);
+        }
+
+        // 3. Aggregate
+        const results: TowerStats[] = [];
+        const towerTypes = [1, 2, 3, 4, 5, 6, 7, 8];
+
+        for (const type of towerTypes) {
+            const typeLogs = grouped.get(type) || [];
+            const pickCount = typeLogs.length;
+
+            // Sums
+            const totalDmgPct = typeLogs.reduce((sum, l) => sum + (l.damagePercent || 0), 0);
+            const totalRaw = typeLogs.reduce((sum, l) => sum + (l.damageRaw || 0), 0);
+            const totalTier = typeLogs.reduce((sum, l) => sum + (l.towerTier || 1), 0);
+
+            // Averages
+            const avgDamagePercent = pickCount > 0 ? totalDmgPct / pickCount : 0;
+            const avgRawDamage = pickCount > 0 ? totalRaw / pickCount : 0;
+            const avgTier = pickCount > 0 ? totalTier / pickCount : 0;
+            const pickRate = pickCount / totalGames;
+
+            // Verdict
+            let verdict: 'OP' | 'Weak' | 'Balanced' = 'Balanced';
+            if (pickRate > 0.7 && avgDamagePercent > 30) verdict = 'OP';
+            else if (pickRate < 0.1 || avgDamagePercent < 5) verdict = 'Weak';
+
+            results.push({
+                type,
+                name: this.getTowerName(type),
+                pickCount,
+                totalDamagePercent: totalDmgPct,
+                totalRawDamage: totalRaw,
+                totalTier: totalTier,
+                avgDamagePercent,
+                avgRawDamage,
+                avgTier,
+                pickRate,
+                verdict
+            });
+        }
+
+        this.stats.set(results);
+    }
+
+    getTowerName(type: number): string {
+        return this._waveAnalyticsService.getTowerName(type);
+
+        // switch (type) {
+        //     case 1: return 'Ice';
+        //     case 2: return 'Lightning';
+        //     case 3: return 'Cannon';
+        //     case 4: return 'Sniper';
+        //     case 5: return 'Inferno';
+        //     case 6: return 'Prism';
+        //     case 7: return 'Venom';
+        //     case 8: return 'Earthquake';
+        //     default: return 'Unknown';
+        // }
+    }
+
+    getTowerIcon(type: number): string {
+        switch (type) {
+            case 1: return '❄️';
+            case 2: return '⚡';
+            case 3: return '💣';
+            case 4: return '🎯';
+            case 5: return '🔥';
+            case 6: return '🌈';
+            case 7: return '☠️';
+            case 8: return '🌋';
+            default: return '❓';
+        }
+    }
+
+    getScaleColor(value: number, high: number, low: number): string {
+        if (value >= high) return 'text-emerald-400 font-bold';
+        if (value <= low) return 'text-red-400 font-bold';
+        return 'text-slate-300';
+    }
 }
