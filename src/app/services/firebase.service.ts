@@ -313,10 +313,9 @@ export class FirebaseService {
         const user = this.user$();
         if (!user) return;
 
-        // wave 128 = 750 (Max Cap)
         if (xp > HARD_CAP) {
             console.error(`Security Alert: XP Award Rejected. Attempted: ${xp}, Max Allowed: ${HARD_CAP}`);
-            return;
+            xp = HARD_CAP
         }
 
         try {
