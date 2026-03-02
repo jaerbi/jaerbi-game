@@ -127,31 +127,38 @@ export class TowerDefenseEngineService {
     private async saveResultIfLoggedIn() {
         if (this.savedResult) return;
         this.savedResult = true;
+
         const user = this.firebase.user$();
         if (!user) return;
 
-        // Centralized XP Calculation
         const xpToAward = this.calculateEarnedXp();
         const config = this.currentLevelConfig();
         const levelId = config?.id;
 
-        if (xpToAward > 0) {
-            await this.firebase.awardTowerDefenseXp(xpToAward, levelId, this.wave());
+        const isVictory = config && this.wave() >= config.waveCount && this.enemiesInternal.length === 0 && this.enemiesToSpawn === 0;
+        if (this.gameMode() === 'campaign') {
+            if (!isVictory) return;
+
+            if (xpToAward > 0) {
+                await this.firebase.awardTowerDefenseXp(xpToAward, levelId, this.wave());
+            }
+            return;
+        } else {
+            const mapSizeLabel = this.gridSize === 20 ? '20x20' : '10x10';
+            const payload = {
+                userId: user.uid,
+                displayName: user.displayName || 'Anonymous',
+                maxWave: this.wave(),
+                totalMoney: this.money(),
+                mapSize: mapSizeLabel,
+                gridSize: this.gridSize
+            };
+            try {
+                await this.firebase.saveTowerDefenseScore(payload);
+            } catch {
+            }
         }
 
-        const mapSizeLabel = this.gridSize === 20 ? '20x20' : '10x10';
-        const payload = {
-            userId: user.uid,
-            displayName: user.displayName || 'Anonymous',
-            maxWave: this.wave(),
-            totalMoney: this.money(),
-            mapSize: mapSizeLabel,
-            gridSize: this.gridSize
-        };
-        try {
-            await this.firebase.saveTowerDefenseScore(payload);
-        } catch {
-        }
     }
 
     dispose() {
@@ -284,7 +291,9 @@ export class TowerDefenseEngineService {
     public calculateEarnedXp(): number {
         if (this.gameMode() === 'campaign') {
             const config = this.currentLevelConfig();
-            return (config && this.wave() >= config.waveCount && this.isFirstTimeClear) ? config.xpReward : 0;
+            return (config && this.wave() >= config.waveCount && this.isFirstTimeClear)
+                ? config.xpReward
+                : 0;
         }
 
         const waves = this.wave();
@@ -800,7 +809,6 @@ export class TowerDefenseEngineService {
                 this.updateRandomQuote();
             });
             if (!this.savedResult) {
-                this.savedResult = true;
                 this.saveResultIfLoggedIn();
             }
             this.gameEndedHard = true;
@@ -1669,7 +1677,7 @@ export class TowerDefenseEngineService {
     // Analytics
     private endGame(victory: boolean) {
         if (this.gameOver()) return;
-
+        
         this.gameOver.set(true);
         this.updateRandomQuote();
         this.isWaveInProgress.set(false);

@@ -310,14 +310,9 @@ export class FirebaseService {
 
     async awardTowerDefenseXp(xp: number, levelId?: string, wave?: number): Promise<void> {
         if (!this.db) return;
-
-        if (xp <= 0) return;
-
         const user = this.user$();
-
         if (!user) return;
 
-        // Dynamic check: if more than HARD_CAP allows has arrived
         // wave 128 = 750 (Max Cap)
         if (xp > HARD_CAP) {
             console.error(`Security Alert: XP Award Rejected. Attempted: ${xp}, Max Allowed: ${HARD_CAP}`);
@@ -325,29 +320,33 @@ export class FirebaseService {
         }
 
         try {
-            console.count('FIREBASE_CALL: awardTowerDefenseXp');
             const current = this.masteryProfile() ?? { totalXp: 0, usedPoints: 0, upgrades: {}, completedLevelIds: [] };
-
-            // Preventing XP re-farming for campaign levels
             const currentCompleted = current.completedLevelIds || [];
 
-            const nextCompleted = levelId && !currentCompleted.includes(levelId)
+            const isNewCompletion = levelId && !currentCompleted.includes(levelId);
+
+            if (xp <= 0 && !isNewCompletion) {
+                console.log('No XP to gain and level already completed. Skipping.');
+                return;
+            }
+
+            const nextCompleted = isNewCompletion
                 ? [...currentCompleted, levelId]
                 : currentCompleted;
 
             const next: MasteryProfile = {
+                ...current,
                 totalXp: current.totalXp + xp,
-                usedPoints: current.usedPoints,
-                upgrades: current.upgrades,
                 completedLevelIds: nextCompleted
             };
 
+            this.masteryProfile.set(next);
             const ref = doc(this.db, 'towerDefenseMasteries', user.uid);
             await setDoc(ref, { userId: user.uid, ...next }, { merge: true });
-            this.masteryProfile.set(next);
 
+            console.log(`Progress saved: XP +${xp}, Levels: ${nextCompleted.length}`);
         } catch (e) {
-            console.error('Error awarding TD XP: ', e);
+            console.error('Failed to save TD progress:', e);
         }
     }
 
