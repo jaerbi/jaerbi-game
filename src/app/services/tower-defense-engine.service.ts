@@ -954,9 +954,22 @@ export class TowerDefenseEngineService {
             hpMultiplier = 3.0 * Math.pow(1.15, w);
         }
 
-        if (currentWave >= 130) {
-            hpMultiplier *= 1.3; // +30%
+        // special for Yevhen
+        if (currentWave >= 200) {
+            hpMultiplier *= 1.8; // +80%
+        } else if (currentWave >= 180) {
+            hpMultiplier *= 1.7; // +70%
+        } else if (currentWave >= 160) {
+            hpMultiplier *= 1.6; // +60%
+        } else if (currentWave >= 140) {
+            hpMultiplier *= 1.5; // +50%
+        } else if (currentWave >= 120) {
+            hpMultiplier *= 1.4; // +40%
         } else if (currentWave >= 100) {
+            hpMultiplier *= 1.3; // +30%
+        } else if (currentWave >= 80) {
+            hpMultiplier *= 1.2; // +20%
+        } else if (currentWave >= 60) {
             hpMultiplier *= 1.1; // +10%
         }
 
