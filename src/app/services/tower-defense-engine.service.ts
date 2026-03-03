@@ -232,21 +232,20 @@ export class TowerDefenseEngineService {
                 if (pathSet.has(`${x},${y}`)) {
                     type = 'path';
                 } else {
-                    // Check if adjacent to path (Standard Buildable Rule)
-                    const neighbors = [
-                        { x: x - 1, y }, { x: x + 1, y }, { x, y: y - 1 }, { x, y: y + 1 }
-                    ];
-                    if (neighbors.some(n => pathSet.has(`${n.x},${n.y}`))) {
-                        type = 'buildable';
-                    }
-
-                    // Apply Bonus Tiles & Force Buildable (Strategic Points)
                     if (config && config.bonusTiles) {
                         const found = config.bonusTiles.find(t => t.x === x && t.y === y);
                         if (found) {
                             bonus = found.type;
                             type = 'buildable'; // FORCE BUILDABLE for bonus tiles
                         }
+                    }
+
+                    // Check if adjacent to path (Standard Buildable Rule)
+                    const neighbors = [
+                        { x: x - 1, y }, { x: x + 1, y }, { x, y: y - 1 }, { x, y: y + 1 }
+                    ];
+                    if (neighbors.some(n => pathSet.has(`${n.x},${n.y}`))) {
+                        type = 'buildable';
                     }
                 }
 
@@ -304,8 +303,14 @@ export class TowerDefenseEngineService {
 
         let totalXp = waves * 0.5;
 
-        if (waves > 20) totalXp += (waves - 20) * 2;
-        if (waves > 40) totalXp += (waves - 40) * 5;
+        if (waves > 20) totalXp += (waves - 20) * 1.5;
+        if (waves > 40) totalXp += (waves - 40) * 2;
+        if (waves > 60) totalXp += (waves - 60) * 2.5;
+        if (waves > 80) totalXp += (waves - 80) * 3;
+        if (waves > 100) totalXp += (waves - 100) * 3.5;
+        if (waves > 120) totalXp += (waves - 120) * 4;
+        if (waves > 140) totalXp += (waves - 140) * 4.5;
+        if (waves > 160) totalXp += (waves - 160) * 5;
 
         const cappedBonusXp = Math.min(this.bonusXpAccumulated, waves * 3);
         totalXp += cappedBonusXp;
@@ -327,7 +332,6 @@ export class TowerDefenseEngineService {
 
                 // Use custom grid size if provided, otherwise default to level param (usually 1/10 or 2/20)
                 this.gridSize = config.gridSize ?? (level === 2 ? 20 : 10);
-                this.updateTileSize();
 
                 this.currentLevelConfig.set(config);
                 this.gameMode.set('campaign');
@@ -336,11 +340,13 @@ export class TowerDefenseEngineService {
 
                 // Set Money from config
                 let money = config.startingGold;
-                // Add Mastery Bonus
-                const goldLevel = this.getGoldMasteryLevel();
-                if (goldLevel >= 8) {
-                    const bonus = (goldLevel - 7) * 20;
-                    money += bonus;
+                if (config.masteriesEnabled) {
+                    // Add Mastery Bonus
+                    const goldLevel = this.getGoldMasteryLevel();
+                    if (goldLevel >= 8) {
+                        const bonus = (goldLevel - 7) * 20;
+                        money += bonus;
+                    }
                 }
                 this.money.set(money);
 
@@ -349,22 +355,15 @@ export class TowerDefenseEngineService {
                 console.error('Level config not found for', campaignLevelId);
                 // Fallback to random
                 this.gridSize = level === 2 ? 20 : 10;
-                this.updateTileSize();
                 this.setupRandomGame();
             }
         } else {
             this.gridSize = level === 2 ? 20 : 10;
-            this.updateTileSize();
             this.setupRandomGame();
         }
 
         this.statsByTowerType.set({});
         this.nextWaveEnemyType.set(this.determineWaveType(1));
-    }
-
-    private updateTileSize() {
-        // zoom works fine
-        // this.tileSize = Math.floor(620 / this.gridSize);
     }
 
     private setupRandomGame() {

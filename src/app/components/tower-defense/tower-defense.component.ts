@@ -30,6 +30,17 @@ import { DamageCalculationService } from '../../services/damage-calculation.serv
       background: #0f172a;
       color: white;
     }
+    .origin-center {
+        display: block;
+        width: fit-content;
+        height: fit-content;
+        margin: 0 auto;
+        overflow: visible !important;
+    }
+
+    .td-canvas {
+        display: block;
+    }
     @keyframes scan {
         0% { transform: translateX(-100%); }
         100% { transform: translateX(100%); }
@@ -342,12 +353,14 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             // Campaign Mode: Load Level 1 by default and show mission select
             this.tdEngine.gameMode.set('campaign');
             this.tdEngine.initializeGame(1, 'level_1');
+            this._refreshGameView();
             this.openMissionSelect();
         }
     }
 
     forceLoadLevel(levelId: string) {
         this.tdEngine.initializeGame(this.tdEngine.gridSize === 20 ? 2 : 1, levelId);
+        this._refreshGameView();
         this.showDevTools = false;
         this.showSettings = false;
     }
@@ -360,6 +373,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             if (nextLevel) {
                 // Check unlocked? Assume completion unlocks next.
                 this.tdEngine.initializeGame(this.tdEngine.gridSize === 20 ? 2 : 1, nextLevel.id);
+                this._refreshGameView();
                 this.selectedTile.set(null);
             } else {
                 // No more levels
@@ -517,8 +531,20 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         this.tdEngine.initializeGame(level);
         this.selectedTile.set(null);
         if (this.isBrowser) {
-            this.resizeCanvas();
+            setTimeout(() => {
+                this.resizeCanvas();
+                this.cdr.detectChanges();
+            }, 50);
         }
+    }
+    private _refreshGameView() {
+        if (!this.isBrowser) return;
+
+        setTimeout(() => {
+            this.resizeCanvas();
+            this.cdr.detectChanges();
+            console.log('View Refreshed:', this.tdEngine.gridSize);
+        }, 100); // 100ms зазвичай достатньо для рендеру
     }
 
     setHardMode(enabled: boolean) {
@@ -543,23 +569,39 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     private resizeCanvas = () => {
         const canvas = this.gameCanvas?.nativeElement;
+
         if (!canvas) return;
-        const tile = this.tdEngine.tileSize;
+
+        const container = canvas.parentElement;
+
+        if (!container) return;
+
         const gridSize = this.tdEngine.gridSize;
+        const availableWidth = Math.min(window.innerWidth - 40, 800);
+        const newTileSize = Math.floor(availableWidth / gridSize);
+        this.tdEngine.tileSize = newTileSize;
+        const tile = this.tdEngine.tileSize;
 
         if (!tile || !gridSize) return;
 
-        const size = this.tdEngine.gridSize * tile;
+        const size = gridSize * tile;
+
         // Style size
         canvas.style.width = `${size}px`;
         canvas.style.height = `${size}px`;
         // Device pixel ratio scaling
-        const dpr = Math.max(1, window.devicePixelRatio || 1);
-        canvas.width = Math.floor(size * dpr);
-        canvas.height = Math.floor(size * dpr);
+        // const dpr = Math.max(1, window.devicePixelRatio || 1);
+        // canvas.width = Math.floor(size * dpr);
+        // canvas.height = Math.floor(size * dpr);
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = size * dpr;
+        canvas.height = size * dpr;
+
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.scale(dpr, dpr);
         this.ctx = ctx;
     };
 
@@ -1578,6 +1620,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     startCampaignLevel() {
         if (!this.selectedCampaignLevel) return;
         this.tdEngine.initializeGame(this.tdEngine.gridSize === 20 ? 2 : 1, this.selectedCampaignLevel);
+        this._refreshGameView();
         this.closeMissionSelect();
         this.selectedCampaignLevel = null;
     }

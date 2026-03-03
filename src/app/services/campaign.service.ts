@@ -40,13 +40,25 @@ export class CampaignService {
     levels: LevelConfig[] = [];
 
     // TOWER IDs REFERENCE:
-    // Type 1 (Ice) -> isFrost | base 15 | full price (4lvl) 41 | abilities price 60
-    // Type 2 (Lightning) -> isGrounded | 50 | 140 | 200
-    // Type 3 (Cannon) -> isAgile | 250 | 700 | 1000 
-    // Type 4 (Sniper) -> isBulwark | 500 | 1400 | 2000
+    // Type 1 (Ice) -> isFrost | base 15 | abilities price 60
+    // Type 2 (Lightning) -> isGrounded | 50  | 200
+    // Type 3 (Cannon) -> isAgile | 400 | 1600 
+    // Type 4 (Sniper) -> isBulwark | 600 | 2400
     // Type 5 (Inferno) -> isMagma (AOE/Burn) | 500 | 1400 | 2000
     // Type 6 (Prism) -> isMirror | 500 | 1400 | 2000
     // Type 7 (Venom) -> isSlime (DoT) | 500 | 1400 | 2000
+    // Type 8 (Earth) -> isLevitating  | 500 | 1400 | 2000
+
+    //  const isVulnerable =
+    //         (enemy.isFrost && towerType === 5) ||      // 1 Ice -> 5 Fire
+    //         (enemy.isGrounded && towerType === 8) ||   // 2 Grounded -> 8 Earth
+    //         (enemy.isAgile && towerType === 6) ||      // 3 Agile -> 6 Prism
+    //         (enemy.isBulwark && towerType === 7) ||    // 4 Armored -> 7 Poison
+    //         (enemy.isMagma && towerType === 1) ||      // 5 Magma -> 1 Ice
+    //         (enemy.isMirror && towerType === 4) ||     // 6 Prism -> 4 Sniper
+    //         (enemy.isSlime && towerType === 2) ||      // 7 Slime -> 2 Lightning
+    //         (enemy.isLevitating && towerType === 3);   // 8 Levitation -> 3 Cannon
+
 
 
     constructor(private _settings: SettingsService) { this.initLevels(); }
@@ -87,7 +99,7 @@ export class CampaignService {
                     { x: 7, y: 5, type: 'range' }   // Trap: Looks nice, but it's too far from the entrance for the Turret
                 ],
                 waveModifiers: {
-                    1: { count: 9},
+                    1: { count: 9 },
                     2: { count: 14, traits: [{ property: 'isFrost', chance: 0.1 }] },
                     3: { count: 20, traits: [{ property: 'isFrost', chance: 0.8 }] },
                     5: { count: 18, traits: [{ property: 'isFrost', chance: 0.4 }] },
@@ -112,7 +124,7 @@ export class CampaignService {
                 healthMultiplier: 1.1,
                 bountyMultiplier: 0.5,
                 masteriesEnabled: false,
-                enemyTypes: ['Standard', 'Tank'],
+                enemyTypes: ['Standard', 'Scout', 'Tank'],
                 waveTypeSequence: [1, 1, 2, 3, 1, 2, 3, 1, 1, 3, 1, 3],
                 bossCount: 2, // Wave 6 and 12
                 // Tight spiral/snake
@@ -129,18 +141,18 @@ export class CampaignService {
                     { x: 7, y: 5, type: 'bounty' }  // For the greedy
                 ],
                 waveModifiers: {
-                    1: { count: 9 },
-                    2: { count: 14, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.2 }] },
+                    1: { count: 10 },
+                    2: { count: 14, traits: [{ property: 'isFrost', chance: 0.2 }] },
                     3: { count: 25, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.2 }] },
                     4: { count: 15 },
-                    5: { count: 18, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.4 }] },
-                    6: { count: 30, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.6 }] },
+                    5: { count: 18, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.2 }] },
+                    6: { count: 30, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.4 }] },
                     7: { count: 20, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.5 }] },
                     8: { count: 25, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.2 }] },
-                    9: { count: 35, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.4 }] },
-                    10: { count: 28, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.4 }] },
-                    11: { count: 40, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.4 }] },
-                    12: { count: 50, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.7 }] },
+                    9: { count: 35, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.6 }] },
+                    10: { count: 28, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.6 }] },
+                    11: { count: 40, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.6 }] },
+                    12: { count: 50, traits: [{ property: 'isFrost', chance: 0.3 }, { property: 'isGrounded', chance: 0.7 }] },
                 }
             },
             {
@@ -150,27 +162,68 @@ export class CampaignService {
                     ? 'Вороги тримають дистанцію. Займіть висоту і використовуйте радіус огляду.'
                     : 'Enemies keep their distance. Take the high ground and utilize range.',
                 waveCount: 15,
-                startingGold: 250,
-                allowedTowers: [1, 4], // Turret, Sniper
+                startingGold: 1050,
+                allowedTowers: [3, 4], // Turret, Sniper
                 mapLayout: 'static',
                 difficulty: 'normal',
                 xpReward: 30,
                 gridSize: 15,
-                healthMultiplier: 1.2,
+                bountyMultiplier: 3.5,
+                healthMultiplier: 5,
+                masteriesEnabled: false,
                 enemyTypes: ['Standard', 'Scout', 'Tank'],
-                waveTypeSequence: [1, 1, 2, 1, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2],
                 bossCount: 3, // Waves 5, 10, 15
                 //Large circle around the edges
                 customPath: [
+                    // TOP:
                     { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 0 }, { x: 5, y: 0 }, { x: 6, y: 0 }, { x: 7, y: 0 }, { x: 8, y: 0 }, { x: 9, y: 0 }, { x: 10, y: 0 }, { x: 11, y: 0 }, { x: 12, y: 0 }, { x: 13, y: 0 }, { x: 14, y: 0 },
+                    // RIGHT:
                     { x: 14, y: 1 }, { x: 14, y: 2 }, { x: 14, y: 3 }, { x: 14, y: 4 }, { x: 14, y: 5 }, { x: 14, y: 6 }, { x: 14, y: 7 }, { x: 14, y: 8 }, { x: 14, y: 9 }, { x: 14, y: 10 }, { x: 14, y: 11 }, { x: 14, y: 12 }, { x: 14, y: 13 }, { x: 14, y: 14 },
-                    { x: 13, y: 14 } // Exit
+                    // BOTTOM: 
+                    { x: 13, y: 14 }, { x: 12, y: 14 }, { x: 11, y: 14 }, { x: 10, y: 14 }, { x: 9, y: 14 }, { x: 8, y: 14 }, { x: 7, y: 14 }, { x: 6, y: 14 }, { x: 5, y: 14 }, { x: 4, y: 14 }, { x: 3, y: 14 }, { x: 2, y: 14 }, { x: 1, y: 14 }, { x: 0, y: 14 },
+                    // LEFT: 
+                    { x: 0, y: 13 }, { x: 0, y: 12 }, { x: 0, y: 11 }, { x: 0, y: 10 }, { x: 0, y: 9 }, { x: 0, y: 8 }, { x: 0, y: 7 }, { x: 0, y: 6 }, { x: 0, y: 5 }, { x: 0, y: 4 }, { x: 0, y: 3 }, { x: 0, y: 2 }, { x: 0, y: 1 }
                 ],
                 bonusTiles: [
-                    { x: 12, y: 2, type: 'range' }, // CENTER. The sniper here covers huge area.
-                    { x: 12, y: 14, type: 'speed' }, // trap (not effective) 
-                    { x: 1, y: 2, type: 'damage' } // trap (not effective)
-                ]
+                    { x: 4, y: 4, type: 'range' }, //sniper
+                    { x: 3, y: 3, type: 'damage' }, //sniper
+                    { x: 10, y: 4, type: 'range' }, //sniper
+                    { x: 11, y: 3, type: 'damage' }, //sniper
+                    { x: 4, y: 10, type: 'range' }, //sniper
+                    { x: 3, y: 11, type: 'damage' }, //sniper
+                    { x: 10, y: 10, type: 'range' }, //sniper
+                    { x: 11, y: 11, type: 'damage' }, //sniper
+
+                    { x: 7, y: 7, type: 'prime' }, //trap
+                    { x: 9, y: 7, type: 'range' }, //trap
+                    { x: 5, y: 7, type: 'range' }, //trap
+                    { x: 7, y: 5, type: 'range' }, //trap
+                    { x: 7, y: 9, type: 'range' }, //trap
+
+                    { x: 13, y: 13, type: 'speed' }, //turret
+                    { x: 13, y: 1, type: 'speed' }, //turret
+                    { x: 1, y: 1, type: 'speed' }, //turret
+                    { x: 1, y: 13, type: 'speed' }, //turret
+                    // (not effective)
+                ],
+                waveTypeSequence: [1, 1, 2, 1, 2, 1, 3, 2, 1, 3, 2, 1, 3, 1, 3],
+                waveModifiers: {
+                    1: { count: 13 },
+                    2: { count: 15 },
+                    3: { count: 25, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.2 }] },
+                    4: { count: 25, traits: [{ property: 'isAgile', chance: 0.4 }] },
+                    5: { count: 30, traits: [{ property: 'isAgile', chance: 0.2 }, { property: 'isBulwark', chance: 0.2 }] },
+                    6: { count: 28, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.4 }] },
+                    7: { count: 25 },
+                    8: { count: 40, traits: [{ property: 'isAgile', chance: 0.5 }, { property: 'isBulwark', chance: 0.5 }] },
+                    9: { count: 34, traits: [{ property: 'isAgile', chance: 0.3 }, { property: 'isBulwark', chance: 0.4 }] },
+                    10: { count: 28, traits: [{ property: 'isAgile', chance: 0.2 }, { property: 'isBulwark', chance: 0.2 }] },
+                    11: { count: 45, traits: [{ property: 'isAgile', chance: 0.7 }, { property: 'isBulwark', chance: 0.3 }] },
+                    12: { count: 38, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.4 }] },
+                    13: { count: 32, traits: [{ property: 'isAgile', chance: 0.7 }, { property: 'isBulwark', chance: 0.3 }] },
+                    14: { count: 45, traits: [{ property: 'isAgile', chance: 0.9 }] },
+                    15: { count: 50, traits: [{ property: 'isBulwark', chance: 0.9 }] },
+                }
             },
             {
                 id: 'level_4',
@@ -185,10 +238,11 @@ export class CampaignService {
                 difficulty: 'hard',
                 xpReward: 40,
                 gridSize: 12,
-                healthMultiplier: 1.5, // Дуже живучі
-                enemyTypes: ['Standard', 'Tank', 'Scout'],
-                waveTypeSequence: [1, 1, 3, 1, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2],
-                bossCount: 4, // 5, 10, 15, 20
+                bountyMultiplier: 0.6,
+                healthMultiplier: 3,
+                masteriesEnabled: false,
+                enemyTypes: ['Standard', 'Scout', 'Tank'],
+                bossCount: 2, // 5, 10, 15, 20
                 // Zig-zag vertical
                 customPath: [
                     { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 1, y: 2 }, { x: 1, y: 3 },
@@ -198,10 +252,38 @@ export class CampaignService {
                     { x: 7, y: 7 }, { x: 7, y: 8 }, { x: 7, y: 9 }, { x: 7, y: 10 }, { x: 7, y: 11 }
                 ],
                 bonusTiles: [
-                    { x: 2, y: 2, type: 'mastery' }, // norm
-                    { x: 5, y: 5, type: 'damage' }, // norm
-                    { x: 8, y: 8, type: 'speed' } // norm
-                ]
+                    { x: 5, y: 5, type: 'mastery' }, // best
+                    { x: 2, y: 2, type: 'damage' }, // norm
+                    { x: 8, y: 8, type: 'speed' }, // norm
+                    { x: 5, y: 2, type: 'prime' }, // norm
+                    { x: 3, y: 7, type: 'prime' }, // norm
+
+                    { x: 0, y: 4, type: 'bounty' }, // trap
+                    { x: 8, y: 5, type: 'bounty' }, // trap
+                ],
+                waveTypeSequence: [1, 1, 3, 1, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 3],
+                waveModifiers: {
+                    1: { count: 15 },
+                    2: { count: 20 },
+                    3: { count: 20, traits: [{ property: 'isFrost', chance: 0.2 }] },//t
+                    4: { count: 30, traits: [{ property: 'isFrost', chance: 0.4 }] },
+                    5: { count: 25, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isMagma', chance: 0.2 }] },//t
+                    6: { count: 35, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isMagma', chance: 0.4 }] },//s
+                    7: { count: 35, traits: [{ property: 'isMagma', chance: 0.6 }] },//t
+                    8: { count: 40, traits: [{ property: 'isFrost', chance: 0.6 }, { property: 'isMagma', chance: 0.4 }] },//s
+                    9: { count: 35, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isMagma', chance: 0.7 }] },//t
+                    10: { count: 45, traits: [{ property: 'isMagma', chance: 1 }] },//s
+                    11: { count: 38, traits: [{ property: 'isFrost', chance: 0.5 }, { property: 'isMagma', chance: 0.5 }] },//t
+                    12: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },//s
+                    13: { count: 40, traits: [{ property: 'isFrost', chance: 0.5}, { property: 'isMagma', chance: 0.5 }] },//t
+                    14: { count: 55, traits: [{ property: 'isFrost', chance: 1 }] },//s
+                    15: { count: 42, traits: [{ property: 'isMagma', chance: 0.9 }] }, //t
+                    16: { count: 60, traits: [{ property: 'isMagma', chance: 1 }] },//s
+                    17: { count: 44, traits: [{ property: 'isMagma', chance: 0.9 }] },//t
+                    18: { count: 65, traits: [{ property: 'isMagma', chance: 1 }] },//s
+                    19: { count: 46, traits: [{ property: 'isMagma', chance: 0.9 }] },//t
+                    20: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },//t
+                }
             },
             {
                 id: 'level_5',
@@ -218,7 +300,6 @@ export class CampaignService {
                 gridSize: 10,
                 healthMultiplier: 10.8,
                 enemyTypes: ['Tank', 'Scout', 'Standard'],
-                waveTypeSequence: [3, 3, 2, 3, 2, 1, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2],
                 bossCount: 5, // 5, 10, 15, 20, 25
                 // Very short U-turn
                 customPath: [
@@ -230,7 +311,35 @@ export class CampaignService {
                     { x: 3, y: 4, type: 'damage' }, //Norm
                     { x: 4, y: 4, type: 'bounty' },//The key to victory is to place the first tower here.
                     { x: 1, y: 1, type: 'speed' } // Trap
-                ]
+                ],
+                waveTypeSequence: [3, 3, 2, 3, 2, 1, 2, 1, 3, 2,  1,  3,  2, 1,  3,  2, 1,  3,  2, 1, 3,  2, 1, 3, 3],
+                waveModifiers: {
+                    1: { count: 15 },//t
+                    2: { count: 20 },//t
+                    3: { count: 20, traits: [{ property: 'isFrost', chance: 0.2 }] },//s
+                    4: { count: 30, traits: [{ property: 'isFrost', chance: 0.4 }] },//t
+                    5: { count: 25, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isMagma', chance: 0.2 }] },//s
+                    6: { count: 35, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isMagma', chance: 0.4 }] },
+                    7: { count: 35, traits: [{ property: 'isMagma', chance: 0.6 }] },//s
+                    8: { count: 40, traits: [{ property: 'isFrost', chance: 0.6 }, { property: 'isMagma', chance: 0.4 }] },
+                    9: { count: 35, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isMagma', chance: 0.7 }] },//t
+                    10: { count: 45, traits: [{ property: 'isMagma', chance: 1 }] },//s
+                    11: { count: 38, traits: [{ property: 'isFrost', chance: 0.5 }, { property: 'isMagma', chance: 0.5 }] },
+                    12: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },//t
+                    13: { count: 40, traits: [{ property: 'isFrost', chance: 0.5}, { property: 'isMagma', chance: 0.5 }] },//s
+                    14: { count: 55, traits: [{ property: 'isFrost', chance: 1 }] },
+                    15: { count: 42, traits: [{ property: 'isMagma', chance: 0.9 }] }, //t
+                    16: { count: 60, traits: [{ property: 'isMagma', chance: 1 }] },//s
+                    17: { count: 44, traits: [{ property: 'isMagma', chance: 0.9 }] },
+                    18: { count: 65, traits: [{ property: 'isMagma', chance: 1 }] },//t
+                    19: { count: 46, traits: [{ property: 'isMagma', chance: 0.9 }] },//s
+                    20: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },
+                    21: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },//t
+                    22: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },//s
+                    23: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },
+                    24: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },//t
+                    25: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },//t
+                }
             }
         ];
     }
