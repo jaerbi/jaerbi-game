@@ -1,7 +1,7 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener, signal, computed, ChangeDetectionStrategy, ChangeDetectorRef, AfterViewInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener, signal, computed, ChangeDetectionStrategy, ChangeDetectorRef, AfterViewInit, effect, inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
-import { TowerDefenseEngineService } from '../../services/tower-defense-engine.service';
+import { HITBOX_OFFSET, TowerDefenseEngineService } from '../../services/tower-defense-engine.service';
 import { TDTile } from '../../models/unit.model';
 import { SettingsService } from '../../services/settings.service';
 import { FirebaseService } from '../../services/firebase.service';
@@ -13,6 +13,8 @@ import { AppPrivacyPolicyComponent } from '../privacy-policy/privacy-policy.comp
 import { CampaignService } from '../../services/campaign.service';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { WaveAnalyticsService } from '../../services/wave-analytics.service';
+import { TranslationKey } from '../../i18n/translations';
+import { DamageCalculationService } from '../../services/damage-calculation.service';
 
 @Component({
     selector: 'app-tower-defense',
@@ -27,6 +29,24 @@ import { WaveAnalyticsService } from '../../services/wave-analytics.service';
       height: 100vh;
       background: #0f172a;
       color: white;
+    }
+    .origin-center {
+        display: block;
+        width: fit-content;
+        height: fit-content;
+        margin: 0 auto;
+        overflow: visible !important;
+    }
+
+    .td-canvas {
+        display: block;
+    }
+    @keyframes scan {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    .animate-scan {
+        animation: scan 3s linear infinite;
     }
     .td-grid {
       display: grid;
@@ -174,14 +194,22 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     selectedDifficulty: 'easy' | 'normal' | 'hard' = 'normal';
     showStatsPanel = false;
     showStats = false; // For draggable modal
+    private platformId = inject(PLATFORM_ID);
+    public windowWidth = signal<number>(1200);
 
     // Zoom & Pan State
     zoomLevel = signal(1);
     panX = signal(0);
     panY = signal(0);
+    private lastTouchDistance = 0;
+    private initialZoom = 1;
+    private isTouching = false;
+    private lastTouchX = 0;
+    private lastTouchY = 0;
     isPanning = false;
     lastMouseX = 0;
     lastMouseY = 0;
+    targeting: TranslationKey[] = ['FIRST', 'WEAKEST', 'STRONGEST', 'RANDOM']
 
     @HostListener('window:keydown', ['$event'])
     onKeyDown(event: KeyboardEvent) {
@@ -215,6 +243,13 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         }
     }
 
+    @HostListener('window:resize')
+    onResize() {
+        if (isPlatformBrowser(this.platformId)) {
+            this.windowWidth.set(window.innerWidth);
+        }
+    }
+
     constructor(
         public tdEngine: TowerDefenseEngineService,
         public settings: SettingsService,
@@ -223,8 +258,18 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         public router: Router,
         private cdr: ChangeDetectorRef,
         public campaignService: CampaignService,
+        private _damageCalculationService: DamageCalculationService,
         private _waveAnalyticsService: WaveAnalyticsService,
-    ) { }
+    ) {
+        effect(() => {
+            if (this.tdEngine.gameOver()) {
+                this.tdEngine.updateRandomQuote();
+            }
+        });
+        if (isPlatformBrowser(this.platformId)) {
+            this.windowWidth.set(window.innerWidth);
+        }
+    }
 
     ngOnInit() {
         this.tdEngine.initializeGame(this.mapLevel());
@@ -270,8 +315,21 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         this.tdEngine.resetEngine();
         this.router.navigate(['/']);
     }
+    canResetOrLeave(): boolean {
+        const hasTowers = this.tdEngine.getTowersRef().length > 0;
+        const isPlaying = this.tdEngine.isWaveInProgress();
+        const isGameOver = this.tdEngine.gameOver();
 
+        if (isGameOver) return true;
+
+        if (hasTowers || isPlaying) {
+            return confirm(this.settings.t('CONFIRM_RESTART_MSG'));
+        }
+        return true;
+    }
     onRestart() {
+        if (!this.canResetOrLeave()) return;
+
         if (this.tdEngine.gameMode() === 'campaign') {
             const config = this.tdEngine.currentLevelConfig();
             if (config) {
@@ -295,12 +353,14 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             // Campaign Mode: Load Level 1 by default and show mission select
             this.tdEngine.gameMode.set('campaign');
             this.tdEngine.initializeGame(1, 'level_1');
+            this._refreshGameView();
             this.openMissionSelect();
         }
     }
 
     forceLoadLevel(levelId: string) {
         this.tdEngine.initializeGame(this.tdEngine.gridSize === 20 ? 2 : 1, levelId);
+        this._refreshGameView();
         this.showDevTools = false;
         this.showSettings = false;
     }
@@ -313,6 +373,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             if (nextLevel) {
                 // Check unlocked? Assume completion unlocks next.
                 this.tdEngine.initializeGame(this.tdEngine.gridSize === 20 ? 2 : 1, nextLevel.id);
+                this._refreshGameView();
                 this.selectedTile.set(null);
             } else {
                 // No more levels
@@ -337,7 +398,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const tile = this.selectedTile();
         if (tile) {
             this.tdEngine.buyTower(tile.x, tile.y, tier);
-            this.selectedTile.set(null);
+            this.selectedTile.set(tile);
         }
     }
 
@@ -358,7 +419,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
         const tower = tile.tower;
         const tileSize = this.tdEngine.tileSize;
-        const range = tower.type === 1 ? this.tdEngine.getEffectiveRange(tower) : tower.range;
+        const range = tower.range;
         const size = range * 2 * tileSize;
         return {
             left: `${tower.position.x * tileSize + tileSize / 2}px`,
@@ -440,12 +501,13 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                     type === 4 ? '#ef4444' :
                         type === 5 ? '#ee822a' :
                             type === 6 ? '#22d3ee' :
-                                '#84cc16';
+                                type === 7 ? '#84cc16' :
+                                    '#a16207';
     }
 
     getDamageStatsView() {
         const stats = this.tdEngine.statsByTowerType();
-        const list = [1, 2, 3, 4, 5, 6, 7].map(type => ({
+        const list = [1, 2, 3, 4, 5, 6, 7, 8].map(type => ({
             type,
             name: this.getTowerName(type),
             color: this.getTowerColor(type),
@@ -469,8 +531,20 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         this.tdEngine.initializeGame(level);
         this.selectedTile.set(null);
         if (this.isBrowser) {
-            this.resizeCanvas();
+            setTimeout(() => {
+                this.resizeCanvas();
+                this.cdr.detectChanges();
+            }, 50);
         }
+    }
+    private _refreshGameView() {
+        if (!this.isBrowser) return;
+
+        setTimeout(() => {
+            this.resizeCanvas();
+            this.cdr.detectChanges();
+            console.log('View Refreshed:', this.tdEngine.gridSize);
+        }, 100); // 100ms зазвичай достатньо для рендеру
     }
 
     setHardMode(enabled: boolean) {
@@ -495,23 +569,39 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     private resizeCanvas = () => {
         const canvas = this.gameCanvas?.nativeElement;
+
         if (!canvas) return;
-        const tile = this.tdEngine.tileSize;
+
+        const container = canvas.parentElement;
+
+        if (!container) return;
+
         const gridSize = this.tdEngine.gridSize;
+        const availableWidth = Math.min(window.innerWidth - 40, 800);
+        const newTileSize = Math.floor(availableWidth / gridSize);
+        this.tdEngine.tileSize = newTileSize;
+        const tile = this.tdEngine.tileSize;
 
         if (!tile || !gridSize) return;
 
-        const size = this.tdEngine.gridSize * tile;
+        const size = gridSize * tile;
+
         // Style size
         canvas.style.width = `${size}px`;
         canvas.style.height = `${size}px`;
         // Device pixel ratio scaling
-        const dpr = Math.max(1, window.devicePixelRatio || 1);
-        canvas.width = Math.floor(size * dpr);
-        canvas.height = Math.floor(size * dpr);
+        // const dpr = Math.max(1, window.devicePixelRatio || 1);
+        // canvas.width = Math.floor(size * dpr);
+        // canvas.height = Math.floor(size * dpr);
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = size * dpr;
+        canvas.height = size * dpr;
+
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.scale(dpr, dpr);
         this.ctx = ctx;
     };
 
@@ -759,6 +849,23 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                             ctx.textBaseline = 'middle';
                             ctx.fillText('⚡', px + halfTile, py + halfTile);
                         }
+                        else if (t.bonus === 'prime') {
+                            const gradient = ctx.createLinearGradient(px, py, px + size, py + size);
+                            gradient.addColorStop(0, 'rgba(239, 68, 68, 0.2)');
+                            gradient.addColorStop(0.5, 'rgba(250, 204, 21, 0.2)');
+                            gradient.addColorStop(1, 'rgba(59, 130, 246, 0.2)');
+                            ctx.fillStyle = gradient;
+                            ctx.strokeStyle = '#94a3b8';
+                            ctx.beginPath();
+                            ctx.roundRect(px + 4, py + 4, size - 8, size - 8, 8);
+                            ctx.fill();
+                            ctx.stroke();
+                            ctx.fillStyle = '#ffffff';
+                            ctx.font = `bold ${Math.floor(tile * 0.5)}px sans-serif`;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText('💎', px + halfTile, py + halfTile);
+                        }
 
                         ctx.restore();
                     }
@@ -860,7 +967,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                         type === 4 ? '#ef4444' :
                             type === 5 ? '#ee822a' :
                                 type === 6 ? '#22d3ee' :
-                                    '#84cc16';
+                                    type === 7 ? '#84cc16' :
+                                        '#a16207';
 
         const lineWidth = 2.5;
         const lv = Math.max(1, Math.min(4, level || 1));
@@ -930,6 +1038,31 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.lineTo(cx - r, cy - r * thickness);
             ctx.lineTo(cx - r * thickness, cy - r * thickness);
             ctx.closePath();
+        } else if (type === 8) {
+            const r = baseSize * 0.5;
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8 - Math.PI / 2;
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+        }
+        else if (type === 9) {
+            ctx.fillStyle = '#a16207';
+            const r = baseSize * 0.5;
+            ctx.beginPath();
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8 - Math.PI / 2;
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
         }
 
         if (lv >= 2) {
@@ -963,19 +1096,43 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         ctx.restore();
     }
 
+    // private drawFrostAuras(ctx: CanvasRenderingContext2D, tile: number) {
+    //     const towers = this.tdEngine.getTowersRef();
+    //     for (const t of towers) {
+    //         if (t.type === 1 && t.specialActive) {
+    //             const cx = t.position.x * tile + tile / 2;
+    //             const cy = t.position.y * tile + tile / 2;
+    //             const radius = 2 * tile;
+    //             ctx.beginPath();
+    //             ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    //             ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
+    //             ctx.fill();
+    //             ctx.lineWidth = 1
+    //             ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
+    //             ctx.stroke();
+    //         }
+    //     }
+    // }
     private drawFrostAuras(ctx: CanvasRenderingContext2D, tile: number) {
         const towers = this.tdEngine.getTowersRef();
+
+        const golden = this.tdEngine.getUpgradeLevel(1, 'golden');
+        const auraMultiplier = 1 + golden * 0.1;
+        const dynamicRadius = this._damageCalculationService.FROST_AURA_RADIUS_BASE * auraMultiplier * tile;
+
         for (const t of towers) {
             if (t.type === 1 && t.specialActive) {
                 const cx = t.position.x * tile + tile / 2;
                 const cy = t.position.y * tile + tile / 2;
-                const radius = 2 * tile;
                 ctx.beginPath();
-                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
+                ctx.arc(cx, cy, dynamicRadius, 0, Math.PI * 2);
+                ctx.fillStyle = golden > 0
+                    ? 'rgba(56, 189, 248, 0.1)'
+                    : 'rgba(56, 189, 248, 0.05)';
+
                 ctx.fill();
-                ctx.lineWidth = 1
-                ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
                 ctx.stroke();
             }
         }
@@ -1076,7 +1233,6 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             const cy = e.displayY ?? ((e.position.y + 0.5) * tile);
             const barW = size;
             const barH = 4;
-            const barY = cy - r - 10;
             ctx.fillStyle = '#0f172a';
             ctx.fillRect(cx - r, cy - r - 10, barW, barH);
             ctx.fillStyle = '#10b981';
@@ -1105,6 +1261,42 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                     ctx.fillRect(cx - r - stackW - 2, startY + i * (stackH + gap), stackW, stackH);
                 }
             }
+
+            // Bleed visualization (Bottom Right Droplet)
+            if (e.bleedDamagePerSec && e.bleedDamagePerSec > 0) {
+                const dropSize = 5;
+                const dropX = cx + r - dropSize;
+                const dropY = cy + r + 2;
+                ctx.save();
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(dropX, dropY, dropSize / 2, 0, Math.PI);
+                ctx.lineTo(dropX, dropY - dropSize);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Inferno Burn Visualization (Оптимізовано для швидкості)
+            if (e.burnedByInferno) {
+                ctx.save();
+                if (!isFastSpeed) {
+                    ctx.shadowBlur = 3;
+                    ctx.shadowColor = '#f97316';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r + 2, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(249, 115, 22, 0.5)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+                const fireSize = Math.floor(tile * 0.22);
+                ctx.font = `${fireSize}px serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('🔥', cx, cy - r - 8);
+                ctx.restore();
+            }
         }
     }
 
@@ -1123,49 +1315,87 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     private drawProjectiles(ctx: CanvasRenderingContext2D, tile: number) {
-        // Speed Constraint: Only draw projectiles at 1x speed
         const speed = this.tdEngine.gameSpeedMultiplier();
         if (speed >= 2) return;
 
         const projs = this.tdEngine.getProjectilesRef();
         const towers = this.tdEngine.getTowersRef();
-        
+
         for (const p of projs) {
-            // Find source tower type to determine color
-            // Optimization: If we stored type on projectile, this would be O(1) instead of O(N)
-            // But for now, we can infer or use a default if we can't easily link back.
-            // Actually, p.from matches tower position.
-            
-            // Let's use a simple heuristic based on what fired it?
-            // Since we don't have type on Projectile interface, we'll use a default or try to match.
-            // Wait, we can just use a default 'energy' color or update Projectile interface.
-            // But to avoid big refactors now, let's just color code by "look".
-            
-            // Actually, we can check the tower at p.from!
+            if (p.isExplosion && !p.isBeam) {
+                const currentGridX = p.from.x + (p.to.x - p.from.x) * p.progress;
+                const currentGridY = p.from.y + (p.to.y - p.from.y) * p.progress;
+                const cx = currentGridX * tile;
+                const cy = currentGridY * tile;
+                // const radius = 6 + 10 * p.progress;
+                const radius = 4 + 14 * p.progress;
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                ctx.strokeStyle = '#78350f';
+                ctx.lineWidth = 4 * (1 - p.progress);
+                ctx.globalAlpha = Math.max(0, 0.8 * (1 - p.progress));
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius * 0.6, 0, Math.PI * 2);
+                ctx.strokeStyle = '#a16207';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.restore();
+                continue;
+            }
+            if (p.isBeam) {
+                ctx.save();
+                ctx.beginPath();
+                const startX = (p.from.x + 0.5) * tile;
+                const startY = (p.from.y + 0.5) * tile;
+                const endX = (p.to.x + 0.5) * tile;
+                const endY = (p.to.y + 0.5) * tile;
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = Math.max(0, 1 - p.progress);
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = '#f61f1fb1';
+                ctx.stroke();
+                ctx.restore();
+                continue;
+            }
+
             const tx = Math.floor(p.from.x);
             const ty = Math.floor(p.from.y);
             const tower = towers.find(t => t.position.x === tx && t.position.y === ty);
             const type = tower ? tower.type : 1;
-
             const x = p.from.x + (p.to.x - p.from.x) * p.progress;
             const y = p.from.y + (p.to.y - p.from.y) * p.progress;
             const cx = x * tile + tile / 2;
             const cy = y * tile + tile / 2;
 
             ctx.beginPath();
-            
-            // Tower-Specific Colors
-            let color = '#fbbf24'; // Default Amber
+            let color = '#fbbf24';
             let size = 3;
 
             switch (type) {
-                case 1: color = '#a3def9'; break; // Ice (Blue)
-                case 2: color = '#d2a6fb'; break; // Lightning (Purple)
-                case 3: color = '#facc15'; break; // Cannon (Yellow/Heavy)
-                case 4: color = '#f04545'; break; // Sniper (Red/Thin)
-                case 5: color = '#f97316'; break; // Inferno (Orange)
-                case 6: color = '#22d3ee'; break; // Prism (Cyan - though usually beam)
-                case 7: color = '#84cc16'; break; // Venom (Green)
+                case 1: color = '#a3def9'; break;
+                case 2: color = '#d2a6fb'; break;
+                case 3: color = '#facc15'; size = 4; break;
+                case 4: color = '#f04545'; size = 2; break;
+                case 5: color = '#f97316';
+                    if (p.isExplosion) {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, tile * 1.5, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(251, 146, 60, 0.3)';
+                        ctx.fill();
+                        ctx.strokeStyle = '#f97316';
+                        ctx.stroke();
+                        ctx.restore();
+                        return;
+                    }
+                    break;
+                case 7: color = '#84cc16'; break;
+                case 8: color = '#78350f'; size = 4; break;
             }
 
             ctx.fillStyle = color;
@@ -1173,17 +1403,16 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.fill();
         }
 
-        // Draw Inferno Zones (always visible if low speed)
         const zones = this.tdEngine.getInfernoZonesRef();
         for (const z of zones) {
             if (z.dps <= 0) continue;
-            const cx = z.position.x * tile + tile / 2;
-            const cy = z.position.y * tile + tile / 2;
+            const cx = (z.position.x + 0.5) * tile;
+            const cy = (z.position.y + 0.5) * tile;
             const r = z.radius * tile;
             ctx.save();
             ctx.beginPath();
             ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(249, 115, 22, 0.15)'; // Orange tint
+            ctx.fillStyle = 'rgba(249, 115, 22, 0.15)';
             ctx.fill();
             ctx.lineWidth = 1;
             ctx.strokeStyle = 'rgba(249, 115, 22, 0.4)';
@@ -1195,12 +1424,14 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
     private drawRangeIndicator(ctx: CanvasRenderingContext2D, tile: number) {
         const tileSel = this.selectedTile();
+
         if (!tileSel || !tileSel.tower) return;
         const t = tileSel.tower;
         const cx = t.position.x * tile + tile / 2;
         const cy = t.position.y * tile + tile / 2;
-        const range = t.type === 1 ? this.tdEngine.getEffectiveRange(t) : t.range;
-        const radius = range * tile;
+        const baseRange = t.range;
+        const radius = (baseRange + HITBOX_OFFSET) * tile;
+        ctx.save();
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(56, 189, 248, 0.12)';
@@ -1208,7 +1439,41 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         ctx.lineWidth = 2;
         ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
         ctx.stroke();
+        ctx.restore();
+        // DEBUG ONLY
+        // this.drawDebugLines(ctx);
     }
+    // DEBUG ONLY
+    private drawDebugLines(ctx: CanvasRenderingContext2D) {
+        const tile = Math.floor(this.tdEngine.tileSize);
+        const tileSel = this.selectedTile();
+        if (!tileSel || !tileSel.tower || !tileSel.tower.targetEnemyId) return;
+
+        const t = tileSel.tower;
+        const enemies = this.tdEngine.getEnemiesRef();
+        const enemy = enemies.find(e => e.id === t.targetEnemyId);
+        if (!enemy) return;
+
+        const tx = (t.position.x + 0.5) * tile;
+        const ty = (t.position.y + 0.5) * tile;
+        const ex = (enemy.position.x + 0.5) * tile;
+        const ey = (enemy.position.y + 0.5) * tile;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(ex, ey);
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+        ctx.setLineDash([5, 5]);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(ex, ey, 4, 0, Math.PI * 2);
+        ctx.fillStyle = 'red';
+        ctx.fill();
+        ctx.restore();
+    }
+    // DEBUG END
 
     onCanvasClick(event: MouseEvent) {
         // If panning occurred, ignore click
@@ -1220,21 +1485,11 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const rect = this.gameCanvas?.nativeElement.getBoundingClientRect();
         if (!rect) return;
 
-        // Transform screen coordinates to canvas coordinates
-        // getBoundingClientRect returns the visual box relative to viewport.
-        // event.clientX/Y is also relative to viewport.
-
-        // Calculate offset within the visual canvas
         const offsetX = event.clientX - rect.left;
         const offsetY = event.clientY - rect.top;
-
-        // Since the canvas is scaled, we divide by the current zoom level to get internal coordinates.
-        // We assume uniform scaling (zoomLevel applies to both X and Y).
         const scale = this.zoomLevel();
-
         const canvasX = offsetX / scale;
         const canvasY = offsetY / scale;
-
         const tile = this.tdEngine.tileSize;
         const x = Math.floor(canvasX / tile);
         const y = Math.floor(canvasY / tile);
@@ -1244,11 +1499,49 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     // Zoom & Pan Handlers
     onWheel(event: WheelEvent) {
         event.preventDefault();
-        // Zoom towards center (simplified) or pointer?
-        // For now, center zoom is safer with simple translate/scale.
         const delta = event.deltaY > 0 ? 0.9 : 1.1;
         const newZoom = Math.max(0.5, Math.min(3, this.zoomLevel() * delta));
         this.zoomLevel.set(newZoom);
+    }
+
+    onTouchStart(event: TouchEvent) {
+        if (event.touches.length === 1) {
+            this.isPanning = true;
+            this.lastTouchX = event.touches[0].clientX;
+            this.lastTouchY = event.touches[0].clientY;
+            this.wasPanning = false;
+        } else if (event.touches.length === 2) {
+            this.isPanning = false;
+            this.lastTouchDistance = this.getDistance(event.touches);
+            this.initialZoom = this.zoomLevel();
+        }
+    }
+
+    onTouchMove(event: TouchEvent) {
+        if (event.touches.length === 1 && this.isPanning) {
+            const touch = event.touches[0];
+            const dx = touch.clientX - this.lastTouchX;
+            const dy = touch.clientY - this.lastTouchY;
+            this.panX.update(x => x + dx);
+            this.panY.update(y => y + dy);
+            this.lastTouchX = touch.clientX;
+            this.lastTouchY = touch.clientY;
+            this.wasPanning = true;
+        } else if (event.touches.length === 2) {
+            const currentDistance = this.getDistance(event.touches);
+            const scale = currentDistance / this.lastTouchDistance;
+            this.zoomLevel.set(Math.max(0.5, Math.min(3, this.initialZoom * scale)));
+        }
+    }
+
+    onTouchEnd() {
+        this.isPanning = false;
+    }
+
+    private getDistance(touches: TouchList): number {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     private wasPanning = false;
@@ -1327,6 +1620,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     startCampaignLevel() {
         if (!this.selectedCampaignLevel) return;
         this.tdEngine.initializeGame(this.tdEngine.gridSize === 20 ? 2 : 1, this.selectedCampaignLevel);
+        this._refreshGameView();
         this.closeMissionSelect();
         this.selectedCampaignLevel = null;
     }

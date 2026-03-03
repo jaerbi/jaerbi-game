@@ -176,6 +176,9 @@ export type TranslationKey =
     | 'T7_NAME'
     | 'T7_GOLDEN_TITLE'
     | 'T7_GOLDEN_DESC'
+    | 'T8_NAME'
+    | 'T8_GOLDEN_TITLE'
+    | 'T8_GOLDEN_DESC'
     | 'GOLD_MASTERY'
     | 'GOLD_MASTERY_INFO'
     | 'THANK_SUPPORTING'
@@ -208,12 +211,80 @@ export type TranslationKey =
     | 'SYSTEM_ALERT_ADAPT'
     | 'EFFICIENCY_OF'
     | 'DECREASED_BY'
+    | 'TACTICAL_ADVICE'
+    | 'USE_STRATEGY_HINT'
+    | 'GAME_OVER_INFO_19'
+    | 'GAME_OVER_INFO_18'
+    | 'GAME_OVER_INFO_17'
+    | 'GAME_OVER_INFO_16'
+    | 'GAME_OVER_INFO_15'
+    | 'GAME_OVER_INFO_14'
+    | 'GAME_OVER_INFO_13'
+    | 'GAME_OVER_INFO_12'
+    | 'GAME_OVER_INFO_11'
+    | 'GAME_OVER_INFO_10'
+    | 'GAME_OVER_INFO_20'
+    | 'GAME_OVER_INFO_1'
+    | 'GAME_OVER_INFO_2'
+    | 'GAME_OVER_INFO_3'
+    | 'GAME_OVER_INFO_4'
+    | 'GAME_OVER_INFO_5'
+    | 'GAME_OVER_INFO_6'
+    | 'GAME_OVER_INFO_7'
+    | 'GAME_OVER_INFO_8'
+    | 'GAME_OVER_INFO_9'
+    | 'GAME_OVER_INFO_21'
+    | 'GAME_OVER_INFO_22'
+    | 'GAME_OVER_INFO_23'
+    | 'GAME_OVER_INFO_24'
+    | 'GAME_OVER_INFO_25'
+    | 'GAME_OVER_INFO_26'
+    | 'CONFIRM_RESTART_MSG'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
-    EFFICIENCY_OF: { en: 'Efficiency of', uk: `Ефективність` },
-    DECREASED_BY: { en: 'decreased by 75%', uk: `знизилася на 75%` },
-    SYSTEM_ALERT_ADAPT: { en: 'System Alert: Adaptation', uk: `Системне сповіщення: Адаптація` },
+    CONFIRM_RESTART_MSG: { en: `Are you sure? This wave's progress and towers built will be lost.`, uk: `Ви впевнені? Прогрес цієї хвилі та побудовані вежі будуть втрачені.` },
+    GAME_OVER_INFO_26: { en: 'Prediction confirmed. Player defeat.', uk: `Прогноз підтверджено. Поразка гравця.` },
+    GAME_OVER_INFO_25: { en: 'Outcome: Suboptimal. Recommend retry.', uk: `Результат: субоптимальний. Рекомендовано повтор.` },
+    GAME_OVER_INFO_24: { en: 'Defense integrity: 0%. Hope integrity: unknown.', uk: `Цілісність оборони: 0%. Цілісність надії: невідома.` },
+    GAME_OVER_INFO_23: { en: 'You lasted longer than expected.', uk: `Ти протримався довше, ніж очікувалось.` },
+    GAME_OVER_INFO_22: { en: 'Learning from defeat increases win probability.', uk: `Навчання на поразці підвищує ймовірність перемоги.` },
+    GAME_OVER_INFO_21: { en: 'Defeat is just a new opportunity to start over.', uk: `Поразка — це лише нова можливість почати спочатку` },
+    GAME_OVER_INFO_20: { en: 'Defeat is just a new opportunity to start over.', uk: `Поразка — це лише нова можливість почати спочатку.` },
+    GAME_OVER_INFO_19: { en: 'Every loss makes your next defense stronger.', uk: `Кожна поразка робить твою наступну оборону сильнішою.` },
+    GAME_OVER_INFO_18: { en: 'Adapt. Rebuild. Try again.', uk: `Адаптуйся. Відбудуйся. Спробуй знову.` },
+    GAME_OVER_INFO_17: { en: 'The enemy evolved. So can you.', uk: `Ворог еволюціонував. Ти теж можеш.` },
+    GAME_OVER_INFO_16: { en: 'Your strategy failed. Your potential did not.', uk: `Твоя стратегія провалилась. Твій потенціал — ні.` },
+    GAME_OVER_INFO_15: { en: 'Simulation ended. Ready for another run?', uk: `Симуляцію завершено. Готовий до нового запуску?` },
+    GAME_OVER_INFO_14: { en: 'You were close. Closer than you think.', uk: `Ти був ближче, ніж думаєш.` },
+    GAME_OVER_INFO_13: { en: 'Recalculate. Rebuild. Revenge.', uk: `Перерахуй. Перебудуй. Помстись.` },
+    GAME_OVER_INFO_12: { en: 'Even the best defenses fall eventually.', uk: `Навіть найкраща оборона колись падає.` },
+    GAME_OVER_INFO_11: { en: 'Failure detected. Experience gained.', uk: `Зафіксовано поразку. Досвід отримано.` },
+    GAME_OVER_INFO_10: { en: 'Your towers fell. Your will should not.', uk: `Твої вежі впали. Твоя воля — ні.` },
+    GAME_OVER_INFO_9: { en: 'The sector is lost. The war is not.', uk: `Сектор втрачено. Війна — ні.` },
+    GAME_OVER_INFO_8: { en: 'Every master was once defeated.', uk: `Кожен майстер колись зазнавав поразки.` },
+    GAME_OVER_INFO_7: { en: 'One more wave. One more chance.', uk: `Ще одна хвиля. Ще один шанс.` },
+    GAME_OVER_INFO_6: { en: 'Game Over is not the end. It is data.', uk: `Game Over — це не кінець. Це дані.` },
+    GAME_OVER_INFO_5: { en: 'Strategy update required.', uk: `Потрібне оновлення стратегії.` },
+    GAME_OVER_INFO_4: { en: 'They broke through. Now break back.', uk: `Вони прорвалися. Тепер прорвися ти.` },
+    GAME_OVER_INFO_3: { en: 'Your defenses collapsed. Your resolve must not.', uk: `Оборона впала. Рішучість — ні.` },
+    GAME_OVER_INFO_2: { en: 'Retry is the strongest upgrade.', uk: `Повтор — це найсильніше покращення.` },
+    GAME_OVER_INFO_1: { en: 'Victory belongs to the persistent.', uk: `Перемога належить наполегливим.` },
+    SYSTEM_ALERT_ADAPT: { en: 'Strategic Adaptation', uk: 'Стратегічна Адаптація' },
+    EFFICIENCY_OF: { en: 'Analysis:', uk: 'Аналіз:' },
+    // Тепер це загальна фраза, яка натякає на зміну тактики
+    DECREASED_BY: {
+        en: 'armored against this type. Seek vulnerability.',
+        uk: 'адаптувалися до цього типу. Шукайте слабку зону.'
+    },
+    USE_STRATEGY_HINT: {
+        en: 'Try bypassing defenses with',
+        uk: 'Спробуйте обійти захист за допомогою'
+    },
+    TACTICAL_ADVICE: {
+        en: 'Tactical Advice',
+        uk: 'Тактичні поради'
+    },
     SHIELDS: { en: 'Shields', uk: `Щити` },
     CREDITS: { en: 'Credits', uk: `Кредити` },
     ENGAGED: { en: 'In Battle', uk: `У бою` },
@@ -223,10 +294,10 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     DAMAGE_STATS: { en: 'Damage Statistics', uk: `Статистика шкоди` },
     NO_DATA: { en: 'No data yet', uk: `Дані відсутні` },
     DAMAGE_STATS_DESC: { en: 'Cumulative damage dealt by each tower type', uk: `Сумарна шкода за типами веж` },
-    RANDOM: { en: 'Random', uk: `Випадковий` },
-    STRONGEST: { en: 'Strongest', uk: `Найсильніший` },
-    WEAKEST: { en: 'Weakest', uk: `Найслабший` },
-    FIRST: { en: 'First', uk: `Перший` },
+    RANDOM: { en: 'Rnd', uk: `Вип.` },
+    STRONGEST: { en: 'Max', uk: `Макс` },
+    WEAKEST: { en: 'Min', uk: `Мін` },
+    FIRST: { en: '1', uk: `1` },
     SPEED: { en: 'Speed', uk: `Швидкість` },
     TARGETING: { en: 'Targeting', uk: `Таргетинг` },
     SOCIAL_FEEDBACK: { en: 'Social & Feedback', uk: `Соціальні мережі та зворотний зв'язок` },
@@ -262,16 +333,16 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     T1_GOLDEN_DESC: { en: 'Slow enemies by an extra 10% and increase aura radius.', uk: 'Уповільнює ворогів на додаткові 10% та збільшує радіус аури.' },
     // Tier 2
     T2_NAME: {
-        en: 'Tier 2 – Precision',
-        uk: 'Тир 2 – Точність',
+        en: 'Tier 2 – Electro',
+        uk: 'Тир 2 – Електро',
     },
     T2_GOLDEN_TITLE: {
-        en: 'Critical Focus',
-        uk: 'Критичне фокусування',
+        en: 'High voltage',
+        uk: 'Висока напруга',
     },
     T2_GOLDEN_DESC: {
-        en: 'Boosts Ricochet: higher trigger chance and up to 150%+ damage.',
-        uk: 'Підсилює рикошет: вищий шанс активації та до 150%+ шкоди.',
+        en: 'Deals critical damage to enemies under slow effects and increases the number of chain targets.',
+        uk: 'Наносить критичну шкоду ворогам під ефектами сповільнення та збільшує кількість цілей ланцюга.',
     },
 
     // Tier 3
@@ -290,16 +361,16 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
 
     // Tier 4
     T4_NAME: {
-        en: 'Tier 4 – Storm',
-        uk: 'Тир 4 – Шторм',
+        en: 'Tier 4 – Piercer',
+        uk: 'Тир 4 – Прошивач',
     },
     T4_GOLDEN_TITLE: {
-        en: 'Chain Lightning',
-        uk: 'Ланцюгова блискавка',
+        en: 'Piercing Round',
+        uk: 'Бронебійний набій',
     },
     T4_GOLDEN_DESC: {
-        en: 'Chance to chain attack and strike an additional target.',
-        uk: 'Шанс на ланцюгову атаку по додатковій цілі.',
+        en: 'Projectiles pierce through multiple enemies.',
+        uk: 'Снаряди пробивають крізь кількох ворогів.',
     },
     T5_NAME: {
         en: 'Tier 5 – Inferno',
@@ -310,8 +381,8 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         uk: 'Ланцюгова реакція',
     },
     T5_GOLDEN_DESC: {
-        en: 'Kills from Inferno or Napalm cause explosions for 50% of max HP.',
-        uk: 'Убивства від Інферно чи напалму спричиняють вибухи на 50% від макс. HP.',
+        en: 'Kills from Inferno or Napalm cause explosions for 30% dps. + 10% for extra point',
+        uk: 'Убивства від Інферно чи напалму спричиняють вибухи на 30% урону. + 10% за кожен поінт',
     },
     T6_NAME: {
         en: 'Tier 6 – Prism',
@@ -337,29 +408,41 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         en: 'Neurotoxin causes stronger slow and heavier stacking poison over time.',
         uk: 'Нейротоксин сильніше сповільнює та посилює накопичення отрути з часом.',
     },
-    FINAL_STRIKE_INFO: {
-        en: 'Execute: Crit on enemies below 50% HP. Bosses take even more damage.',
-        uk: `Екзекуція: критичний удар по ворогах з HP нижче 50%. Боси отримують ще більше шкоди.`,
+    T8_NAME: {
+        en: 'Tier 8 – Earthquake',
+        uk: 'Тир 8 – Землетрус',
+    },
+    T8_GOLDEN_TITLE: {
+        en: 'Tectonic Rift',
+        uk: 'Тектонічний розлом',
+    },
+    T8_GOLDEN_DESC: {
+        en: 'Seismic waves strike additional targets, creating a chain reaction of knockbacks.',
+        uk: 'Сейсмічні хвилі вражають додаткові цілі, створюючи ланцюгову реакцію відкидання.',
     },
     FINAL_STRIKE: {
-        en: 'Final Strike',
-        uk: `Останній удар`,
+        en: 'Executioner’s Strike',
+        uk: 'Удар Ката',
+    },
+    FINAL_STRIKE_INFO: {
+        en: 'Executes targets below 50% HP (x2 damage, x3 for Bosses) and applies a bleeding effect based on hit damage.',
+        uk: 'Добиває цілі з HP нижче 50% (x2 шкоди, x3 по Босах) та накладає ефект кровотечі від нанесеної шкоди.',
     },
     SHATTER_INFO: {
-        en: 'Each hit adds 1 stack (Max 5). Damage is multiplied by (1 + stacks * 0.20). (Stack up to +100% dmg).',
-        uk: `Кожен удар додає 1 заряд (максимум 5). Шкода множиться на (1 + заряди * 0.20). (Накопичується до +100% шкоди).`,
+        en: 'Each hit adds 1 stack (Max 5). Damage is multiplied from all types of elements on (1 + stacks * 0.20). (Stack up to +100% dmg).',
+        uk: `Кожен удар додає 1 заряд (максимум 5). Шкода множиться від усіх типів стихій на (1 + заряди * 0.20). (Накопичується до +100% шкоди).`,
     },
     SHATTER: {
         en: 'Shatter',
         uk: `Розколоти`,
     },
-    CHAIN_LIGHTNING_INFO: {
-        en: 'Chance for shots to ricochet and deal up to 150% damage to nearby enemies.',
-        uk: `Шанс рикошету пострілу та нанесення до 150% шкоди сусіднім ворогам.`,
-    },
     CHAIN_LIGHTNING: {
         en: 'Chain Lightning',
-        uk: `Ланцюгова блискавка`,
+        uk: 'Ланцюгова блискавка',
+    },
+    CHAIN_LIGHTNING_INFO: {
+        en: 'Shots chain to additional targets (up to 2-5(masteries)). Deals increased damage to Frozen or Poisoned enemies.',
+        uk: 'Постріли вражають додаткові цілі ланцюгом (від 2 до 5 (ямайстерність)). Завдає підвищену шкоду замороженим або отруєним ворогам.',
     },
     FROST_AURA_INFO: {
         en: 'Apply 30% slow to enemies in range.',
@@ -372,7 +455,7 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     REFRACTION_BEAM: { en: 'Refraction Beam', uk: `Заломлення променя` },
     REFRACTION_BEAM_INFO: { en: 'Allows attacking up to 3 targets simultaneously. Each beam benefits from the laser ramp-up bonus.', uk: `Дозволяє атакувати до 3 цілей одночасно. Кожна ціль отримує бонус від наростання потужності лазера.` },
     NAPALM_STRIKE: { en: 'Напалмовий удар', uk: `Напалмовий удар` },
-    NAPALM_STRIKE_INFO: { en: 'Leaves a fire zone for 4s, dealing 50% tower damage per second to all enemies in the blast radius.', uk: `Залишає вогняну зону на 4 сек., що наносить 50% шкодау щосекунди всім ворогам у радіусі вибуху.` },
+    NAPALM_STRIKE_INFO: { en: 'Leaves a fire zone for 4s, dealing 15% tower damage per second to all enemies in the blast radius.', uk: `Залишає вогняну зону на 4 сек., що наносить 15% шкодау щосекунди всім ворогам у радіусі вибуху.` },
     NEUROTOXIN: { en: 'Neurotoxin', uk: `Нейротоксин` },
     NEUROTOXIN_INFO: { en: 'Poison now slows enemies by 20%.', uk: `Отрута тепер уповільнює ворогів на 20%.` },
     BUY_ABILITY: {
@@ -416,8 +499,8 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         uk: `МАКС РІВЕНЬ`,
     },
     UPGRADE: {
-        en: 'UPGRADE',
-        uk: `ОНОВЛЕННЯ`,
+        en: 'Upgrade',
+        uk: `Покращення`,
     },
     TIER: {
         en: 'Tier',

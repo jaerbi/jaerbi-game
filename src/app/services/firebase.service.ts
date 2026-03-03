@@ -5,6 +5,7 @@ import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User, Auth } from 'firebase/auth';
 import { environmentFirebase } from '../../environments/environment.firebase';
 import { Difficulty, MapSize } from './settings.service';
+import { HARD_CAP } from './tower-defense-engine.service';
 
 export interface ScoreEntry {
     playerName: string;
@@ -143,6 +144,7 @@ export class FirebaseService {
         try {
             console.count('FIREBASE_CALL: saveTowerDefenseScore');
             let userTotalXp: number | undefined = undefined;
+            const querySize = entry.mapSize;
             if (entry.userId) {
                 try {
                     const ref = doc(this.db, 'towerDefenseMasteries', entry.userId);
@@ -162,6 +164,50 @@ export class FirebaseService {
                 timestamp: serverTimestamp()
             };
             await addDoc(collection(this.db, 'towerDefenseLeaderboards'), payload);
+
+            // Update personal bests collection
+            if (entry.userId) {
+                const bestId = `${entry.userId}_${querySize}`;
+                const bestRef = doc(this.db, 'towerDefenseBestScores', bestId);
+                try {
+                    const bestSnap = await getDoc(bestRef);
+                    if (!bestSnap.exists()) {
+                        await setDoc(bestRef, {
+                            userId: entry.userId,
+                            displayName: entry.displayName,
+                            maxWave: entry.maxWave,
+                            totalMoney: entry.totalMoney,
+                            mapSize: querySize,
+                            gridSize: entry.gridSize,
+                            userTotalXp,
+                            timestamp: serverTimestamp()
+                        });
+                    } else {
+                        const data = bestSnap.data() as TowerDefenseScore;
+                        const currentWave = Number(entry.maxWave);
+                        const shouldUpdate = typeof data?.maxWave !== 'number' || currentWave > data.maxWave;
+                        if (shouldUpdate) {
+                            await setDoc(bestRef, {
+                                userId: entry.userId,
+                                displayName: entry.displayName,
+                                maxWave: entry.maxWave,
+                                totalMoney: entry.totalMoney,
+                                mapSize: querySize,
+                                gridSize: entry.gridSize,
+                                userTotalXp,
+                                timestamp: serverTimestamp()
+                            }, { merge: true });
+                        } else {
+                            // Ensure displayName stays in sync even if not a new max
+                            if (data.displayName !== entry.displayName) {
+                                await setDoc(bestRef, { displayName: entry.displayName, timestamp: serverTimestamp() }, { merge: true });
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error updating best TD score: ', e);
+                }
+            }
         } catch (e) {
             console.error('Error adding TD score: ', e);
         }
@@ -171,32 +217,14 @@ export class FirebaseService {
         if (!this.db) return [];
         const querySize = `${size}x${size}`;
         try {
-            // First get raw list
             const q = query(
-                collection(this.db, 'towerDefenseLeaderboards'),
+                collection(this.db, 'towerDefenseBestScores'),
                 where('mapSize', '==', querySize),
                 orderBy('maxWave', 'desc'),
-                limit(limitCount * 4) // Fetch more to filter duplicates
+                limit(limitCount)
             );
             const querySnapshot = await getDocs(q);
-            const allScores = querySnapshot.docs.map(doc => doc.data() as TowerDefenseScore);
-
-            // Filter to keep only best per user
-            const bestPerUser = new Map<string, TowerDefenseScore>();
-            for (const s of allScores) {
-                if (!bestPerUser.has(s.userId)) {
-                    bestPerUser.set(s.userId, s);
-                } else {
-                    const existing = bestPerUser.get(s.userId)!;
-                    if (s.maxWave > existing.maxWave) {
-                        bestPerUser.set(s.userId, s);
-                    }
-                }
-            }
-
-            return Array.from(bestPerUser.values())
-                .sort((a, b) => b.maxWave - a.maxWave)
-                .slice(0, limitCount);
+            return querySnapshot.docs.map(docSnap => docSnap.data() as TowerDefenseScore);
 
         } catch (e) {
             console.error('Error fetching TD scores: ', e);
@@ -225,19 +253,11 @@ export class FirebaseService {
         if (!this.db) return null;
         const querySize = `${size}x${size}`;
         try {
-            const q = query(
-                collection(this.db, 'towerDefenseLeaderboards'),
-                where('userId', '==', userId),
-                where('mapSize', '==', querySize),
-                orderBy('maxWave', 'desc'),
-                orderBy('timestamp', 'desc'),
-                limit(1)
-            );
-            const querySnapshot = await getDocs(q);
-            if (querySnapshot.empty) {
-                return null;
-            }
-            return querySnapshot.docs[0].data() as TowerDefenseScore;
+            const bestId = `${userId}_${querySize}`;
+            const ref = doc(this.db, 'towerDefenseBestScores', bestId);
+            const snap = await getDoc(ref);
+            if (!snap.exists()) return null;
+            return snap.data() as TowerDefenseScore;
         } catch {
             return null;
         }
@@ -290,48 +310,42 @@ export class FirebaseService {
 
     async awardTowerDefenseXp(xp: number, levelId?: string, wave?: number): Promise<void> {
         if (!this.db) return;
-
-        if (xp <= 0) return;
-
         const user = this.user$();
-
         if (!user) return;
 
-        const HARD_CAP = 750;
-
-        // Dynamic check: if more than HARD_CAP allows has arrived
         if (xp > HARD_CAP) {
             console.error(`Security Alert: XP Award Rejected. Attempted: ${xp}, Max Allowed: ${HARD_CAP}`);
-            return;
+            xp = HARD_CAP;
         }
 
         try {
-            console.count('FIREBASE_CALL: awardTowerDefenseXp');
             const current = this.masteryProfile() ?? { totalXp: 0, usedPoints: 0, upgrades: {}, completedLevelIds: [] };
+            const currentCompleted = current.completedLevelIds || [];
 
-            // Preventing XP re-farming for campaign levels
-            if (levelId && current.completedLevelIds?.includes(levelId)) {
-                console.warn(`XP skipped: Level ${levelId} already completed.`);
+            const isNewCompletion = levelId && !currentCompleted.includes(levelId);
+
+            if (xp <= 0 && !isNewCompletion) {
+                console.log('No XP to gain and level already completed. Skipping.');
                 return;
             }
 
-            const nextCompleted = levelId && !current.completedLevelIds?.includes(levelId)
-                ? [...(current.completedLevelIds || []), levelId]
-                : current.completedLevelIds;
+            const nextCompleted = isNewCompletion
+                ? [...currentCompleted, levelId]
+                : currentCompleted;
 
             const next: MasteryProfile = {
+                ...current,
                 totalXp: current.totalXp + xp,
-                usedPoints: current.usedPoints,
-                upgrades: current.upgrades,
                 completedLevelIds: nextCompleted
             };
 
+            this.masteryProfile.set(next);
             const ref = doc(this.db, 'towerDefenseMasteries', user.uid);
             await setDoc(ref, { userId: user.uid, ...next }, { merge: true });
-            this.masteryProfile.set(next);
 
+            console.log(`Progress saved: XP +${xp}, Levels: ${nextCompleted.length}`);
         } catch (e) {
-            console.error('Error awarding TD XP: ', e);
+            console.error('Failed to save TD progress:', e);
         }
     }
 
@@ -368,5 +382,44 @@ export class FirebaseService {
             console.error('Error fetching balance logs: ', e);
             return [];
         }
+    }
+
+    async migrateHistoricalScores() {
+        // if (!this.db) return;
+        // console.log('🚀 Starting optimized migration...');
+
+        // try {
+        //     const snapshot = await getDocs(collection(this.db, 'towerDefenseLeaderboards'));
+        //     const allRuns = snapshot.docs.map(d => d.data() as TowerDefenseScore);
+
+        //     // Сортуємо: старі спочатку, щоб новіші рекорди перетирали їх
+        //     allRuns.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+
+        //     // Використовуємо локальний Map для збору найкращих результатів перед записом
+        //     const bestMap = new Map<string, TowerDefenseScore>();
+
+        //     for (const run of allRuns) {
+        //         if (!run.userId || !run.mapSize) continue;
+        //         const key = `${run.userId}_${run.mapSize}`;
+        //         const existing = bestMap.get(key);
+
+        //         if (!existing || run.maxWave >= existing.maxWave) {
+        //             bestMap.set(key, run);
+        //         }
+        //     }
+
+        //     console.log(`📊 Found ${bestMap.size} unique best scores to migrate.`);
+
+        //     // Записуємо результати
+        //     for (const [docId, bestData] of bestMap) {
+        //         const bestRef = doc(this.db, 'towerDefenseBestScores', docId);
+        //         await setDoc(bestRef, bestData);
+        //         console.log(`✅ Migrated: ${docId}`);
+        //     }
+
+        //     console.log('🎉 Migration complete!');
+        // } catch (error) {
+        //     console.error('❌ Migration failed:', error);
+        // }
     }
 }

@@ -9,6 +9,7 @@ interface TierMeta {
   id: number;
   nameKey: TranslationKey;
   color: string;
+  bgColor: string;
   goldenTitleKey: TranslationKey;
   goldenDescriptionKey: TranslationKey;
 }
@@ -35,6 +36,7 @@ export class MasteriesComponent implements OnInit {
       id: 1,
       nameKey: 'T1_NAME',
       color: 'text-sky-400',
+      bgColor: 'bg-sky-400',
       goldenTitleKey: 'T1_GOLDEN_TITLE',
       goldenDescriptionKey: 'T1_GOLDEN_DESC'
     },
@@ -42,6 +44,7 @@ export class MasteriesComponent implements OnInit {
       id: 2,
       nameKey: 'T2_NAME',
       color: 'text-purple-400',
+      bgColor: 'bg-purple-400',
       goldenTitleKey: 'T2_GOLDEN_TITLE',
       goldenDescriptionKey: 'T2_GOLDEN_DESC'
     },
@@ -49,6 +52,7 @@ export class MasteriesComponent implements OnInit {
       id: 3,
       nameKey: 'T3_NAME',
       color: 'text-amber-400',
+      bgColor: 'bg-amber-400',
       goldenTitleKey: 'T3_GOLDEN_TITLE',
       goldenDescriptionKey: 'T3_GOLDEN_DESC'
     },
@@ -56,6 +60,7 @@ export class MasteriesComponent implements OnInit {
       id: 4,
       nameKey: 'T4_NAME',
       color: 'text-rose-400',
+      bgColor: 'bg-rose-400',
       goldenTitleKey: 'T4_GOLDEN_TITLE',
       goldenDescriptionKey: 'T4_GOLDEN_DESC'
     },
@@ -63,6 +68,7 @@ export class MasteriesComponent implements OnInit {
       id: 5,
       nameKey: 'T5_NAME',
       color: 'text-orange-400',
+      bgColor: 'bg-orange-400',
       goldenTitleKey: 'T5_GOLDEN_TITLE',
       goldenDescriptionKey: 'T5_GOLDEN_DESC'
     },
@@ -70,6 +76,7 @@ export class MasteriesComponent implements OnInit {
       id: 6,
       nameKey: 'T6_NAME',
       color: 'text-cyan-400',
+      bgColor: 'bg-cyan-400',
       goldenTitleKey: 'T6_GOLDEN_TITLE',
       goldenDescriptionKey: 'T6_GOLDEN_DESC'
     },
@@ -77,8 +84,17 @@ export class MasteriesComponent implements OnInit {
       id: 7,
       nameKey: 'T7_NAME',
       color: 'text-lime-400',
+      bgColor: 'bg-lime-400',
       goldenTitleKey: 'T7_GOLDEN_TITLE',
       goldenDescriptionKey: 'T7_GOLDEN_DESC'
+    },
+    {
+      id: 8,
+      nameKey: 'T8_NAME',
+      color: 'text-amber-700',
+      bgColor: 'bg-amber-700',
+      goldenTitleKey: 'T8_GOLDEN_TITLE',
+      goldenDescriptionKey: 'T8_GOLDEN_DESC'
     }
   ];
 

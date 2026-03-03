@@ -67,14 +67,21 @@ export interface Enemy {
     bg?: string;
     scale?: number;
     stunTime?: number;
+    cannonSlowTimer?: number;
     type?: 'tank' | 'scout' | 'standard' | 'boss';
     burnedByInferno?: boolean;
+    lastInfernoDamage?: number;
+    lastInfernoSourceId?: string;
     prismVulnerableTime?: number;
+    progressScore?: number;
     venomStacks?: number;
     venomDuration?: number;
     venomTickTimer?: number;
     venomBaseDamage?: number;
     venomSlowActive?: boolean;
+    lastVenomSourceId?: string;
+    bleedDamagePerSec?: number;
+    lastBleedSourceId?: string;
     isMagma?: boolean;
     isMirror?: boolean;
     isSlime?: boolean;
@@ -82,6 +89,7 @@ export interface Enemy {
     isFrost?: boolean; // Resists Ice
     isGrounded?: boolean; // Resists Lightning/Physical
     isAgile?: boolean; // Resists Cannon
+    isLevitating?: boolean; // Resists Earthquake
 }
 
 export interface Projectile {
@@ -90,6 +98,8 @@ export interface Projectile {
     to: Position;
     progress: number;
     speedMultiplier?: number;
+    isExplosion?: boolean;
+    isBeam?: boolean;
 }
 
 export interface InfernoZone {
@@ -100,7 +110,7 @@ export interface InfernoZone {
     dps: number;
 }
 
-export type TileBonus = 'none' | 'damage' | 'range' | 'bounty' | 'mastery' | 'speed';
+export type TileBonus = 'none' | 'damage' | 'range' | 'prime' | 'bounty' | 'mastery' | 'speed';
 
 export interface TDTile {
     x: number;
