@@ -724,7 +724,13 @@ export class TowerDefenseEngineService {
         // Cap unit count, increase stats instead
         const wave = this.wave();
         const baseCount = 5 + wave * 2;
-        const maxUnits = 50; // Hard cap
+        let maxUnits = 50;
+        if (wave > 25) {
+            const extraUnits = Math.min(80, Math.floor((wave - 25) * (80 / 75)));
+            maxUnits = 50 + extraUnits;
+        } else if (wave > 100) {
+            maxUnits = 130;
+        }
         let actualCount = Math.min(baseCount, maxUnits);
         if (config && config.waveModifiers) {
             const wm = config.waveModifiers[wave];
@@ -733,6 +739,13 @@ export class TowerDefenseEngineService {
             }
         }
         this.currentWaveEnemyCount = actualCount;
+        let baseInterval = 1000;
+        if (wave >= 50) {
+            const reduction = Math.min(50, wave - 50) * 10;
+            this.spawnInterval = baseInterval - reduction;
+        } else {
+            this.spawnInterval = baseInterval;
+        }
         this.enemiesToSpawn = actualCount;
         this.spawnTimer = 0;
 
@@ -940,6 +953,12 @@ export class TowerDefenseEngineService {
         } else {
             const w = currentWave - 10;
             hpMultiplier = 3.0 * Math.pow(1.15, w);
+        }
+
+        if (currentWave >= 130) {
+            hpMultiplier *= 1.3; // +30%
+        } else if (currentWave >= 100) {
+            hpMultiplier *= 1.1; // +10%
         }
 
         const hp = 50 * hpMultiplier;

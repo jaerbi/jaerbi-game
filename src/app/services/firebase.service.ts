@@ -315,7 +315,7 @@ export class FirebaseService {
 
         if (xp > HARD_CAP) {
             console.error(`Security Alert: XP Award Rejected. Attempted: ${xp}, Max Allowed: ${HARD_CAP}`);
-            xp = HARD_CAP
+            xp = HARD_CAP;
         }
 
         try {
