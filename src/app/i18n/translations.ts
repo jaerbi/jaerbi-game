@@ -121,7 +121,6 @@ export type TranslationKey =
     | 'DAMAGE'
     | 'RANGE'
     | 'UPGRADE'
-    | 'MAX_LEVEL'
     | 'SELL'
     | 'SELECT_BUILD_TILE'
     | 'TO_PLACE_DEFENDER'
@@ -144,7 +143,9 @@ export type TranslationKey =
     | 'SPENT'
     | 'AVAILABLE'
     | 'LOG_IN_MASTERY_MSG'
+    | 'LOG_IN_CAMPAIGN_MSG'
     | 'NEED_LOG_IN'
+    | 'NEED_LOG_IN_CAMPAIGN'
     | 'LOGIN_GOOGLE'
     | 'MASTERIES_SUBTITLE'
     | 'PER_LEVEL'
@@ -240,9 +241,17 @@ export type TranslationKey =
     | 'GAME_OVER_INFO_25'
     | 'GAME_OVER_INFO_26'
     | 'CONFIRM_RESTART_MSG'
+    | 'CAMPAIGN_MAP'
+    | 'SELECT_ZONE'
+    | 'HIDE_STATS'
+    | 'SHOW_STATS'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
+    SHOW_STATS: { en: `Show Detailed Stats`, uk: `Показати детальну статистику` },
+    HIDE_STATS: { en: `Hide Stats`, uk: `Приховати статистику` },
+    SELECT_ZONE: { en: `Select Operational Zone`, uk: `Виберіть операційну зону` },
+    CAMPAIGN_MAP: { en: `Campaign Map`, uk: `Карта кампанії` },
     CONFIRM_RESTART_MSG: { en: `Are you sure? This wave's progress and towers built will be lost.`, uk: `Ви впевнені? Прогрес цієї хвилі та побудовані вежі будуть втрачені.` },
     GAME_OVER_INFO_26: { en: 'Prediction confirmed. Player defeat.', uk: `Прогноз підтверджено. Поразка гравця.` },
     GAME_OVER_INFO_25: { en: 'Outcome: Suboptimal. Recommend retry.', uk: `Результат: субоптимальний. Рекомендовано повтор.` },
@@ -314,6 +323,8 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     SPENT: { en: 'Spent', uk: 'Витрачено' },
     AVAILABLE: { en: 'Available', uk: 'Доступно' },
     LOG_IN_MASTERY_MSG: { en: 'Log in to earn and spend Mastery XP.', uk: 'Увійдіть, щоб заробляти та витрачати досвід майстерності.' },
+    LOG_IN_CAMPAIGN_MSG: { en: 'Log in to immerse yourself in the incredible world of the Company', uk: 'Увійдіть, щоб зануритись у неймовірний світ Компанії.' },
+    NEED_LOG_IN_CAMPAIGN: { en: 'You need to log in to start completing company missions.', uk: 'Вам потрібно увійти, щоб почати проходити місії компанії.' },
     NEED_LOG_IN: { en: 'You need to be logged in to earn XP and unlock Masteries.', uk: 'Вам потрібно увійти, щоб заробляти досвід та відкривати Вміння.' },
     LOGIN_GOOGLE: { en: 'Login with Google', uk: 'Увійти через Google' },
     MASTERIES_SUBTITLE: { en: 'Spend points to permanently improve each tower tier.', uk: 'Витрачайте очки, щоб назавжди покращити кожен тир веж.' },
@@ -330,7 +341,7 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     // Ключі для описів тирів
     T1_NAME: { en: 'Tier 1 – Frost', uk: 'Тир 1 – Мороз' },
     T1_GOLDEN_TITLE: { en: 'Frost Aura', uk: 'Аура морозу' },
-    T1_GOLDEN_DESC: { en: 'Slow enemies by an extra 10% and increase aura radius.', uk: 'Уповільнює ворогів на додаткові 10% та збільшує радіус аури.' },
+    T1_GOLDEN_DESC: { en: 'Slows enemies by an additional 10%, increases aura radius, and deals more damage to frozen enemies.', uk: 'Уповільнює ворогів на додаткові 10%, збільшує радіус аури та більше пошкодження по замороженим.' },
     // Tier 2
     T2_NAME: {
         en: 'Tier 2 – Electro',
@@ -341,8 +352,8 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         uk: 'Висока напруга',
     },
     T2_GOLDEN_DESC: {
-        en: 'Deals critical damage to enemies under slow effects and increases the number of chain targets.',
-        uk: 'Наносить критичну шкоду ворогам під ефектами сповільнення та збільшує кількість цілей ланцюга.',
+        en: 'Deals critical damage to enemies with Slow, Poison, and Bleed effects and increases the number of targets in the chain.',
+        uk: 'Наносить критичну шкоду ворогам під ефектами Сповільнення, Отрути, Крововтрати та збільшує кількість цілей ланцюга.',
     },
 
     // Tier 3
@@ -355,8 +366,8 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         uk: 'Контузійні вибухи',
     },
     T3_GOLDEN_DESC: {
-        en: 'Concussive blasts: stronger stun chance and duration on shattered foes.',
-        uk: 'Контузійні вибухи: вищий шанс і тривалість оглушення розбитих ворогів.',
+        en: 'Higher chance and duration of stunning defeated enemies and increased damage from stacks..',
+        uk: 'Dищий шанс і тривалість оглушення розбитих ворогів та збільшення пошкодження від стаків.',
     },
 
     // Tier 4
@@ -393,8 +404,8 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         uk: 'Спектральний розлом',
     },
     T6_GOLDEN_DESC: {
-        en: 'Increases ramp-up cap to +300% and adds +15% taken damage.',
-        uk: 'Підвищує ліміт нарощення до +300% та додає +15% отримуваної шкоди.',
+        en: 'Increases the build limit to +300% and adds up to +25% to damage taken.',
+        uk: 'Підвищує ліміт нарощення до +300% та додає до +25% отримуваної шкоди.',
     },
     T7_NAME: {
         en: 'Tier 7 – Venom',
@@ -493,10 +504,6 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
     SELL: {
         en: 'SELL',
         uk: `ПРОДАТИ`,
-    },
-    MAX_LEVEL: {
-        en: 'MAX LEVEL',
-        uk: `МАКС РІВЕНЬ`,
     },
     UPGRADE: {
         en: 'Upgrade',

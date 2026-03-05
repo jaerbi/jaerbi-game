@@ -37,7 +37,20 @@ export interface MasteryProfile {
     upgrades: { [key: string]: number };
     completedLevelIds?: string[];
 }
+export interface LevelCompletion {
+    lives: number;
+    completedAt: any; // Timestamp
+}
 
+export interface MasteryProfile {
+    totalXp: number;
+    usedPoints: number;
+    upgrades: { [key: string]: number };
+    completedLevels: { [levelId: string]: LevelCompletion };
+    totalLivesSum?: number;
+    completedLevelsCount?: number;
+    lastActivityAt?: any;
+}
 @Injectable({ providedIn: 'root' })
 export class FirebaseService {
     private db: Firestore | null = null;
@@ -276,11 +289,22 @@ export class FirebaseService {
                     totalXp: typeof data.totalXp === 'number' ? data.totalXp : 0,
                     usedPoints: typeof data.usedPoints === 'number' ? data.usedPoints : 0,
                     upgrades: data.upgrades && typeof data.upgrades === 'object' ? data.upgrades as { [key: string]: number } : {},
-                    completedLevelIds: Array.isArray(data.completedLevelIds) ? data.completedLevelIds : []
+                    completedLevelIds: Array.isArray(data.completedLevelIds) ? data.completedLevelIds : [],
+                    completedLevels: data.completedLevels || {},
+                    totalLivesSum: data.totalLivesSum || 0,
+                    completedLevelsCount: data.completedLevelsCount || 0
                 };
                 this.masteryProfile.set(profile);
             } else {
-                const profile: MasteryProfile = { totalXp: 0, usedPoints: 0, upgrades: {} };
+                const profile: MasteryProfile = {
+                    totalXp: 0,
+                    usedPoints: 0,
+                    upgrades: {},
+                    completedLevelIds: [],
+                    completedLevels: {},
+                    totalLivesSum: 0,
+                    completedLevelsCount: 0
+                };
                 await setDoc(ref, { userId, ...profile });
                 this.masteryProfile.set(profile);
             }
@@ -308,7 +332,7 @@ export class FirebaseService {
         }
     }
 
-    async awardTowerDefenseXp(xp: number, levelId?: string, wave?: number): Promise<void> {
+    async awardTowerDefenseXp(xp: number, levelId?: string, lives: number = 0): Promise<void> {
         if (!this.db) return;
         const user = this.user$();
         if (!user) return;
@@ -319,33 +343,82 @@ export class FirebaseService {
         }
 
         try {
-            const current = this.masteryProfile() ?? { totalXp: 0, usedPoints: 0, upgrades: {}, completedLevelIds: [] };
-            const currentCompleted = current.completedLevelIds || [];
+            const current = this.masteryProfile() ?? {
+                totalXp: 0,
+                usedPoints: 0,
+                upgrades: {},
+                completedLevels: {}
+            };
+            const completedLevelIds = [...(current.completedLevelIds || [])];
 
-            const isNewCompletion = levelId && !currentCompleted.includes(levelId);
+            const completedLevels = current.completedLevels || {};
+            const previousResult = completedLevels[levelId || ''];
 
-            if (xp <= 0 && !isNewCompletion) {
-                console.log('No XP to gain and level already completed. Skipping.');
+            const isFirstTime = !previousResult;
+            const isImproved = previousResult && lives > previousResult.lives;
+
+            if (xp <= 0 && !isFirstTime && !isImproved) {
                 return;
             }
 
-            const nextCompleted = isNewCompletion
-                ? [...currentCompleted, levelId]
-                : currentCompleted;
+            if (levelId && (isFirstTime || isImproved)) {
+                completedLevels[levelId] = {
+                    lives: lives,
+                    completedAt: new Date()
+                };
+                if (isFirstTime && !completedLevelIds.includes(levelId)) {
+                    completedLevelIds.push(levelId);
+                }
+            }
+
+            const allLevels = Object.values(completedLevels);
+            const totalLivesSum = allLevels.reduce((sum, lvl) => sum + lvl.lives, 0);
+            const completedLevelsCount = allLevels.length;
 
             const next: MasteryProfile = {
                 ...current,
-                totalXp: current.totalXp + xp,
-                completedLevelIds: nextCompleted
+                totalXp: current.totalXp + (isFirstTime ? xp : 0),
+                completedLevels: completedLevels,
+                completedLevelIds: completedLevelIds,
+                totalLivesSum,
+                completedLevelsCount,
+                lastActivityAt: new Date()
             };
 
             this.masteryProfile.set(next);
             const ref = doc(this.db, 'towerDefenseMasteries', user.uid);
-            await setDoc(ref, { userId: user.uid, ...next }, { merge: true });
-
-            console.log(`Progress saved: XP +${xp}, Levels: ${nextCompleted.length}`);
+            await setDoc(ref, {
+                userId: user.uid,
+                displayName: user.displayName,
+                ...next
+            }, { merge: true });
         } catch (e) {
             console.error('Failed to save TD progress:', e);
+        }
+    }
+
+    async getCampaignLeaderboard(limitCount: number = 20): Promise<any[]> {
+
+        if (!this.db) {
+            console.error('Firestore is not initialized');
+            return [];
+        }
+
+        try {
+            const colRef = collection(this.db, 'towerDefenseMasteries');
+
+            const q = query(
+                colRef,
+                orderBy('completedLevelsCount', 'desc'),
+                orderBy('totalLivesSum', 'desc'),
+                limit(limitCount)
+            );
+
+            const snap = await getDocs(q);
+            return snap.docs.map(d => d.data());
+        } catch (e) {
+            console.error('Error fetching campaign leaderboard:', e);
+            return [];
         }
     }
 

@@ -47,69 +47,84 @@
         </button>
       </div>
     </div>
-
     <div
       cdkDrag
       cdkDragBoundary=".fixed"
       class="absolute top-4 left-1/2 -translate-x-1/2 pointer-events-auto z-[60] cursor-grab active:cursor-grabbing"
     >
-      <div
-        class="bg-slate-950/60 backdrop-blur-xl border border-white/10 rounded-2xl px-3 py-2 flex gap-4 md:px-6 md:py-3 md:gap-10 items-center shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden active:scale-95 transition-transform duration-200"
-      >
-        <div class="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
+      <div class="flex items-center gap-2">
+        <button
+          (click)="setGameMode('random')"
+          class="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-2xl border transition-all duration-300"
+          [class.bg-sky-500/80]="tdEngine.gameMode() === 'random'"
+          [class.border-sky-400]="tdEngine.gameMode() === 'random'"
+          [class.shadow-[0_0_15px_rgba(56,189,248,0.4)]]="tdEngine.gameMode() === 'random'"
+          [class.bg-slate-950/40]="tdEngine.gameMode() !== 'random'"
+          [class.border-white/10]="tdEngine.gameMode() !== 'random'"
+          [class.opacity-50]="tdEngine.gameMode() !== 'random'"
+        >
+          <span class="text-lg md:text-xl" [class.grayscale]="tdEngine.gameMode() !== 'random'">🎲</span>
+        </button>
 
-        <div class="flex flex-col items-center select-none">
-          <span class="text-[9px] text-emerald-500 font-black uppercase tracking-[0.2em] mb-1">
-            {{ settings.t('CREDITS') }}
-          </span>
-          <div class="flex items-center gap-2">
+        <div
+          class="bg-slate-950/60 backdrop-blur-xl border border-white/10 rounded-2xl px-3 py-2 flex gap-4 md:px-6 md:py-3 md:gap-10 items-center shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden transition-transform duration-200"
+        >
+          <div class="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
+
+          <div class="flex flex-col items-center select-none">
+            <span class="text-[9px] text-emerald-500 font-black uppercase tracking-[0.2em] mb-1">
+              {{ settings.t('CREDITS') }}
+            </span>
             <span
               class="font-black font-mono text-white text-lg md:text-2xl drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]"
             >
               {{ tdEngine.money() }}
             </span>
           </div>
-        </div>
 
-        <div class="w-px h-10 bg-white/10"></div>
+          <div class="w-px h-8 bg-white/10"></div>
 
-        <div class="flex flex-col items-center select-none">
-          <span class="text-[9px] text-rose-500 font-black uppercase tracking-[0.2em] mb-1">
-            {{ settings.t('SHIELDS') }}
-          </span>
-          <div class="flex items-center gap-2">
+          <div class="flex flex-col items-center select-none">
+            <span class="text-[9px] text-rose-500 font-black uppercase tracking-[0.2em] mb-1">
+              {{ settings.t('SHIELDS') }}
+            </span>
             <span
               class="font-black font-mono text-white text-lg md:text-2xl drop-shadow-[0_0_10px_rgba(251,113,133,0.3)]"
             >
               {{ tdEngine.lives() }}
             </span>
           </div>
-        </div>
 
-        <div class="w-px h-10 bg-white/10"></div>
+          <div class="w-px h-8 bg-white/10"></div>
 
-        <div class="flex flex-col items-center select-none">
-          <span class="text-[9px] text-sky-500 font-black uppercase tracking-[0.2em] mb-1">
-            {{ settings.t('WAVE') }}
-          </span>
-          <div class="flex items-center gap-2">
+          <div class="flex flex-col items-center select-none">
+            <span class="text-[9px] text-sky-500 font-black uppercase tracking-[0.2em] mb-1">
+              {{ settings.t('WAVE') }}
+            </span>
             <span
-              class="tfont-black font-mono text-white text-lg md:text-2xl drop-shadow-[0_0_10px_rgba(56,189,248,0.3)]"
+              class="font-black font-mono text-white text-lg md:text-2xl drop-shadow-[0_0_10px_rgba(56,189,248,0.3)]"
             >
               {{ tdEngine.wave() }}
             </span>
           </div>
-          @if (tdEngine.gameMode() === 'campaign' && !tdEngine.masteriesActiveForCurrentWave()) {
-            <div class="mt-1 text-[10px] text-slate-400 italic flex items-center gap-1">
-              <span>🚫✨</span>
-              <span>Masteries Disabled</span>
-            </div>
-          }
         </div>
+
+        <button
+          (click)="setGameMode('campaign')"
+          class="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-2xl border transition-all duration-300"
+          [class.bg-indigo-600/80]="tdEngine.gameMode() === 'campaign'"
+          [class.border-indigo-400]="tdEngine.gameMode() === 'campaign'"
+          [class.shadow-[0_0_15px_rgba(99,102,241,0.4)]]="tdEngine.gameMode() === 'campaign'"
+          [class.bg-slate-950/40]="tdEngine.gameMode() !== 'campaign'"
+          [class.border-white/10]="tdEngine.gameMode() !== 'campaign'"
+          [class.opacity-50]="tdEngine.gameMode() !== 'campaign'"
+        >
+          <span class="text-lg md:text-xl" [class.grayscale]="tdEngine.gameMode() !== 'campaign'">🛡️</span>
+        </button>
       </div>
 
       @if (tdEngine.gameMode() === 'campaign' && tdEngine.currentLevelConfig()) {
-        <div class="mt-2 text-center select-none">
+        <div class="mt-2 text-center select-none relative animate-in fade-in slide-in-from-top-1">
           <span
             class="px-4 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-black uppercase tracking-[0.3em] rounded-full backdrop-blur-sm"
           >
@@ -136,7 +151,7 @@
           </button>
         </div>
 
-        @if (false) {
+        <!-- @if (true) {
           <div class="bg-slate-950/40 backdrop-blur-md p-1 rounded-2xl border border-white/10 flex shadow-xl">
             <button
               (click)="setGameMode('random')"
@@ -155,7 +170,7 @@
               Campaign
             </button>
           </div>
-        }
+        } -->
       </div>
     } @else {
       <div class="absolute top-0 right-0 pointer-events-auto flex gap-3">
@@ -463,19 +478,21 @@
                 </div>
 
                 <div class="grid grid-cols-4 gap-2">
-                  @for (cost of tdEngine.towerCosts; track $index) {
-                    @let tier = $index + 1;
-                    @let canAfford = tdEngine.money() >= cost;
-                    @if (tdEngine.allowedTowers().includes(tier)) {
+                  @for (item of shopItems(); track item.tier) {
+                    @let canAfford = tdEngine.money() >= item.cost;
+                    @if (tdEngine.allowedTowers().includes(item.tier)) {
                       <button
-                        (click)="buyTower(tier)"
+                        (click)="buyTower(item.tier)"
                         [disabled]="!canAfford"
                         class="flex justify-center gap-2 items-center p-2 rounded-lg border border-white/5 transition-all"
                         [class.bg-slate-800]="canAfford"
                         [class.opacity-30]="!canAfford"
                       >
-                        <div class="w-4 h-4 rounded-full mb-1" [style.background-color]="getTowerColor(tier)"></div>
-                        <span class="text-[10px] font-mono font-bold text-white">{{ cost }}</span>
+                        <div
+                          class="w-4 h-4 rounded-full mb-1"
+                          [style.background-color]="getTowerColor(item.tier)"
+                        ></div>
+                        <span class="text-[10px] font-mono font-bold text-white">{{ item.cost }}</span>
                       </button>
                     }
                   }
@@ -673,14 +690,13 @@
                 }
 
                 <div class="grid grid-cols-2 gap-2 md:flex md:flex-col md:gap-1.5 td-shop-list px-1">
-                  @for (cost of tdEngine.towerCosts; track $index) {
-                    @let tier = $index + 1;
-                    @let canAfford = tdEngine.money() >= cost;
-                    @let allowed = tdEngine.allowedTowers().includes(tier);
+                  @for (item of shopItems(); track item.tier) {
+                    @let canAfford = tdEngine.money() >= item.cost;
+                    @let allowed = tdEngine.allowedTowers().includes(item.tier);
 
                     @if (allowed) {
                       <button
-                        (click)="buyTower(tier)"
+                        (click)="buyTower(item.tier)"
                         [disabled]="!canAfford"
                         class="group relative flex flex-col min-[768px]:flex-row items-center p-2 rounded-xl border transition-all"
                         [class.bg-slate-800\/60]="canAfford"
@@ -688,7 +704,7 @@
                       >
                         <div
                           class="max-[767px]:w-full max-[767px]:h-1.5 max-[767px]:mb-1 min-[768px]:absolute min-[768px]:left-0 min-[768px]:top-2 min-[768px]:bottom-2 min-[768px]:w-1 rounded-full"
-                          [style.background-color]="getTowerColor(tier)"
+                          [style.background-color]="getTowerColor(item.tier)"
                         ></div>
 
                         <div class="flex-grow min-[768px]:ml-2 w-full text-center min-[768px]:text-left">
@@ -696,10 +712,10 @@
                             <span
                               class="hidden min-[768px]:block font-bold text-[11px] text-slate-100 uppercase truncate mr-1"
                             >
-                              {{ getTowerName(tier) }}
+                              {{ getTowerName(item.tier) }}
                             </span>
                             <span class="text-emerald-400 font-mono font-bold text-[10px] min-[768px]:text-[11px]">
-                              {{ cost }}
+                              {{ item.cost }}
                             </span>
                           </div>
                         </div>
@@ -814,26 +830,13 @@
                         </span>
                       </button>
                     </div>
-                  } @else {
-                    <div
-                      class="w-full py-2 bg-slate-900 text-slate-500 rounded text-center text-xs font-bold border border-slate-700"
-                    >
-                      {{ settings.t('MAX_LEVEL') }}
-                    </div>
-                  }
-
-                  <button
-                    (click)="sellTower()"
-                    class="cursor-pointer w-full py-2 bg-rose-950/50 border border-rose-900/50 text-rose-400 hover:bg-rose-900/50 rounded font-bold transition-all flex justify-center items-center text-xs uppercase tracking-wider"
-                  >
-                    {{ settings.t('SELL') }} (60%)
-                  </button>
+                  } @else {}
 
                   @if (tile.tower.level === 4) {
                     <button
                       (click)="buyAbility()"
                       [disabled]="tile.tower.specialActive || tdEngine.money() < tdEngine.getSpecialCost(tile.tower)"
-                      class="cursor-pointer w-full py-3 rounded font-bold transition-all flex justify-between px-4 items-center mt-2"
+                      class="cursor-pointer w-full py-3 rounded font-bold transition-all flex justify-between px-4 items-center"
                       [class.bg-purple-600]="
                         !tile.tower.specialActive && tdEngine.money() >= tdEngine.getSpecialCost(tile.tower)
                       "
@@ -849,6 +852,12 @@
                       }
                     </button>
                   }
+                  <button
+                    (click)="sellTower()"
+                    class="cursor-pointer w-full py-2 bg-rose-950/50 border border-rose-900/50 text-rose-400 hover:bg-rose-900/50 rounded font-bold transition-all flex justify-center items-center text-xs uppercase tracking-wider"
+                  >
+                    {{ settings.t('SELL') }} (60%)
+                  </button>
                 </div>
               }
             } @else {
@@ -899,37 +908,41 @@
         <div class="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent shrink-0"></div>
 
         <div class="px-3 py-1 bg-black/60 shrink-0 space-y-3 z-20">
-          <div class="flex items-center justify-between gap-2">
-            <div class="flex gap-1 bg-black/40 p-1 rounded-lg border border-white/5">
-              <button
-                *ngFor="let s of [1, 2, 4]"
-                (click)="setSpeed(s)"
-                [class.bg-emerald-600]="tdEngine.gameSpeedMultiplier() === s"
-                [class.text-white]="tdEngine.gameSpeedMultiplier() === s"
-                [class.text-slate-500]="tdEngine.gameSpeedMultiplier() !== s"
-                class="w-8 h-7 flex items-center justify-center rounded text-[11px] font-black transition-all hover:text-slate-200"
+          @if (isShowSpeed) {
+            <div class="flex items-center justify-between gap-2">
+              <div
+                class="flex gap-1 bg-black/40 p-1 rounded-lg border border-white/5 animate-in fade-in slide-in-from-left-2 duration-300"
               >
-                {{ s }}x
-              </button>
-            </div>
-
-            <label
-              class="flex items-center gap-2 cursor-pointer bg-black/40 px-2 py-1 rounded-lg border border-white/5"
-            >
-              <span class="text-[9px] font-black uppercase tracking-wide text-slate-400">Auto</span>
-              <div class="relative scale-75 flex items-center">
-                <input type="checkbox" [checked]="autoWave()" (change)="autoWave.set(!autoWave())" class="sr-only" />
-                <div
-                  class="w-8 h-4 bg-slate-700 rounded-full transition-colors"
-                  [class.bg-emerald-600]="autoWave()"
-                ></div>
-                <div
-                  class="absolute left-0 w-4 h-4 bg-white rounded-full transition-transform shadow-sm"
-                  [class.translate-x-4]="autoWave()"
-                ></div>
+                <button
+                  *ngFor="let s of [1, 2, 4]"
+                  (click)="setSpeed(s)"
+                  [class.bg-emerald-600]="tdEngine.gameSpeedMultiplier() === s"
+                  [class.text-white]="tdEngine.gameSpeedMultiplier() === s"
+                  [class.text-slate-500]="tdEngine.gameSpeedMultiplier() !== s"
+                  class="w-8 h-7 flex items-center justify-center rounded text-[11px] font-black transition-all hover:text-slate-200"
+                >
+                  {{ s }}x
+                </button>
               </div>
-            </label>
-          </div>
+
+              <label
+                class="flex items-center gap-2 cursor-pointer bg-black/40 px-2 py-1 rounded-lg border border-white/5"
+              >
+                <span class="text-[9px] font-black uppercase tracking-wide text-slate-400">Auto</span>
+                <div class="relative scale-75 flex items-center">
+                  <input type="checkbox" [checked]="autoWave()" (change)="autoWave.set(!autoWave())" class="sr-only" />
+                  <div
+                    class="w-8 h-4 bg-slate-700 rounded-full transition-colors"
+                    [class.bg-emerald-600]="autoWave()"
+                  ></div>
+                  <div
+                    class="absolute left-0 w-4 h-4 bg-white rounded-full transition-transform shadow-sm"
+                    [class.translate-x-4]="autoWave()"
+                  ></div>
+                </div>
+              </label>
+            </div>
+          }
 
           <div class="flex gap-2">
             <div class="relative flex-1 group">
@@ -977,6 +990,18 @@
                 {{ tdEngine.isPaused() ? '▶' : 'II' }}
               </span>
             </button>
+            <button
+              (click)="isShowSpeed = !isShowSpeed"
+              class="w-6 h-7 flex items-center justify-center bg-black/40 rounded border border-white/5 hover:bg-black/60 transition-all"
+              [title]="isShowSpeed ? 'Сховати швидкість' : 'Налаштувати швидкість'"
+            >
+              <span
+                class="text-white/60 text-[10px] transition-transform duration-300"
+                [style.transform]="isShowSpeed ? 'rotate(90deg)' : 'rotate(-90deg)'"
+              >
+                ▶
+              </span>
+            </button>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -1009,8 +1034,114 @@
       <app-support-community />
     }
   </div>
-
   @if (tdEngine.gameOver()) {
+    <div
+      class="fixed inset-0 flex items-center justify-center bg-slate-950/80 backdrop-blur-md z-[200] animate-in fade-in duration-500 overflow-y-auto py-10"
+    >
+      <div class="relative flex flex-col items-center max-w-sm w-full mx-4">
+        <div
+          class="relative bg-slate-900 border-2 border-rose-500/30 rounded-2xl px-10 py-8 pb-4 text-center shadow-[0_0_50px_-12px_rgba(244,63,94,0.5)] w-full overflow-hidden z-10"
+        >
+          <div class="absolute -top-24 -left-24 w-48 h-48 bg-rose-500/10 rounded-full blur-3xl"></div>
+          <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl"></div>
+
+          <div class="relative">
+            <div
+              class="inline-flex items-center justify-center w-16 h-16 bg-rose-500/20 rounded-full mb-4 border border-rose-500/50"
+            >
+              <span class="text-3xl">💀</span>
+            </div>
+            <h2
+              class="text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-rose-400 to-rose-600 mb-1 uppercase"
+            >
+              {{ settings.t('GAME_OVER') }}
+            </h2>
+            <div class="h-1 w-20 bg-rose-500/30 mx-auto rounded-full mb-6"></div>
+          </div>
+
+          <div class="space-y-3 mb-6">
+            <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
+              <p class="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-1">
+                {{ settings.t('YOU_SURVIVED') }}
+              </p>
+              <div class="flex items-center justify-center gap-4">
+                <div class="text-center">
+                  <span class="block text-2xl font-black text-white">{{ tdEngine.wave() }}</span>
+                  <span class="text-[10px] text-emerald-400 font-bold uppercase">{{ settings.t('WAVES') }}</span>
+                </div>
+                <div class="w-px h-8 bg-slate-700"></div>
+                <div class="text-center">
+                  <span class="block text-2xl font-black text-white">{{ tdEngine.enemiesKilled() }}</span>
+                  <span class="text-[10px] text-rose-400 font-bold uppercase">Kills</span>
+                </div>
+              </div>
+            </div>
+            <p class="text-slate-500 text-xs italic px-2">"{{ settings.t(tdEngine.currentQuoteKey()) }}"</p>
+          </div>
+
+          <div class="flex flex-col gap-3">
+            <button
+              (click)="onRestart()"
+              class="group relative w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-xl transition-all duration-200 active:scale-95 shadow-[0_4px_0_0_rgba(5,150,105,1)] uppercase tracking-wider"
+            >
+              <span class="relative z-10 flex items-center justify-center gap-2">
+                <span class="text-xl">⚔️</span>
+                {{ settings.t('TRY_AGAIN') }}
+              </span>
+            </button>
+
+            <button
+              (click)="showStats = !showStats"
+              class="text-slate-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
+            >
+              <span>{{ showStats ? '▲' : '▼' }}</span>
+              {{ showStats ? settings.t('HIDE_STATS') : settings.t('SHOW_STATS') }}
+            </button>
+          </div>
+        </div>
+
+        @if (showStats) {
+          <div
+            class="w-[95%] bg-slate-900/90 border-x-2 border-b-2 border-slate-700/50 rounded-b-2xl p-6 pt-10 -mt-6 animate-in slide-in-from-top-10 duration-500 z-0"
+          >
+            <div class="mb-4 flex items-center gap-2 border-b border-white/5 pb-2">
+              <span class="text-xl">📊</span>
+              <h3 class="text-sm font-black tracking-tight text-white uppercase italic">
+                {{ settings.t('DAMAGE_STATS') }}
+              </h3>
+            </div>
+
+            @let statsView = getDamageStatsView();
+            <div class="space-y-3">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-[10px] text-slate-500 uppercase font-bold">Total Damage:</span>
+                <span class="text-xs font-mono text-white font-bold">
+                  {{ getTotalDamage(statsView.list) | abbreviateNumber }}
+                </span>
+              </div>
+
+              @for (item of statsView.list; track item.type) {
+                <div class="flex flex-col gap-1">
+                  <div class="flex justify-between text-[10px]">
+                    <span [style.color]="item.color" class="font-bold uppercase">{{ item.name }}</span>
+                    <span class="font-mono text-slate-300">{{ item.damage | number: '1.0-1' }}</span>
+                  </div>
+                  <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      class="h-full transition-all duration-1000"
+                      [style.width.%]="statsView.max > 0 ? (item.damage / statsView.max) * 100 : 0"
+                      [style.background-color]="item.color"
+                    ></div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+  @if (false) {
     <div
       class="fixed inset-0 flex items-center justify-center bg-slate-950/80 backdrop-blur-md z-[200] animate-in fade-in duration-500"
     >
@@ -1070,149 +1201,208 @@
   <a (click)="openPrivacy()" class="underline cursor-pointer hover:text-sky-400 pointer-events-auto">Privacy Policy</a>
 </footer>
 @if (showMissionSelect) {
-  <div class="fixed inset-0 z-[999] flex items-center justify-center p-2 sm:p-4">
-    <div class="absolute inset-0 bg-slate-950/95 backdrop-blur-sm" (click)="closeMissionSelect()"></div>
+  @if (user()) {
+    <div class="fixed inset-0 z-[999] flex items-center justify-center p-2 sm:p-4">
+      <div class="absolute inset-0 bg-slate-950/95 backdrop-blur-sm" (click)="closeMissionSelect()"></div>
 
-    <div class="relative w-full max-w-5xl max-h-[95vh] flex flex-col gap-4 animate-in zoom-in-95 duration-300">
-      <div class="text-center">
-        <h2
-          class="text-3xl font-black uppercase tracking-[0.15em] text-transparent bg-clip-text bg-gradient-to-b from-sky-400 to-indigo-600"
-        >
-          Campaign Map
-        </h2>
-        <p class="text-slate-500 font-mono text-[10px] uppercase tracking-widest">Select Operational Zone</p>
-      </div>
-
-      <div
-        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto p-2 custom-scrollbar items-stretch"
-      >
-        @for (level of campaignService.levels; track level.id) {
-          @let unlocked = isLevelUnlocked(level.id);
-          @let completed = isLevelCompleted(level.id);
-          @let isSelected = selectedCampaignLevel === level.id;
-
-          <div
-            (click)="unlocked ? selectCampaignLevel(level.id) : null"
-            class="group relative flex flex-col transition-all duration-300 rounded-2xl border-2 p-0.5 overflow-hidden"
-            [class.cursor-pointer]="unlocked"
-            [class.opacity-60]="!unlocked"
-            [class.scale-[0.98]]="!isSelected && unlocked"
-            [class.border-emerald-500/30]="completed"
-            [class.border-sky-500]="isSelected && !completed"
-            [class.border-slate-800/50]="!isSelected && !completed"
-            [class.shadow-[0_0_20px_rgba(56,189,248,0.15)]]="isSelected"
+      <div class="relative w-full max-w-5xl max-h-[95vh] flex flex-col gap-4 animate-in zoom-in-95 duration-300">
+        <div class="text-center">
+          <h2
+            class="text-3xl font-black uppercase tracking-[0.15em] text-transparent bg-clip-text bg-gradient-to-b from-sky-400 to-indigo-600"
           >
-            <div class="absolute inset-0 bg-slate-900 z-0"></div>
+            {{ settings.t('CAMPAIGN_MAP') }}
+          </h2>
+          <p class="text-slate-500 font-mono text-[10px] uppercase tracking-widest">{{ settings.t('SELECT_ZONE') }}</p>
+        </div>
 
-            @if (!unlocked) {
-              <div class="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/40 backdrop-blur-[2px]">
-                <div class="text-2xl opacity-50">🔒</div>
-              </div>
-            }
+        <div
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto p-2 custom-scrollbar items-stretch"
+        >
+          @for (level of campaignService.levels; track level.id) {
+            @let unlocked = isLevelUnlocked(level.id);
+            @let completed = isLevelCompleted(level.id);
+            @let isSelected = selectedCampaignLevel === level.id;
 
-            <div class="relative z-10 p-4 flex flex-col h-full gap-3">
-              <div class="flex justify-between items-center">
-                <span
-                  class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-tighter bg-black/40"
-                  [class.text-emerald-400]="level.difficulty === 'easy'"
-                  [class.text-amber-400]="level.difficulty === 'normal'"
-                  [class.text-rose-500]="level.difficulty === 'hard'"
-                >
-                  {{ level.difficulty }}
-                </span>
-                @if (completed) {
-                  <span class="text-emerald-400 text-[9px] font-bold uppercase flex items-center gap-1">
-                    <span class="text-sm">✓</span>
-                    Secured
-                  </span>
-                }
-              </div>
+            <div
+              (click)="unlocked ? selectCampaignLevel(level.id) : null"
+              class="group relative flex flex-col transition-all duration-300 rounded-2xl border-2 p-0.5 overflow-hidden"
+              [class.cursor-pointer]="unlocked"
+              [class.opacity-60]="!unlocked"
+              [class.scale-[0.98]]="!isSelected && unlocked"
+              [class.border-emerald-500/30]="completed"
+              [class.border-sky-500]="isSelected && !completed"
+              [class.border-slate-800/50]="!isSelected && !completed"
+              [class.shadow-[0_0_20px_rgba(56,189,248,0.15)]]="isSelected"
+            >
+              <div class="absolute inset-0 bg-slate-900 z-0"></div>
 
-              <div>
-                <h3
-                  class="text-lg font-black text-white leading-tight uppercase italic group-hover:text-sky-400 transition-colors"
-                >
-                  {{ level.name }}
-                </h3>
-                <p class="text-slate-400 text-[11px] leading-snug line-clamp-2 mt-1 font-medium">
-                  {{ level.description }}
-                </p>
-              </div>
-
-              <div class="flex gap-2 border-y border-white/5 py-2">
-                <div class="flex-1 flex flex-col items-center border-r border-white/5">
-                  <span class="text-[8px] text-slate-500 uppercase font-bold">Waves</span>
-                  <span class="text-xs font-mono text-white">{{ level.waveCount }}</span>
-                </div>
-                <div class="flex-1 flex flex-col items-center">
-                  <span class="text-[8px] text-slate-500 uppercase font-bold">Gold</span>
-                  <span class="text-xs font-mono text-white">{{ level.startingGold }}</span>
-                </div>
-              </div>
-
-              @if (level.enemyTypes?.length) {
-                <div class="space-y-1">
-                  <div class="text-[8px] text-slate-500 uppercase font-bold tracking-widest">Intel</div>
-                  <div class="flex flex-wrap gap-1">
-                    @for (type of level.enemyTypes; track type) {
-                      <span
-                        class="px-1.5 py-0.5 bg-slate-800/50 rounded text-[9px] text-slate-300 border border-slate-700/50"
-                      >
-                        {{ type }}
-                      </span>
-                    }
-                  </div>
+              @if (!unlocked) {
+                <div class="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/40 backdrop-blur-[2px]">
+                  <div class="text-2xl opacity-50">🔒</div>
                 </div>
               }
 
-              <div class="mt-auto pt-2 space-y-3">
-                <div class="flex justify-between items-end">
-                  <span class="text-[8px] font-bold text-slate-500 uppercase">Reward</span>
-                  <div class="flex items-center gap-1.5">
-                    <span
-                      class="text-xs font-black transition-all"
-                      [class.text-amber-400]="!completed"
-                      [class.text-slate-600]="completed"
-                      [class.line-through]="completed"
-                    >
-                      {{ level.xpReward }} XP
-                    </span>
-                    @if (completed) {
-                      <span class="text-[8px] font-bold text-emerald-500/80 uppercase">Claimed</span>
-                    }
-                  </div>
-                </div>
+              <div class="relative z-10 p-4 flex flex-col h-full gap-3">
+                <div class="flex justify-between items-center">
+                  <span
+                    class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-tighter bg-black/40"
+                    [class.text-emerald-400]="level.difficulty === 'easy'"
+                    [class.text-amber-400]="level.difficulty === 'normal'"
+                    [class.text-rose-500]="level.difficulty === 'hard'"
+                  >
+                    {{ level.difficulty }}
+                  </span>
+                  @if (completed) {
+                    @let stats = getLevelCompletionData(level.id);
+                    @let maxLives = 100;
+                    @let percent = stats ? (stats.lives / maxLives) * 100 : 0;
 
-                <div class="h-10">
-                  @if (isSelected && unlocked) {
-                    <button
-                      (click)="$event.stopPropagation(); startCampaignLevel()"
-                      class="w-full h-full bg-sky-600 hover:bg-sky-500 text-white font-black rounded-lg uppercase tracking-tighter text-xs shadow-lg transition-all transform active:scale-95 animate-in fade-in slide-in-from-bottom-1"
-                    >
-                      Deploy Operation
-                    </button>
-                  } @else if (unlocked) {
-                    <div
-                      class="w-full h-full border border-dashed border-slate-800 rounded-lg flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity"
-                    >
-                      <span class="text-[9px] font-bold text-slate-500 uppercase">Select Zone</span>
+                    <div class="flex flex-col items-end gap-1">
+                      <span class="text-emerald-400 text-[9px] font-bold uppercase flex items-center gap-1">
+                        <span class="text-xs">✓</span>
+                        Secured
+                      </span>
+
+                      <div class="w-24 h-1 bg-white/5 rounded-full overflow-hidden flex border border-white/5">
+                        <div
+                          class="h-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(52,211,153,0.5)]"
+                          [style.width.%]="percent"
+                          [class.bg-emerald-500]="percent > 70"
+                          [class.bg-amber-500]="percent <= 70 && percent > 30"
+                          [class.bg-rose-500]="percent <= 30"
+                        ></div>
+                      </div>
+
+                      <span
+                        class="text-[8px] font-mono font-bold"
+                        [class.text-emerald-400]="percent > 70"
+                        [class.text-amber-400]="percent <= 70 && percent > 30"
+                        [class.text-rose-400]="percent <= 30"
+                      >
+                        {{ stats?.lives }} SHIELDS RETAINED
+                      </span>
                     </div>
                   }
                 </div>
+
+                <div>
+                  <h3
+                    class="text-lg font-black text-white leading-tight uppercase italic group-hover:text-sky-400 transition-colors"
+                  >
+                    {{ level.name }}
+                  </h3>
+                  <p class="text-slate-400 text-[11px] leading-snug line-clamp-2 mt-1 font-medium">
+                    {{ level.description }}
+                  </p>
+                </div>
+
+                <div class="flex gap-2 border-y border-white/5 py-2">
+                  <div class="flex-1 flex flex-col items-center border-r border-white/5">
+                    <span class="text-[8px] text-slate-500 uppercase font-bold">Waves</span>
+                    <span class="text-xs font-mono text-white">{{ level.waveCount }}</span>
+                  </div>
+                  <div class="flex-1 flex flex-col items-center">
+                    <span class="text-[8px] text-slate-500 uppercase font-bold">Gold</span>
+                    <span class="text-xs font-mono text-white">{{ level.startingGold }}</span>
+                  </div>
+                </div>
+
+                @if (level.enemyTypes?.length) {
+                  <div class="space-y-1">
+                    <div class="text-[8px] text-slate-500 uppercase font-bold tracking-widest">Intel</div>
+                    <div class="flex flex-wrap gap-1">
+                      @for (type of level.enemyTypes; track type) {
+                        <span
+                          class="px-1.5 py-0.5 bg-slate-800/50 rounded text-[9px] text-slate-300 border border-slate-700/50"
+                        >
+                          {{ type }}
+                        </span>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <div class="mt-auto pt-2 space-y-3">
+                  <div class="flex justify-between items-end">
+                    <span class="text-[8px] font-bold text-slate-500 uppercase">Reward</span>
+                    <div class="flex items-center gap-1.5">
+                      <span
+                        class="text-xs font-black transition-all"
+                        [class.text-amber-400]="!completed"
+                        [class.text-slate-600]="completed"
+                        [class.line-through]="completed"
+                      >
+                        {{ level.xpReward }} XP
+                      </span>
+                      @if (completed) {
+                        <span class="text-[8px] font-bold text-emerald-500/80 uppercase">Claimed</span>
+                      }
+                    </div>
+                  </div>
+
+                  <div class="h-10">
+                    @if (isSelected && unlocked) {
+                      <button
+                        (click)="$event.stopPropagation(); startCampaignLevel()"
+                        class="w-full h-full bg-sky-600 hover:bg-sky-500 text-white font-black rounded-lg uppercase tracking-tighter text-xs shadow-lg transition-all transform active:scale-95 animate-in fade-in slide-in-from-bottom-1"
+                      >
+                        Deploy Operation
+                      </button>
+                    } @else if (unlocked) {
+                      <div
+                        class="w-full h-full border border-dashed border-slate-800 rounded-lg flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity"
+                      >
+                        <span class="text-[9px] font-bold text-slate-500 uppercase">Select Zone</span>
+                      </div>
+                    }
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        }
-      </div>
+          }
+        </div>
 
-      <button
-        (click)="closeMissionSelect()"
-        class="absolute -top-2 -right-2 sm:-top-4 sm:-right-4 w-10 h-10 flex items-center justify-center bg-slate-800 hover:bg-rose-600 text-white rounded-full transition-all border-2 border-slate-700 shadow-xl z-[1000]"
-      >
-        ✕
-      </button>
+        <button
+          (click)="setGameMode('random')"
+          class="absolute -top-2 -right-2 sm:-top-4 sm:-right-4 w-10 h-10 flex items-center justify-center bg-slate-800 hover:bg-rose-600 text-white rounded-full transition-all border-2 border-slate-700 shadow-xl z-[1000]"
+        >
+          ✕
+        </button>
+      </div>
     </div>
-  </div>
+  } @else {
+    <div class="fixed inset-0 z-[999] flex items-center justify-center p-2 sm:p-4">
+      <div class="absolute inset-0 bg-slate-950/95 backdrop-blur-sm"></div>
+
+      <div class="relative w-full max-w-5xl max-h-[95vh] flex flex-col gap-4 animate-in zoom-in-95 duration-300">
+        <div class="flex flex-col items-center justify-center py-20 text-center">
+          <div
+            class="px-6 py-2 mb-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs animate-pulse"
+          >
+            {{ settings.t('LOG_IN_CAMPAIGN_MSG') }}
+          </div>
+          <div
+            class="w-20 h-20 bg-slate-700/30 rounded-full flex items-center justify-center mb-6 border border-slate-600"
+          >
+            <span class="text-4xl">🔒</span>
+          </div>
+          <p class="text-slate-400 max-w-md mb-8 leading-relaxed">{{ settings.t('NEED_LOG_IN_CAMPAIGN') }}</p>
+          <button
+            (click)="login()"
+            class="px-8 py-4 bg-sky-600 hover:bg-sky-500 hover:scale-105 active:scale-95 rounded-2xl text-base font-black transition-all shadow-[0_0_20px_rgba(14,165,233,0.4)]"
+          >
+            {{ settings.t('LOGIN_GOOGLE') }}
+          </button>
+        </div>
+        <button
+          (click)="setGameMode('random')"
+          class="absolute -top-2 -right-2 sm:-top-4 sm:-right-4 w-10 h-10 flex items-center justify-center bg-slate-800 hover:bg-rose-600 text-white rounded-full transition-all border-2 border-slate-700 shadow-xl z-[1000]"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  }
 }
 
 @if (showSettings) {
@@ -1353,9 +1543,8 @@
 
       <div class="grid grid-cols-2 gap-4 mb-8">
         <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-          <div class="text-xs text-slate-500 uppercase font-bold mb-1">Enemies Defeated</div>
-          <div class="text-2xl font-mono text-white">{{ tdEngine.wave() * 10 + 5 }}</div>
-          <!-- Rough estimate or track actual kills -->
+          <div class="text-xs text-slate-500 uppercase font-bold mb-1">Shields Left</div>
+          <div class="text-2xl font-mono text-white">{{ tdEngine.lives() }}</div>
         </div>
         <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
           <div class="text-xs text-slate-500 uppercase font-bold mb-1">XP Gained</div>

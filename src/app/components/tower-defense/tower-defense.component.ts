@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { HITBOX_OFFSET, TowerDefenseEngineService } from '../../services/tower-defense-engine.service';
 import { TDTile } from '../../models/unit.model';
 import { SettingsService } from '../../services/settings.service';
-import { FirebaseService } from '../../services/firebase.service';
+import { FirebaseService, LevelCompletion } from '../../services/firebase.service';
 import { Subscription } from 'rxjs';
 import { GameEngineService } from '../../services/game-engine.service';
 import { SupportCommunityComponent } from '../support-community/support-community.component';
@@ -193,6 +193,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     selectedCampaignLevel: string | null = null;
     selectedDifficulty: 'easy' | 'normal' | 'hard' = 'normal';
     showStatsPanel = false;
+    isShowSpeed = true;
     showStats = false; // For draggable modal
     private platformId = inject(PLATFORM_ID);
     public windowWidth = signal<number>(1200);
@@ -342,13 +343,28 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         }
         this.selectedTile.set(null);
     }
+    public shopItems = computed(() => {
+        const costs = this.tdEngine.towerCosts;
+        const allowed = this.tdEngine.allowedTowers();
 
+        return costs
+            .map((cost, index) => ({
+                tier: index + 1,
+                cost: cost,
+                color: this.getTowerColor(index + 1)
+            }))
+            .filter(item => allowed.includes(item.tier))
+            .sort((a, b) => a.cost - b.cost);
+    });
     setGameMode(mode: 'random' | 'campaign') {
+        if (!this.canResetOrLeave()) return;
+
         if (this.tdEngine.gameMode() === mode) return;
 
         if (mode === 'random') {
             this.tdEngine.setModeRandom();
             this.showMissionSelect = false;
+            this.selectedCampaignLevel = null;
         } else {
             // Campaign Mode: Load Level 1 by default and show mission select
             this.tdEngine.gameMode.set('campaign');
@@ -543,8 +559,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         setTimeout(() => {
             this.resizeCanvas();
             this.cdr.detectChanges();
-            console.log('View Refreshed:', this.tdEngine.gridSize);
-        }, 100); // 100ms зазвичай достатньо для рендеру
+        }, 100);
     }
 
     setHardMode(enabled: boolean) {
@@ -1096,23 +1111,6 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         ctx.restore();
     }
 
-    // private drawFrostAuras(ctx: CanvasRenderingContext2D, tile: number) {
-    //     const towers = this.tdEngine.getTowersRef();
-    //     for (const t of towers) {
-    //         if (t.type === 1 && t.specialActive) {
-    //             const cx = t.position.x * tile + tile / 2;
-    //             const cy = t.position.y * tile + tile / 2;
-    //             const radius = 2 * tile;
-    //             ctx.beginPath();
-    //             ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    //             ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
-    //             ctx.fill();
-    //             ctx.lineWidth = 1
-    //             ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
-    //             ctx.stroke();
-    //         }
-    //     }
-    // }
     private drawFrostAuras(ctx: CanvasRenderingContext2D, tile: number) {
         const towers = this.tdEngine.getTowersRef();
 
@@ -1278,7 +1276,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 ctx.restore();
             }
 
-            // Inferno Burn Visualization (Оптимізовано для швидкості)
+            // Inferno Burn Visualization
             if (e.burnedByInferno) {
                 ctx.save();
                 if (!isFastSpeed) {
@@ -1295,6 +1293,36 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 ctx.font = `${fireSize}px serif`;
                 ctx.textAlign = 'center';
                 ctx.fillText('🔥', cx, cy - r - 8);
+                ctx.restore();
+            }
+
+            // Prism Vulnerability Visualization
+            if (e.prismVulnerableTime && e.prismVulnerableTime > 0) {
+                ctx.save();
+
+                // Налаштування розміру та позиції (збоку від HP-бару або над ворогом)
+                const diamondW = tile * 0.15; // Ширина ромба
+                const diamondH = tile * 0.22; // Висота ромба
+                const px = cx - r - 10;       // Позиція зліва від ворога (симетрично венему)
+                const py = cy - r - 8;        // На рівні HP-бару
+
+                if (!isFastSpeed) {
+                    ctx.shadowBlur = 4;
+                    ctx.shadowColor = '#a855f7';
+                }
+
+                ctx.fillStyle = '#c084fc';
+                ctx.beginPath();
+                ctx.moveTo(px, py - diamondH / 2);
+                ctx.lineTo(px + diamondW / 2, py);
+                ctx.lineTo(px, py + diamondH / 2);
+                ctx.lineTo(px - diamondW / 2, py);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#f5f3ff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
                 ctx.restore();
             }
         }
@@ -1628,18 +1656,38 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     isLevelUnlocked(levelId: string): boolean {
         if (levelId === 'level_1') return true;
         const profile = this.firebase.masteryProfile();
-        if (!profile || !profile.completedLevelIds) return false;
+        if (!profile) return false;
 
-        // Find index of this level
         const index = this.campaignService.levels.findIndex(l => l.id === levelId);
-        if (index <= 0) return true; // Should be handled by level_1 check but safe guard
+        if (index <= 0) return true;
 
         const prevLevel = this.campaignService.levels[index - 1];
-        return profile.completedLevelIds.includes(prevLevel.id);
+
+        const isCompleted =
+            (profile.completedLevelIds?.includes(prevLevel.id)) ||
+            (profile.completedLevels && !!profile.completedLevels[prevLevel.id]);
+
+        return isCompleted;
     }
 
     isLevelCompleted(levelId: string): boolean {
         const profile = this.firebase.masteryProfile();
-        return !!profile?.completedLevelIds?.includes(levelId);
+        if (!profile) return false;
+
+        return !!(profile.completedLevelIds?.includes(levelId) || profile.completedLevels?.[levelId]);
+    }
+
+    getLevelCompletionData(levelId: string): LevelCompletion | null {
+        const profile = this.firebase.masteryProfile();
+        if (!profile || !profile.completedLevels) return null;
+
+        return profile.completedLevels[levelId] || null;
+    }
+
+    user() {
+        return this.firebase.user$();
+    }
+    login() {
+        this.firebase.loginWithGoogle();
     }
 }
