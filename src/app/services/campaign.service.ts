@@ -142,17 +142,17 @@ export class CampaignService {
                 waveTypeSequence: [1, 1, 2, 3, 1, 2, 3, 1, 1, 3, 1, 3],
                 waveModifiers: {
                     1: { count: 10 },
-                    2: { count: 14, traits: [{ property: 'isFrost', chance: 0.2 }] },
+                    2: { count: 15, traits: [{ property: 'isFrost', chance: 0.2 }] },
                     3: { count: 30, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.2 }] },//S
-                    4: { count: 15 },//T
+                    4: { count: 17 },//T
                     5: { count: 18, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.2 }] },
                     6: { count: 40, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.4 }] },//S
                     7: { count: 20, traits: [{ property: 'isFrost', chance: 0.3 }, { property: 'isGrounded', chance: 0.5 }] },//T
-                    8: { count: 30, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.2 }] },
-                    9: { count: 35, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.6 }] },
-                    10: { count: 30, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.6 }] },//T
-                    11: { count: 45, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.6 }] },
-                    12: { count: 40, traits: [{ property: 'isFrost', chance: 0.3 }, { property: 'isGrounded', chance: 0.7 }] },//T
+                    8: { count: 30, traits: [{ property: 'isFrost', chance: 0.6 }, { property: 'isGrounded', chance: 0.4 }] },
+                    9: { count: 35, traits: [{ property: 'isFrost', chance: 0.3 }, { property: 'isGrounded', chance: 0.6 }] },
+                    10: { count: 30, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.6 }] },//T
+                    11: { count: 45, traits: [{ property: 'isFrost', chance: 0.3 }, { property: 'isGrounded', chance: 0.7 }] },
+                    12: { count: 40, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.8 }] },//T
                 }
             },
             {
@@ -210,19 +210,19 @@ export class CampaignService {
                 waveModifiers: {
                     1: { count: 13 },
                     2: { count: 15 },
-                    3: { count: 25, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.4 }] },//s
-                    4: { count: 25, traits: [{ property: 'isAgile', chance: 0.4 }] },
-                    5: { count: 30, traits: [{ property: 'isAgile', chance: 0.2 }, { property: 'isBulwark', chance: 0.2 }] },//s
-                    6: { count: 28, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.4 }] },
-                    7: { count: 25 },//T
+                    3: { count: 27, traits: [{ property: 'isAgile', chance: 0.5 }, { property: 'isBulwark', chance: 0.5 }] },//s
+                    4: { count: 30, traits: [{ property: 'isAgile', chance: 0.6 }] },
+                    5: { count: 30, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.4 }] },//s
+                    6: { count: 35, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.4 }] },
+                    7: { count: 28 },//T
                     8: { count: 40, traits: [{ property: 'isAgile', chance: 0.5 }, { property: 'isBulwark', chance: 0.5 }] },//s
                     9: { count: 34, traits: [{ property: 'isAgile', chance: 0.3 }, { property: 'isBulwark', chance: 0.4 }] },
-                    10: { count: 28, traits: [{ property: 'isAgile', chance: 0.2 }, { property: 'isBulwark', chance: 0.2 }] },//t
+                    10: { count: 25, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.2 }] },//t
                     11: { count: 45, traits: [{ property: 'isAgile', chance: 0.5 }, { property: 'isBulwark', chance: 0.5 }] },//s
                     12: { count: 38, traits: [{ property: 'isAgile', chance: 0.5 }, { property: 'isBulwark', chance: 0.5 }] },
-                    13: { count: 35, traits: [{ property: 'isAgile', chance: 0.6 }, { property: 'isBulwark', chance: 0.3 }] },//t
-                    14: { count: 45, traits: [{ property: 'isAgile', chance: 0.7 }, { property: 'isBulwark', chance: 0.3 }] },
-                    15: { count: 50, traits: [{ property: 'isBulwark', chance: 0.6 }] },//T
+                    13: { count: 35, traits: [{ property: 'isAgile', chance: 0.6 }, { property: 'isBulwark', chance: 0.4 }] },//t
+                    14: { count: 45, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.6 }] },
+                    15: { count: 50, traits: [{ property: 'isBulwark', chance: 0.7 }] },//T
                 }
             },
             {

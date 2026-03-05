@@ -337,6 +337,8 @@ export class FirebaseService {
         const user = this.user$();
         if (!user) return;
 
+        const isWin = lives > 0;
+
         if (xp > HARD_CAP) {
             console.error(`Security Alert: XP Award Rejected. Attempted: ${xp}, Max Allowed: ${HARD_CAP}`);
             xp = HARD_CAP;
@@ -361,7 +363,7 @@ export class FirebaseService {
                 return;
             }
 
-            if (levelId && (isFirstTime || isImproved)) {
+            if (levelId && isWin && (isFirstTime || isImproved)) {
                 completedLevels[levelId] = {
                     lives: lives,
                     completedAt: new Date()
@@ -409,8 +411,8 @@ export class FirebaseService {
 
             const q = query(
                 colRef,
-                orderBy('completedLevelsCount', 'desc'),
                 orderBy('totalLivesSum', 'desc'),
+                orderBy('completedLevelsCount', 'desc'),
                 limit(limitCount)
             );
 
