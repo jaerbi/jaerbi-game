@@ -454,53 +454,54 @@ export class FirebaseService {
     }
 
     async migrateHistoricalScores() {
-        if (!this.db) return;
-        console.log('🚀 Starting improved migration...');
+        // if (!this.db) return;
+        // console.log('🚀 Starting improved migration...');
 
-        try {
-            const snapshot = await getDocs(collection(this.db, 'towerDefenseLeaderboards'));
-            const allRuns = snapshot.docs.map(d => d.data() as TowerDefenseScore);
+        // try {
+        //     const snapshot = await getDocs(collection(this.db, 'towerDefenseLeaderboards'));
+        //     const allRuns = snapshot.docs.map(d => d.data() as TowerDefenseScore);
 
-            // 1. Сортуємо за часом (від старих до нових)
-            allRuns.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+        //     // 1. Сортуємо за часом (від старих до нових)
+        //     allRuns.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
 
-            const bestMap = new Map<string, TowerDefenseScore>();
+        //     const bestMap = new Map<string, TowerDefenseScore>();
 
-            for (const run of allRuns) {
-                // Виправляємо mapSize, якщо він раптом порожній
-                const actualMapSize = run.mapSize || (run.gridSize ? `${run.gridSize}x${run.gridSize}` : '10x10');
-                if (!run.userId) continue;
+        //     for (const run of allRuns) {
+        //         // Виправляємо mapSize, якщо він раптом порожній
+        //         const actualMapSize = run.mapSize || (run.gridSize ? `${run.gridSize}x${run.gridSize}` : '10x10');
+        //         if (!run.userId) continue;
 
-                const key = `${run.userId}_${actualMapSize}`;
-                const existing = bestMap.get(key);
+        //         const key = `${run.userId}_${actualMapSize}`;
+        //         const existing = bestMap.get(key);
 
-                const currentWave = Number(run.maxWave || 0);
-                const currentMoney = Number(run.totalMoney || 0);
-                const existingWave = existing ? Number(existing.maxWave || 0) : -1;
-                const existingMoney = existing ? Number(existing.totalMoney || 0) : -1;
+        //         const currentWave = Number(run.maxWave || 0);
+        //         const currentMoney = Number(run.totalMoney || 0);
+        //         const existingWave = existing ? Number(existing.maxWave || 0) : -1;
+        //         const existingMoney = existing ? Number(existing.totalMoney || 0) : -1;
 
-                // Логіка відбору найкращого: більша хвиля АБО така сама хвиля + більше грошей
-                if (!existing || currentWave > existingWave || (currentWave === existingWave && currentMoney > existingMoney)) {
-                    bestMap.set(key, {
-                        ...run,
-                        mapSize: actualMapSize,
-                        maxWave: currentWave,
-                        totalMoney: currentMoney
-                    });
-                }
-            }
+        //         // Логіка відбору найкращого: більша хвиля АБО така сама хвиля + більше грошей
+        //         if (!existing || currentWave > existingWave || (currentWave === existingWave && currentMoney > existingMoney)) {
+        //             bestMap.set(key, {
+        //                 ...run,
+        //                 mapSize: actualMapSize,
+        //                 maxWave: currentWave,
+        //                 totalMoney: currentMoney
+        //             });
+        //         }
+        //     }
 
-            console.log(`📊 Found ${bestMap.size} unique records to fix.`);
+        //     console.log(`📊 Found ${bestMap.size} unique records to fix.`);
 
-            for (const [docId, bestData] of bestMap) {
-                const bestRef = doc(this.db, 'towerDefenseBestScores', docId);
-                await setDoc(bestRef, bestData, { merge: true });
-                console.log(`✅ Fixed record: ${docId}`);
-            }
+        //     for (const [docId, bestData] of bestMap) {
+        //         const bestRef = doc(this.db, 'towerDefenseBestScores', docId);
+        //         await setDoc(bestRef, bestData, { merge: true });
+        //         console.log(`✅ Fixed record: ${docId}`);
+        //     }
 
-            console.log('🎉 All historical data synchronized!');
-        } catch (error) {
-            console.error('❌ Migration failed:', error);
-        }
+        //     console.log('🎉 All historical data synchronized!');
+        // } catch (error) {
+            // console.error('❌ Migration failed:', error);
+            console.error('❌ Migration failed: Don`t do this');
+        // }
     }
 }
