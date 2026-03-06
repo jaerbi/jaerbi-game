@@ -76,7 +76,7 @@ export class DamageCalculationService {
 
         // 3. Cannon Shatter (Special) - Logic moved to dedicated method, calling it here
         if (tower.type === 3) {
-            this.applyShatterStack(target, tower.specialActive);
+            this.applyShatterStack(target, tower.specialActive, getUpgradeLevel(3, 'golden'));
         }
         const stacks = target.shatterStacks || 0;
         if (stacks > 0) {
@@ -224,11 +224,12 @@ export class DamageCalculationService {
         }
     }
 
-    applyShatterStack(enemy: Enemy, specialActive: boolean) {
+    applyShatterStack(enemy: Enemy, specialActive: boolean, goldenLevel: number) {
         if (!specialActive || enemy.isAgile) return;
 
+        const dynamicMaxStacks = this.SHATTER_MAX_STACKS + goldenLevel;
         const currentStacks = enemy.shatterStacks || 0;
-        const nextStacks = Math.min(this.SHATTER_MAX_STACKS, currentStacks + 1);
+        const nextStacks = Math.min(dynamicMaxStacks, currentStacks + 1);
         enemy.shatterStacks = nextStacks;
     }
 
@@ -239,11 +240,12 @@ export class DamageCalculationService {
         if (enemy.isSlime) return; // Immune
 
         const currentStacks = enemy.venomStacks ?? 0;
-        const newStacks = Math.min(this.VENOM_MAX_STACKS, currentStacks + 1);
+        const golden = getUpgradeLevel(7, 'golden');
+        const dynamicMaxStacks = this.VENOM_MAX_STACKS + golden;
+        const newStacks = Math.min(dynamicMaxStacks, currentStacks + 1);
 
         enemy.venomStacks = newStacks;
-        const golden = getUpgradeLevel(1, 'golden');
-        const duration = this.VENOM_DURATION + golden * 0.1;
+        const duration = this.VENOM_DURATION + golden * 0.2;
         enemy.venomDuration = duration;
         enemy.venomTickTimer = 0;
 

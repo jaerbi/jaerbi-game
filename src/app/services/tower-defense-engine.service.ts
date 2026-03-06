@@ -1320,11 +1320,11 @@ export class TowerDefenseEngineService {
         for (const tower of this.towersInternal) {
             tower.cooldown -= dt;
             if (tower.cooldown <= 0) {
-                const target = this.findTargetForTower(tower, this.enemiesInternal);
+                const target = this.findTargetForTower(tower, this.enemiesInternal, (tier, type: 'damage' | 'range' | 'golden') => this.getUpgradeLevel(tier, type));
                 if (target) {
                     tower.targetEnemyId = target.id;
                     this.fireAt(tower, target);
-                    if (tower.type === 7) {
+                    if (tower.type === 7 || tower.type === 3) {
                         tower.hitsOnTarget = (tower.hitsOnTarget || 0) + 1;
                     }
                     tower.cooldown = tower.fireInterval;
@@ -1334,7 +1334,12 @@ export class TowerDefenseEngineService {
                     tower.lastBeamTargetId = undefined;
                     tower.extraTargetIds = undefined;
                     tower.cooldown = 0;
-                    if (tower.type === 7) {
+                    if (tower.type === 7 || tower.type === 3) {
+                        tower.hitsOnTarget = 0;
+                    }
+                }
+                if (tower.type === 7 || tower.type === 3) {
+                    if (!target || target.id !== tower.targetEnemyId) {
                         tower.hitsOnTarget = 0;
                     }
                 }
@@ -1350,9 +1355,15 @@ export class TowerDefenseEngineService {
         );
     }
 
-    private findTargetForTower(tower: Tower, enemies: Enemy[]): Enemy | null {
+    private findTargetForTower(tower: Tower, enemies: Enemy[], getUpgradeLevel: (tier: number, type: 'damage' | 'range' | 'golden') => number): Enemy | null {
         const stickyTypes = [3, 6];
-
+        let maxHits = Infinity;
+        const goldenLevel = getUpgradeLevel(tower.type, 'golden');
+        if (tower.type === 7) {
+            maxHits = this.damageService.VENOM_MAX_STACKS + goldenLevel;
+        } else if (tower.type === 3) {
+            maxHits = this.damageService.SHATTER_MAX_STACKS + goldenLevel;
+        }
         const tX = tower.position.x + 0.5;
         const tY = tower.position.y + 0.5;
 
@@ -1371,9 +1382,7 @@ export class TowerDefenseEngineService {
                 const rangeSq = stickyRange * stickyRange;
 
                 if (distSq <= rangeSq) {
-                    if (tower.type === 7) {
-                        if ((tower.hitsOnTarget ?? 0) < 3) return currentTarget;
-                    } else {
+                    if ((tower.hitsOnTarget ?? 0) < maxHits) {
                         return currentTarget;
                     }
                 }
@@ -1395,10 +1404,7 @@ export class TowerDefenseEngineService {
 
             if (distSq > rangeSq) continue;
 
-            if (tower.type === 7 && enemy.id === tower.targetEnemyId && (tower.hitsOnTarget ?? 0) >= (tower.hasGolden ? 4 : 3)) {
-                continue;
-            }
-            if (tower.type === 3 && enemy.id === tower.targetEnemyId && (tower.hitsOnTarget ?? 0) >= 5) {
+            if (enemy.id === tower.targetEnemyId && (tower.hitsOnTarget ?? 0) >= maxHits) {
                 continue;
             }
 

@@ -523,7 +523,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 type === 3 ? '#f5e50b' :
                     type === 4 ? '#ef4444' :
                         type === 5 ? '#ee822a' :
-                            type === 6 ? '#22d3ee' :
+                            type === 6 ? '#78e3f3' :
                                 type === 7 ? '#84cc16' :
                                     '#a16207';
     }
@@ -981,7 +981,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                     type === 3 ? '#f5e50b' :
                         type === 4 ? '#ef4444' :
                             type === 5 ? '#ee822a' :
-                                type === 6 ? '#22d3ee' :
+                                type === 6 ? '#78e3f3' :
                                     type === 7 ? '#84cc16' :
                                         '#a16207';
 
@@ -1250,7 +1250,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
             // Shatter stacks visualization (Left Side)
             if (e.shatterStacks && e.shatterStacks > 0) {
-                const stackH = 4;
+                const stackH = 2;
                 const stackW = 8;
                 const gap = 2;
                 const startY = cy - r + 5;
