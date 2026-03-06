@@ -21,7 +21,7 @@ const TIER_STATS = [
     { damage: 66, range: 1.5, fireInterval: 2.5 },
     { damage: 30, range: 2, fireInterval: 0.2 },
     { damage: 92, range: 1.6, fireInterval: 1 },
-    { damage: 52, range: 1.5, fireInterval: 2.5 }
+    { damage: 152, range: 1.5, fireInterval: 2.5 }
 ] as const;
 
 import { WaveAnalyticsService } from './wave-analytics.service';
@@ -985,7 +985,7 @@ export class TowerDefenseEngineService {
             }
         }
 
-        const baseSpeed = 0.5 + (currentWave * 0.01) + (Math.floor(currentWave / 5) * 0.05);
+        const baseSpeed = 0.5 + (currentWave * 0.01); // + (Math.floor(currentWave / 5) * 0.05)
         const total = this.currentWaveEnemyCount || (5 + this.wave() * 2);
         const spawnedSoFar = total - this.enemiesToSpawn;
 

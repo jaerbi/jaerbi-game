@@ -194,6 +194,13 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     selectedDifficulty: 'easy' | 'normal' | 'hard' = 'normal';
     showStatsPanel = false;
     isShowSpeed = true;
+    isMobileMenuOpen = signal(false);
+        toggleMobileMenu() {
+            this.isMobileMenuOpen.update(v => !v);
+        }
+        closeMobileMenu() {
+            this.isMobileMenuOpen.set(false);
+        }
     showStats = false; // For draggable modal
     private platformId = inject(PLATFORM_ID);
     public windowWidth = signal<number>(1200);

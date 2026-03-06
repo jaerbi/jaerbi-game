@@ -144,13 +144,13 @@ export class CampaignService {
                     1: { count: 10 },
                     2: { count: 15, traits: [{ property: 'isFrost', chance: 0.2 }] },
                     3: { count: 30, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.2 }] },//S
-                    4: { count: 17 },//T
-                    5: { count: 18, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.2 }] },
+                    4: { count: 20 },//T
+                    5: { count: 28, traits: [{ property: 'isFrost', chance: 0.3 }, { property: 'isGrounded', chance: 0.3 }] },
                     6: { count: 40, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.4 }] },//S
-                    7: { count: 20, traits: [{ property: 'isFrost', chance: 0.3 }, { property: 'isGrounded', chance: 0.5 }] },//T
+                    7: { count: 24, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.5 }] },//T
                     8: { count: 30, traits: [{ property: 'isFrost', chance: 0.6 }, { property: 'isGrounded', chance: 0.4 }] },
-                    9: { count: 35, traits: [{ property: 'isFrost', chance: 0.3 }, { property: 'isGrounded', chance: 0.6 }] },
-                    10: { count: 30, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.6 }] },//T
+                    9: { count: 35, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.6 }] },
+                    10: { count: 35, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.6 }] },//T
                     11: { count: 45, traits: [{ property: 'isFrost', chance: 0.3 }, { property: 'isGrounded', chance: 0.7 }] },
                     12: { count: 40, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.8 }] },//T
                 }
