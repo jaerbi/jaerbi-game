@@ -171,7 +171,7 @@ export class DamageCalculationService {
     /**
      *Determines whether an enemy is vulnerable to this tower type due to its current "resistance"
      */
-    private getVulnerabilityMultiplier(enemy: Enemy, towerType: number): number {
+    getVulnerabilityMultiplier(enemy: Enemy, towerType: number): number {
         // if X, then more dps to Y
         const isVulnerable =
             (enemy.isFrost && towerType === 5) ||      // 1 Ice -> 5 Fire

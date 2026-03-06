@@ -1384,7 +1384,7 @@ export class TowerDefenseEngineService {
         const effectiveFiringRange = effRange + HITBOX_OFFSET;
         const rangeSq = effectiveFiringRange * effectiveFiringRange;
 
-        const candidates: { enemy: Enemy; distSq: number; progressScore: number }[] = [];
+        const candidates: { enemy: Enemy; distSq: number; progressScore: number; isVulnerable: boolean }[] = [];
 
         for (const enemy of enemies) {
             if (enemy.hp <= 0) continue;
@@ -1395,13 +1395,18 @@ export class TowerDefenseEngineService {
 
             if (distSq > rangeSq) continue;
 
-            if (tower.type === 7 && enemy.id === tower.targetEnemyId && (tower.hitsOnTarget ?? 0) >= 3) {
+            if (tower.type === 7 && enemy.id === tower.targetEnemyId && (tower.hitsOnTarget ?? 0) >= (tower.hasGolden ? 4 : 3)) {
+                continue;
+            }
+            if (tower.type === 3 && enemy.id === tower.targetEnemyId && (tower.hitsOnTarget ?? 0) >= 5) {
                 continue;
             }
 
             const idx = enemy.pathIndex ?? 0;
             const prog = enemy.progress ?? 0;
-            candidates.push({ enemy, distSq, progressScore: idx + prog });
+            const isVulnerable = this.damageService.getVulnerabilityMultiplier(enemy, tower.type) > 1.0;
+
+            candidates.push({ enemy, distSq, progressScore: idx + prog, isVulnerable });
         }
 
         if (candidates.length === 0) {
@@ -1410,8 +1415,13 @@ export class TowerDefenseEngineService {
             return null;
         }
 
-        const selectedEnemy = this.applyStrategy(tower, candidates);
-
+        const vulnerableCandidates = candidates.filter(c => c.isVulnerable);
+        let selectedEnemy: Enemy;
+        if (vulnerableCandidates.length > 0) {
+            selectedEnemy = this.applyStrategy(tower, vulnerableCandidates);
+        } else {
+            selectedEnemy = this.applyStrategy(tower, candidates);
+        }
         if (tower.targetEnemyId !== selectedEnemy.id) {
             tower.hitsOnTarget = 0;
             if (tower.type === 6) tower.beamTime = 0;

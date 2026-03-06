@@ -914,18 +914,11 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 ctx.font = `bold ${Math.floor(tile * 0.3)}px Arial`;
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'top';
-                ctx.fillText('★', cx - tile / 2 + padding, cy - tile / 2 + padding);
-                ctx.restore();
-            }
-            if (t.specialActive && t.hasGolden) {
-                ctx.save();
-                ctx.fillStyle = '#FFD700';
-                ctx.shadowColor = 'black';
-                ctx.shadowBlur = 4;
-                ctx.font = `bold ${Math.floor(tile * 0.3)}px Arial`;
-                ctx.textAlign = 'right';
-                ctx.textBaseline = 'top';
-                ctx.fillText('⚡', cx + tile / 2 - padding, cy - tile / 2 + padding);
+                if (t.hasGolden) {
+                    ctx.fillText('⚡', cx - tile / 2 + padding, cy - tile / 2 + padding);
+                } else {
+                    ctx.fillText('★', cx - tile / 2 + padding, cy - tile / 2 + padding);
+                }
                 ctx.restore();
             }
 
