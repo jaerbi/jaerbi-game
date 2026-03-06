@@ -294,7 +294,11 @@
     <div
       class="relative bg-slate-900 border border-white/10 p-6 rounded-2xl max-w-3xl w-full overflow-y-auto max-h-[80vh]"
     >
-      <h2 class="text-xl font-black mb-4">
+      <h2
+        class="text-xl mb-4"
+        [class.text-purple-400]="rulesGame === 'defense'"
+        [class.text-emerald-400]="rulesGame === 'tactics'"
+      >
         {{
           rulesGame === 'tactics'
             ? settings.currentLang() === 'uk'
@@ -305,43 +309,202 @@
               : 'Rules: Shape Defense'
         }}
       </h2>
-      <div class="space-y-4 text-slate-300 text-sm leading-relaxed">
-        <div>
-          <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
-            {{ settings.currentLang() === 'uk' ? 'Мета' : 'Objective' }}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-slate-300 text-sm leading-relaxed">
+        @if (rulesGame === 'tactics') {
+          <div class="space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="text-emerald-400 text-xl">🎯</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Мета' : 'Objective' }}
+                </div>
+                <p>
+                  {{
+                    settings.currentLang() === 'uk'
+                      ? 'Отримайте перемогу як Монополія (контроль ресурсних зон) або як Знищення (ліквідація супротивника). Ваш план — поєднання руху, атаки та будівництва стін.'
+                      : 'Win via Monopoly (control resource zones) or Annihilation (eliminate the opponent). Your plan combines movement, attack, and wall construction.'
+                  }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="text-purple-400 text-xl">⚙️</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Базові механіки' : 'Core Mechanics' }}
+                </div>
+                <ul class="space-y-1">
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Юніти мають тир і рівень. Тактичне позиціювання та вибір цілей — ключ до переваги.'
+                        : 'Units have tier and level. Tactical positioning and target selection are key to advantage.'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Стіни утворюють формації, підвищуючи міцність кожного сегмента в групі.'
+                        : 'Walls form formations, increasing the durability of each segment in the group.'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Ліси дають деревину, шахти — метал. Ресурси витрачаються на будівництво та укріплення.'
+                        : 'Forests provide wood; mines yield metal. Resources are spent on building and fortifying.'
+                    }}
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
-          <p>
-            {{
-              settings.currentLang() === 'uk'
-                ? 'Досягніть перемоги шляхом контролю ключових точок та ефективного розміщення юнітів.'
-                : 'Achieve victory by controlling key positions and placing units efficiently.'
-            }}
-          </p>
-        </div>
-        <div>
-          <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
-            {{ settings.currentLang() === 'uk' ? 'Керування' : 'Controls' }}
+          <div class="space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="text-amber-400 text-xl">💰</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Економіка' : 'Economy' }}
+                </div>
+                <p>
+                  {{
+                    settings.currentLang() === 'uk'
+                      ? 'Контроль ресурсних зон збільшує ваші можливості будівництва. Розподіляйте деревину та метал для створення формацій, що стримують ворога, і відкривають простір для наступу.'
+                      : 'Controlling resource zones expands your building options. Allocate wood and metal to form strong defensive shapes and open lanes for offense.'
+                  }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="text-emerald-400 text-xl">🧠</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Профі-поради' : 'Pro Tips' }}
+                </div>
+                <ul class="space-y-1">
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Будуйте стіни групами для максимального формаційного бонусу, для захисту.'
+                        : 'Build walls in groups for maximum formation bonus, for protection.'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Захоплюйте кластери лісів: стабільна економіка виграє довгі сутички.'
+                        : 'Capture forest clusters: steady economy wins prolonged engagements.'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Юніт вищого Рангу має більше шансів на перемогу в бою.'
+                        : 'A unit of a higher Tier has a better chance of winning a battle.'
+                    }}
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
-          <p>
-            {{
-              settings.currentLang() === 'uk'
-                ? 'Клацайте по клітинках для вибору; використовуйте панель дій для побудови та атаки.'
-                : 'Click tiles to select; use the action panel to build and attack.'
-            }}
-          </p>
-        </div>
-        <div>
-          <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
-            {{ settings.currentLang() === 'uk' ? 'Нарахування балів' : 'Scoring' }}
+        } @else {
+          <div class="space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="text-emerald-400 text-xl">🎯</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Мета' : 'Objective' }}
+                </div>
+                <p>
+                  {{
+                    settings.currentLang() === 'uk'
+                      ? 'Виживайте проти навали ворогів, зберігаючи щити бази. У кампанії — пройдіть усі хвилі на місії; у виживанні — потрібно вижити якомога довше на 10x10 чи 20x20 картах, і очолити лідерські позиції в рейтингу.'
+                      : `Survive against the onslaught of enemies while maintaining the base's shields. In the campaign, complete all the waves in the mission; in survival, survive as long as possible on 10x10 or 20x20 maps and take the top spot in the leaderboard.`
+                  }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="text-purple-400 text-xl">⚙️</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Базові механіки' : 'Core Mechanics' }}
+                </div>
+                <ul class="space-y-1">
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Будуйте вежі поруч зі шляхом. Рівні, спеціальні здібності та «золоті» покращення посилюють ваші Вежі.'
+                        : 'Build towers along the path. Levels, special abilities, and "gold" upgrades strengthen your Towers'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Типи веж покривають сповільнення, ланцюгові атаки, AOE, DOT, промінь та відштовхування.'
+                        : 'Tower types cover slow, chaining, AOE, DOT, ramping beam, and knockback.'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Боси зʼявляються у ключових хвилях. Вороги, що досягають бази, знімають життя щита за типом і здоровʼям.'
+                        : 'Bosses appear in key waves. Enemies that reach the base take shield health based on type and health.'
+                    }}
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
-          <p>
-            {{
-              settings.currentLang() === 'uk'
-                ? 'Отримуйте очки за виживання хвиль, ефективність оборони та економіку.'
-                : 'Earn points for wave survival, defensive efficiency, and economy.'
-            }}
-          </p>
-        </div>
+          <div class="space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="text-amber-400 text-xl">💰</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Економіка' : 'Economy' }}
+                </div>
+                <p>
+                  {{
+                    settings.currentLang() === 'uk'
+                      ? 'Кредити: базова формула (5 + хвиля) з зменшенням після 10-ї. Є також бонусні плитки, якщо вежа стоїть в зоні — +2, боси — ×5, «золота» майстерність множить. Продаж Веж повертає 60%.'
+                      : 'Credits: basic formula (5 + wave) with a decrease after the 10th. There are also bonus tiles, if the tower is in the zone — +2, bosses — ×5, "gold" skill multiplies. Selling Towers returns 60%.'
+                  }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="text-emerald-400 text-xl">🧠</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Профі-поради' : 'Pro Tips' }}
+                </div>
+                <ul class="space-y-1">
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Комбінуйте Льодяну з Інферно для максимальної тривалості у зоні ураження.'
+                        : 'Combine Ice with Inferno to maximize time in damage zones.'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Розміщуйте вежі на перехрестях, щоб збільшити експозицію ворогів і вигоду від бонусних тайлів.'
+                        : 'Place towers at intersections to increase enemy exposure and benefit from bonus tiles.'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Слідкуйте за статистикою шкоди, під час хвиль, це може стати в пригоді, при плануванні наступних кроків'
+                        : 'Keep an eye on the damage statistics during waves, it can be useful when planning your next steps.'
+                    }}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        }
       </div>
       <div class="mt-6 text-right">
         <button class="px-4 py-2 bg-sky-600 text-white rounded-lg" (click)="closeModals()">

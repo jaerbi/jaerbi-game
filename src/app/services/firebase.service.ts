@@ -173,6 +173,7 @@ export class FirebaseService {
             }
             const payload = {
                 ...entry,
+                maxWave: Number(entry.maxWave),
                 userTotalXp,
                 timestamp: serverTimestamp()
             };
