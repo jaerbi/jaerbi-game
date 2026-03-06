@@ -60,10 +60,6 @@ export class AiStrategyService {
 
         const phase: 'expansion' | 'defense' | 'full_rush' | 'none' = fullRushActive ? 'full_rush' : (baseThreat ? 'defense' : (isEarlyGame ? 'expansion' : 'none'));
         if (phase !== this.lastPhase) {
-            try { 
-                if (phase === 'full_rush') console.log('AI Phase: FULL RUSH ACTIVATED - Initiating All-Out Assault');
-                else console.log(phase === 'defense' ? 'AI Phase: Base Defense Activated' : (phase === 'expansion' ? 'AI Phase: Expansion' : 'AI Phase: Normal')); 
-            } catch {}
             this.lastPhase = phase;
         }
 
@@ -231,7 +227,6 @@ export class AiStrategyService {
             );
             if (inSession && !baseProximity && unit.tier < 3) {
                 this.goals.set(unit.id, { x: unit.position.x, y: unit.position.y });
-                // console.log(`[AI Block] Unit ${unit.id} is blocked in the forest at (${unit.position.x},${unit.position.y}). Progress: ${(unit.forestOccupationTurns ?? 0)}/3.`);
                 continue;
             }
             if (unit.tier >= 3) {
@@ -930,10 +925,7 @@ export class AiStrategyService {
             }
         }
         if (!best) return null;
-        const goal = this.goals.get(best.unit.id);
-        const goalText = goal ? `Goal: Forest at ${goal.x},${goal.y}` : 'Goal: None';
-        // CRITICAL LOGIC: Final decision logging aids telemetry and debugging of AI pathing.
-        // console.log(`[AI Decision] Unit ${best.unit.id} moving to (${best.target.x},${best.target.y}) targeting ${goalText}.`);
+
         return { type: best.type, unit: best.unit, target: best.target, reason: best.reason, edge: (best as any).edge };
     }
 
