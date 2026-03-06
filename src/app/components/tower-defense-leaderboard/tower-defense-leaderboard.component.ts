@@ -173,8 +173,14 @@ export class TowerDefenseLeaderboardComponent implements OnInit {
             } else if (size === 0) {
                 const user = this.firebase.user$();
                 if (user) {
-                    const list = await this.firebase.getMyTowerDefenseHistory(user.uid, 10);
-                    this.scores.set(list ?? []);
+                    const best10 = await this.firebase.getUserBestTowerDefenseScore(user.uid, 10);
+                    const best20 = await this.firebase.getUserBestTowerDefenseScore(user.uid, 20);
+
+                    const myBests = [];
+                    if (best10) myBests.push(best10);
+                    if (best20) myBests.push(best20);
+
+                    this.scores.set(myBests);
                 }
                 this.best.set(null);
             } else {
