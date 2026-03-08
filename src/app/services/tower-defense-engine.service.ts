@@ -946,7 +946,7 @@ export class TowerDefenseEngineService {
         const currentWave = this.wave();
 
         // HP Scaling
-        let hpMultiplier = Math.pow(1.10, currentWave)
+        let hpMultiplier = Math.pow(1.15, currentWave)
 
         // special for Yevhen
         if (currentWave >= 240) {
