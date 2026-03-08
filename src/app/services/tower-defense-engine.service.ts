@@ -17,11 +17,11 @@ const TIER_STATS = [
     { damage: 5, range: 1.5, fireInterval: 0.5 },
     { damage: 13, range: 2, fireInterval: 0.7 },
     { damage: 87, range: 1.5, fireInterval: 1 },
-    { damage: 250, range: 3, fireInterval: 4.5 },
-    { damage: 66, range: 1.5, fireInterval: 2.5 },
-    { damage: 30, range: 2, fireInterval: 0.2 },
+    { damage: 265, range: 3, fireInterval: 4.5 },
+    { damage: 76, range: 1.5, fireInterval: 2.5 },
+    { damage: 29, range: 2, fireInterval: 0.2 },
     { damage: 92, range: 1.6, fireInterval: 1 },
-    { damage: 152, range: 1.5, fireInterval: 2.5 }
+    { damage: 172, range: 1.5, fireInterval: 2.5 }
 ] as const;
 
 import { WaveAnalyticsService } from './wave-analytics.service';
@@ -946,31 +946,24 @@ export class TowerDefenseEngineService {
         const currentWave = this.wave();
 
         // HP Scaling
-        let hpMultiplier: number;
-        if (currentWave <= 10) {
-            // Linear: 1.2, 1.4... 3.0
-            hpMultiplier = 1 + 0.2 * currentWave;
-        } else {
-            const w = currentWave - 10;
-            hpMultiplier = 3.0 * Math.pow(1.15, w);
-        }
+        let hpMultiplier = Math.pow(1.10, currentWave)
 
         // special for Yevhen
-        if (currentWave >= 200) {
+        if (currentWave >= 240) {
             hpMultiplier *= 1.4; // +40%
-        } else if (currentWave >= 180) {
+        } else if (currentWave >= 220) {
             hpMultiplier *= 1.35; // +35%
-        } else if (currentWave >= 160) {
+        } else if (currentWave >= 200) {
             hpMultiplier *= 1.3; // +30%
-        } else if (currentWave >= 140) {
+        } else if (currentWave >= 180) {
             hpMultiplier *= 1.25; // +25%
-        } else if (currentWave >= 120) {
+        } else if (currentWave >= 160) {
             hpMultiplier *= 1.2; // +20%
-        } else if (currentWave >= 100) {
+        } else if (currentWave >= 140) {
             hpMultiplier *= 1.15; // +15%
-        } else if (currentWave >= 80) {
+        } else if (currentWave >= 120) {
             hpMultiplier *= 1.1; // +10%
-        } else if (currentWave >= 60) {
+        } else if (currentWave >= 100) {
             hpMultiplier *= 1.05; // +5%
         }
 
@@ -985,7 +978,7 @@ export class TowerDefenseEngineService {
             }
         }
 
-        const baseSpeed = 0.5 + (currentWave * 0.01); // + (Math.floor(currentWave / 5) * 0.05)
+        const baseSpeed = 0.5 + (currentWave * 0.02) + (Math.floor(currentWave / 5) * 0.05)
         const total = this.currentWaveEnemyCount || (5 + this.wave() * 2);
         const spawnedSoFar = total - this.enemiesToSpawn;
 

@@ -56,20 +56,21 @@ export class DamageCalculationService {
             const golden = getUpgradeLevel(1, 'golden');
 
             if (target.isFrozen && !target.isFrost) {
-                const frostMultiplier = 2.0 + (golden * 0.2);
+                const frostMultiplier = 2.0 + ((1 + golden) * 0.5);
                 damage = Math.floor(damage * frostMultiplier);
 
                 if (target.isBoss) {
-                    damage += Math.floor(tower.damage * 0.25);
+                    damage += tower.damage * (1.0 + golden * 0.2);
                 }
             }
         }
 
         // 4. Sniper Execute (Special)
         if (tower.specialActive && tower.type === 4 && !target.isBulwark) {
+            const golden = getUpgradeLevel(4, 'golden');
             const ratio = target.hp / target.maxHp;
             if (ratio < 0.5) {
-                const multiplier = target.isBoss ? 3 : 2;
+                const multiplier = (target.isBoss ? 5 : 3) + golden;
                 damage = Math.floor(damage * multiplier);
             }
         }
@@ -83,9 +84,14 @@ export class DamageCalculationService {
             const golden = getUpgradeLevel(3, 'golden');
             const masteryMultiplier = 1 + (golden * 0.25);
             const effectiveShatterPerStack = this.SHATTER_DAMAGE_PER_STACK * masteryMultiplier;
-
             const shatterMultiplier = 1 + (stacks * effectiveShatterPerStack);
             damage = Math.floor(damage * shatterMultiplier);
+
+            if (tower.type === 3) {
+                const selfBonusPerStack = 0.15 + (golden * 0.05);
+                const selfMultiplier = 1 + (stacks * selfBonusPerStack);
+                damage = Math.floor(damage * selfMultiplier);
+            }
         }
 
         // 6. Prism Ramp
@@ -122,7 +128,7 @@ export class DamageCalculationService {
 
             //if (Slow || Bleed || Venom), add +30% dps for each Golden level
             if (target.isFrozen || (target.venomStacks && target.venomStacks > 0) || (target.bleedDamagePerSec && target.bleedDamagePerSec > 0)) {
-                const focusMultiplier = 1 + (golden * 0.3);
+                const focusMultiplier = 1 + (golden * 0.35);
                 damage = Math.floor(damage * focusMultiplier);
             }
         }
@@ -245,12 +251,14 @@ export class DamageCalculationService {
         const newStacks = Math.min(dynamicMaxStacks, currentStacks + 1);
 
         enemy.venomStacks = newStacks;
-        const duration = this.VENOM_DURATION + golden * 0.2;
+        const goldenDamageMultiplier = 1 + (golden * 0.2);
+        const effectiveDamage = towerDamage * goldenDamageMultiplier;
+        const duration = this.VENOM_DURATION + (golden * 1);
         enemy.venomDuration = duration;
         enemy.venomTickTimer = 0;
 
         const currentBase = enemy.venomBaseDamage ?? 0;
-        enemy.venomBaseDamage = Math.max(currentBase, towerDamage);
+        enemy.venomBaseDamage = Math.max(currentBase, effectiveDamage);
 
         if (specialActive) {
             enemy.venomSlowActive = true;

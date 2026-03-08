@@ -99,12 +99,12 @@ export class CampaignService {
                 ],
                 waveTypeSequence: [1, 1, 2, 1, 1, 2, 1, 1],
                 waveModifiers: {
-                    1: { count: 12 },
-                    2: { count: 14, traits: [{ property: 'isFrost', chance: 0.1 }] },
-                    3: { count: 20, traits: [{ property: 'isFrost', chance: 0.8 }] },
-                    5: { count: 18, traits: [{ property: 'isFrost', chance: 0.5 }] },
-                    6: { count: 25, traits: [{ property: 'isFrost', chance: 1 }] },
-                    7: { count: 30, traits: [{ property: 'isFrost', chance: 0.6 }] },
+                    1: { count: 14 },
+                    2: { count: 16, traits: [{ property: 'isFrost', chance: 0.3 }] },
+                    3: { count: 24, traits: [{ property: 'isFrost', chance: 0.8 }] },
+                    5: { count: 20, traits: [{ property: 'isFrost', chance: 0.5 }] },
+                    6: { count: 26, traits: [{ property: 'isFrost', chance: 1 }] },
+                    7: { count: 32, traits: [{ property: 'isFrost', chance: 0.6 }] },
                     8: { count: 38, traits: [{ property: 'isFrost', chance: 0.9 }] },
                 }
             },
@@ -142,17 +142,17 @@ export class CampaignService {
                 waveTypeSequence: [1, 1, 2, 3, 1, 2, 3, 1, 1, 3, 1, 3],
                 waveModifiers: {
                     1: { count: 10 },
-                    2: { count: 15, traits: [{ property: 'isFrost', chance: 0.2 }] },
+                    2: { count: 15, traits: [{ property: 'isFrost', chance: 0.4 }] },
                     3: { count: 30, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.2 }] },//S
                     4: { count: 20 },//T
-                    5: { count: 28, traits: [{ property: 'isFrost', chance: 0.3 }, { property: 'isGrounded', chance: 0.3 }] },
-                    6: { count: 40, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.4 }] },//S
-                    7: { count: 24, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.5 }] },//T
+                    5: { count: 28, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.3 }] },
+                    6: { count: 40, traits: [{ property: 'isFrost', chance: 0.5 }, { property: 'isGrounded', chance: 0.4 }] },//S
+                    7: { count: 24, traits: [{ property: 'isFrost', chance: 0.5 }, { property: 'isGrounded', chance: 0.5 }] },//T
                     8: { count: 30, traits: [{ property: 'isFrost', chance: 0.6 }, { property: 'isGrounded', chance: 0.4 }] },
                     9: { count: 35, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.6 }] },
                     10: { count: 35, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.6 }] },//T
-                    11: { count: 45, traits: [{ property: 'isFrost', chance: 0.3 }, { property: 'isGrounded', chance: 0.7 }] },
-                    12: { count: 40, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.8 }] },//T
+                    11: { count: 45, traits: [{ property: 'isFrost', chance: 0.5 }, { property: 'isGrounded', chance: 0.5 }] },
+                    12: { count: 40, traits: [{ property: 'isFrost', chance: 0.5 }, { property: 'isGrounded', chance: 0.5 }] },//T
                 }
             },
             {

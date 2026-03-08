@@ -18,7 +18,7 @@ export class WaveAnalyticsService {
     public currentWaveCounters: { type: number, ratio: number }[] = [];
     public currentWaveCounterChance: number = 0;
     public currentDominanceRatio: number = 0;
-    public BALANCE_VERSION: string = '0.0.6';
+    public BALANCE_VERSION: string = '0.0.7';
     readonly COUNTER_RECOMMENDATIONS: Record<number, { id: number, name: string }> = {}
 
     constructor(private _settings: SettingsService) {
