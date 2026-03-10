@@ -661,7 +661,7 @@ export class TowerDefenseEngineService {
         }
 
         this.wave.update(w => w + 1);
-        if (this.gameMode() !== 'campaign' && this.wave() > 1 && this.wave() % 10 === 0) {
+        if (this.gameMode() !== 'campaign' && this.wave() > 1 && this.wave() % 5 === 0) {
             this.spawnRandomBonusTile();
         }
         this.isWaveInProgress.set(true);
@@ -896,7 +896,7 @@ export class TowerDefenseEngineService {
         const golden = this.getUpgradeLevel(5, 'golden');
         if (golden <= 0 || sourceDamage <= 0) return;
 
-        const damageMultiplier = 0.2 + (golden * 0.1);
+        const damageMultiplier = 0.2 + (golden * 0.3);
         const explosionDamage = Math.floor(sourceDamage * damageMultiplier);
 
         const radius = 1.0;
@@ -946,7 +946,7 @@ export class TowerDefenseEngineService {
         const currentWave = this.wave();
 
         // HP Scaling
-        let hpMultiplier = Math.pow(1.15, currentWave)
+        let hpMultiplier = Math.pow(1.10, currentWave)
 
         // special for Yevhen
         if (currentWave >= 240) {
@@ -1525,7 +1525,7 @@ export class TowerDefenseEngineService {
                     'z' + (this.projectileIdCounter++),
                     radius,
                     4.0,
-                    Math.floor(damage * 0.15)
+                    Math.floor(damage * 0.35)
                 );
                 this.infernoZones.push(napalmZone);
             }
