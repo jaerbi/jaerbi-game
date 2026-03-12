@@ -896,7 +896,7 @@ export class TowerDefenseEngineService {
         const golden = this.getUpgradeLevel(5, 'golden');
         if (golden <= 0 || sourceDamage <= 0) return;
 
-        const damageMultiplier = 0.2 + (golden * 0.3);
+        const damageMultiplier = 0.5 + (golden * 0.3);
         const explosionDamage = Math.floor(sourceDamage * damageMultiplier);
 
         const radius = 1.0;
