@@ -19,7 +19,7 @@ export class DamageCalculationService {
     readonly FROST_AURA_RADIUS_BASE = 2;
 
     // Venom
-    readonly VENOM_DURATION = 4;
+    readonly VENOM_DURATION = 3;
     readonly VENOM_MAX_STACKS = 3;
     readonly VENOM_SLOW_MODIFIER = 0.8;
 
@@ -30,7 +30,7 @@ export class DamageCalculationService {
     // Prism
     readonly PRISM_RAMP_MAX_BONUS = 1;
     readonly PRISM_RAMP_MAX_BONUS_GOLDEN = 3;
-    readonly PRISM_VULNERABILITY_BONUS = 1.15;
+    readonly PRISM_VULNERABILITY_BONUS = 1.10;
 
     // Golden Bonuses (% Current HP)
     readonly LIGHTNING_GOLDEN_PERCENT = 0.005;
@@ -38,7 +38,7 @@ export class DamageCalculationService {
 
     // Bleed 
     readonly BLEED_RATIO = 0.2;
-    
+
     constructor(private waveAnalytics: WaveAnalyticsService) { }
 
     /**
@@ -55,33 +55,43 @@ export class DamageCalculationService {
         if (tower.type === 1) {
             const golden = getUpgradeLevel(1, 'golden');
 
-            if (target.isFrozen) {
-                const frostMultiplier = 2.0 + (golden * 0.2);
+            if (target.isFrozen && !target.isFrost) {
+                const frostMultiplier = 2.0 + ((1 + golden) * 0.5);
                 damage = Math.floor(damage * frostMultiplier);
 
                 if (target.isBoss) {
-                    damage += Math.floor(tower.damage * 0.25);
+                    damage += tower.damage * (1.0 + golden * 0.2);
                 }
             }
         }
 
         // 4. Sniper Execute (Special)
-        if (tower.specialActive && tower.type === 4) {
+        if (tower.specialActive && tower.type === 4 && !target.isBulwark) {
+            const golden = getUpgradeLevel(4, 'golden');
             const ratio = target.hp / target.maxHp;
             if (ratio < 0.5) {
-                const multiplier = target.isBoss ? 3 : 2;
+                const multiplier = (target.isBoss ? 5 : 3) + golden;
                 damage = Math.floor(damage * multiplier);
             }
         }
 
         // 3. Cannon Shatter (Special) - Logic moved to dedicated method, calling it here
         if (tower.type === 3) {
-            this.applyShatterStack(target, tower.specialActive);
+            this.applyShatterStack(target, tower.specialActive, getUpgradeLevel(3, 'golden'));
         }
         const stacks = target.shatterStacks || 0;
         if (stacks > 0) {
-            const shatterMultiplier = 1 + stacks * this.SHATTER_DAMAGE_PER_STACK;
+            const golden = getUpgradeLevel(3, 'golden');
+            const masteryMultiplier = 1 + (golden * 0.25);
+            const effectiveShatterPerStack = this.SHATTER_DAMAGE_PER_STACK * masteryMultiplier;
+            const shatterMultiplier = 1 + (stacks * effectiveShatterPerStack);
             damage = Math.floor(damage * shatterMultiplier);
+
+            if (tower.type === 3) {
+                const selfBonusPerStack = 0.15 + (golden * 0.05);
+                const selfMultiplier = 1 + (stacks * selfBonusPerStack);
+                damage = Math.floor(damage * selfMultiplier);
+            }
         }
 
         // 6. Prism Ramp
@@ -98,31 +108,29 @@ export class DamageCalculationService {
             }
 
             const golden = getUpgradeLevel(6, 'golden');
-            const maxBonus = golden > 0 ? this.PRISM_RAMP_MAX_BONUS_GOLDEN : this.PRISM_RAMP_MAX_BONUS;
-            const ramp = 1 + Math.min(maxBonus, (tower?.beamTime || 0) * 0.5);
+            const maxBonus = this.PRISM_RAMP_MAX_BONUS + (golden * 1.0);
+            const rampSpeed = 0.5 + (golden * 0.1);
+            const ramp = 1 + Math.min(maxBonus, (tower?.beamTime || 0) * rampSpeed);
             damage = Math.floor(damage * ramp);
         }
 
         // Prism Vulnerability Debuff
-        if (target.prismVulnerableTime && target.prismVulnerableTime > 0) {
-            damage = Math.floor(damage * this.PRISM_VULNERABILITY_BONUS);
+        if (target.prismVulnerableTime && target.prismVulnerableTime > 0 && !target.isMirror) {
+            const bonus = this.PRISM_VULNERABILITY_BONUS + (getUpgradeLevel(6, 'golden') * 0.05); // 1.15, 1.20, 1.25
+            damage = Math.floor(damage * bonus);
         }
 
         // Golden Upgrades (% HP Damage)
-        if (tower.type === 2) { // Lightning
+        if (tower.type === 2 && !target.isGrounded) { // Lightning
             const golden = getUpgradeLevel(2, 'golden');
             const bonus = target.hp * (0.01 + golden * this.LIGHTNING_GOLDEN_PERCENT);
             damage += bonus;
 
             //if (Slow || Bleed || Venom), add +30% dps for each Golden level
             if (target.isFrozen || (target.venomStacks && target.venomStacks > 0) || (target.bleedDamagePerSec && target.bleedDamagePerSec > 0)) {
-                const focusMultiplier = 1 + (golden * 0.3);
+                const focusMultiplier = 1 + (golden * 0.35);
                 damage = Math.floor(damage * focusMultiplier);
             }
-        } else if (tower.type === 4) { // Sniper
-            const golden = getUpgradeLevel(4, 'golden');
-            const bonus = target.hp * (0.05 + golden * this.SNIPER_GOLDEN_PERCENT);
-            damage += bonus;
         }
 
         return damage;
@@ -169,7 +177,7 @@ export class DamageCalculationService {
     /**
      *Determines whether an enemy is vulnerable to this tower type due to its current "resistance"
      */
-    private getVulnerabilityMultiplier(enemy: Enemy, towerType: number): number {
+    getVulnerabilityMultiplier(enemy: Enemy, towerType: number): number {
         // if X, then more dps to Y
         const isVulnerable =
             (enemy.isFrost && towerType === 5) ||      // 1 Ice -> 5 Fire
@@ -222,29 +230,35 @@ export class DamageCalculationService {
         }
     }
 
-    applyShatterStack(enemy: Enemy, specialActive: boolean) {
-        if (!specialActive) return;
+    applyShatterStack(enemy: Enemy, specialActive: boolean, goldenLevel: number) {
+        if (!specialActive || enemy.isAgile) return;
 
+        const dynamicMaxStacks = this.SHATTER_MAX_STACKS + goldenLevel;
         const currentStacks = enemy.shatterStacks || 0;
-        const nextStacks = Math.min(this.SHATTER_MAX_STACKS, currentStacks + 1);
+        const nextStacks = Math.min(dynamicMaxStacks, currentStacks + 1);
         enemy.shatterStacks = nextStacks;
     }
 
     /**
      * Applies Venom stacks and handles duration reset.
      */
-    applyVenomStack(enemy: Enemy, towerDamage: number, specialActive: boolean) {
+    applyVenomStack(enemy: Enemy, towerDamage: number, specialActive: boolean, getUpgradeLevel: (tier: number, type: 'damage' | 'range' | 'golden') => number) {
         if (enemy.isSlime) return; // Immune
 
         const currentStacks = enemy.venomStacks ?? 0;
-        const newStacks = Math.min(this.VENOM_MAX_STACKS, currentStacks + 1);
+        const golden = getUpgradeLevel(7, 'golden');
+        const dynamicMaxStacks = this.VENOM_MAX_STACKS + golden;
+        const newStacks = Math.min(dynamicMaxStacks, currentStacks + 1);
 
         enemy.venomStacks = newStacks;
-        enemy.venomDuration = this.VENOM_DURATION;
+        const goldenDamageMultiplier = 1 + (golden * 0.2);
+        const effectiveDamage = towerDamage * goldenDamageMultiplier;
+        const duration = this.VENOM_DURATION + (golden * 1);
+        enemy.venomDuration = duration;
         enemy.venomTickTimer = 0;
 
         const currentBase = enemy.venomBaseDamage ?? 0;
-        enemy.venomBaseDamage = Math.max(currentBase, towerDamage);
+        enemy.venomBaseDamage = Math.max(currentBase, effectiveDamage);
 
         if (specialActive) {
             enemy.venomSlowActive = true;

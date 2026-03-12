@@ -82,9 +82,8 @@ export class CampaignService {
                 gridSize: 10,
                 bountyMultiplier: 0.3,
                 masteriesEnabled: false,
-                healthMultiplier: 0.6,
+                healthMultiplier: 0.5,
                 enemyTypes: ['Standard', 'Scout'],
-                waveTypeSequence: [1, 1, 2, 1, 1, 2, 1, 1],
                 bossCount: 1, // Only at the end
                 // Simple S-shape
                 customPath: [
@@ -98,14 +97,15 @@ export class CampaignService {
                     { x: 2, y: 3, type: 'damage' }, // Strategic point, covers two lines
                     { x: 7, y: 5, type: 'range' }   // Trap: Looks nice, but it's too far from the entrance for the Turret
                 ],
+                waveTypeSequence: [1, 1, 2, 1, 1, 2, 1, 1],
                 waveModifiers: {
-                    1: { count: 9 },
-                    2: { count: 14, traits: [{ property: 'isFrost', chance: 0.1 }] },
-                    3: { count: 20, traits: [{ property: 'isFrost', chance: 0.8 }] },
-                    5: { count: 18, traits: [{ property: 'isFrost', chance: 0.4 }] },
-                    6: { count: 25, traits: [{ property: 'isFrost', chance: 1 }] },
-                    7: { count: 33, traits: [{ property: 'isFrost', chance: 0.8 }] },
-                    8: { count: 38, traits: [{ property: 'isFrost', chance: 1 }] },
+                    1: { count: 14 },
+                    2: { count: 16, traits: [{ property: 'isFrost', chance: 0.3 }] },
+                    3: { count: 24, traits: [{ property: 'isFrost', chance: 0.8 }] },
+                    5: { count: 20, traits: [{ property: 'isFrost', chance: 0.5 }] },
+                    6: { count: 26, traits: [{ property: 'isFrost', chance: 1 }] },
+                    7: { count: 32, traits: [{ property: 'isFrost', chance: 0.6 }] },
+                    8: { count: 38, traits: [{ property: 'isFrost', chance: 0.9 }] },
                 }
             },
             {
@@ -125,7 +125,6 @@ export class CampaignService {
                 bountyMultiplier: 0.5,
                 masteriesEnabled: false,
                 enemyTypes: ['Standard', 'Scout', 'Tank'],
-                waveTypeSequence: [1, 1, 2, 3, 1, 2, 3, 1, 1, 3, 1, 3],
                 bossCount: 2, // Wave 6 and 12
                 // Tight spiral/snake
                 customPath: [
@@ -140,19 +139,20 @@ export class CampaignService {
                     { x: 2, y: 1, type: 'damage' }, // Perfect for a cannon, hits 3 lines
                     { x: 7, y: 5, type: 'bounty' }  // For the greedy
                 ],
+                waveTypeSequence: [1, 1, 2, 3, 1, 2, 3, 1, 1, 3, 1, 3],
                 waveModifiers: {
                     1: { count: 10 },
-                    2: { count: 14, traits: [{ property: 'isFrost', chance: 0.2 }] },
-                    3: { count: 25, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.2 }] },
-                    4: { count: 15 },
-                    5: { count: 18, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.2 }] },
-                    6: { count: 30, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.4 }] },
-                    7: { count: 20, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.5 }] },
-                    8: { count: 25, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.2 }] },
-                    9: { count: 35, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.6 }] },
-                    10: { count: 28, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.6 }] },
-                    11: { count: 40, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isGrounded', chance: 0.6 }] },
-                    12: { count: 50, traits: [{ property: 'isFrost', chance: 0.3 }, { property: 'isGrounded', chance: 0.7 }] },
+                    2: { count: 15, traits: [{ property: 'isFrost', chance: 0.4 }] },
+                    3: { count: 30, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.2 }] },//S
+                    4: { count: 20 },//T
+                    5: { count: 28, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.3 }] },
+                    6: { count: 40, traits: [{ property: 'isFrost', chance: 0.5 }, { property: 'isGrounded', chance: 0.4 }] },//S
+                    7: { count: 24, traits: [{ property: 'isFrost', chance: 0.5 }, { property: 'isGrounded', chance: 0.5 }] },//T
+                    8: { count: 30, traits: [{ property: 'isFrost', chance: 0.6 }, { property: 'isGrounded', chance: 0.4 }] },
+                    9: { count: 35, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.6 }] },
+                    10: { count: 35, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isGrounded', chance: 0.6 }] },//T
+                    11: { count: 45, traits: [{ property: 'isFrost', chance: 0.5 }, { property: 'isGrounded', chance: 0.5 }] },
+                    12: { count: 40, traits: [{ property: 'isFrost', chance: 0.5 }, { property: 'isGrounded', chance: 0.5 }] },//T
                 }
             },
             {
@@ -210,19 +210,19 @@ export class CampaignService {
                 waveModifiers: {
                     1: { count: 13 },
                     2: { count: 15 },
-                    3: { count: 25, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.2 }] },
-                    4: { count: 25, traits: [{ property: 'isAgile', chance: 0.4 }] },
-                    5: { count: 30, traits: [{ property: 'isAgile', chance: 0.2 }, { property: 'isBulwark', chance: 0.2 }] },
-                    6: { count: 28, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.4 }] },
-                    7: { count: 25 },
-                    8: { count: 40, traits: [{ property: 'isAgile', chance: 0.5 }, { property: 'isBulwark', chance: 0.5 }] },
+                    3: { count: 27, traits: [{ property: 'isAgile', chance: 0.5 }, { property: 'isBulwark', chance: 0.5 }] },//s
+                    4: { count: 30, traits: [{ property: 'isAgile', chance: 0.6 }] },
+                    5: { count: 30, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.4 }] },//s
+                    6: { count: 35, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.4 }] },
+                    7: { count: 28 },//T
+                    8: { count: 40, traits: [{ property: 'isAgile', chance: 0.5 }, { property: 'isBulwark', chance: 0.5 }] },//s
                     9: { count: 34, traits: [{ property: 'isAgile', chance: 0.3 }, { property: 'isBulwark', chance: 0.4 }] },
-                    10: { count: 28, traits: [{ property: 'isAgile', chance: 0.2 }, { property: 'isBulwark', chance: 0.2 }] },
-                    11: { count: 45, traits: [{ property: 'isAgile', chance: 0.7 }, { property: 'isBulwark', chance: 0.3 }] },
-                    12: { count: 38, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.4 }] },
-                    13: { count: 32, traits: [{ property: 'isAgile', chance: 0.7 }, { property: 'isBulwark', chance: 0.3 }] },
-                    14: { count: 45, traits: [{ property: 'isAgile', chance: 0.9 }] },
-                    15: { count: 50, traits: [{ property: 'isBulwark', chance: 0.9 }] },
+                    10: { count: 25, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.2 }] },//t
+                    11: { count: 45, traits: [{ property: 'isAgile', chance: 0.5 }, { property: 'isBulwark', chance: 0.5 }] },//s
+                    12: { count: 38, traits: [{ property: 'isAgile', chance: 0.5 }, { property: 'isBulwark', chance: 0.5 }] },
+                    13: { count: 35, traits: [{ property: 'isAgile', chance: 0.6 }, { property: 'isBulwark', chance: 0.4 }] },//t
+                    14: { count: 45, traits: [{ property: 'isAgile', chance: 0.4 }, { property: 'isBulwark', chance: 0.6 }] },
+                    15: { count: 50, traits: [{ property: 'isBulwark', chance: 0.7 }] },//T
                 }
             },
             {
@@ -275,14 +275,14 @@ export class CampaignService {
                     10: { count: 45, traits: [{ property: 'isMagma', chance: 1 }] },//s
                     11: { count: 38, traits: [{ property: 'isFrost', chance: 0.5 }, { property: 'isMagma', chance: 0.5 }] },//t
                     12: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },//s
-                    13: { count: 40, traits: [{ property: 'isFrost', chance: 0.5}, { property: 'isMagma', chance: 0.5 }] },//t
+                    13: { count: 40, traits: [{ property: 'isFrost', chance: 0.5 }, { property: 'isMagma', chance: 0.5 }] },//t
                     14: { count: 55, traits: [{ property: 'isFrost', chance: 1 }] },//s
-                    15: { count: 42, traits: [{ property: 'isMagma', chance: 0.9 }] }, //t
+                    15: { count: 42, traits: [{ property: 'isMagma', chance: 0.5 }] }, //t
                     16: { count: 60, traits: [{ property: 'isMagma', chance: 1 }] },//s
-                    17: { count: 44, traits: [{ property: 'isMagma', chance: 0.9 }] },//t
+                    17: { count: 44, traits: [{ property: 'isMagma', chance: 0.8 }] },//t
                     18: { count: 65, traits: [{ property: 'isMagma', chance: 1 }] },//s
-                    19: { count: 46, traits: [{ property: 'isMagma', chance: 0.9 }] },//t
-                    20: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },//t
+                    19: { count: 46, traits: [{ property: 'isMagma', chance: 0.8 }] },//t
+                    20: { count: 50, traits: [{ property: 'isMagma', chance: 0.8 }] },//t
                 }
             },
             {
@@ -292,53 +292,62 @@ export class CampaignService {
                     ? 'Короткий шлях. Елітні вежі. Економіка вирішує все.'
                     : 'Short path. Elite towers. Economy is everything.',
                 waveCount: 25,
-                startingGold: 50000, // Only enough for one steeplechase
+                startingGold: 1250, // Only enough for one steeplechase
                 allowedTowers: [4, 6, 7], // Sniper, Prism, Poison (High Tier)
                 mapLayout: 'static',
                 difficulty: 'hard',
                 xpReward: 50,
                 gridSize: 10,
-                healthMultiplier: 10.8,
+                bountyMultiplier: 2.5,
+                healthMultiplier: 8.5,
+                masteriesEnabled: false,
                 enemyTypes: ['Tank', 'Scout', 'Standard'],
                 bossCount: 5, // 5, 10, 15, 20, 25
                 // Very short U-turn
                 customPath: [
-                    { x: 2, y: 0 }, { x: 2, y: 1 }, { x: 2, y: 2 }, { x: 2, y: 3 }, { x: 2, y: 4 }, { x: 2, y: 5 },
-                    { x: 3, y: 5 }, { x: 4, y: 5 }, { x: 5, y: 5 },
-                    { x: 5, y: 4 }, { x: 5, y: 3 }, { x: 5, y: 2 }, { x: 5, y: 1 }, { x: 5, y: 0 }
+                    { x: 3, y: 0 }, { x: 3, y: 1 }, { x: 3, y: 2 }, { x: 3, y: 3 }, { x: 3, y: 4 }, { x: 3, y: 5 },
+                    { x: 4, y: 5 }, { x: 5, y: 5 }, { x: 6, y: 5 },
+                    { x: 6, y: 4 }, { x: 6, y: 3 }, { x: 6, y: 2 }, { x: 6, y: 1 }, { x: 6, y: 0 }
                 ],
                 bonusTiles: [
-                    { x: 3, y: 4, type: 'damage' }, //Norm
-                    { x: 4, y: 4, type: 'bounty' },//The key to victory is to place the first tower here.
-                    { x: 1, y: 1, type: 'speed' } // Trap
+                    { x: 4, y: 4, type: 'damage' },  // Norm
+                    { x: 2, y: 0, type: 'speed' },   // Trap
+                    { x: 7, y: 0, type: 'speed' },   // Trap
+                    { x: 0, y: 3, type: 'prime' },   // best
+                    { x: 9, y: 3, type: 'prime' },   // best
+                    { x: 5, y: 3, type: 'mastery' }, // best
+                    { x: 2, y: 6, type: 'bounty' },  // best
+                    { x: 7, y: 6, type: 'bounty' },  // The key to victory is to place the first tower here.
+                    { x: 3, y: 9, type: 'range' },   // norm
+                    { x: 6, y: 9, type: 'range' },   // norm
                 ],
-                waveTypeSequence: [3, 3, 2, 3, 2, 1, 2, 1, 3, 2,  1,  3,  2, 1,  3,  2, 1,  3,  2, 1, 3,  2, 1, 3, 3],
+                waveTypeSequence: [3, 3, 2, 3, 2, 1, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3, 3],
                 waveModifiers: {
                     1: { count: 15 },//t
                     2: { count: 20 },//t
-                    3: { count: 20, traits: [{ property: 'isFrost', chance: 0.2 }] },//s
-                    4: { count: 30, traits: [{ property: 'isFrost', chance: 0.4 }] },//t
-                    5: { count: 25, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isMagma', chance: 0.2 }] },//s
-                    6: { count: 35, traits: [{ property: 'isFrost', chance: 0.4 }, { property: 'isMagma', chance: 0.4 }] },
-                    7: { count: 35, traits: [{ property: 'isMagma', chance: 0.6 }] },//s
-                    8: { count: 40, traits: [{ property: 'isFrost', chance: 0.6 }, { property: 'isMagma', chance: 0.4 }] },
-                    9: { count: 35, traits: [{ property: 'isFrost', chance: 0.2 }, { property: 'isMagma', chance: 0.7 }] },//t
-                    10: { count: 45, traits: [{ property: 'isMagma', chance: 1 }] },//s
-                    11: { count: 38, traits: [{ property: 'isFrost', chance: 0.5 }, { property: 'isMagma', chance: 0.5 }] },
-                    12: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },//t
-                    13: { count: 40, traits: [{ property: 'isFrost', chance: 0.5}, { property: 'isMagma', chance: 0.5 }] },//s
-                    14: { count: 55, traits: [{ property: 'isFrost', chance: 1 }] },
-                    15: { count: 42, traits: [{ property: 'isMagma', chance: 0.9 }] }, //t
-                    16: { count: 60, traits: [{ property: 'isMagma', chance: 1 }] },//s
-                    17: { count: 44, traits: [{ property: 'isMagma', chance: 0.9 }] },
-                    18: { count: 65, traits: [{ property: 'isMagma', chance: 1 }] },//t
-                    19: { count: 46, traits: [{ property: 'isMagma', chance: 0.9 }] },//s
-                    20: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },
-                    21: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },//t
-                    22: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },//s
-                    23: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },
-                    24: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },//t
-                    25: { count: 50, traits: [{ property: 'isMagma', chance: 1 }] },//t
+                    3: { count: 30, traits: [{ property: 'isBulwark', chance: 0.2 }, { property: 'isMirror', chance: 0.2 }, { property: 'isSlime', chance: 0.2 }] },//s
+                    4: { count: 25, traits: [{ property: 'isMirror', chance: 0.4 }] },//t
+                    5: { count: 25, traits: [{ property: 'isSlime', chance: 0.3 }, { property: 'isBulwark', chance: 0.3 }, { property: 'isMirror', chance: 0.2 }] },//s
+                    6: { count: 35, traits: [{ property: 'isSlime', chance: 0.4 }, { property: 'isMirror', chance: 0.4 }] },
+                    7: { count: 45, traits: [{ property: 'isMirror', chance: 0.8 }] },//s
+                    8: { count: 40, traits: [{ property: 'isSlime', chance: 0.6 }, { property: 'isBulwark', chance: 0.4 }] },
+                    9: { count: 28, traits: [{ property: 'isMirror', chance: 0.3 }, { property: 'isBulwark', chance: 0.5 }] },//t
+                    10: { count: 50, traits: [{ property: 'isSlime', chance: 0.8 }] },//s
+                    11: { count: 38, traits: [{ property: 'isSlime', chance: 0.3 }, { property: 'isBulwark', chance: 0.3 }, { property: 'isMirror', chance: 0.3 }] },
+                    12: { count: 30, traits: [{ property: 'isBulwark', chance: 0.8 }] },//t
+                    13: { count: 50, traits: [{ property: 'isBulwark', chance: 0.5 }, { property: 'isMirror', chance: 0.5 }] },//s
+                    14: { count: 35, traits: [{ property: 'isSlime', chance: 0.4 }, { property: 'isMirror', chance: 0.4 }, { property: 'isBulwark', chance: 0.2 }] },
+                    15: { count: 32, traits: [{ property: 'isMirror', chance: 0.8 }] }, //t
+                    16: { count: 60, traits: [{ property: 'isSlime', chance: 0.3 }, { property: 'isBulwark', chance: 0.3 }, { property: 'isMirror', chance: 0.3 }] },//s
+                    17: { count: 37, traits: [{ property: 'isSlime', chance: 0.1 }, { property: 'isBulwark', chance: 0.4 }] },
+                    18: { count: 34, traits: [{ property: 'isSlime', chance: 0.3 }, { property: 'isMirror', chance: 0.5 }] },//t
+                    19: { count: 46, traits: [{ property: 'isSlime', chance: 0.4 }, { property: 'isMirror', chance: 0.2 }, { property: 'isBulwark', chance: 0.4 }] },//s
+                    20: { count: 42, traits: [{ property: 'isBulwark', chance: 0.8 }] },
+                    21: { count: 38, traits: [{ property: 'isSlime', chance: 0.2 }, { property: 'isBulwark', chance: 0.2 }, { property: 'isMirror', chance: 0.2 }] },//t
+                    22: { count: 50, traits: [{ property: 'isSlime', chance: 0.3 }, { property: 'isBulwark', chance: 0.3 }, { property: 'isMirror', chance: 0.3 }] },//s
+                    23: { count: 46, traits: [{ property: 'isSlime', chance: 0.3 }, { property: 'isBulwark', chance: 0.3 }, { property: 'isMirror', chance: 0.3 }] },
+                    24: { count: 41, traits: [{ property: 'isSlime', chance: 0.3 }, { property: 'isBulwark', chance: 0.3 }, { property: 'isMirror', chance: 0.3 }] },//t
+                    25: { count: 45, traits: [{ property: 'isSlime', chance: 0.3 }, { property: 'isBulwark', chance: 0.3 }, { property: 'isMirror', chance: 0.3 }] },//t
                 }
             }
         ];

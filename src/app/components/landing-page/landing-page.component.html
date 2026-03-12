@@ -1,121 +1,256 @@
-<div
-  class="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-white overflow-hidden relative"
->
-  <div class="absolute top-6 right-6 z-50">
-    <div class="flex items-center gap-1 px-1 py-0.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
-      <button
-        (click)="settings.setLang('uk')"
-        class="cursor-pointer text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full transition-all"
-        [class.bg-emerald-500/20]="settings.currentLang() === 'uk'"
-        [class.text-emerald-400]="settings.currentLang() === 'uk'"
-        [class.text-slate-500]="settings.currentLang() !== 'uk'"
-        [class.hover:text-slate-300]="settings.currentLang() !== 'uk'"
+<div class="min-h-screen bg-slate-950 flex flex-col items-center text-white relative">
+  <header class="fixed top-0 left-0 right-0 z-50 bg-slate-900/30 backdrop-blur-md border-b border-white/10">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="font-black tracking-widest text-[11px] uppercase text-slate-200">SHAPE TACTICS LABS</div>
+      <nav class="hidden md:flex items-center gap-6">
+        <div class="relative">
+          <button
+            class="text-sm font-bold text-emerald-300 hover:text-emerald-200"
+            (click)="navigateTo('/shape-tactics')"
+          >
+            Shape Tactics
+          </button>
+          <button class="ml-2 text-xs text-slate-400 hover:text-slate-200" (click)="toggleTacticsMenu()">▼</button>
+          @if (showTacticsMenu) {
+            <div
+              class="absolute mt-2 bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-lg shadow-xl p-2 w-48"
+            >
+              <button
+                class="w-full text-left px-2 py-2 text-[12px] hover:bg-white/5 rounded"
+                (click)="openRules('tactics')"
+              >
+                {{ settings.currentLang() === 'uk' ? 'Як грати' : 'How to Play' }}
+              </button>
+              <button
+                class="w-full text-left px-2 py-2 text-[12px] hover:bg-white/5 rounded"
+                (click)="openTrailer('tactics')"
+              >
+                {{ settings.currentLang() === 'uk' ? 'Офіційний трейлер' : 'Official Trailer' }}
+              </button>
+            </div>
+          }
+        </div>
+        <div class="relative">
+          <button
+            class="text-sm font-bold text-purple-300 hover:text-purple-200"
+            (click)="navigateTo('/tower-defense')"
+          >
+            Shape Defense
+          </button>
+          <button class="ml-2 text-xs text-slate-400 hover:text-slate-200" (click)="toggleDefenseMenu()">▼</button>
+          @if (showDefenseMenu) {
+            <div
+              class="absolute mt-2 bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-lg shadow-xl p-2 w-48"
+            >
+              <button
+                class="w-full text-left px-2 py-2 text-[12px] hover:bg-white/5 rounded"
+                (click)="openRules('defense')"
+              >
+                {{ settings.currentLang() === 'uk' ? 'Як грати' : 'How to Play' }}
+              </button>
+              <button
+                class="w-full text-left px-2 py-2 text-[12px] hover:bg-white/5 rounded"
+                (click)="openTrailer('defense')"
+              >
+                {{ settings.currentLang() === 'uk' ? 'Офіційний трейлер' : 'Official Trailer' }}
+              </button>
+            </div>
+          }
+        </div>
+        <div class="flex items-center gap-1 px-1 py-0.5 rounded-full bg-white/5 border border-white/10">
+          <button
+            (click)="settings.setLang('uk')"
+            class="cursor-pointer text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full transition-all"
+            [class.bg-emerald-500/20]="settings.currentLang() === 'uk'"
+            [class.text-emerald-400]="settings.currentLang() === 'uk'"
+            [class.text-slate-500]="settings.currentLang() !== 'uk'"
+          >
+            UA
+          </button>
+          <button
+            (click)="settings.setLang('en')"
+            class="cursor-pointer text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full transition-all"
+            [class.bg-emerald-500/20]="settings.currentLang() === 'en'"
+            [class.text-emerald-400]="settings.currentLang() === 'en'"
+            [class.text-slate-500]="settings.currentLang() !== 'en'"
+          >
+            EN
+          </button>
+        </div>
+      </nav>
+      <button class="md:hidden text-slate-200" (click)="toggleMobileMenu()">☰</button>
+    </div>
+    @if (mobileMenuOpen) {
+      <div class="md:hidden border-t border-white/10 px-4 py-3 space-y-2 bg-slate-900/60 backdrop-blur">
+        <button
+          class="block w-full text-left text-sm font-bold text-emerald-300"
+          (click)="navigateTo('/shape-tactics')"
+        >
+          Shape Tactics
+        </button>
+        <button class="block w-full text-left text-sm font-bold text-purple-300" (click)="navigateTo('/tower-defense')">
+          Shape Defense
+        </button>
+      </div>
+    }
+  </header>
+
+  <div class="fixed top-1/4 -left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse -z-10"></div>
+  <div class="fixed bottom-1/4 -right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse -z-10"></div>
+
+  <main class="flex flex-col items-center w-full pt-32 pb-20 z-10">
+    <div class="text-center mb-16">
+      <h1
+        class="text-6xl font-black tracking-tighter mb-4 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent"
       >
-        UA
+        {{ settings.currentLang() === 'uk' ? 'ІГРОВИЙ ЦЕНТР' : 'GAMING HUB' }}
+      </h1>
+      <p class="text-slate-400 text-lg max-w-md mx-auto">
+        {{
+          settings.currentLang() === 'uk'
+            ? 'Виберіть портал, щоб розпочати свою подорож.'
+            : 'Select a portal to begin your journey.'
+        }}
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl px-6 mb-24">
+      <button
+        (click)="navigateTo('shape-tactics')"
+        class="cursor-pointer group relative overflow-hidden bg-slate-900 border border-emerald-500/30 rounded-2xl p-8 transition-all duration-500 hover:scale-[1.02] hover:border-emerald-400 hover:shadow-[0_0_40px_-10px_rgba(52,211,153,0.3)] text-left"
+      >
+        <div class="relative z-20">
+          <span
+            class="inline-block px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full mb-4 border border-emerald-500/20"
+          >
+            {{ settings.currentLang() === 'uk' ? 'ГРАТИ ЗАРАЗ' : 'PLAY NOW' }}
+          </span>
+          <h2 class="text-3xl font-bold mb-3">Shape Tactics</h2>
+          <p class="text-slate-400 leading-relaxed">{{ settings.t('SHAPE_TACTIC_DESCRIPTION') }}</p>
+        </div>
       </button>
+
       <button
-        (click)="settings.setLang('en')"
-        class="cursor-pointer text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full transition-all"
-        [class.bg-emerald-500/20]="settings.currentLang() === 'en'"
-        [class.text-emerald-400]="settings.currentLang() === 'en'"
-        [class.text-slate-500]="settings.currentLang() !== 'en'"
-        [class.hover:text-slate-300]="settings.currentLang() !== 'en'"
+        (click)="navigateTo('tower-defense')"
+        class="cursor-pointer group relative overflow-hidden bg-slate-900 border border-purple-500/30 rounded-2xl p-8 transition-all duration-500 hover:scale-[1.02] hover:border-purple-400 hover:shadow-[0_0_40px_-10px_rgba(168,85,247,0.3)] text-left"
       >
-        EN
+        <div class="relative z-20">
+          <span
+            class="inline-block px-3 py-1 bg-purple-500/10 text-purple-400 text-xs font-bold rounded-full mb-4 border border-purple-500/20"
+          >
+            {{ settings.currentLang() === 'uk' ? 'ГРАТИ ЗАРАЗ' : 'PLAY NOW' }}
+          </span>
+          <h2 class="text-3xl font-bold mb-3">Shape Defense</h2>
+          <p class="text-slate-400 leading-relaxed">{{ settings.t('TOWER_DEFFENCE_DESCRIPTION') }}</p>
+        </div>
       </button>
     </div>
-  </div>
-  <!-- Background Glow Effects -->
-  <div class="absolute top-1/4 -left-1/4 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl animate-pulse"></div>
-  <div
-    class="absolute bottom-1/4 -right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse"
-    style="animation-delay: 1ms"
-  ></div>
 
-  <div class="z-10 text-center mb-12">
-    <h1
-      class="text-6xl font-black tracking-tighter mb-4 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-sm"
-    >
-      {{ settings.currentLang() === 'uk' ? 'ІГРОВИЙ ЦЕНТР' : 'GAMING HUB' }}
-    </h1>
-    <p class="text-slate-400 text-lg max-w-md mx-auto">
-      {{
-        settings.currentLang() === 'uk'
-          ? 'Виберіть портал, щоб розпочати свою подорож.'
-          : 'Select a portal to begin your journey.'
-      }}
-    </p>
-  </div>
-
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl z-10">
-    <!-- Shape Tactics Card -->
-    <button
-      (click)="navigateTo('shape-tactics')"
-      class="cursor-pointer group relative overflow-hidden bg-slate-900 border border-emerald-500/30 rounded-2xl p-8 transition-all duration-500 hover:scale-105 hover:border-emerald-400 hover:shadow-[0_0_40px_-10px_rgba(52,211,153,0.3)] text-left"
-    >
-      <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-        <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 24 24">
-          <path
-            d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.8L19.5 8 12 11.2 4.5 8 12 4.8zM4 15.5v-5.2l7 3.1v5.2l-7-3.1zm9 3.1v-5.2l7-3.1v5.2l-7 3.1z"
-          />
-        </svg>
-      </div>
-      <div class="relative z-20">
-        <span
-          class="inline-block px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full mb-4 border border-emerald-500/20 uppercase tracking-widest"
-        >
-          {{ settings.currentLang() === 'uk' ? 'ГРАТИ ЗАРАЗ' : 'PLAY NOW' }}
-        </span>
-        <h2 class="text-3xl font-bold mb-3 text-emerald-50">Shape Tactics</h2>
-        <p class="text-slate-400 leading-relaxed mb-6">
-          {{ settings.t('SHAPE_TACTIC_DESCRIPTION') }}
+    <section class="w-full max-w-5xl px-6 mb-24">
+      <div class="text-center mb-10">
+        <h2 class="text-2xl font-black tracking-wider uppercase text-slate-200">Deep Dive</h2>
+        <p class="text-slate-400 text-sm">
+          {{
+            settings.currentLang() === 'uk'
+              ? 'Більше деталей про наші ігри та підхід.'
+              : 'More details about our games and approach.'
+          }}
         </p>
-        <div class="flex items-center text-emerald-400 font-bold group-hover:translate-x-2 transition-transform">
-          ENTER PORTAL
-          <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-          </svg>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-slate-900/50 border border-white/10 rounded-xl p-6">
+          <h3 class="text-emerald-400 font-black uppercase text-sm mb-3">
+            {{ settings.currentLang() === 'uk' ? 'Стратегічна глибина' : 'Strategic Depth' }}
+          </h3>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            {{
+              settings.currentLang() === 'uk'
+                ? 'Наші ігри створені для тих, хто любить мислити наперед. Кожне рішення має наслідки, кожен хід змінює бойове поле. Гравець планує атаки, вибудовує захист, шукає оптимальну позицію та обирає момент для контратаки. Ми приділяємо увагу тому, щоб кожна механіка була простою для сприйняття, але багатошаровою за своїм впливом: взаємодія фігур, лінії огляду, контроль зон, економіка та розвиток. Стратегічна глибина народжується з мінімалізму — менше відволікань, більше суті. Рівні побудовані так, щоб викликати прогресивну складність: від базових тактичних викликів до сценаріїв, де кожна помилка має ціну, а кожна перемога — результат обдуманого плану.'
+                : 'Our games are built for players who like to think ahead. Every decision has consequences, and each action reshapes the battlefield. You plan attacks, construct defense, evaluate line-of-sight, control zones, and manage resources. We make every mechanic intuitive yet layered: shape interactions, visibility, area control, economy, and growth. Strategic depth emerges from minimalism — fewer distractions, more substance. Levels escalate thoughtfully: from foundational tactical challenges to scenarios where mistakes have weight and victories are earned through deliberate planning.'
+            }}
+          </p>
+        </div>
+        <div class="bg-slate-900/50 border border-white/10 rounded-xl p-6">
+          <h3 class="text-purple-400 font-black uppercase text-sm mb-3">
+            {{ settings.currentLang() === 'uk' ? 'Мінімалістична естетика' : 'Minimalist Aesthetic' }}
+          </h3>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            {{
+              settings.currentLang() === 'uk'
+                ? 'Візуальний стиль нашого порталу базується на чистих формах та акцентних кольорах. Ми обираємо мінімалістичну естетику не лише заради краси — вона допомагає фокусуватися на геймплеї. Грань між інформацією та шумом має бути чіткою. Кожен елемент інтерфейсу слугує конкретній меті: передати стан, підказати дію або підсилити емоцію. Ефекти використовуються стримано, але з характером: легкі засвічення, м’які тіні, делікатні анімації. Це створює відчуття технологічної сучасності без перевантаження. Мінімалізм зберігає ясність та дозволяє системам і механікам говорити самі за себе.'
+                : 'The visual style of our hub relies on clean geometry and accent colors. We choose minimalism not only for beauty but to help players focus on gameplay. The boundary between information and noise is kept sharp. Each UI element serves a specific purpose: to convey state, suggest an action, or enhance emotion. Effects are restrained yet characterful: soft glows, subtle shadows, gentle animations. This delivers a modern, technological mood without excess. Minimalism preserves clarity and lets systems and mechanics speak for themselves.'
+            }}
+          </p>
+        </div>
+        <div class="bg-slate-900/50 border border-white/10 rounded-xl p-6">
+          <h3 class="text-sky-400 font-black uppercase text-sm mb-3">
+            {{ settings.currentLang() === 'uk' ? 'Спільнотний розвиток' : 'Community-Driven Development' }}
+          </h3>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            {{
+              settings.currentLang() === 'uk'
+                ? 'Ми активно взаємодіємо з гравцями, збираємо пропозиції та впроваджуємо покращення, що мають реальну цінність. Спільнота — це наш навчальний простір: ми реагуємо на стратегії, аналізуємо мету, балансуємо системи та додаємо контр-механіки там, де вони потрібні. Кожен апдейт — продуманий крок, що вирішує конкретну проблему або розкриває новий потенціал гри. Ми віримо у прозорість: ділимося планами, показуємо дорожню карту, слухаємо фідбек. У центрі — повага до часу та уваги гравця, прагнення до якості та довіри. Разом ми будуємо ігровий досвід, який еволюціонує.'
+                : 'We engage actively with players, gather suggestions, and ship improvements that add real value. The community is our learning space: we respond to strategies, analyze the meta, balance systems, and add counter-mechanics where needed. Each update is a deliberate step that solves a specific problem or opens new possibilities. We believe in transparency: sharing plans, publishing roadmaps, listening to feedback. At the center is respect for the player’s time and attention, with a commitment to quality and trust. Together, we shape a game experience that evolves.'
+            }}
+          </p>
         </div>
       </div>
-    </button>
+    </section>
 
-    <!-- New Game Placeholder Card -->
-    <button
-      (click)="navigateTo('tower-defense')"
-      class="cursor-pointer group relative overflow-hidden bg-slate-900 border border-purple-500/30 rounded-2xl p-8 transition-all duration-500 hover:scale-105 hover:border-purple-400 hover:shadow-[0_0_40px_-10px_rgba(168,85,247,0.3)] text-left"
-    >
-      <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-        <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-      </div>
-      <div class="relative z-20">
-        <span
-          class="inline-block px-3 py-1 bg-purple-500/10 text-purple-400 text-xs font-bold rounded-full mb-4 border border-purple-500/20 uppercase tracking-widest"
-        >
-          {{ settings.currentLang() === 'uk' ? 'ГРАТИ ЗАРАЗ' : 'PLAY NOW' }}
-        </span>
-        <h2 class="text-3xl font-bold mb-3 text-purple-50">Shape Defense</h2>
-        <p class="text-slate-400 leading-relaxed mb-6">
-          {{ settings.t('TOWER_DEFFENCE_DESCRIPTION') }}
+    <footer class="w-full max-w-5xl px-6 py-12 border-t border-white/5 text-center">
+      <div class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-8 text-left text-slate-500 text-xs leading-relaxed">
+        <p>
+          {{
+            settings.currentLang() === 'uk'
+              ? 'Shape Tactics — це унікальне поєднання тактики та мінімалістичного дизайну. Ми створюємо ігри, де кожна геометрична фігура має значення, а ваша стратегія визначає долю кожної хвилі ворогів.'
+              : 'Shape Tactics is a unique blend of tactics and minimalist design. We create games where every geometric shape matters, and your strategy determines the fate of every enemy wave.'
+          }}
         </p>
-        <div class="flex items-center text-purple-400 font-bold group-hover:translate-x-2 transition-transform">
-          DEFEND BASE
-          <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-          </svg>
+        <p>
+          {{
+            settings.currentLang() === 'uk'
+              ? 'Наш ігровий центр пропонує найкращі Tower Defense випробування 2026 року. Розвивайте свої навички, захищайте базу в Shape Defense та підкорюйте нові світи разом з нами.'
+              : 'Our gaming hub offers the best Tower Defense challenges of 2026. Develop your skills, defend your base in Shape Defense, and conquer new worlds with us.'
+          }}
+        </p>
+      </div>
+      <div
+        class="flex flex-col md:flex-row items-center justify-between gap-4 text-slate-500 text-[10px] uppercase tracking-widest"
+      >
+        <span>&copy; 2026 Shape Tactics Labs // {{ settings.version }}</span>
+        <div class="flex items-center gap-6">
+          <a
+            href="https://discord.com/invite/c9tCWFtFaG"
+            target="_blank"
+            class="flex items-center gap-2 text-slate-500 hover:text-[#5865F2] transition-colors"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path
+                d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.874.89a.076.076 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.086 2.157 2.419c0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.086 2.157 2.419c0 1.334-.946 2.419-2.157 2.419z"
+              />
+            </svg>
+            <span>Discord</span>
+          </a>
+
+          <button
+            (click)="openExternalLink('https://www.youtube.com/@jaerb1')"
+            class="flex items-center gap-2 text-slate-500 hover:text-[#FF0000] transition-colors"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path
+                d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
+              />
+            </svg>
+            <span>YouTube</span>
+          </button>
+
+          <a (click)="openPrivacy()" class="underline cursor-pointer hover:text-sky-400">Privacy Policy</a>
         </div>
       </div>
-    </button>
-  </div>
-
-  <footer
-    class="absolute bottom-6 text-slate-500 text-sm font-medium uppercase tracking-widest opacity-50 text-[10px] mt-10"
-  >
-    <span class="mr-1">&copy; 2026 Shape Tactics Labs // {{ settings.version }}</span>
-    <a (click)="openPrivacy()" class="underline cursor-pointer hover:text-sky-400">Privacy Policy</a>
-  </footer>
+    </footer>
+  </main>
 </div>
+
 @if (showPrivacy) {
   <div class="fixed inset-0 z-[999] flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" (click)="showPrivacy = false"></div>
@@ -131,3 +266,267 @@
     </div>
   </div>
 }
+@if (showTrailer && trailerUrl) {
+  <div class="fixed inset-0 z-[999] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" (click)="closeModals()"></div>
+    <div class="relative bg-slate-900 border border-white/10 p-4 rounded-2xl max-w-3xl w-full">
+      <div class="aspect-video w-full bg-black rounded-lg overflow-hidden">
+        <iframe
+          [src]="trailerUrl"
+          width="100%"
+          height="100%"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+        ></iframe>
+      </div>
+      <div class="mt-3 text-right">
+        <button class="px-4 py-2 bg-sky-600 text-white rounded-lg" (click)="closeModals()">
+          {{ settings.currentLang() === 'uk' ? 'Закрити' : 'Close' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+@if (showRules) {
+  <div class="fixed inset-0 z-[999] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" (click)="closeModals()"></div>
+    <div
+      class="relative bg-slate-900 border border-white/10 p-6 rounded-2xl max-w-3xl w-full overflow-y-auto max-h-[80vh]"
+    >
+      <h2
+        class="text-xl mb-4"
+        [class.text-purple-400]="rulesGame === 'defense'"
+        [class.text-emerald-400]="rulesGame === 'tactics'"
+      >
+        {{
+          rulesGame === 'tactics'
+            ? settings.currentLang() === 'uk'
+              ? 'Правила: Shape Tactics'
+              : 'Rules: Shape Tactics'
+            : settings.currentLang() === 'uk'
+              ? 'Правила: Shape Defense'
+              : 'Rules: Shape Defense'
+        }}
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-slate-300 text-sm leading-relaxed">
+        @if (rulesGame === 'tactics') {
+          <div class="space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="text-emerald-400 text-xl">🎯</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Мета' : 'Objective' }}
+                </div>
+                <p>
+                  {{
+                    settings.currentLang() === 'uk'
+                      ? 'Отримайте перемогу як Монополія (контроль ресурсних зон) або як Знищення (ліквідація супротивника). Ваш план — поєднання руху, атаки та будівництва стін.'
+                      : 'Win via Monopoly (control resource zones) or Annihilation (eliminate the opponent). Your plan combines movement, attack, and wall construction.'
+                  }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="text-purple-400 text-xl">⚙️</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Базові механіки' : 'Core Mechanics' }}
+                </div>
+                <ul class="space-y-1">
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Юніти мають тир і рівень. Тактичне позиціювання та вибір цілей — ключ до переваги.'
+                        : 'Units have tier and level. Tactical positioning and target selection are key to advantage.'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Стіни утворюють формації, підвищуючи міцність кожного сегмента в групі.'
+                        : 'Walls form formations, increasing the durability of each segment in the group.'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Ліси дають деревину, шахти — метал. Ресурси витрачаються на будівництво та укріплення.'
+                        : 'Forests provide wood; mines yield metal. Resources are spent on building and fortifying.'
+                    }}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="text-amber-400 text-xl">💰</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Економіка' : 'Economy' }}
+                </div>
+                <p>
+                  {{
+                    settings.currentLang() === 'uk'
+                      ? 'Контроль ресурсних зон збільшує ваші можливості будівництва. Розподіляйте деревину та метал для створення формацій, що стримують ворога, і відкривають простір для наступу.'
+                      : 'Controlling resource zones expands your building options. Allocate wood and metal to form strong defensive shapes and open lanes for offense.'
+                  }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="text-emerald-400 text-xl">🧠</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Профі-поради' : 'Pro Tips' }}
+                </div>
+                <ul class="space-y-1">
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Будуйте стіни групами для максимального формаційного бонусу, для захисту.'
+                        : 'Build walls in groups for maximum formation bonus, for protection.'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Захоплюйте кластери лісів: стабільна економіка виграє довгі сутички.'
+                        : 'Capture forest clusters: steady economy wins prolonged engagements.'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Юніт вищого Рангу має більше шансів на перемогу в бою.'
+                        : 'A unit of a higher Tier has a better chance of winning a battle.'
+                    }}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        } @else {
+          <div class="space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="text-emerald-400 text-xl">🎯</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Мета' : 'Objective' }}
+                </div>
+                <p>
+                  {{
+                    settings.currentLang() === 'uk'
+                      ? 'Виживайте проти навали ворогів, зберігаючи щити бази. У кампанії — пройдіть усі хвилі на місії; у виживанні — потрібно вижити якомога довше на 10x10 чи 20x20 картах, і очолити лідерські позиції в рейтингу.'
+                      : `Survive against the onslaught of enemies while maintaining the base's shields. In the campaign, complete all the waves in the mission; in survival, survive as long as possible on 10x10 or 20x20 maps and take the top spot in the leaderboard.`
+                  }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="text-purple-400 text-xl">⚙️</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Базові механіки' : 'Core Mechanics' }}
+                </div>
+                <ul class="space-y-1">
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Будуйте вежі поруч зі шляхом. Рівні, спеціальні здібності та «золоті» покращення посилюють ваші Вежі.'
+                        : 'Build towers along the path. Levels, special abilities, and "gold" upgrades strengthen your Towers'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Типи веж покривають сповільнення, ланцюгові атаки, AOE, DOT, промінь та відштовхування.'
+                        : 'Tower types cover slow, chaining, AOE, DOT, ramping beam, and knockback.'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Боси зʼявляються у ключових хвилях. Вороги, що досягають бази, знімають життя щита за типом і здоровʼям.'
+                        : 'Bosses appear in key waves. Enemies that reach the base take shield health based on type and health.'
+                    }}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="text-amber-400 text-xl">💰</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Економіка' : 'Economy' }}
+                </div>
+                <p>
+                  {{
+                    settings.currentLang() === 'uk'
+                      ? 'Кредити: базова формула (5 + хвиля) з зменшенням після 10-ї. Є також бонусні плитки, якщо вежа стоїть в зоні — +2, боси — ×5, «золота» майстерність множить. Продаж Веж повертає 60%.'
+                      : 'Credits: basic formula (5 + wave) with a decrease after the 10th. There are also bonus tiles, if the tower is in the zone — +2, bosses — ×5, "gold" skill multiplies. Selling Towers returns 60%.'
+                  }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="text-emerald-400 text-xl">🧠</div>
+              <div>
+                <div class="text-sky-400 font-bold uppercase tracking-widest text-xs">
+                  {{ settings.currentLang() === 'uk' ? 'Профі-поради' : 'Pro Tips' }}
+                </div>
+                <ul class="space-y-1">
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Комбінуйте Льодяну з Інферно для максимальної тривалості у зоні ураження.'
+                        : 'Combine Ice with Inferno to maximize time in damage zones.'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Розміщуйте вежі на перехрестях, щоб збільшити експозицію ворогів і вигоду від бонусних тайлів.'
+                        : 'Place towers at intersections to increase enemy exposure and benefit from bonus tiles.'
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      settings.currentLang() === 'uk'
+                        ? 'Слідкуйте за статистикою шкоди, під час хвиль, це може стати в пригоді, при плануванні наступних кроків'
+                        : 'Keep an eye on the damage statistics during waves, it can be useful when planning your next steps.'
+                    }}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+      <div class="mt-6 text-right">
+        <button class="px-4 py-2 bg-sky-600 text-white rounded-lg" (click)="closeModals()">
+          {{ settings.currentLang() === 'uk' ? 'Закрити' : 'Close' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+<div class="fixed inset-0 overflow-hidden pointer-events-none select-none z-0">
+  <div class="floating-shape shape-giant-1"></div>
+  <div class="floating-shape shape-giant-2"></div>
+  <div class="floating-shape shape-giant-3"></div>
+  <div class="floating-shape shape-giant-4"></div>
+  <div class="floating-shape shape-giant-5"></div>
+</div>
+<svg width="0" height="0" class="absolute pointer-events-none">
+  <defs>
+    <clipPath id="soft-triangle" clipPathUnits="objectBoundingBox">
+      <path
+        d="M0.5 0.05 Q0.5 0 0.56 0.12 L0.92 0.85 Q0.98 0.98 0.85 0.98 L0.15 0.98 Q0.02 0.98 0.08 0.85 L0.44 0.12 Q0.5 0 0.5 0.05"
+      />
+    </clipPath>
+  </defs>
+</svg>

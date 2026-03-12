@@ -49,10 +49,10 @@
     display: none;
   }
   .mobile-actions-compact {
-    left: 0;
+    right: 0 !important;
     top: 0;
     bottom: unset;
-    right: unset;
+    left: unset;
     opacity: 0.8;
     scale: 0.8;
   }
