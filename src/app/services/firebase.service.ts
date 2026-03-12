@@ -157,66 +157,72 @@ export class FirebaseService {
         try {
             console.count('FIREBASE_CALL: saveTowerDefenseScore');
             let userTotalXp: number | undefined = undefined;
-
-            const querySize = entry.mapSize || (entry.gridSize ? `${entry.gridSize}x${entry.gridSize}` : '10x10');
-
+            const querySize = entry.mapSize;
             if (entry.userId) {
                 try {
                     const ref = doc(this.db, 'towerDefenseMasteries', entry.userId);
                     const snap = await getDoc(ref);
                     if (snap.exists()) {
                         const data = snap.data() as any;
-                        userTotalXp = data && typeof data.totalXp === 'number' ? data.totalXp : 0;
+                        const xp = data && typeof data.totalXp === 'number' ? data.totalXp : 0;
+                        userTotalXp = xp;
                     }
                 } catch {
                     userTotalXp = undefined;
                 }
             }
-
-            const currentWave = Number(entry.maxWave);
-            const currentMoney = Number(entry.totalMoney);
-
             const payload = {
                 ...entry,
-                maxWave: currentWave,
-                totalMoney: currentMoney,
                 userTotalXp,
-                mapSize: querySize,
                 timestamp: serverTimestamp()
             };
-
             await addDoc(collection(this.db, 'towerDefenseLeaderboards'), payload);
 
+            // Update personal bests collection
             if (entry.userId) {
                 const bestId = `${entry.userId}_${querySize}`;
                 const bestRef = doc(this.db, 'towerDefenseBestScores', bestId);
-
-                const bestSnap = await getDoc(bestRef);
-
-                if (!bestSnap.exists()) {
-                    await setDoc(bestRef, payload);
-                    console.log(`[Firebase] New best score created for ${querySize}`);
-                } else {
-                    const existingData = bestSnap.data() as TowerDefenseScore;
-                    const existingWave = Number(existingData.maxWave || 0);
-                    const existingMoney = Number(existingData.totalMoney || 0);
-
-                    const isBetterWave = currentWave > existingWave;
-                    const isBetterEconomy = currentWave === existingWave && currentMoney > existingMoney;
-
-                    if (isBetterWave || isBetterEconomy) {
-                        await setDoc(bestRef, payload, { merge: true });
-                        console.log(`[Firebase] Best score updated for ${querySize}: Wave ${currentWave}`);
-                    } else if (existingData.displayName !== entry.displayName) {
+                try {
+                    const bestSnap = await getDoc(bestRef);
+                    if (!bestSnap.exists()) {
                         await setDoc(bestRef, {
+                            userId: entry.userId,
                             displayName: entry.displayName,
+                            maxWave: entry.maxWave,
+                            totalMoney: entry.totalMoney,
+                            mapSize: querySize,
+                            gridSize: entry.gridSize,
+                            userTotalXp,
                             timestamp: serverTimestamp()
-                        }, { merge: true });
+                        });
+                    } else {
+                        const data = bestSnap.data() as TowerDefenseScore;
+                        const currentWave = Number(entry.maxWave);
+                        const shouldUpdate = typeof data?.maxWave !== 'number' || currentWave > data.maxWave;
+                        if (shouldUpdate) {
+                            await setDoc(bestRef, {
+                                userId: entry.userId,
+                                displayName: entry.displayName,
+                                maxWave: entry.maxWave,
+                                totalMoney: entry.totalMoney,
+                                mapSize: querySize,
+                                gridSize: entry.gridSize,
+                                userTotalXp,
+                                timestamp: serverTimestamp()
+                            }, { merge: true });
+                        } else {
+                            // Ensure displayName stays in sync even if not a new max
+                            if (data.displayName !== entry.displayName) {
+                                await setDoc(bestRef, { displayName: entry.displayName, timestamp: serverTimestamp() }, { merge: true });
+                            }
+                        }
                     }
+                } catch (e) {
+                    console.error('Error updating best TD score: ', e);
                 }
             }
         } catch (e) {
-            console.error('Error in saveTowerDefenseScore: ', e);
+            console.error('Error adding TD score: ', e);
         }
     }
 
@@ -455,53 +461,40 @@ export class FirebaseService {
 
     async migrateHistoricalScores() {
         // if (!this.db) return;
-        // console.log('🚀 Starting improved migration...');
+        // console.log('🚀 Starting optimized migration...');
 
         // try {
         //     const snapshot = await getDocs(collection(this.db, 'towerDefenseLeaderboards'));
         //     const allRuns = snapshot.docs.map(d => d.data() as TowerDefenseScore);
 
-        //     // 1. Сортуємо за часом (від старих до нових)
+        //     // Сортуємо: старі спочатку, щоб новіші рекорди перетирали їх
         //     allRuns.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
 
+        //     // Використовуємо локальний Map для збору найкращих результатів перед записом
         //     const bestMap = new Map<string, TowerDefenseScore>();
 
         //     for (const run of allRuns) {
-        //         // Виправляємо mapSize, якщо він раптом порожній
-        //         const actualMapSize = run.mapSize || (run.gridSize ? `${run.gridSize}x${run.gridSize}` : '10x10');
-        //         if (!run.userId) continue;
-
-        //         const key = `${run.userId}_${actualMapSize}`;
+        //         if (!run.userId || !run.mapSize) continue;
+        //         const key = `${run.userId}_${run.mapSize}`;
         //         const existing = bestMap.get(key);
 
-        //         const currentWave = Number(run.maxWave || 0);
-        //         const currentMoney = Number(run.totalMoney || 0);
-        //         const existingWave = existing ? Number(existing.maxWave || 0) : -1;
-        //         const existingMoney = existing ? Number(existing.totalMoney || 0) : -1;
-
-        //         // Логіка відбору найкращого: більша хвиля АБО така сама хвиля + більше грошей
-        //         if (!existing || currentWave > existingWave || (currentWave === existingWave && currentMoney > existingMoney)) {
-        //             bestMap.set(key, {
-        //                 ...run,
-        //                 mapSize: actualMapSize,
-        //                 maxWave: currentWave,
-        //                 totalMoney: currentMoney
-        //             });
+        //         if (!existing || run.maxWave >= existing.maxWave) {
+        //             bestMap.set(key, run);
         //         }
         //     }
 
-        //     console.log(`📊 Found ${bestMap.size} unique records to fix.`);
+        //     console.log(`📊 Found ${bestMap.size} unique best scores to migrate.`);
 
+        //     // Записуємо результати
         //     for (const [docId, bestData] of bestMap) {
         //         const bestRef = doc(this.db, 'towerDefenseBestScores', docId);
-        //         await setDoc(bestRef, bestData, { merge: true });
-        //         console.log(`✅ Fixed record: ${docId}`);
+        //         await setDoc(bestRef, bestData);
+        //         console.log(`✅ Migrated: ${docId}`);
         //     }
 
-        //     console.log('🎉 All historical data synchronized!');
+        //     console.log('🎉 Migration complete!');
         // } catch (error) {
-            // console.error('❌ Migration failed:', error);
-            console.error('❌ Migration failed: Don`t do this');
+        //     console.error('❌ Migration failed:', error);
         // }
     }
 }

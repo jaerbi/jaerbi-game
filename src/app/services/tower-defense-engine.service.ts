@@ -303,14 +303,14 @@ export class TowerDefenseEngineService {
 
         let totalXp = waves * 0.5;
 
-        if (waves > 20) totalXp += (waves - 20) * 1.5;
-        if (waves > 40) totalXp += (waves - 40) * 2;
-        if (waves > 60) totalXp += (waves - 60) * 2.5;
-        if (waves > 80) totalXp += (waves - 80) * 3;
-        if (waves > 100) totalXp += (waves - 100) * 3.5;
-        if (waves > 120) totalXp += (waves - 120) * 4;
-        if (waves > 140) totalXp += (waves - 140) * 4.5;
-        if (waves > 160) totalXp += (waves - 160) * 5;
+        if (waves > 20) totalXp += (waves - 20) * 2.5;
+        if (waves > 40) totalXp += (waves - 40) * 3;
+        if (waves > 60) totalXp += (waves - 60) * 4.5;
+        if (waves > 80) totalXp += (waves - 80) * 5.5;
+        if (waves > 100) totalXp += (waves - 100) * 6.5;
+        if (waves > 120) totalXp += (waves - 120) * 8;
+        if (waves > 140) totalXp += (waves - 140) * 9.5;
+        if (waves > 160) totalXp += (waves - 160) * 10;
 
         const cappedBonusXp = Math.min(this.bonusXpAccumulated, waves * 3);
         totalXp += cappedBonusXp;

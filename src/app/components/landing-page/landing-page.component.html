@@ -294,11 +294,7 @@
     <div
       class="relative bg-slate-900 border border-white/10 p-6 rounded-2xl max-w-3xl w-full overflow-y-auto max-h-[80vh]"
     >
-      <h2
-        class="text-xl mb-4"
-        [class.text-purple-400]="rulesGame === 'defense'"
-        [class.text-emerald-400]="rulesGame === 'tactics'"
-      >
+      <h2 class="text-xl font-black mb-4">
         {{
           rulesGame === 'tactics'
             ? settings.currentLang() === 'uk'
@@ -385,8 +381,8 @@
                   <li>
                     {{
                       settings.currentLang() === 'uk'
-                        ? 'Будуйте стіни групами для максимального формаційного бонусу, для захисту.'
-                        : 'Build walls in groups for maximum formation bonus, for protection.'
+                        ? 'Будуйте стіни групами для максимального формаційного бонусу.'
+                        : 'Build walls in groups to maximize formation bonuses.'
                     }}
                   </li>
                   <li>
@@ -394,13 +390,6 @@
                       settings.currentLang() === 'uk'
                         ? 'Захоплюйте кластери лісів: стабільна економіка виграє довгі сутички.'
                         : 'Capture forest clusters: steady economy wins prolonged engagements.'
-                    }}
-                  </li>
-                  <li>
-                    {{
-                      settings.currentLang() === 'uk'
-                        ? 'Юніт вищого Рангу має більше шансів на перемогу в бою.'
-                        : 'A unit of a higher Tier has a better chance of winning a battle.'
                     }}
                   </li>
                 </ul>
@@ -418,8 +407,8 @@
                 <p>
                   {{
                     settings.currentLang() === 'uk'
-                      ? 'Виживайте проти навали ворогів, зберігаючи щити бази. У кампанії — пройдіть усі хвилі на місії; у виживанні — потрібно вижити якомога довше на 10x10 чи 20x20 картах, і очолити лідерські позиції в рейтингу.'
-                      : `Survive against the onslaught of enemies while maintaining the base's shields. In the campaign, complete all the waves in the mission; in survival, survive as long as possible on 10x10 or 20x20 maps and take the top spot in the leaderboard.`
+                      ? 'Виживайте хвилі, зберігаючи щити. У кампанії — пройдіть усі хвилі рівня; у виживанні — збільшуйте хвилю максимум.'
+                      : 'Survive waves while preserving shields. In campaign, clear all waves; in survival, push wave highs.'
                   }}
                 </p>
               </div>
@@ -434,8 +423,8 @@
                   <li>
                     {{
                       settings.currentLang() === 'uk'
-                        ? 'Будуйте вежі поруч зі шляхом. Рівні, спеціальні здібності та «золоті» покращення посилюють ваші Вежі.'
-                        : 'Build towers along the path. Levels, special abilities, and "gold" upgrades strengthen your Towers'
+                        ? 'Будуйте вежі поруч зі шляхом. Рівні, спеціальні здібності та «золоті» покращення посилюють ваш арсенал.'
+                        : 'Build towers adjacent to path tiles. Levels, special abilities, and golden upgrades power up your arsenal.'
                     }}
                   </li>
                   <li>
@@ -448,8 +437,8 @@
                   <li>
                     {{
                       settings.currentLang() === 'uk'
-                        ? 'Боси зʼявляються у ключових хвилях. Вороги, що досягають бази, знімають життя щита за типом і здоровʼям.'
-                        : 'Bosses appear in key waves. Enemies that reach the base take shield health based on type and health.'
+                        ? 'Боси зʼявляються у ключових хвилях. Вороги, що досягають бази, знімають щити за типом і здоровʼям.'
+                        : 'Bosses spawn on key waves. Enemies reaching base remove shields based on type and health.'
                     }}
                   </li>
                 </ul>
@@ -466,8 +455,8 @@
                 <p>
                   {{
                     settings.currentLang() === 'uk'
-                      ? 'Кредити: базова формула (5 + хвиля) з зменшенням після 10-ї. Є також бонусні плитки, якщо вежа стоїть в зоні — +2, боси — ×5, «золота» майстерність множить. Продаж Веж повертає 60%.'
-                      : 'Credits: basic formula (5 + wave) with a decrease after the 10th. There are also bonus tiles, if the tower is in the zone — +2, bosses — ×5, "gold" skill multiplies. Selling Towers returns 60%.'
+                      ? 'Кредити: базова формула (5 + хвиля) з зменшенням після 10-ї. Баунті в зоні — +2, боси — ×5, «золота» майстерність множить. Продаж повертає 60%.'
+                      : 'Credits: base (5 + wave) with post-10 diminishing. Bounty zone +2, bosses ×5, golden mastery multiplies. Selling returns 60%.'
                   }}
                 </p>
               </div>
@@ -489,15 +478,8 @@
                   <li>
                     {{
                       settings.currentLang() === 'uk'
-                        ? 'Розміщуйте вежі на перехрестях, щоб збільшити експозицію ворогів і вигоду від бонусних тайлів.'
-                        : 'Place towers at intersections to increase enemy exposure and benefit from bonus tiles.'
-                    }}
-                  </li>
-                  <li>
-                    {{
-                      settings.currentLang() === 'uk'
-                        ? 'Слідкуйте за статистикою шкоди, під час хвиль, це може стати в пригоді, при плануванні наступних кроків'
-                        : 'Keep an eye on the damage statistics during waves, it can be useful when planning your next steps.'
+                        ? 'Розміщуйте вежі на перехрестях, щоб збільшити експозицію ворогів і вигоду від баунті.'
+                        : 'Place towers at intersections to increase enemy exposure and bounty value.'
                     }}
                   </li>
                 </ul>
