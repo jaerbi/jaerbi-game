@@ -18,7 +18,7 @@ const TIER_STATS = [
     { damage: 13, range: 2, fireInterval: 0.7 },
     { damage: 87, range: 1.5, fireInterval: 1 },
     { damage: 265, range: 3, fireInterval: 4.5 },
-    { damage: 76, range: 1.5, fireInterval: 2.5 },
+    { damage: 86, range: 1.5, fireInterval: 2.5 },
     { damage: 29, range: 2, fireInterval: 0.2 },
     { damage: 92, range: 1.6, fireInterval: 1 },
     { damage: 172, range: 1.5, fireInterval: 2.5 }
@@ -1510,7 +1510,7 @@ export class TowerDefenseEngineService {
 
                     if (!other.isMagma) {
                         const golden = this.getUpgradeLevel(5, 'golden');
-                        const duration = 3.0 + golden;
+                        const duration = 6.0 + golden;
                         other.burnedByInferno = true;
                         other.burnDuration = duration;
                         other.lastInfernoDamage = damage;
@@ -1525,7 +1525,7 @@ export class TowerDefenseEngineService {
                     'z' + (this.projectileIdCounter++),
                     radius,
                     4.0,
-                    Math.floor(damage * 0.35)
+                    Math.floor(damage * 0.45)
                 );
                 this.infernoZones.push(napalmZone);
             }

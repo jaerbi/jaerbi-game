@@ -1238,8 +1238,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.fillRect(cx - r, cy - r - 10, barW * pct, barH);
             // Venom stacks visualization
             if (e.venomStacks && e.venomStacks > 0) {
-                const stackH = 4;
-                const stackW = 8;
+                const stackH = 2;
+                const stackW = 6;
                 const gap = 2;
                 const startY = cy - r + 5;
                 ctx.fillStyle = '#84cc16';
@@ -1250,8 +1250,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
             // Shatter stacks visualization (Left Side)
             if (e.shatterStacks && e.shatterStacks > 0) {
-                const stackH = 2;
-                const stackW = 8;
+                const stackH = 1;
+                const stackW = 6;
                 const gap = 2;
                 const startY = cy - r + 5;
                 ctx.fillStyle = '#f5e50b'; // Cannon Yellow
