@@ -91,6 +91,7 @@ export interface Enemy {
     isGrounded?: boolean; // Resists Lightning/Physical
     isAgile?: boolean; // Resists Cannon
     isLevitating?: boolean; // Resists Earthquake
+    isTimeFrozen?: boolean; // NEW: Global Time Freeze State
 }
 
 export interface Projectile {

@@ -204,6 +204,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     showStats = false; // For draggable modal
     private platformId = inject(PLATFORM_ID);
     public windowWidth = signal<number>(1200);
+    protected readonly Math = Math;
 
     // Zoom & Pan State
     zoomLevel = signal(1);
@@ -669,6 +670,9 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         this.drawFrostAuras(ctx, tile);
         this.drawTowers(ctx, tile);
         this.drawEnemies(ctx, tile);
+        if (this.tdEngine.isFreezeActive()) {
+            this.drawTimeFreezeOverlay(ctx, totalSize);
+        }
         if (this.tdEngine.gameSpeedMultiplier() === 1) {
             this.drawProjectiles(ctx, tile);
         }
@@ -1471,6 +1475,24 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         // DEBUG ONLY
         // this.drawDebugLines(ctx);
     }
+
+    private drawTimeFreezeOverlay(ctx: CanvasRenderingContext2D, size: number) {
+        ctx.save();
+        // Blue tint over the whole canvas
+        ctx.fillStyle = 'rgba(0, 242, 255, 0.05)';
+        ctx.fillRect(0, 0, size, size);
+
+        // Vignette effect
+        const grad = ctx.createRadialGradient(size / 2, size / 2, size * 0.3, size / 2, size / 2, size * 0.7);
+        grad.addColorStop(0, 'rgba(0, 242, 255, 0)');
+        grad.addColorStop(1, 'rgba(0, 242, 255, 0.15)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+
+        // Frost particles or snowflakes could be added here for extra polish
+        ctx.restore();
+    }
+
     // DEBUG ONLY
     private drawDebugLines(ctx: CanvasRenderingContext2D) {
         const tile = Math.floor(this.tdEngine.tileSize);

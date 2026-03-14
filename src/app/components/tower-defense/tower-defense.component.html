@@ -1000,6 +1000,47 @@
               {{ settings.t('INTEL') }}
             </button>
           </div>
+
+          <!-- Time Freeze Active Ability Button -->
+          <div class="pt-1">
+            <button
+              (click)="tdEngine.useTimeFreeze()"
+              [disabled]="tdEngine.freezeCharges() <= 0 || tdEngine.isFreezeActive() || !tdEngine.isWaveInProgress()"
+              class="relative w-full py-2 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center border shadow-lg overflow-hidden group"
+              [class.bg-cyan-600/20]="!tdEngine.isFreezeActive() && tdEngine.freezeCharges() > 0"
+              [class.border-cyan-500/40]="!tdEngine.isFreezeActive() && tdEngine.freezeCharges() > 0"
+              [class.text-cyan-400]="!tdEngine.isFreezeActive() && tdEngine.freezeCharges() > 0"
+              [class.bg-cyan-500]="tdEngine.isFreezeActive()"
+              [class.border-cyan-300]="tdEngine.isFreezeActive()"
+              [class.text-white]="tdEngine.isFreezeActive()"
+              [class.opacity-40]="tdEngine.freezeCharges() <= 0 && !tdEngine.isFreezeActive()"
+              [class.grayscale]="tdEngine.freezeCharges() <= 0 && !tdEngine.isFreezeActive()"
+            >
+              <!-- Frozen Overlay Effect -->
+              @if (tdEngine.isFreezeActive()) {
+                <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+              }
+
+              <div class="flex items-center gap-2 relative z-10">
+                <span class="text-xs">❄️</span>
+                <span>{{ tdEngine.isFreezeActive() ? 'TIME FROZEN' : 'TIME FREEZE' }}</span>
+                <span
+                  class="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono"
+                  [class.bg-cyan-950/50]="!tdEngine.isFreezeActive()"
+                  [class.bg-white/20]="tdEngine.isFreezeActive()"
+                >
+                  {{ tdEngine.freezeCharges() }}
+                </span>
+              </div>
+
+              <!-- Charge Indicator Dots -->
+              <div class="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1">
+                @for (i of [].constructor(Math.min(5, tdEngine.freezeCharges())); track $index) {
+                  <div class="w-1 h-1 rounded-full bg-cyan-400/50"></div>
+                }
+              </div>
+            </button>
+          </div>
         </div>
       </div>
     </div>

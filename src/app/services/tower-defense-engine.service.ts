@@ -61,6 +61,11 @@ export class TowerDefenseEngineService {
     public enemiesKilled = signal(0);
     public isFirstTimeClear = false;
 
+    // Time Freeze Logic
+    public freezeCharges = signal(0);
+    public isFreezeActive = signal(false);
+    private freezeTimer: any = null;
+
     private enemiesInternal: Enemy[] = [];
     private projectilesInternal: Projectile[] = [];
     private towersInternal: Tower[] = [];
@@ -167,6 +172,11 @@ export class TowerDefenseEngineService {
 
     dispose() {
         this.stopGameLoop();
+        if (this.freezeTimer) {
+            clearTimeout(this.freezeTimer);
+            this.freezeTimer = null;
+        }
+        this.isFreezeActive.set(false);
         this.enemiesInternal = [];
         this.projectilesInternal = [];
         this.towersInternal = [];
@@ -350,6 +360,10 @@ export class TowerDefenseEngineService {
                 }
                 this.money.set(money);
 
+                // Set Freeze Charges from Workshop
+                const freezeLevel = profile?.upgrades?.['time_freeze_charges'] ?? 0;
+                this.freezeCharges.set(1 + (typeof freezeLevel === 'number' ? freezeLevel : 0));
+
                 this.generateMap(config);
             } else {
                 console.error('Level config not found for', campaignLevelId);
@@ -382,6 +396,12 @@ export class TowerDefenseEngineService {
             startMoney += bonus;
         }
         this.money.set(startMoney);
+
+        // Set Freeze Charges from Workshop for Random Mode
+        const profile = this.firebase.masteryProfile();
+        const freezeLevel = profile?.upgrades?.['time_freeze_charges'] ?? 0;
+        this.freezeCharges.set(1 + (typeof freezeLevel === 'number' ? freezeLevel : 0));
+
         const bonusTiles: { x: number, y: number, type: 'damage' | 'range' | 'prime' | 'bounty' | 'mastery' | 'speed' }[] = [];
         const tempPath = this.generateRandomPath();
         const randomBonusCount = Math.floor(Math.random() * 3) + 3;
@@ -875,6 +895,22 @@ export class TowerDefenseEngineService {
         this.isPaused.set(false);
     }
 
+    public useTimeFreeze() {
+        if (this.freezeCharges() <= 0 || this.isFreezeActive() || this.gameOver() || !this.isWaveInProgress()) return;
+
+        this.freezeCharges.update(c => c - 1);
+        this.isFreezeActive.set(true);
+
+        if (this.freezeTimer) clearTimeout(this.freezeTimer);
+
+        this.freezeTimer = setTimeout(() => {
+            this.ngZone.run(() => {
+                this.isFreezeActive.set(false);
+                this.freezeTimer = null;
+            });
+        }, 10000); // 10 seconds duration
+    }
+
     public getUpgradeLevel(tier: number, kind: 'damage' | 'range' | 'golden'): number {
         if (!this.areMasteriesActiveForWave(this.wave())) return 0;
         const profile = this.firebase.masteryProfile();
@@ -932,7 +968,7 @@ export class TowerDefenseEngineService {
     private damageTracking: Map<string, number> = new Map();
 
     private handleSpawning(dt: number) {
-        if (this.enemiesToSpawn <= 0) return;
+        if (this.enemiesToSpawn <= 0 || this.isFreezeActive()) return;
 
         this.spawnTimer += dt * 1000;
         if (this.spawnTimer >= this.spawnInterval) {
@@ -1104,10 +1140,13 @@ export class TowerDefenseEngineService {
     }
 
     private updateEnemies(dt: number) {
+        const globalFreeze = this.isFreezeActive();
+
         for (let i = this.enemiesInternal.length - 1; i >= 0; i--) {
             const enemy = this.enemiesInternal[i];
             enemy.speedModifier = 1;
             enemy.isFrozen = false;
+            enemy.isTimeFrozen = globalFreeze;
 
             if (enemy.cannonSlowTimer && enemy.cannonSlowTimer > 0) {
                 enemy.cannonSlowTimer -= dt;
@@ -1181,7 +1220,7 @@ export class TowerDefenseEngineService {
                 enemy.basePlayerDamage = enemy.type === 'boss' ? 10 : 3;
             }
 
-            if (!isStunned) {
+            if (!isStunned && !globalFreeze) {
                 const base = enemy.baseSpeed;
                 const archetypeMultiplier =
                     enemy.type === 'tank' ? 0.5 :
@@ -1241,7 +1280,9 @@ export class TowerDefenseEngineService {
             else if (enemy.type === 'scout') scale = 0.9;
             else if (enemy.type === 'boss') scale = 1.6;
             enemy.scale = scale;
-            if (enemy.isFrozen) {
+            if (enemy.isTimeFrozen) {
+                enemy.bg = `hsl(190, 90%, 85%)`; // Light Cyan for Time Freeze
+            } else if (enemy.isFrozen) {
                 enemy.bg = `hsl(190, 80%, ${lightness}%)`;
             } else if (enemy.type === 'tank') {
                 enemy.bg = `hsl(330, 70%, 60%)`;

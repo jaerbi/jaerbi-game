@@ -245,6 +245,9 @@ export type TranslationKey =
     | 'SELECT_ZONE'
     | 'HIDE_STATS'
     | 'SHOW_STATS'
+    | 'WORKSHOP_TITLE'
+    | 'TIME_FREEZE_UPGRADE'
+    | 'TIME_FREEZE_UPGRADE_DESC'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
@@ -431,6 +434,9 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         en: 'Seismic waves strike additional targets, creating a chain reaction of knockbacks.',
         uk: 'Сейсмічні хвилі вражають додаткові цілі, створюючи ланцюгову реакцію відкидання.',
     },
+    WORKSHOP_TITLE: { en: 'Workshop', uk: 'Майстерня' },
+    TIME_FREEZE_UPGRADE: { en: 'Time Freeze Charges', uk: 'Заряди заморозки часу' },
+    TIME_FREEZE_UPGRADE_DESC: { en: 'Increases the number of starting Time Freeze charges. Each level adds +1 charge.', uk: 'Збільшує кількість початкових зарядів заморозки часу. Кожен рівень додає +1 заряд.' },
     FINAL_STRIKE: {
         en: 'Executioner’s Strike',
         uk: 'Удар Ката',
