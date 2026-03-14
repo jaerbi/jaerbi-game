@@ -18,7 +18,7 @@ export class WaveAnalyticsService {
     public currentWaveCounters: { type: number, ratio: number }[] = [];
     public currentWaveCounterChance: number = 0;
     public currentDominanceRatio: number = 0;
-    public BALANCE_VERSION: string = '0.0.7';
+    public BALANCE_VERSION: string = '0.0.8';
     readonly COUNTER_RECOMMENDATIONS: Record<number, { id: number, name: string }> = {}
 
     constructor(private _settings: SettingsService) {
@@ -48,6 +48,7 @@ export class WaveAnalyticsService {
             case 5: return !!enemy.isMagma;
             case 6: return !!enemy.isMirror;
             case 7: return !!enemy.isSlime;
+            case 8: return !!enemy.isLevitating
             default: return false;
         }
     }

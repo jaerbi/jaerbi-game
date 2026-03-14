@@ -896,7 +896,7 @@
                 class="flex gap-1 bg-black/40 p-1 rounded-lg border border-white/5 animate-in fade-in slide-in-from-left-2 duration-300"
               >
                 <button
-                  *ngFor="let s of [1, 2, 4]"
+                  *ngFor="let s of [1, 2, 4, 6]"
                   (click)="setSpeed(s)"
                   [class.bg-emerald-600]="tdEngine.gameSpeedMultiplier() === s"
                   [class.text-white]="tdEngine.gameSpeedMultiplier() === s"
