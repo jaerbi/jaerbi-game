@@ -234,6 +234,46 @@ export class MasteriesComponent implements OnInit {
         this.isSaved.set(false);
     }
 
+    // New Workshop Abilities
+    getWorkshopLevel(key: string): number {
+        const p = this.firebase.masteryProfile();
+        if (!p || !p.upgrades) return 0;
+        const v = p.upgrades[key];
+        return typeof v === 'number' ? v : 0;
+    }
+
+    getWorkshopNextLevelCost(key: string): number {
+        const current = this.getWorkshopLevel(key);
+        if (current >= 10) return 0;
+        return (current + 1) * 500;
+    }
+
+    canIncreaseWorkshop(key: string): boolean {
+        const current = this.getWorkshopLevel(key);
+        if (current >= 10) return false;
+        if (!this.profile()) return false;
+        const cost = this.getWorkshopNextLevelCost(key);
+        if (cost <= 0) return false;
+        if (this.availablePoints() < cost) return false;
+        return true;
+    }
+
+    increaseWorkshop(key: string) {
+        if (!this.canIncreaseWorkshop(key)) return;
+        const cost = this.getWorkshopNextLevelCost(key);
+        if (cost <= 0) return;
+        this.updateProfile(p => {
+            const current = this.getWorkshopLevel(key);
+            const upgrades = { ...p.upgrades, [key]: current + 1 };
+            return {
+                ...p,
+                usedPoints: p.usedPoints + cost,
+                upgrades
+            };
+        });
+        this.isSaved.set(false);
+    }
+
     private updateProfile(mutator: (p: MasteryProfile) => MasteryProfile) {
         const p = this.firebase.masteryProfile();
         if (!p) return;

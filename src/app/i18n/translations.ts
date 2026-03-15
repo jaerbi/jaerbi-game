@@ -248,6 +248,17 @@ export type TranslationKey =
     | 'WORKSHOP_TITLE'
     | 'TIME_FREEZE_UPGRADE'
     | 'TIME_FREEZE_UPGRADE_DESC'
+    | 'SPELLS_TITLE'
+    | 'ORBITAL_STRIKE_UPGRADE'
+    | 'ORBITAL_STRIKE_UPGRADE_DESC'
+    | 'OVERDRIVE_UPGRADE'
+    | 'OVERDRIVE_UPGRADE_DESC'
+    | 'GOLD_RUSH_UPGRADE'
+    | 'GOLD_RUSH_UPGRADE_DESC'
+    | 'BLACK_HOLE_UPGRADE'
+    | 'BLACK_HOLE_UPGRADE_DESC'
+    | 'SHIELD_WALL_UPGRADE'
+    | 'SHIELD_WALL_UPGRADE_DESC'
     | 'INFO';
 
 export const translations: Record<TranslationKey, Record<LangCode, string>> = {
@@ -435,8 +446,19 @@ export const translations: Record<TranslationKey, Record<LangCode, string>> = {
         uk: 'Сейсмічні хвилі вражають додаткові цілі, створюючи ланцюгову реакцію відкидання.',
     },
     WORKSHOP_TITLE: { en: 'Workshop', uk: 'Майстерня' },
+    SPELLS_TITLE: { en: 'Spells', uk: 'Закляття' },
     TIME_FREEZE_UPGRADE: { en: 'Time Freeze Charges', uk: 'Заряди заморозки часу' },
     TIME_FREEZE_UPGRADE_DESC: { en: 'Increases the number of starting Time Freeze charges. Each level adds +1 charge.', uk: 'Збільшує кількість початкових зарядів заморозки часу. Кожен рівень додає +1 заряд.' },
+    ORBITAL_STRIKE_UPGRADE: { en: 'Orbital Strike', uk: 'Орбітальний удар' },
+    ORBITAL_STRIKE_UPGRADE_DESC: { en: 'Increases the damage dealt by Orbital Strike from 50% up to 95% of current HP.', uk: 'Збільшує шкоду від орбітального удару з 50% до 95% від поточного HP.' },
+    OVERDRIVE_UPGRADE: { en: 'Overdrive', uk: 'Овердрайв' },
+    OVERDRIVE_UPGRADE_DESC: { en: 'Increases the duration of tower speed boost from 10s up to 20s.', uk: 'Збільшує тривалість прискорення веж з 10 до 20 секунд.' },
+    GOLD_RUSH_UPGRADE: { en: 'Gold Rush', uk: 'Золота лихоманка' },
+    GOLD_RUSH_UPGRADE_DESC: { en: 'Increases the gold multiplier for kills during the buff.', uk: 'Збільшує множник золота за вбивства під час дії баффу.' },
+    BLACK_HOLE_UPGRADE: { en: 'Black Hole', uk: 'Чорна діра' },
+    BLACK_HOLE_UPGRADE_DESC: { en: 'Increases the pull radius and duration of the Black Hole.', uk: 'Збільшує радіус притягування та тривалість чорної діри.' },
+    SHIELD_WALL_UPGRADE: { en: 'Shield Wall', uk: 'Щит-стіна' },
+    SHIELD_WALL_UPGRADE_DESC: { en: 'Increases the number of enemy teleports per charge from 1 up to 5.', uk: 'Збільшує кількість телепортацій ворогів за один заряд з 1 до 5.' },
     FINAL_STRIKE: {
         en: 'Executioner’s Strike',
         uk: 'Удар Ката',

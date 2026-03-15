@@ -1001,52 +1001,169 @@
             </button>
           </div>
 
-          <!-- Time Freeze Active Ability Button -->
-          <div class="pt-1">
+          <!-- Spells / Abilities Collapsible Menu -->
+          <div class="pt-1 flex flex-col gap-2">
             <button
-              (click)="tdEngine.useTimeFreeze()"
-              [disabled]="tdEngine.freezeCharges() <= 0 || tdEngine.isFreezeActive() || !tdEngine.isWaveInProgress()"
-              class="relative w-full py-2 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center border shadow-lg overflow-hidden group"
-              [class.bg-cyan-600/20]="!tdEngine.isFreezeActive() && tdEngine.freezeCharges() > 0"
-              [class.border-cyan-500/40]="!tdEngine.isFreezeActive() && tdEngine.freezeCharges() > 0"
-              [class.text-cyan-400]="!tdEngine.isFreezeActive() && tdEngine.freezeCharges() > 0"
-              [class.bg-cyan-500]="tdEngine.isFreezeActive()"
-              [class.border-cyan-300]="tdEngine.isFreezeActive()"
-              [class.text-white]="tdEngine.isFreezeActive()"
-              [class.opacity-40]="tdEngine.freezeCharges() <= 0 && !tdEngine.isFreezeActive()"
-              [class.grayscale]="tdEngine.freezeCharges() <= 0 && !tdEngine.isFreezeActive()"
+              (click)="toggleSpellsMenu()"
+              class="relative w-full py-2.5 rounded-xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center border shadow-lg overflow-hidden group bg-slate-800/80 border-white/10 text-slate-300 hover:bg-slate-700 hover:text-white"
+              [class.border-cyan-500/50]="isSpellsMenuOpen()"
+              [class.bg-slate-700]="isSpellsMenuOpen()"
             >
-              <!-- Frozen Overlay Effect -->
-              @if (tdEngine.isFreezeActive()) {
-                <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
-              }
-
               <div class="flex items-center gap-2 relative z-10">
-                <span class="text-xs">❄️</span>
-                <span>{{ tdEngine.isFreezeActive() ? 'TIME FROZEN' : 'TIME FREEZE' }}</span>
-                <span
-                  class="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono"
-                  [class.bg-cyan-950/50]="!tdEngine.isFreezeActive()"
-                  [class.bg-white/20]="tdEngine.isFreezeActive()"
+                <span class="text-xs">{{ isSpellsMenuOpen() ? '✨' : '' }}</span>
+                <span>{{ settings.t('SPELLS_TITLE') }}</span>
+                <svg
+                  class="w-3 h-3 transition-transform duration-300"
+                  [class.rotate-180]="isSpellsMenuOpen()"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  {{ tdEngine.freezeCharges() }}
-                </span>
-              </div>
-
-              <!-- Charge Indicator Dots -->
-              <div class="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1">
-                @for (i of [].constructor(Math.min(5, tdEngine.freezeCharges())); track $index) {
-                  <div class="w-1 h-1 rounded-full bg-cyan-400/50"></div>
-                }
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
             </button>
+
+            @if (isSpellsMenuOpen()) {
+              <div
+                class="grid grid-cols-3 gap-2 p-2 bg-black/40 rounded-2xl border border-white/5 animate-in fade-in slide-in-from-top-2 duration-300"
+              >
+                <!-- Time Freeze -->
+                <button
+                  (click)="tdEngine.useTimeFreeze()"
+                  [disabled]="
+                    tdEngine.freezeCharges() <= 0 || tdEngine.isFreezeActive() || !tdEngine.isWaveInProgress()
+                  "
+                  class="spell-btn relative aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
+                  [class.bg-cyan-600/20]="!tdEngine.isFreezeActive() && tdEngine.freezeCharges() > 0"
+                  [class.border-cyan-500/40]="!tdEngine.isFreezeActive() && tdEngine.freezeCharges() > 0"
+                  [class.text-cyan-400]="!tdEngine.isFreezeActive() && tdEngine.freezeCharges() > 0"
+                  [class.bg-cyan-500]="tdEngine.isFreezeActive()"
+                  [class.border-cyan-300]="tdEngine.isFreezeActive()"
+                  [class.text-white]="tdEngine.isFreezeActive()"
+                  [class.opacity-30]="tdEngine.freezeCharges() <= 0 && !tdEngine.isFreezeActive()"
+                  title="Time Freeze"
+                >
+                  <span class="text-lg">❄️</span>
+                  <span class="text-[9px] font-bold mt-1">{{ tdEngine.freezeCharges() }}</span>
+                </button>
+
+                <!-- Orbital Strike -->
+                <button
+                  (click)="tdEngine.useOrbitalStrike()"
+                  [disabled]="tdEngine.orbitalStrikeCharges() <= 0 || !tdEngine.isWaveInProgress()"
+                  class="spell-btn relative aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
+                  [class.bg-rose-600/20]="tdEngine.orbitalStrikeCharges() > 0"
+                  [class.border-rose-500/40]="tdEngine.orbitalStrikeCharges() > 0"
+                  [class.text-rose-400]="tdEngine.orbitalStrikeCharges() > 0"
+                  [class.opacity-30]="tdEngine.orbitalStrikeCharges() <= 0"
+                  title="Orbital Strike"
+                >
+                  <span class="text-lg">☄️</span>
+                  <span class="text-[9px] font-bold mt-1">{{ tdEngine.orbitalStrikeCharges() }}</span>
+                </button>
+
+                <!-- Overdrive -->
+                <button
+                  (click)="tdEngine.useOverdrive()"
+                  [disabled]="
+                    tdEngine.overdriveCharges() <= 0 || tdEngine.isOverdriveActive() || !tdEngine.isWaveInProgress()
+                  "
+                  class="spell-btn relative aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
+                  [class.bg-purple-600/20]="!tdEngine.isOverdriveActive() && tdEngine.overdriveCharges() > 0"
+                  [class.border-purple-500/40]="!tdEngine.isOverdriveActive() && tdEngine.overdriveCharges() > 0"
+                  [class.text-purple-400]="!tdEngine.isOverdriveActive() && tdEngine.overdriveCharges() > 0"
+                  [class.bg-purple-500]="tdEngine.isOverdriveActive()"
+                  [class.border-purple-300]="tdEngine.isOverdriveActive()"
+                  [class.text-white]="tdEngine.isOverdriveActive()"
+                  [class.opacity-30]="tdEngine.overdriveCharges() <= 0 && !tdEngine.isOverdriveActive()"
+                  title="Overdrive"
+                >
+                  <span class="text-lg">⚡</span>
+                  <span class="text-[9px] font-bold mt-1">{{ tdEngine.overdriveCharges() }}</span>
+                </button>
+
+                <!-- Gold Rush -->
+                <button
+                  (click)="tdEngine.useGoldRush()"
+                  [disabled]="
+                    tdEngine.goldRushCharges() <= 0 || tdEngine.isGoldRushActive() || !tdEngine.isWaveInProgress()
+                  "
+                  class="spell-btn relative aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
+                  [class.bg-emerald-600/20]="!tdEngine.isGoldRushActive() && tdEngine.goldRushCharges() > 0"
+                  [class.border-emerald-500/40]="!tdEngine.isGoldRushActive() && tdEngine.goldRushCharges() > 0"
+                  [class.text-emerald-400]="!tdEngine.isGoldRushActive() && tdEngine.goldRushCharges() > 0"
+                  [class.bg-emerald-500]="tdEngine.isGoldRushActive()"
+                  [class.border-emerald-300]="tdEngine.isGoldRushActive()"
+                  [class.text-white]="tdEngine.isGoldRushActive()"
+                  [class.opacity-30]="tdEngine.goldRushCharges() <= 0 && !tdEngine.isGoldRushActive()"
+                  title="Gold Rush"
+                >
+                  <span class="text-lg">💰</span>
+                  <span class="text-[9px] font-bold mt-1">{{ tdEngine.goldRushCharges() }}</span>
+                </button>
+
+                <!-- Black Hole -->
+                <button
+                  (click)="tdEngine.useBlackHole()"
+                  [disabled]="
+                    tdEngine.blackHoleCharges() <= 0 || tdEngine.isBlackHoleActive() || !tdEngine.isWaveInProgress()
+                  "
+                  class="spell-btn relative aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
+                  [class.bg-blue-600/20]="!tdEngine.isBlackHoleActive() && tdEngine.blackHoleCharges() > 0"
+                  [class.border-blue-500/40]="!tdEngine.isBlackHoleActive() && tdEngine.blackHoleCharges() > 0"
+                  [class.text-blue-400]="!tdEngine.isBlackHoleActive() && tdEngine.blackHoleCharges() > 0"
+                  [class.bg-blue-500]="tdEngine.isBlackHoleActive() || tdEngine.isTargetingBlackHole()"
+                  [class.border-blue-300]="tdEngine.isBlackHoleActive() || tdEngine.isTargetingBlackHole()"
+                  [class.text-white]="tdEngine.isBlackHoleActive() || tdEngine.isTargetingBlackHole()"
+                  [class.animate-pulse]="tdEngine.isTargetingBlackHole()"
+                  [class.opacity-30]="tdEngine.blackHoleCharges() <= 0 && !tdEngine.isBlackHoleActive()"
+                  title="Black Hole"
+                >
+                  <span class="text-lg">🕳️</span>
+                  <span class="text-[9px] font-bold mt-1">{{ tdEngine.blackHoleCharges() }}</span>
+                </button>
+
+                <!-- Shield Wall (Passive Info) -->
+                <!-- <div
+                  class="relative aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
+                  [class.bg-orange-600/20]="tdEngine.shieldWallCharges() > 0"
+                  [class.border-orange-500/40]="tdEngine.shieldWallCharges() > 0"
+                  [class.text-orange-400]="tdEngine.shieldWallCharges() > 0"
+                  [class.opacity-30]="tdEngine.shieldWallCharges() <= 0"
+                  title="Shield Wall (Passive)"
+                >
+                  <span class="text-lg">🛡️</span>
+                  <span class="text-[9px] font-bold mt-1">{{ tdEngine.shieldWallCharges() }}</span>
+                </div> -->
+                <button
+                  (click)="tdEngine.toggleShieldWall()"
+                  [disabled]="
+                    (tdEngine.shieldWallCharges() <= 0 && tdEngine.shieldWallHitsRemaining() <= 0) ||
+                    !tdEngine.isWaveInProgress()
+                  "
+                  class="spell-btn relative aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
+                  [class.bg-orange-500]="tdEngine.isShieldWallActive()"
+                  [class.text-white]="tdEngine.isShieldWallActive()"
+                  [class.animate-pulse]="tdEngine.isShieldWallActive()"
+                >
+                  <span class="text-lg">🛡️</span>
+
+                  <span class="text-[10px] font-bold mt-1">
+                    {{
+                      tdEngine.isShieldWallActive() ? tdEngine.shieldWallHitsRemaining() : tdEngine.shieldWallCharges()
+                    }}
+                  </span>
+                </button>
+              </div>
+            }
           </div>
         </div>
       </div>
     </div>
 
     <button
-      class="mobile-actions-compact fixed bottom-4 right-4 z-71 px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-500 text-white shadow-xl cursor-pointer flex items-center gap-2 support-pulse"
+      class="mobile-actions-compact fixed bottom-2 right-2 z-69 px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-500 text-white shadow-xl cursor-pointer flex items-center gap-2 support-pulse"
       (click)="gameEngine.toggleSupport()"
       aria-label="Support the Project"
     >

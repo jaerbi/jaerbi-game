@@ -312,6 +312,181 @@
                   {{ settings.t('TIME_FREEZE_UPGRADE_DESC') }}
                 </div>
               </div>
+
+              <!-- Orbital Strike -->
+              <div class="bg-slate-900/70 border border-rose-500/30 rounded-2xl px-6 py-5 shadow-xl transition-all hover:border-rose-500/50">
+                <div class="flex items-center justify-between gap-4 mb-3">
+                  <div>
+                    <div class="text-sm font-black uppercase tracking-wider text-rose-400">
+                      {{ settings.t('ORBITAL_STRIKE_UPGRADE') }}
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-1">
+                      {{ settings.t('COST') }}: {{ getWorkshopNextLevelCost('orbital_strike_charges') }} XP
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <div class="flex flex-col items-end">
+                      <span class="font-mono text-sm text-rose-400 bg-rose-500/10 px-3 py-1.5 rounded-xl border border-rose-500/20 shadow-inner">
+                         {{ getWorkshopLevel('orbital_strike_charges') }} / 10
+                      </span>
+                    </div>
+                    <button
+                      (click)="increaseWorkshop('orbital_strike_charges')"
+                      [disabled]="!canIncreaseWorkshop('orbital_strike_charges')"
+                      class="w-10 h-10 rounded-2xl flex items-center justify-center text-2xl font-black transition-all border-2 shadow-lg disabled:opacity-20 disabled:grayscale disabled:shadow-none active:scale-95"
+                      [class.bg-rose-500]="canIncreaseWorkshop('orbital_strike_charges')"
+                      [class.border-rose-400]="canIncreaseWorkshop('orbital_strike_charges')"
+                      [class.text-slate-950]="canIncreaseWorkshop('orbital_strike_charges')"
+                      [class.hover:scale-110]="canIncreaseWorkshop('orbital_strike_charges')"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div class="text-xs text-slate-300 leading-relaxed italic border-t border-white/5 pt-3">
+                  {{ settings.t('ORBITAL_STRIKE_UPGRADE_DESC') }}
+                </div>
+              </div>
+
+              <!-- Overdrive -->
+              <div class="bg-slate-900/70 border border-purple-500/30 rounded-2xl px-6 py-5 shadow-xl transition-all hover:border-purple-500/50">
+                <div class="flex items-center justify-between gap-4 mb-3">
+                  <div>
+                    <div class="text-sm font-black uppercase tracking-wider text-purple-400">
+                      {{ settings.t('OVERDRIVE_UPGRADE') }}
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-1">
+                      {{ settings.t('COST') }}: {{ getWorkshopNextLevelCost('overdrive_charges') }} XP
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <div class="flex flex-col items-end">
+                      <span class="font-mono text-sm text-purple-400 bg-purple-500/10 px-3 py-1.5 rounded-xl border border-purple-500/20 shadow-inner">
+                         {{ getWorkshopLevel('overdrive_charges') }} / 10
+                      </span>
+                    </div>
+                    <button
+                      (click)="increaseWorkshop('overdrive_charges')"
+                      [disabled]="!canIncreaseWorkshop('overdrive_charges')"
+                      class="w-10 h-10 rounded-2xl flex items-center justify-center text-2xl font-black transition-all border-2 shadow-lg disabled:opacity-20 disabled:grayscale disabled:shadow-none active:scale-95"
+                      [class.bg-purple-500]="canIncreaseWorkshop('overdrive_charges')"
+                      [class.border-purple-400]="canIncreaseWorkshop('overdrive_charges')"
+                      [class.text-slate-950]="canIncreaseWorkshop('overdrive_charges')"
+                      [class.hover:scale-110]="canIncreaseWorkshop('overdrive_charges')"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div class="text-xs text-slate-300 leading-relaxed italic border-t border-white/5 pt-3">
+                  {{ settings.t('OVERDRIVE_UPGRADE_DESC') }}
+                </div>
+              </div>
+
+              <!-- Gold Rush -->
+              <div class="bg-slate-900/70 border border-emerald-500/30 rounded-2xl px-6 py-5 shadow-xl transition-all hover:border-emerald-500/50">
+                <div class="flex items-center justify-between gap-4 mb-3">
+                  <div>
+                    <div class="text-sm font-black uppercase tracking-wider text-emerald-400">
+                      {{ settings.t('GOLD_RUSH_UPGRADE') }}
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-1">
+                      {{ settings.t('COST') }}: {{ getWorkshopNextLevelCost('gold_rush_charges') }} XP
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <div class="flex flex-col items-end">
+                      <span class="font-mono text-sm text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20 shadow-inner">
+                         {{ getWorkshopLevel('gold_rush_charges') }} / 10
+                      </span>
+                    </div>
+                    <button
+                      (click)="increaseWorkshop('gold_rush_charges')"
+                      [disabled]="!canIncreaseWorkshop('gold_rush_charges')"
+                      class="w-10 h-10 rounded-2xl flex items-center justify-center text-2xl font-black transition-all border-2 shadow-lg disabled:opacity-20 disabled:grayscale disabled:shadow-none active:scale-95"
+                      [class.bg-emerald-500]="canIncreaseWorkshop('gold_rush_charges')"
+                      [class.border-emerald-400]="canIncreaseWorkshop('gold_rush_charges')"
+                      [class.text-slate-950]="canIncreaseWorkshop('gold_rush_charges')"
+                      [class.hover:scale-110]="canIncreaseWorkshop('gold_rush_charges')"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div class="text-xs text-slate-300 leading-relaxed italic border-t border-white/5 pt-3">
+                  {{ settings.t('GOLD_RUSH_UPGRADE_DESC') }}
+                </div>
+              </div>
+
+              <!-- Black Hole -->
+              <div class="bg-slate-900/70 border border-blue-500/30 rounded-2xl px-6 py-5 shadow-xl transition-all hover:border-blue-500/50">
+                <div class="flex items-center justify-between gap-4 mb-3">
+                  <div>
+                    <div class="text-sm font-black uppercase tracking-wider text-blue-400">
+                      {{ settings.t('BLACK_HOLE_UPGRADE') }}
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-1">
+                      {{ settings.t('COST') }}: {{ getWorkshopNextLevelCost('black_hole_charges') }} XP
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <div class="flex flex-col items-end">
+                      <span class="font-mono text-sm text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20 shadow-inner">
+                         {{ getWorkshopLevel('black_hole_charges') }} / 10
+                      </span>
+                    </div>
+                    <button
+                      (click)="increaseWorkshop('black_hole_charges')"
+                      [disabled]="!canIncreaseWorkshop('black_hole_charges')"
+                      class="w-10 h-10 rounded-2xl flex items-center justify-center text-2xl font-black transition-all border-2 shadow-lg disabled:opacity-20 disabled:grayscale disabled:shadow-none active:scale-95"
+                      [class.bg-blue-500]="canIncreaseWorkshop('black_hole_charges')"
+                      [class.border-blue-400]="canIncreaseWorkshop('black_hole_charges')"
+                      [class.text-slate-950]="canIncreaseWorkshop('black_hole_charges')"
+                      [class.hover:scale-110]="canIncreaseWorkshop('black_hole_charges')"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div class="text-xs text-slate-300 leading-relaxed italic border-t border-white/5 pt-3">
+                  {{ settings.t('BLACK_HOLE_UPGRADE_DESC') }}
+                </div>
+              </div>
+
+              <!-- Shield Wall -->
+              <div class="bg-slate-900/70 border border-orange-500/30 rounded-2xl px-6 py-5 shadow-xl transition-all hover:border-orange-500/50">
+                <div class="flex items-center justify-between gap-4 mb-3">
+                  <div>
+                    <div class="text-sm font-black uppercase tracking-wider text-orange-400">
+                      {{ settings.t('SHIELD_WALL_UPGRADE') }}
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-1">
+                      {{ settings.t('COST') }}: {{ getWorkshopNextLevelCost('shield_wall_charges') }} XP
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <div class="flex flex-col items-end">
+                      <span class="font-mono text-sm text-orange-400 bg-orange-500/10 px-3 py-1.5 rounded-xl border border-orange-500/20 shadow-inner">
+                         {{ getWorkshopLevel('shield_wall_charges') }} / 10
+                      </span>
+                    </div>
+                    <button
+                      (click)="increaseWorkshop('shield_wall_charges')"
+                      [disabled]="!canIncreaseWorkshop('shield_wall_charges')"
+                      class="w-10 h-10 rounded-2xl flex items-center justify-center text-2xl font-black transition-all border-2 shadow-lg disabled:opacity-20 disabled:grayscale disabled:shadow-none active:scale-95"
+                      [class.bg-orange-500]="canIncreaseWorkshop('shield_wall_charges')"
+                      [class.border-orange-400]="canIncreaseWorkshop('shield_wall_charges')"
+                      [class.text-slate-950]="canIncreaseWorkshop('shield_wall_charges')"
+                      [class.hover:scale-110]="canIncreaseWorkshop('shield_wall_charges')"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div class="text-xs text-slate-300 leading-relaxed italic border-t border-white/5 pt-3">
+                  {{ settings.t('SHIELD_WALL_UPGRADE_DESC') }}
+                </div>
+              </div>
             </div>
           </div>
 

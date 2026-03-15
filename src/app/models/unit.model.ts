@@ -92,6 +92,7 @@ export interface Enemy {
     isAgile?: boolean; // Resists Cannon
     isLevitating?: boolean; // Resists Earthquake
     isTimeFrozen?: boolean; // NEW: Global Time Freeze State
+    isBlackHolePulled?: boolean; // NEW: Black Hole State
 }
 
 export interface Projectile {

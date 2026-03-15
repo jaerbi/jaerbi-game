@@ -195,12 +195,17 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     showStatsPanel = false;
     isShowSpeed = true;
     isMobileMenuOpen = signal(false);
-        toggleMobileMenu() {
-            this.isMobileMenuOpen.update(v => !v);
-        }
-        closeMobileMenu() {
-            this.isMobileMenuOpen.set(false);
-        }
+    isSpellsMenuOpen = signal(false);
+
+    toggleMobileMenu() {
+        this.isMobileMenuOpen.update(v => !v);
+    }
+    closeMobileMenu() {
+        this.isMobileMenuOpen.set(false);
+    }
+    toggleSpellsMenu() {
+        this.isSpellsMenuOpen.update(v => !v);
+    }
     showStats = false; // For draggable modal
     private platformId = inject(PLATFORM_ID);
     public windowWidth = signal<number>(1200);
@@ -670,6 +675,12 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         this.drawFrostAuras(ctx, tile);
         this.drawTowers(ctx, tile);
         this.drawEnemies(ctx, tile);
+        this.drawOrbitalStrikeVisuals(ctx, tile);
+        this.drawBlackHoleVisuals(ctx, tile);
+
+        if (this.tdEngine.isFreezeActive()) {
+            this.drawTimeFreezeOverlay(ctx, totalSize);
+        }
         if (this.tdEngine.isFreezeActive()) {
             this.drawTimeFreezeOverlay(ctx, totalSize);
         }
@@ -680,6 +691,29 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         ctx.restore(); // Remove clip
 
         this.drawRangeIndicator(ctx, tile);
+    }
+
+    private drawOrbitalStrikeVisuals(ctx: CanvasRenderingContext2D, tile: number) {
+        if (!this.tdEngine.isOrbitalStrikeActive()) return;
+
+        const totalSize = this.tdEngine.gridSize * tile;
+        ctx.save();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillRect(0, 0, totalSize, totalSize);
+
+        for (let i = 0; i < 5; i++) {
+            const x = Math.random() * totalSize;
+            const gradient = ctx.createLinearGradient(x, 0, x + 20, 0);
+            gradient.addColorStop(0, 'transparent');
+            gradient.addColorStop(0.5, 'rgba(0, 200, 255, 0.8)');
+            gradient.addColorStop(1, 'transparent');
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(x, 0, 30, totalSize);
+        }
+
+        ctx.restore();
     }
 
     private drawPathOverlay(ctx: CanvasRenderingContext2D, tile: number) {
@@ -904,10 +938,27 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const towers = this.tdEngine.getTowersRef();
         const enemies = this.tdEngine.getEnemiesRef();
         const speed = this.tdEngine.gameSpeedMultiplier();
+        const overdriveActive = this.tdEngine.isOverdriveActive();
+
         for (const t of towers) {
             const cx = t.position.x * tile + tile / 2;
             const cy = t.position.y * tile + tile / 2;
             const padding = tile * 0.15;
+
+            // Overdrive Aura
+            if (overdriveActive) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(cx, cy, tile * 0.45, 0, Math.PI * 2);
+                ctx.strokeStyle = '#facc15';
+                ctx.lineWidth = 3;
+                ctx.shadowColor = '#fbbf24';
+                ctx.shadowBlur = 10;
+                ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 200) * 0.2;
+                ctx.stroke();
+                ctx.restore();
+            }
+
             this.drawTowerShape(ctx, cx, cy, t.type, t.level, tile);
 
             if (t.specialActive) {
@@ -1153,6 +1204,12 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             const cy = e.displayY ?? ((e.position.y + 0.5) * tile);
             ctx.fillStyle = e.bg || (e.isFrozen ? '#7dd3fc' : '#ef4444');
             let strokeColor = 'transparent';
+
+            // Black Hole Visual Highlight
+            if (e.isBlackHolePulled) {
+                strokeColor = '#3b82f6';
+            }
+
             const getGlowColor = (hex: any, alpha = 0.5) => {
                 if (hex === 'transparent') return 'transparent';
                 return hex + Math.round(alpha * 255).toString(16).padStart(2, '0');
@@ -1493,6 +1550,55 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         ctx.restore();
     }
 
+    private drawBlackHoleVisuals(ctx: CanvasRenderingContext2D, tile: number) {
+        const bhActive = this.tdEngine.isBlackHoleActive();
+        const bhTargeting = this.tdEngine.isTargetingBlackHole();
+        const pos = this.tdEngine.blackHolePosition(); // Тепер працює!
+        const mouse = this.tdEngine.lastMousePos();    // Для прицілу
+
+        // 1. Малюємо приціл (радіус дії), коли гравець обирає місце
+        if (bhTargeting && mouse) {
+            ctx.beginPath();
+            ctx.arc(mouse.x * tile, mouse.y * tile, 2 * tile, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(163, 73, 164, 0.6)'; // Фіолетовий
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]); // Пунктир
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // 2. Малюємо саму Чорну діру, якщо вона активна
+        if (bhActive && pos) {
+            const cx = pos.x * tile;
+            const cy = pos.y * tile;
+            const time = Date.now() / 1000;
+
+            ctx.save();
+
+            // Зовнішнє сяйво (акреційний диск)
+            const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, tile * 2);
+            gradient.addColorStop(0, 'black');
+            gradient.addColorStop(0.5, 'rgba(75, 0, 130, 0.9)');
+            gradient.addColorStop(1, 'transparent');
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(cx, cy, tile * 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Центр ("Подія горизонту") з легкою пульсацією
+            const pulse = Math.sin(time * 8) * 3;
+            ctx.beginPath();
+            ctx.arc(cx, cy, tile * 0.8 + pulse, 0, Math.PI * 2);
+            ctx.fillStyle = 'black';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#ff00ff';
+            ctx.fill();
+
+            ctx.restore();
+        }
+    }
+
     // DEBUG ONLY
     private drawDebugLines(ctx: CanvasRenderingContext2D) {
         const tile = Math.floor(this.tdEngine.tileSize);
@@ -1578,7 +1684,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             this.lastTouchY = touch.clientY;
             this.wasPanning = true;
         } else if (event.touches.length === 2) {
-            const currentDistance = this.getDistance(event.touches);
+            const currentDistance = this.getDistance(event.touches);    
             const scale = currentDistance / this.lastTouchDistance;
             this.zoomLevel.set(Math.max(0.5, Math.min(3, this.initialZoom * scale)));
         }
@@ -1611,12 +1717,22 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     pan(event: MouseEvent) {
+        // --- НОВИЙ БЛОК: Оновлюємо позицію для абілок ---
+        const rect = this.gameCanvas?.nativeElement?.getBoundingClientRect();
+        // Вираховуємо x та y відносно канвасу, враховуючи панорамування (panX/Y) та масштаб
+        if(rect) {
+            // const x = (event.clientX - rect.left - this.panX()) / (this.tdEngine.tileSize * this.zoom());
+            // const y = (event.clientY - rect.top - this.panY()) / (this.tdEngine.tileSize * this.zoom());
+            // this.tdEngine.lastMousePos.set({ x, y });
+        }
+
+        // ----------------------------------------------
+
         if (!this.isPanning) return;
 
         const dx = event.clientX - this.lastMouseX;
         const dy = event.clientY - this.lastMouseY;
 
-        // Threshold to distinguish click from drag
         if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
             this.wasPanning = true;
         }
@@ -1635,6 +1751,11 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     private handleTileClick(gx: number, gy: number) {
+        if (this.tdEngine.isTargetingBlackHole()) {
+            this.tdEngine.spawnBlackHole(gx, gy);
+            return;
+        }
+
         if (gx >= 0 && gx < this.tdEngine.gridSize && gy >= 0 && gy < this.tdEngine.gridSize) {
             const grid = this.tdEngine.getGridRef();
             const clickedTile = grid[gy][gx];

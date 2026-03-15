@@ -294,6 +294,7 @@ export class FirebaseService {
                     totalLivesSum: data.totalLivesSum || 0,
                     completedLevelsCount: data.completedLevelsCount || 0
                 };
+                // Ensure all keys are present or handled in components
                 this.masteryProfile.set(profile);
             } else {
                 const profile: MasteryProfile = {
