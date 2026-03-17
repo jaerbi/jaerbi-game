@@ -93,6 +93,10 @@ export class TowerDefenseEngineService {
     public shieldWallHitsRemaining = signal(0);
     public isShieldWallActive = signal(false);
 
+    // Global Ability Purchase Logic
+    public abilityPurchaseCount = signal(0);
+    public nextAbilityPrice = signal(1000);
+
     private enemiesInternal: Enemy[] = [];
     private projectilesInternal: Projectile[] = [];
     private towersInternal: Tower[] = [];
@@ -114,6 +118,24 @@ export class TowerDefenseEngineService {
     // Counter Strategy handled by WaveAnalyticsService
     public get activeCounterStrategy() {
         return this.waveAnalytics.activeCounterStrategy;
+    }
+
+    public buyAbilityCharge(abilityType: string) {
+        const price = 1000 * Math.pow(2, this.abilityPurchaseCount());
+        if (this.money() < price) return;
+
+        this.money.update(m => m - price);
+        this.abilityPurchaseCount.update(c => c + 1);
+        this.nextAbilityPrice.set(1000 * Math.pow(2, this.abilityPurchaseCount()));
+
+        switch (abilityType) {
+            case 'freeze': this.freezeCharges.update(c => c + 1); break;
+            case 'orbital': this.orbitalStrikeCharges.update(c => c + 1); break;
+            case 'overdrive': this.overdriveCharges.update(c => c + 1); break;
+            case 'goldRush': this.goldRushCharges.update(c => c + 1); break;
+            case 'blackHole': this.blackHoleCharges.update(c => c + 1); break;
+            case 'shieldWall': this.shieldWallCharges.update(c => c + 1); break;
+        }
     }
 
     // Costs and Stats
@@ -381,6 +403,8 @@ export class TowerDefenseEngineService {
         // Reset state
         this.dispose();
         this.isFirstTimeClear = false;
+        this.abilityPurchaseCount.set(0);
+        this.nextAbilityPrice.set(1000);
 
         // Handle Campaign Mode Configuration
         if (campaignLevelId) {
@@ -454,7 +478,7 @@ export class TowerDefenseEngineService {
         this.allowedTowers.set([1, 2, 3, 4, 5, 6, 7, 8]);
         this.isFirstTimeClear = false;
 
-        let startMoney = 55000;
+        let startMoney = 55;
         if (this.isHardMode()) {
             startMoney = 40;
         }
@@ -1204,7 +1228,7 @@ export class TowerDefenseEngineService {
             hpMultiplier *= 1.05; // +5%
         }
 
-        const hp = 5055 * hpMultiplier;
+        const hp = 50 * hpMultiplier;
 
         // Apply Level Specific Multiplier
         let levelMultiplier = 1;

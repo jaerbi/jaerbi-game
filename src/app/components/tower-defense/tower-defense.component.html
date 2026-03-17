@@ -234,7 +234,7 @@
         <span class="text-[14px] font-bold uppercase tracking-tighter">{{ settings.t('FEEDBACK_MODULE') }}</span>
       </button>
     }
-
+    
     <!-- Main Game Area Container with Zoom/Pan -->
     <div
       class="flex-1 relative bg-slate-900 rounded-lg overflow-hidden border flex items-center justify-center p-4 min-h-[400px] td-main-area cursor-grab active:cursor-grabbing"
@@ -1029,132 +1029,180 @@
                 class="grid grid-cols-3 gap-2 p-2 bg-black/40 rounded-2xl border border-white/5 animate-in fade-in slide-in-from-top-2 duration-300"
               >
                 <!-- Time Freeze -->
-                <button
-                  (click)="tdEngine.useTimeFreeze()"
-                  [disabled]="
-                    tdEngine.freezeCharges() <= 0 || tdEngine.isFreezeActive() || !tdEngine.isWaveInProgress()
-                  "
-                  class="spell-btn relative aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
-                  [class.bg-cyan-600/20]="!tdEngine.isFreezeActive() && tdEngine.freezeCharges() > 0"
-                  [class.border-cyan-500/40]="!tdEngine.isFreezeActive() && tdEngine.freezeCharges() > 0"
-                  [class.text-cyan-400]="!tdEngine.isFreezeActive() && tdEngine.freezeCharges() > 0"
-                  [class.bg-cyan-500]="tdEngine.isFreezeActive()"
-                  [class.border-cyan-300]="tdEngine.isFreezeActive()"
-                  [class.text-white]="tdEngine.isFreezeActive()"
-                  [class.opacity-30]="tdEngine.freezeCharges() <= 0 && !tdEngine.isFreezeActive()"
-                  title="Time Freeze"
-                >
-                  <span class="text-lg">❄️</span>
-                  <span class="text-[9px] font-bold mt-1">{{ tdEngine.freezeCharges() }}</span>
-                </button>
+                <div class="relative group">
+                  <button
+                    (click)="tdEngine.useTimeFreeze()"
+                    [disabled]="
+                      tdEngine.freezeCharges() <= 0 || tdEngine.isFreezeActive() || !tdEngine.isWaveInProgress()
+                    "
+                    class="spell-btn relative w-full aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
+                    [class.bg-cyan-600/20]="!tdEngine.isFreezeActive() && tdEngine.freezeCharges() > 0"
+                    [class.border-cyan-500/40]="!tdEngine.isFreezeActive() && tdEngine.freezeCharges() > 0"
+                    [class.text-cyan-400]="!tdEngine.isFreezeActive() && tdEngine.freezeCharges() > 0"
+                    [class.bg-cyan-500]="tdEngine.isFreezeActive()"
+                    [class.border-cyan-300]="tdEngine.isFreezeActive()"
+                    [class.text-white]="tdEngine.isFreezeActive()"
+                    [class.opacity-30]="tdEngine.freezeCharges() <= 0 && !tdEngine.isFreezeActive()"
+                    title="Time Freeze"
+                  >
+                    <span class="text-lg">❄️</span>
+                    <span class="text-[9px] font-bold mt-1">{{ tdEngine.freezeCharges() }}</span>
+                  </button>
+                  <button
+                    (click)="tdEngine.buyAbilityCharge('freeze')"
+                    [disabled]="tdEngine.money() < tdEngine.nextAbilityPrice()"
+                    class="absolute -top-1 -right-1 w-5 h-5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-50 text-white rounded-full flex items-center justify-center text-[10px] font-black border border-white/20 shadow-lg z-20 transition-all active:scale-90"
+                    [title]="'Buy Charge: ' + tdEngine.nextAbilityPrice()"
+                  >
+                    +
+                  </button>
+                </div>
 
                 <!-- Orbital Strike -->
-                <button
-                  (click)="tdEngine.useOrbitalStrike()"
-                  [disabled]="tdEngine.orbitalStrikeCharges() <= 0 || !tdEngine.isWaveInProgress()"
-                  class="spell-btn relative aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
-                  [class.bg-rose-600/20]="tdEngine.orbitalStrikeCharges() > 0"
-                  [class.border-rose-500/40]="tdEngine.orbitalStrikeCharges() > 0"
-                  [class.text-rose-400]="tdEngine.orbitalStrikeCharges() > 0"
-                  [class.opacity-30]="tdEngine.orbitalStrikeCharges() <= 0"
-                  title="Orbital Strike"
-                >
-                  <span class="text-lg">☄️</span>
-                  <span class="text-[9px] font-bold mt-1">{{ tdEngine.orbitalStrikeCharges() }}</span>
-                </button>
+                <div class="relative group">
+                  <button
+                    (click)="tdEngine.useOrbitalStrike()"
+                    [disabled]="tdEngine.orbitalStrikeCharges() <= 0 || !tdEngine.isWaveInProgress()"
+                    class="spell-btn relative w-full aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
+                    [class.bg-rose-600/20]="tdEngine.orbitalStrikeCharges() > 0"
+                    [class.border-rose-500/40]="tdEngine.orbitalStrikeCharges() > 0"
+                    [class.text-rose-400]="tdEngine.orbitalStrikeCharges() > 0"
+                    [class.opacity-30]="tdEngine.orbitalStrikeCharges() <= 0"
+                    title="Orbital Strike"
+                  >
+                    <span class="text-lg">☄️</span>
+                    <span class="text-[9px] font-bold mt-1">{{ tdEngine.orbitalStrikeCharges() }}</span>
+                  </button>
+                  <button
+                    (click)="tdEngine.buyAbilityCharge('orbital')"
+                    [disabled]="tdEngine.money() < tdEngine.nextAbilityPrice()"
+                    class="absolute -top-1 -right-1 w-5 h-5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-50 text-white rounded-full flex items-center justify-center text-[10px] font-black border border-white/20 shadow-lg z-20 transition-all active:scale-90"
+                    [title]="'Buy Charge: ' + tdEngine.nextAbilityPrice()"
+                  >
+                    +
+                  </button>
+                </div>
 
                 <!-- Overdrive -->
-                <button
-                  (click)="tdEngine.useOverdrive()"
-                  [disabled]="
-                    tdEngine.overdriveCharges() <= 0 || tdEngine.isOverdriveActive() || !tdEngine.isWaveInProgress()
-                  "
-                  class="spell-btn relative aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
-                  [class.bg-purple-600/20]="!tdEngine.isOverdriveActive() && tdEngine.overdriveCharges() > 0"
-                  [class.border-purple-500/40]="!tdEngine.isOverdriveActive() && tdEngine.overdriveCharges() > 0"
-                  [class.text-purple-400]="!tdEngine.isOverdriveActive() && tdEngine.overdriveCharges() > 0"
-                  [class.bg-purple-500]="tdEngine.isOverdriveActive()"
-                  [class.border-purple-300]="tdEngine.isOverdriveActive()"
-                  [class.text-white]="tdEngine.isOverdriveActive()"
-                  [class.opacity-30]="tdEngine.overdriveCharges() <= 0 && !tdEngine.isOverdriveActive()"
-                  title="Overdrive"
-                >
-                  <span class="text-lg">⚡</span>
-                  <span class="text-[9px] font-bold mt-1">{{ tdEngine.overdriveCharges() }}</span>
-                </button>
+                <div class="relative group">
+                  <button
+                    (click)="tdEngine.useOverdrive()"
+                    [disabled]="
+                      tdEngine.overdriveCharges() <= 0 || tdEngine.isOverdriveActive() || !tdEngine.isWaveInProgress()
+                    "
+                    class="spell-btn relative w-full aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
+                    [class.bg-purple-600/20]="!tdEngine.isOverdriveActive() && tdEngine.overdriveCharges() > 0"
+                    [class.border-purple-500/40]="!tdEngine.isOverdriveActive() && tdEngine.overdriveCharges() > 0"
+                    [class.text-purple-400]="!tdEngine.isOverdriveActive() && tdEngine.overdriveCharges() > 0"
+                    [class.bg-purple-500]="tdEngine.isOverdriveActive()"
+                    [class.border-purple-300]="tdEngine.isOverdriveActive()"
+                    [class.text-white]="tdEngine.isOverdriveActive()"
+                    [class.opacity-30]="tdEngine.overdriveCharges() <= 0 && !tdEngine.isOverdriveActive()"
+                    title="Overdrive"
+                  >
+                    <span class="text-lg">⚡</span>
+                    <span class="text-[9px] font-bold mt-1">{{ tdEngine.overdriveCharges() }}</span>
+                  </button>
+                  <button
+                    (click)="tdEngine.buyAbilityCharge('overdrive')"
+                    [disabled]="tdEngine.money() < tdEngine.nextAbilityPrice()"
+                    class="absolute -top-1 -right-1 w-5 h-5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-50 text-white rounded-full flex items-center justify-center text-[10px] font-black border border-white/20 shadow-lg z-20 transition-all active:scale-90"
+                    [title]="'Buy Charge: ' + tdEngine.nextAbilityPrice()"
+                  >
+                    +
+                  </button>
+                </div>
 
                 <!-- Gold Rush -->
-                <button
-                  (click)="tdEngine.useGoldRush()"
-                  [disabled]="
-                    tdEngine.goldRushCharges() <= 0 || tdEngine.isGoldRushActive() || !tdEngine.isWaveInProgress()
-                  "
-                  class="spell-btn relative aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
-                  [class.bg-emerald-600/20]="!tdEngine.isGoldRushActive() && tdEngine.goldRushCharges() > 0"
-                  [class.border-emerald-500/40]="!tdEngine.isGoldRushActive() && tdEngine.goldRushCharges() > 0"
-                  [class.text-emerald-400]="!tdEngine.isGoldRushActive() && tdEngine.goldRushCharges() > 0"
-                  [class.bg-emerald-500]="tdEngine.isGoldRushActive()"
-                  [class.border-emerald-300]="tdEngine.isGoldRushActive()"
-                  [class.text-white]="tdEngine.isGoldRushActive()"
-                  [class.opacity-30]="tdEngine.goldRushCharges() <= 0 && !tdEngine.isGoldRushActive()"
-                  title="Gold Rush"
-                >
-                  <span class="text-lg">💰</span>
-                  <span class="text-[9px] font-bold mt-1">{{ tdEngine.goldRushCharges() }}</span>
-                </button>
+                <div class="relative group">
+                  <button
+                    (click)="tdEngine.useGoldRush()"
+                    [disabled]="
+                      tdEngine.goldRushCharges() <= 0 || tdEngine.isGoldRushActive() || !tdEngine.isWaveInProgress()
+                    "
+                    class="spell-btn relative w-full aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
+                    [class.bg-emerald-600/20]="!tdEngine.isGoldRushActive() && tdEngine.goldRushCharges() > 0"
+                    [class.border-emerald-500/40]="!tdEngine.isGoldRushActive() && tdEngine.goldRushCharges() > 0"
+                    [class.text-emerald-400]="!tdEngine.isGoldRushActive() && tdEngine.goldRushCharges() > 0"
+                    [class.bg-emerald-500]="tdEngine.isGoldRushActive()"
+                    [class.border-emerald-300]="tdEngine.isGoldRushActive()"
+                    [class.text-white]="tdEngine.isGoldRushActive()"
+                    [class.opacity-30]="tdEngine.goldRushCharges() <= 0 && !tdEngine.isGoldRushActive()"
+                    title="Gold Rush"
+                  >
+                    <span class="text-lg">💰</span>
+                    <span class="text-[9px] font-bold mt-1">{{ tdEngine.goldRushCharges() }}</span>
+                  </button>
+                  <button
+                    (click)="tdEngine.buyAbilityCharge('goldRush')"
+                    [disabled]="tdEngine.money() < tdEngine.nextAbilityPrice()"
+                    class="absolute -top-1 -right-1 w-5 h-5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-50 text-white rounded-full flex items-center justify-center text-[10px] font-black border border-white/20 shadow-lg z-20 transition-all active:scale-90"
+                    [title]="'Buy Charge: ' + tdEngine.nextAbilityPrice()"
+                  >
+                    +
+                  </button>
+                </div>
 
                 <!-- Black Hole -->
-                <button
-                  (click)="tdEngine.useBlackHole()"
-                  [disabled]="
-                    tdEngine.blackHoleCharges() <= 0 || tdEngine.isBlackHoleActive() || !tdEngine.isWaveInProgress()
-                  "
-                  class="spell-btn relative aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
-                  [class.bg-blue-600/20]="!tdEngine.isBlackHoleActive() && tdEngine.blackHoleCharges() > 0"
-                  [class.border-blue-500/40]="!tdEngine.isBlackHoleActive() && tdEngine.blackHoleCharges() > 0"
-                  [class.text-blue-400]="!tdEngine.isBlackHoleActive() && tdEngine.blackHoleCharges() > 0"
-                  [class.bg-blue-500]="tdEngine.isBlackHoleActive() || tdEngine.isTargetingBlackHole()"
-                  [class.border-blue-300]="tdEngine.isBlackHoleActive() || tdEngine.isTargetingBlackHole()"
-                  [class.text-white]="tdEngine.isBlackHoleActive() || tdEngine.isTargetingBlackHole()"
-                  [class.animate-pulse]="tdEngine.isTargetingBlackHole()"
-                  [class.opacity-30]="tdEngine.blackHoleCharges() <= 0 && !tdEngine.isBlackHoleActive()"
-                  title="Black Hole"
-                >
-                  <span class="text-lg">🕳️</span>
-                  <span class="text-[9px] font-bold mt-1">{{ tdEngine.blackHoleCharges() }}</span>
-                </button>
+                <div class="relative group">
+                  <button
+                    (click)="tdEngine.useBlackHole()"
+                    [disabled]="
+                      tdEngine.blackHoleCharges() <= 0 || tdEngine.isBlackHoleActive() || !tdEngine.isWaveInProgress()
+                    "
+                    class="spell-btn relative w-full aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
+                    [class.bg-blue-600/20]="!tdEngine.isBlackHoleActive() && tdEngine.blackHoleCharges() > 0"
+                    [class.border-blue-500/40]="!tdEngine.isBlackHoleActive() && tdEngine.blackHoleCharges() > 0"
+                    [class.text-blue-400]="!tdEngine.isBlackHoleActive() && tdEngine.blackHoleCharges() > 0"
+                    [class.bg-blue-500]="tdEngine.isBlackHoleActive() || tdEngine.isTargetingBlackHole()"
+                    [class.border-blue-300]="tdEngine.isBlackHoleActive() || tdEngine.isTargetingBlackHole()"
+                    [class.text-white]="tdEngine.isBlackHoleActive() || tdEngine.isTargetingBlackHole()"
+                    [class.animate-pulse]="tdEngine.isTargetingBlackHole()"
+                    [class.opacity-30]="tdEngine.blackHoleCharges() <= 0 && !tdEngine.isBlackHoleActive()"
+                    title="Black Hole"
+                  >
+                    <span class="text-lg">🕳️</span>
+                    <span class="text-[9px] font-bold mt-1">{{ tdEngine.blackHoleCharges() }}</span>
+                  </button>
+                  <button
+                    (click)="tdEngine.buyAbilityCharge('blackHole')"
+                    [disabled]="tdEngine.money() < tdEngine.nextAbilityPrice()"
+                    class="absolute -top-1 -right-1 w-5 h-5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-50 text-white rounded-full flex items-center justify-center text-[10px] font-black border border-white/20 shadow-lg z-20 transition-all active:scale-90"
+                    [title]="'Buy Charge: ' + tdEngine.nextAbilityPrice()"
+                  >
+                    +
+                  </button>
+                </div>
 
-                <!-- Shield Wall (Passive Info) -->
-                <!-- <div
-                  class="relative aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
-                  [class.bg-orange-600/20]="tdEngine.shieldWallCharges() > 0"
-                  [class.border-orange-500/40]="tdEngine.shieldWallCharges() > 0"
-                  [class.text-orange-400]="tdEngine.shieldWallCharges() > 0"
-                  [class.opacity-30]="tdEngine.shieldWallCharges() <= 0"
-                  title="Shield Wall (Passive)"
-                >
-                  <span class="text-lg">🛡️</span>
-                  <span class="text-[9px] font-bold mt-1">{{ tdEngine.shieldWallCharges() }}</span>
-                </div> -->
-                <button
-                  (click)="tdEngine.toggleShieldWall()"
-                  [disabled]="
-                    (tdEngine.shieldWallCharges() <= 0 && tdEngine.shieldWallHitsRemaining() <= 0) ||
-                    !tdEngine.isWaveInProgress()
-                  "
-                  class="spell-btn relative aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
-                  [class.bg-orange-500]="tdEngine.isShieldWallActive()"
-                  [class.text-white]="tdEngine.isShieldWallActive()"
-                  [class.animate-pulse]="tdEngine.isShieldWallActive()"
-                >
-                  <span class="text-lg">🛡️</span>
+                <div class="relative group">
+                  <button
+                    (click)="tdEngine.toggleShieldWall()"
+                    [disabled]="
+                      (tdEngine.shieldWallCharges() <= 0 && tdEngine.shieldWallHitsRemaining() <= 0) ||
+                      !tdEngine.isWaveInProgress()
+                    "
+                    class="spell-btn relative w-full aspect-square flex flex-col items-center justify-center rounded-xl border transition-all"
+                    [class.bg-orange-500]="tdEngine.isShieldWallActive()"
+                    [class.text-white]="tdEngine.isShieldWallActive()"
+                    [class.animate-pulse]="tdEngine.isShieldWallActive()"
+                  >
+                    <span class="text-lg">🛡️</span>
 
-                  <span class="text-[10px] font-bold mt-1">
-                    {{
-                      tdEngine.isShieldWallActive() ? tdEngine.shieldWallHitsRemaining() : tdEngine.shieldWallCharges()
-                    }}
-                  </span>
-                </button>
+                    <span class="text-[10px] font-bold mt-1">
+                      {{
+                        tdEngine.isShieldWallActive() ? tdEngine.shieldWallHitsRemaining() : tdEngine.shieldWallCharges()
+                      }}
+                    </span>
+                  </button>
+                  <button
+                    (click)="tdEngine.buyAbilityCharge('shieldWall')"
+                    [disabled]="tdEngine.money() < tdEngine.nextAbilityPrice()"
+                    class="absolute -top-1 -right-1 w-5 h-5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-50 text-white rounded-full flex items-center justify-center text-[10px] font-black border border-white/20 shadow-lg z-20 transition-all active:scale-90"
+                    [title]="'Buy Charge: ' + tdEngine.nextAbilityPrice()"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             }
           </div>
