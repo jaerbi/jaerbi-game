@@ -14,6 +14,9 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 })
 export class LandingPageComponent {
     showPrivacy = false;
+    showTerms = false;
+    showAbout = false;
+    showContact = false;
     showTrailer = false;
     showRules = false;
     trailerUrl: SafeResourceUrl | null = null;

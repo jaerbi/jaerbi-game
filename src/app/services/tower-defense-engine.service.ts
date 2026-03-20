@@ -1018,7 +1018,7 @@ export class TowerDefenseEngineService {
                 this.isFreezeActive.set(false);
                 this.freezeTimer = null;
             });
-        }, 10000); // 10 seconds duration
+        }, 8000); // 10 seconds duration
     }
 
     public useOrbitalStrike() {
@@ -1034,7 +1034,7 @@ export class TowerDefenseEngineService {
         // Damage all enemies
         for (const enemy of this.enemiesInternal) {
             if (enemy.hp <= 0) continue;
-            const dmg = enemy.hp * finalDamagePercent;
+            const dmg = enemy.maxHp * finalDamagePercent;
             this.damageService.applyDamage(enemy, dmg, 0, this.wave(), 'orbital', this.recordDamage.bind(this));
         }
 
@@ -1053,7 +1053,7 @@ export class TowerDefenseEngineService {
 
         const profile = this.firebase.masteryProfile();
         const level = profile?.upgrades?.['overdrive_charges'] ?? 0;
-        const duration = 10 + (typeof level === 'number' ? level : 0); // 10s to 20s
+        const duration = 15 + (typeof level === 'number' ? level : 0);
 
         this.overdriveTimer = setTimeout(() => {
             this.ngZone.run(() => {
@@ -1103,7 +1103,7 @@ export class TowerDefenseEngineService {
 
         const profile = this.firebase.masteryProfile();
         const level = profile?.upgrades?.['black_hole_charges'] ?? 0;
-        const duration = 6 + (typeof level === 'number' ? level * 0.4 : 0);
+        const duration = 10 + (typeof level === 'number' ? level * 0.4 : 0);
 
         this.blackHoleTimer = setTimeout(() => {
             this.ngZone.run(() => {

@@ -103,15 +103,11 @@
       <h1
         class="text-6xl font-black tracking-tighter mb-4 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent"
       >
-        {{ settings.currentLang() === 'uk' ? 'ІГРОВИЙ ЦЕНТР' : 'GAMING HUB' }}
+        Play Shape Tactics - Tower Defense Browser Game
       </h1>
-      <p class="text-slate-400 text-lg max-w-md mx-auto">
-        {{
-          settings.currentLang() === 'uk'
-            ? 'Виберіть портал, щоб розпочати свою подорож.'
-            : 'Select a portal to begin your journey.'
-        }}
-      </p>
+      <h2 class="text-slate-400 text-lg max-w-md mx-auto">
+        Strategic Grid-Based Defense and Minimalist Tactics
+      </h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl px-6 mb-24">
@@ -148,14 +144,30 @@
 
     <section class="w-full max-w-5xl px-6 mb-24">
       <div class="text-center mb-10">
-        <h2 class="text-2xl font-black tracking-wider uppercase text-slate-200">Deep Dive</h2>
+        <h2 class="text-3xl font-black tracking-wider uppercase text-sky-400">Mastering Shape Tactics & Defense</h2>
         <p class="text-slate-400 text-sm">
-          {{
-            settings.currentLang() === 'uk'
-              ? 'Більше деталей про наші ігри та підхід.'
-              : 'More details about our games and approach.'
-          }}
+          A Comprehensive Guide to Strategic Grid-Based Gameplay
         </p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-900/40 p-8 rounded-3xl border border-white/5 mb-12">
+        <div class="space-y-4">
+          <h3 class="text-xl font-bold text-emerald-400">How to Play Shape Tactics</h3>
+          <p class="text-slate-300 text-sm leading-relaxed">
+            Shape Tactics is a minimalist turn-based strategy game where every geometric form has a tactical purpose. Players must navigate a grid-based battlefield, managing wood and metal resources to construct defensive wall formations. The game offers two paths to victory: <strong>Monopoly</strong>, achieved by controlling key resource zones, or <strong>Annihilation</strong>, where you systematically eliminate your opponent's units. 
+          </p>
+          <p class="text-slate-300 text-sm leading-relaxed">
+            Success in Shape Tactics depends on understanding unit tiers and positioning. Higher-tier shapes deal more damage but require more resources to deploy. Building walls in adjacent clusters grants a <strong>Formation Bonus</strong>, significantly increasing their durability against enemy attacks. Managing your economy is crucial—mines provide steady metal income for fortifications, while forests yield wood for rapid expansion.
+          </p>
+        </div>
+        <div class="space-y-4">
+          <h3 class="text-xl font-bold text-purple-400">Shape Defense: Tower Defense Redefined</h3>
+          <p class="text-slate-300 text-sm leading-relaxed">
+            In Shape Defense, you face relentless waves of geometric enemies. This browser-based tower defense game challenges you to place specialized towers along a path to protect your base shields. With 8 distinct tower types—ranging from rapid-fire triangles to heavy-hitting octagons—you must adapt your strategy to counter different enemy archetypes like fast scouts, armored tanks, and massive bosses.
+          </p>
+          <p class="text-slate-300 text-sm leading-relaxed">
+            The game features a deep <strong>Mastery System</strong> and a <strong>Workshop</strong> where you can unlock permanent upgrades using XP earned during play. Advanced mechanics like the <em>Prism Vulnerability</em>, <em>Frost Auras</em>, and <em>Orbital Strikes</em> allow for complex synergies. Every wave is a test of your efficiency—maximize your gold interest and place towers on bonus tiles to gain the upper hand in this strategic defense challenge.
+          </p>
+        </div>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="bg-slate-900/50 border border-white/10 rounded-xl p-6">
@@ -245,6 +257,9 @@
           </button>
 
           <a (click)="openPrivacy()" class="underline cursor-pointer hover:text-sky-400">Privacy Policy</a>
+          <a (click)="showTerms = true" class="underline cursor-pointer hover:text-sky-400">Terms of Service</a>
+          <a (click)="showAbout = true" class="underline cursor-pointer hover:text-sky-400">About Us</a>
+          <a (click)="showContact = true" class="underline cursor-pointer hover:text-sky-400">Contact</a>
         </div>
       </div>
     </footer>
@@ -263,6 +278,60 @@
       <div class="mt-6 text-center">
         <button (click)="showPrivacy = false" class="px-6 py-2 bg-sky-600 text-white rounded-lg">Close</button>
       </div>
+    </div>
+  </div>
+}
+
+@if (showTerms) {
+  <div class="fixed inset-0 z-[999] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" (click)="showTerms = false"></div>
+    <div class="relative bg-slate-900 border border-white/10 p-8 rounded-2xl max-w-2xl max-h-[80vh] overflow-y-auto">
+      <h2 class="text-2xl font-black text-white mb-6">Terms of Service</h2>
+      <div class="text-sm text-slate-300 space-y-4">
+        <p>By using shape-tactics.com, you agree to these terms. This site provides browser-based games for entertainment purposes.</p>
+        <h3 class="text-lg font-bold text-sky-400">Usage</h3>
+        <p>You may use the site for personal, non-commercial play. Automated scripts or scraping are prohibited.</p>
+        <h3 class="text-lg font-bold text-sky-400">Intellectual Property</h3>
+        <p>All game mechanics, shapes, and code are the property of Shape Tactics Labs.</p>
+        <h3 class="text-lg font-bold text-sky-400">Ads</h3>
+        <p>We display ads through Google AdSense. By using the site, you acknowledge that third parties may be placing and reading cookies on your browser.</p>
+      </div>
+      <button (click)="showTerms = false" class="mt-6 px-6 py-2 bg-sky-600 text-white rounded-lg w-full">Close</button>
+    </div>
+  </div>
+}
+
+@if (showAbout) {
+  <div class="fixed inset-0 z-[999] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" (click)="showAbout = false"></div>
+    <div class="relative bg-slate-900 border border-white/10 p-8 rounded-2xl max-w-2xl text-center">
+      <h2 class="text-2xl font-black text-white mb-6">About Shape Tactics Labs</h2>
+      <p class="text-slate-300 mb-4">
+        We are an independent game studio focused on minimalist, high-strategy browser experiences. 
+        Our goal is to bring deep tactical depth to simple geometric forms.
+      </p>
+      <p class="text-slate-400 text-sm">Founded in 2026.</p>
+      <button (click)="showAbout = false" class="mt-6 px-6 py-2 bg-sky-600 text-white rounded-lg">Close</button>
+    </div>
+  </div>
+}
+
+@if (showContact) {
+  <div class="fixed inset-0 z-[999] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" (click)="showContact = false"></div>
+    <div class="relative bg-slate-900 border border-white/10 p-8 rounded-2xl max-w-md text-center">
+      <h2 class="text-2xl font-black text-white mb-6">Contact Us</h2>
+      <p class="text-slate-300 mb-6">
+        Have questions or feedback? Reach out to us through our social channels or email.
+      </p>
+      <div class="space-y-4">
+        <p class="text-sky-400 font-bold">Email: hello@shape-tactics.com</p>
+        <div class="flex justify-center gap-4">
+          <a href="https://discord.com/invite/c9tCWFtFaG" class="text-slate-400 hover:text-white">Discord</a>
+          <a href="https://www.youtube.com/@jaerb1" class="text-slate-400 hover:text-white">YouTube</a>
+        </div>
+      </div>
+      <button (click)="showContact = false" class="mt-8 px-6 py-2 bg-sky-600 text-white rounded-lg w-full">Close</button>
     </div>
   </div>
 }
@@ -294,7 +363,7 @@
     <div
       class="relative bg-slate-900 border border-white/10 p-6 rounded-2xl max-w-3xl w-full overflow-y-auto max-h-[80vh]"
     >
-      <h2 class="text-xl font-black mb-4">
+      <h2 class="text-xl font-white mb-4">
         {{
           rulesGame === 'tactics'
             ? settings.currentLang() === 'uk'
