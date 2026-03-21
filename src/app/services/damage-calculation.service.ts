@@ -251,7 +251,7 @@ export class DamageCalculationService {
         const newStacks = Math.min(dynamicMaxStacks, currentStacks + 1);
 
         enemy.venomStacks = newStacks;
-        const goldenDamageMultiplier = 1 + (golden * 0.2);
+        const goldenDamageMultiplier = 1 + (golden * 0.6);
         const effectiveDamage = towerDamage * goldenDamageMultiplier;
         const duration = this.VENOM_DURATION + (golden * 1);
         enemy.venomDuration = duration;

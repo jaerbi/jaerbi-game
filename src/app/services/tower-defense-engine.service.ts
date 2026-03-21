@@ -121,7 +121,7 @@ export class TowerDefenseEngineService {
     }
 
     public buyAbilityCharge(abilityType: string) {
-        const price = 1000 * Math.pow(2, this.abilityPurchaseCount());
+        const price = 1000 * Math.pow(1.3, this.abilityPurchaseCount());
         if (this.money() < price) return;
 
         this.money.update(m => m - price);
@@ -1870,7 +1870,7 @@ export class TowerDefenseEngineService {
                     'z' + (this.projectileIdCounter++),
                     radius,
                     4.0,
-                    Math.floor(damage * 0.45)
+                    Math.floor(damage * 0.6)
                 );
                 this.infernoZones.push(napalmZone);
             }
