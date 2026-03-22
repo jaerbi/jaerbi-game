@@ -121,12 +121,12 @@ export class TowerDefenseEngineService {
     }
 
     public buyAbilityCharge(abilityType: string) {
-        const price = 1000 * Math.pow(1.3, this.abilityPurchaseCount());
+        const price = 500 * Math.pow(1.3, this.abilityPurchaseCount());
         if (this.money() < price) return;
 
         this.money.update(m => m - price);
         this.abilityPurchaseCount.update(c => c + 1);
-        this.nextAbilityPrice.set(1000 * Math.pow(2, this.abilityPurchaseCount()));
+        this.nextAbilityPrice.set(500 * Math.pow(1.3, this.abilityPurchaseCount()));
 
         switch (abilityType) {
             case 'freeze': this.freezeCharges.update(c => c + 1); break;
@@ -1210,23 +1210,23 @@ export class TowerDefenseEngineService {
         let hpMultiplier = Math.pow(1.10, currentWave)
 
         // special for Yevhen
-        if (currentWave >= 240) {
-            hpMultiplier *= 1.4; // +40%
-        } else if (currentWave >= 220) {
-            hpMultiplier *= 1.35; // +35%
-        } else if (currentWave >= 200) {
-            hpMultiplier *= 1.3; // +30%
-        } else if (currentWave >= 180) {
-            hpMultiplier *= 1.25; // +25%
-        } else if (currentWave >= 160) {
-            hpMultiplier *= 1.2; // +20%
-        } else if (currentWave >= 140) {
-            hpMultiplier *= 1.15; // +15%
-        } else if (currentWave >= 120) {
-            hpMultiplier *= 1.1; // +10%
-        } else if (currentWave >= 100) {
-            hpMultiplier *= 1.05; // +5%
-        }
+        // if (currentWave >= 240) {
+        //     hpMultiplier *= 1.4; // +40%
+        // } else if (currentWave >= 220) {
+        //     hpMultiplier *= 1.35; // +35%
+        // } else if (currentWave >= 200) {
+        //     hpMultiplier *= 1.3; // +30%
+        // } else if (currentWave >= 180) {
+        //     hpMultiplier *= 1.25; // +25%
+        // } else if (currentWave >= 160) {
+        //     hpMultiplier *= 1.2; // +20%
+        // } else if (currentWave >= 140) {
+        //     hpMultiplier *= 1.15; // +15%
+        // } else if (currentWave >= 120) {
+        //     hpMultiplier *= 1.1; // +10%
+        // } else if (currentWave >= 100) {
+        //     hpMultiplier *= 1.05; // +5%
+        // }
 
         const hp = 50 * hpMultiplier;
 
