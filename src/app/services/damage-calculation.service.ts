@@ -19,9 +19,9 @@ export class DamageCalculationService {
     readonly FROST_AURA_RADIUS_BASE = 2;
 
     // Venom
-    readonly VENOM_DURATION = 3;
+    readonly VENOM_DURATION = 5;
     readonly VENOM_MAX_STACKS = 3;
-    readonly VENOM_SLOW_MODIFIER = 0.8;
+    readonly VENOM_SLOW_MODIFIER = 0.6;
 
     // Shatter (Cannon)
     readonly SHATTER_MAX_STACKS = 5;
@@ -243,22 +243,23 @@ export class DamageCalculationService {
      * Applies Venom stacks and handles duration reset.
      */
     applyVenomStack(enemy: Enemy, towerDamage: number, specialActive: boolean, getUpgradeLevel: (tier: number, type: 'damage' | 'range' | 'golden') => number) {
-        if (enemy.isSlime) return; // Immune
+        if (enemy.isSlime) return;
 
-        const currentStacks = enemy.venomStacks ?? 0;
         const golden = getUpgradeLevel(7, 'golden');
-        const dynamicMaxStacks = this.VENOM_MAX_STACKS + golden;
+        const currentStacks = enemy.venomStacks ?? 0;
+
+        const dynamicMaxStacks = this.VENOM_MAX_STACKS + (golden * 2);
         const newStacks = Math.min(dynamicMaxStacks, currentStacks + 1);
 
         enemy.venomStacks = newStacks;
-        const goldenDamageMultiplier = 1 + (golden * 1.5);
-        const effectiveDamage = towerDamage * goldenDamageMultiplier;
-        const duration = this.VENOM_DURATION + (golden * 1);
-        enemy.venomDuration = duration;
-        enemy.venomTickTimer = 0;
 
-        const currentBase = enemy.venomBaseDamage ?? 0;
-        enemy.venomBaseDamage = Math.max(currentBase, effectiveDamage);
+        const goldenDamageMultiplier = 1.0 + (golden * 0.5);
+        const stackDamage = (towerDamage * 0.4) * goldenDamageMultiplier;
+
+        enemy.venomBaseDamage = (enemy.venomBaseDamage ?? 0) + stackDamage;
+
+        enemy.venomDuration = this.VENOM_DURATION + (golden * 0.5);
+        enemy.venomTickTimer = (enemy.venomTickTimer ?? 0);
 
         if (specialActive) {
             enemy.venomSlowActive = true;
@@ -270,31 +271,41 @@ export class DamageCalculationService {
      * Returns damage to deal.
      */
     processVenomTick(enemy: Enemy, dt: number): number {
-        if (!enemy.venomDuration || enemy.venomDuration <= 0) {
+        if (!enemy.venomDuration || enemy.venomDuration <= 0 || !enemy.venomStacks) {
             enemy.venomSlowActive = false;
+            enemy.venomBaseDamage = 0;
             return 0;
         }
-        if (!enemy.venomStacks || enemy.venomStacks <= 0) return 0;
 
-        enemy.venomDuration = Math.max(0, enemy.venomDuration - dt);
-        if (enemy.venomSlowActive && enemy.venomDuration > 0) {
-            enemy.speedModifier *= this.VENOM_SLOW_MODIFIER;
+        enemy.venomDuration -= dt;
+        if (enemy.venomSlowActive) {
+            const totalSlow = Math.max(0.3, 1 - ((1 - this.VENOM_SLOW_MODIFIER) * (enemy.venomStacks / 5)));
+            enemy.speedModifier *= totalSlow;
         }
+
         enemy.venomTickTimer = (enemy.venomTickTimer ?? 0) + dt;
         let damageToDeal = 0;
-        const tickInterval = 1.0;
-        while (enemy.venomTickTimer >= tickInterval && enemy.venomDuration > 0) {
-            enemy.venomTickTimer -= tickInterval;
-            const tickDamage = enemy.venomBaseDamage ?? 0;
-            damageToDeal += tickDamage * (enemy.venomStacks ?? 1);
-        }
-        if (enemy.venomDuration <= 0) {
-            enemy.venomStacks = 0;
+
+        const tickInterval = 0.5;
+
+        if (enemy.venomTickTimer >= tickInterval) {
             enemy.venomTickTimer = 0;
-            enemy.venomSlowActive = false;
+            damageToDeal = ((enemy.venomBaseDamage || 0) * (enemy.venomStacks * 0.1)) / 2;
+        }
+
+        if (enemy.venomDuration <= 0) {
+            this.clearVenom(enemy);
         }
 
         return damageToDeal;
+    }
+
+    private clearVenom(enemy: Enemy) {
+        enemy.venomStacks = 0;
+        enemy.venomBaseDamage = 0;
+        enemy.venomTickTimer = 0;
+        enemy.venomSlowActive = false;
+        enemy.venomDuration = 0;
     }
 
     createInfernoZone(

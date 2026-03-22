@@ -17,7 +17,7 @@ export class SettingsService {
     private mapSizeSignal = signal<MapSize>(10);
     private langSignal = signal<LangCode>('en');
     private customModeSignal = signal<boolean>(false);
-    public version = 'v.2.8.30';
+    public version = 'v.2.8.31';
     public diffArr: Difficulty[] = ['baby', 'normal', 'hard', 'nightmare'];
     private storageKey = 'shape_tactics_settings';
 
