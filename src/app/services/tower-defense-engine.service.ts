@@ -95,7 +95,7 @@ export class TowerDefenseEngineService {
 
     // Global Ability Purchase Logic
     public abilityPurchaseCount = signal(0);
-    public nextAbilityPrice = signal(1000);
+    public nextAbilityPrice = signal(500);
 
     private enemiesInternal: Enemy[] = [];
     private projectilesInternal: Projectile[] = [];
