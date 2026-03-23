@@ -1077,7 +1077,7 @@
                     (click)="tdEngine.buyAbilityCharge('orbital')"
                     [disabled]="tdEngine.money() < tdEngine.nextAbilityPrice()"
                     class="absolute -top-1 -right-1 w-5 h-5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-50 text-white rounded-full flex items-center justify-center text-[10px] font-black border border-white/20 shadow-lg z-20 transition-all active:scale-90"
-                    [title]="'Buy Charge: ' + tdEngine.nextAbilityPrice()"
+                    [title]="'Buy Charge: ' + (tdEngine.nextAbilityPrice() | abbreviateNumber)"
                   >
                     +
                   </button>
@@ -1107,7 +1107,7 @@
                     (click)="tdEngine.buyAbilityCharge('overdrive')"
                     [disabled]="tdEngine.money() < tdEngine.nextAbilityPrice()"
                     class="absolute -top-1 -right-1 w-5 h-5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-50 text-white rounded-full flex items-center justify-center text-[10px] font-black border border-white/20 shadow-lg z-20 transition-all active:scale-90"
-                    [title]="'Buy Charge: ' + tdEngine.nextAbilityPrice()"
+                    [title]="'Buy Charge: ' + (tdEngine.nextAbilityPrice() | abbreviateNumber)"
                   >
                     +
                   </button>
@@ -1137,7 +1137,7 @@
                     (click)="tdEngine.buyAbilityCharge('goldRush')"
                     [disabled]="tdEngine.money() < tdEngine.nextAbilityPrice()"
                     class="absolute -top-1 -right-1 w-5 h-5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-50 text-white rounded-full flex items-center justify-center text-[10px] font-black border border-white/20 shadow-lg z-20 transition-all active:scale-90"
-                    [title]="'Buy Charge: ' + tdEngine.nextAbilityPrice()"
+                    [title]="'Buy Charge: ' + (tdEngine.nextAbilityPrice() | abbreviateNumber)"
                   >
                     +
                   </button>
@@ -1168,7 +1168,7 @@
                     (click)="tdEngine.buyAbilityCharge('blackHole')"
                     [disabled]="tdEngine.money() < tdEngine.nextAbilityPrice()"
                     class="absolute -top-1 -right-1 w-5 h-5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-50 text-white rounded-full flex items-center justify-center text-[10px] font-black border border-white/20 shadow-lg z-20 transition-all active:scale-90"
-                    [title]="'Buy Charge: ' + tdEngine.nextAbilityPrice()"
+                    [title]="'Buy Charge: ' + (tdEngine.nextAbilityPrice() | abbreviateNumber)"
                   >
                     +
                   </button>
@@ -1198,7 +1198,7 @@
                     (click)="tdEngine.buyAbilityCharge('shieldWall')"
                     [disabled]="tdEngine.money() < tdEngine.nextAbilityPrice()"
                     class="absolute -top-1 -right-1 w-5 h-5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-50 text-white rounded-full flex items-center justify-center text-[10px] font-black border border-white/20 shadow-lg z-20 transition-all active:scale-90"
-                    [title]="'Buy Charge: ' + tdEngine.nextAbilityPrice()"
+                    [title]="'Buy Charge: ' + (tdEngine.nextAbilityPrice() | abbreviateNumber)"
                   >
                     +
                   </button>

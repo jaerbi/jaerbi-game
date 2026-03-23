@@ -404,7 +404,7 @@ export class TowerDefenseEngineService {
         this.dispose();
         this.isFirstTimeClear = false;
         this.abilityPurchaseCount.set(0);
-        this.nextAbilityPrice.set(1000);
+        this.nextAbilityPrice.set(500);
 
         // Handle Campaign Mode Configuration
         if (campaignLevelId) {

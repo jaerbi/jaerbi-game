@@ -12,7 +12,7 @@ export class AbbreviateNumberPipe implements PipeTransform {
     
     if (isNaN(num) || num === 0) return '0';
 
-    if (Math.abs(num) < 1000) {
+    if (Math.abs(num) < 100000) {
       return num.toString();
     }
 
