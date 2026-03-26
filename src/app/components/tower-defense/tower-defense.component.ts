@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { HITBOX_OFFSET, TowerDefenseEngineService } from '../../services/tower-defense-engine.service';
 import { TDTile } from '../../models/unit.model';
 import { SettingsService } from '../../services/settings.service';
-import { FirebaseService } from '../../services/firebase.service';
+import { FirebaseService, LevelCompletion } from '../../services/firebase.service';
 import { Subscription } from 'rxjs';
 import { GameEngineService } from '../../services/game-engine.service';
 import { SupportCommunityComponent } from '../support-community/support-community.component';
@@ -193,9 +193,23 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     selectedCampaignLevel: string | null = null;
     selectedDifficulty: 'easy' | 'normal' | 'hard' = 'normal';
     showStatsPanel = false;
+    isShowSpeed = true;
+    isMobileMenuOpen = signal(false);
+    isSpellsMenuOpen = signal(false);
+
+    toggleMobileMenu() {
+        this.isMobileMenuOpen.update(v => !v);
+    }
+    closeMobileMenu() {
+        this.isMobileMenuOpen.set(false);
+    }
+    toggleSpellsMenu() {
+        this.isSpellsMenuOpen.update(v => !v);
+    }
     showStats = false; // For draggable modal
     private platformId = inject(PLATFORM_ID);
     public windowWidth = signal<number>(1200);
+    protected readonly Math = Math;
 
     // Zoom & Pan State
     zoomLevel = signal(1);
@@ -342,13 +356,28 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         }
         this.selectedTile.set(null);
     }
+    public shopItems = computed(() => {
+        const costs = this.tdEngine.towerCosts;
+        const allowed = this.tdEngine.allowedTowers();
 
+        return costs
+            .map((cost, index) => ({
+                tier: index + 1,
+                cost: cost,
+                color: this.getTowerColor(index + 1)
+            }))
+            .filter(item => allowed.includes(item.tier))
+            .sort((a, b) => a.cost - b.cost);
+    });
     setGameMode(mode: 'random' | 'campaign') {
+        if (!this.canResetOrLeave()) return;
+
         if (this.tdEngine.gameMode() === mode) return;
 
         if (mode === 'random') {
             this.tdEngine.setModeRandom();
             this.showMissionSelect = false;
+            this.selectedCampaignLevel = null;
         } else {
             // Campaign Mode: Load Level 1 by default and show mission select
             this.tdEngine.gameMode.set('campaign');
@@ -500,7 +529,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 type === 3 ? '#f5e50b' :
                     type === 4 ? '#ef4444' :
                         type === 5 ? '#ee822a' :
-                            type === 6 ? '#22d3ee' :
+                            type === 6 ? '#78e3f3' :
                                 type === 7 ? '#84cc16' :
                                     '#a16207';
     }
@@ -543,8 +572,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         setTimeout(() => {
             this.resizeCanvas();
             this.cdr.detectChanges();
-            console.log('View Refreshed:', this.tdEngine.gridSize);
-        }, 100); // 100ms зазвичай достатньо для рендеру
+        }, 100);
     }
 
     setHardMode(enabled: boolean) {
@@ -647,6 +675,15 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         this.drawFrostAuras(ctx, tile);
         this.drawTowers(ctx, tile);
         this.drawEnemies(ctx, tile);
+        this.drawOrbitalStrikeVisuals(ctx, tile);
+        this.drawBlackHoleVisuals(ctx, tile);
+
+        if (this.tdEngine.isFreezeActive()) {
+            this.drawTimeFreezeOverlay(ctx, totalSize);
+        }
+        if (this.tdEngine.isFreezeActive()) {
+            this.drawTimeFreezeOverlay(ctx, totalSize);
+        }
         if (this.tdEngine.gameSpeedMultiplier() === 1) {
             this.drawProjectiles(ctx, tile);
         }
@@ -654,6 +691,29 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         ctx.restore(); // Remove clip
 
         this.drawRangeIndicator(ctx, tile);
+    }
+
+    private drawOrbitalStrikeVisuals(ctx: CanvasRenderingContext2D, tile: number) {
+        if (!this.tdEngine.isOrbitalStrikeActive()) return;
+
+        const totalSize = this.tdEngine.gridSize * tile;
+        ctx.save();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillRect(0, 0, totalSize, totalSize);
+
+        for (let i = 0; i < 5; i++) {
+            const x = Math.random() * totalSize;
+            const gradient = ctx.createLinearGradient(x, 0, x + 20, 0);
+            gradient.addColorStop(0, 'transparent');
+            gradient.addColorStop(0.5, 'rgba(0, 200, 255, 0.8)');
+            gradient.addColorStop(1, 'transparent');
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(x, 0, 30, totalSize);
+        }
+
+        ctx.restore();
     }
 
     private drawPathOverlay(ctx: CanvasRenderingContext2D, tile: number) {
@@ -878,10 +938,27 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         const towers = this.tdEngine.getTowersRef();
         const enemies = this.tdEngine.getEnemiesRef();
         const speed = this.tdEngine.gameSpeedMultiplier();
+        const overdriveActive = this.tdEngine.isOverdriveActive();
+
         for (const t of towers) {
             const cx = t.position.x * tile + tile / 2;
             const cy = t.position.y * tile + tile / 2;
             const padding = tile * 0.15;
+
+            // Overdrive Aura
+            if (overdriveActive) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(cx, cy, tile * 0.45, 0, Math.PI * 2);
+                ctx.strokeStyle = '#facc15';
+                ctx.lineWidth = 3;
+                ctx.shadowColor = '#fbbf24';
+                ctx.shadowBlur = 10;
+                ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 200) * 0.2;
+                ctx.stroke();
+                ctx.restore();
+            }
+
             this.drawTowerShape(ctx, cx, cy, t.type, t.level, tile);
 
             if (t.specialActive) {
@@ -892,18 +969,11 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 ctx.font = `bold ${Math.floor(tile * 0.3)}px Arial`;
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'top';
-                ctx.fillText('★', cx - tile / 2 + padding, cy - tile / 2 + padding);
-                ctx.restore();
-            }
-            if (t.specialActive && t.hasGolden) {
-                ctx.save();
-                ctx.fillStyle = '#FFD700';
-                ctx.shadowColor = 'black';
-                ctx.shadowBlur = 4;
-                ctx.font = `bold ${Math.floor(tile * 0.3)}px Arial`;
-                ctx.textAlign = 'right';
-                ctx.textBaseline = 'top';
-                ctx.fillText('⚡', cx + tile / 2 - padding, cy - tile / 2 + padding);
+                if (t.hasGolden) {
+                    ctx.fillText('⚡', cx - tile / 2 + padding, cy - tile / 2 + padding);
+                } else {
+                    ctx.fillText('★', cx - tile / 2 + padding, cy - tile / 2 + padding);
+                }
                 ctx.restore();
             }
 
@@ -966,7 +1036,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                     type === 3 ? '#f5e50b' :
                         type === 4 ? '#ef4444' :
                             type === 5 ? '#ee822a' :
-                                type === 6 ? '#22d3ee' :
+                                type === 6 ? '#78e3f3' :
                                     type === 7 ? '#84cc16' :
                                         '#a16207';
 
@@ -1096,23 +1166,6 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         ctx.restore();
     }
 
-    // private drawFrostAuras(ctx: CanvasRenderingContext2D, tile: number) {
-    //     const towers = this.tdEngine.getTowersRef();
-    //     for (const t of towers) {
-    //         if (t.type === 1 && t.specialActive) {
-    //             const cx = t.position.x * tile + tile / 2;
-    //             const cy = t.position.y * tile + tile / 2;
-    //             const radius = 2 * tile;
-    //             ctx.beginPath();
-    //             ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    //             ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
-    //             ctx.fill();
-    //             ctx.lineWidth = 1
-    //             ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
-    //             ctx.stroke();
-    //         }
-    //     }
-    // }
     private drawFrostAuras(ctx: CanvasRenderingContext2D, tile: number) {
         const towers = this.tdEngine.getTowersRef();
 
@@ -1151,6 +1204,12 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             const cy = e.displayY ?? ((e.position.y + 0.5) * tile);
             ctx.fillStyle = e.bg || (e.isFrozen ? '#7dd3fc' : '#ef4444');
             let strokeColor = 'transparent';
+
+            // Black Hole Visual Highlight
+            if (e.isBlackHolePulled) {
+                strokeColor = '#3b82f6';
+            }
+
             const getGlowColor = (hex: any, alpha = 0.5) => {
                 if (hex === 'transparent') return 'transparent';
                 return hex + Math.round(alpha * 255).toString(16).padStart(2, '0');
@@ -1240,8 +1299,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             ctx.fillRect(cx - r, cy - r - 10, barW * pct, barH);
             // Venom stacks visualization
             if (e.venomStacks && e.venomStacks > 0) {
-                const stackH = 4;
-                const stackW = 8;
+                const stackH = 2;
+                const stackW = 6;
                 const gap = 2;
                 const startY = cy - r + 5;
                 ctx.fillStyle = '#84cc16';
@@ -1252,8 +1311,8 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
 
             // Shatter stacks visualization (Left Side)
             if (e.shatterStacks && e.shatterStacks > 0) {
-                const stackH = 4;
-                const stackW = 8;
+                const stackH = 1;
+                const stackW = 6;
                 const gap = 2;
                 const startY = cy - r + 5;
                 ctx.fillStyle = '#f5e50b'; // Cannon Yellow
@@ -1278,7 +1337,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 ctx.restore();
             }
 
-            // Inferno Burn Visualization (Оптимізовано для швидкості)
+            // Inferno Burn Visualization
             if (e.burnedByInferno) {
                 ctx.save();
                 if (!isFastSpeed) {
@@ -1295,6 +1354,36 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
                 ctx.font = `${fireSize}px serif`;
                 ctx.textAlign = 'center';
                 ctx.fillText('🔥', cx, cy - r - 8);
+                ctx.restore();
+            }
+
+            // Prism Vulnerability Visualization
+            if (e.prismVulnerableTime && e.prismVulnerableTime > 0) {
+                ctx.save();
+
+                // Налаштування розміру та позиції (збоку від HP-бару або над ворогом)
+                const diamondW = tile * 0.15; // Ширина ромба
+                const diamondH = tile * 0.22; // Висота ромба
+                const px = cx - r - 10;       // Позиція зліва від ворога (симетрично венему)
+                const py = cy - r - 8;        // На рівні HP-бару
+
+                if (!isFastSpeed) {
+                    ctx.shadowBlur = 4;
+                    ctx.shadowColor = '#a855f7';
+                }
+
+                ctx.fillStyle = '#c084fc';
+                ctx.beginPath();
+                ctx.moveTo(px, py - diamondH / 2);
+                ctx.lineTo(px + diamondW / 2, py);
+                ctx.lineTo(px, py + diamondH / 2);
+                ctx.lineTo(px - diamondW / 2, py);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#f5f3ff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
                 ctx.restore();
             }
         }
@@ -1443,6 +1532,73 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
         // DEBUG ONLY
         // this.drawDebugLines(ctx);
     }
+
+    private drawTimeFreezeOverlay(ctx: CanvasRenderingContext2D, size: number) {
+        ctx.save();
+        // Blue tint over the whole canvas
+        ctx.fillStyle = 'rgba(0, 242, 255, 0.05)';
+        ctx.fillRect(0, 0, size, size);
+
+        // Vignette effect
+        const grad = ctx.createRadialGradient(size / 2, size / 2, size * 0.3, size / 2, size / 2, size * 0.7);
+        grad.addColorStop(0, 'rgba(0, 242, 255, 0)');
+        grad.addColorStop(1, 'rgba(0, 242, 255, 0.15)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+
+        // Frost particles or snowflakes could be added here for extra polish
+        ctx.restore();
+    }
+
+    private drawBlackHoleVisuals(ctx: CanvasRenderingContext2D, tile: number) {
+        const bhActive = this.tdEngine.isBlackHoleActive();
+        const bhTargeting = this.tdEngine.isTargetingBlackHole();
+        const pos = this.tdEngine.blackHolePosition(); // Тепер працює!
+        const mouse = this.tdEngine.lastMousePos();    // Для прицілу
+
+        // 1. Малюємо приціл (радіус дії), коли гравець обирає місце
+        if (bhTargeting && mouse) {
+            ctx.beginPath();
+            ctx.arc(mouse.x * tile, mouse.y * tile, 2 * tile, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(163, 73, 164, 0.6)'; // Фіолетовий
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]); // Пунктир
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // 2. Малюємо саму Чорну діру, якщо вона активна
+        if (bhActive && pos) {
+            const cx = pos.x * tile;
+            const cy = pos.y * tile;
+            const time = Date.now() / 1000;
+
+            ctx.save();
+
+            // Зовнішнє сяйво (акреційний диск)
+            const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, tile * 2);
+            gradient.addColorStop(0, 'black');
+            gradient.addColorStop(0.5, 'rgba(75, 0, 130, 0.9)');
+            gradient.addColorStop(1, 'transparent');
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(cx, cy, tile * 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Центр ("Подія горизонту") з легкою пульсацією
+            const pulse = Math.sin(time * 8) * 3;
+            ctx.beginPath();
+            ctx.arc(cx, cy, tile * 0.8 + pulse, 0, Math.PI * 2);
+            ctx.fillStyle = 'black';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#ff00ff';
+            ctx.fill();
+
+            ctx.restore();
+        }
+    }
+
     // DEBUG ONLY
     private drawDebugLines(ctx: CanvasRenderingContext2D) {
         const tile = Math.floor(this.tdEngine.tileSize);
@@ -1528,7 +1684,7 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
             this.lastTouchY = touch.clientY;
             this.wasPanning = true;
         } else if (event.touches.length === 2) {
-            const currentDistance = this.getDistance(event.touches);
+            const currentDistance = this.getDistance(event.touches);    
             const scale = currentDistance / this.lastTouchDistance;
             this.zoomLevel.set(Math.max(0.5, Math.min(3, this.initialZoom * scale)));
         }
@@ -1561,12 +1717,22 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     pan(event: MouseEvent) {
+        // --- НОВИЙ БЛОК: Оновлюємо позицію для абілок ---
+        const rect = this.gameCanvas?.nativeElement?.getBoundingClientRect();
+        // Вираховуємо x та y відносно канвасу, враховуючи панорамування (panX/Y) та масштаб
+        if(rect) {
+            // const x = (event.clientX - rect.left - this.panX()) / (this.tdEngine.tileSize * this.zoom());
+            // const y = (event.clientY - rect.top - this.panY()) / (this.tdEngine.tileSize * this.zoom());
+            // this.tdEngine.lastMousePos.set({ x, y });
+        }
+
+        // ----------------------------------------------
+
         if (!this.isPanning) return;
 
         const dx = event.clientX - this.lastMouseX;
         const dy = event.clientY - this.lastMouseY;
 
-        // Threshold to distinguish click from drag
         if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
             this.wasPanning = true;
         }
@@ -1585,6 +1751,11 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     private handleTileClick(gx: number, gy: number) {
+        if (this.tdEngine.isTargetingBlackHole()) {
+            this.tdEngine.spawnBlackHole(gx, gy);
+            return;
+        }
+
         if (gx >= 0 && gx < this.tdEngine.gridSize && gy >= 0 && gy < this.tdEngine.gridSize) {
             const grid = this.tdEngine.getGridRef();
             const clickedTile = grid[gy][gx];
@@ -1628,18 +1799,38 @@ export class TowerDefenseComponent implements OnInit, OnDestroy, AfterViewInit {
     isLevelUnlocked(levelId: string): boolean {
         if (levelId === 'level_1') return true;
         const profile = this.firebase.masteryProfile();
-        if (!profile || !profile.completedLevelIds) return false;
+        if (!profile) return false;
 
-        // Find index of this level
         const index = this.campaignService.levels.findIndex(l => l.id === levelId);
-        if (index <= 0) return true; // Should be handled by level_1 check but safe guard
+        if (index <= 0) return true;
 
         const prevLevel = this.campaignService.levels[index - 1];
-        return profile.completedLevelIds.includes(prevLevel.id);
+
+        const isCompleted =
+            (profile.completedLevelIds?.includes(prevLevel.id)) ||
+            (profile.completedLevels && !!profile.completedLevels[prevLevel.id]);
+
+        return isCompleted;
     }
 
     isLevelCompleted(levelId: string): boolean {
         const profile = this.firebase.masteryProfile();
-        return !!profile?.completedLevelIds?.includes(levelId);
+        if (!profile) return false;
+
+        return !!(profile.completedLevelIds?.includes(levelId) || profile.completedLevels?.[levelId]);
+    }
+
+    getLevelCompletionData(levelId: string): LevelCompletion | null {
+        const profile = this.firebase.masteryProfile();
+        if (!profile || !profile.completedLevels) return null;
+
+        return profile.completedLevels[levelId] || null;
+    }
+
+    user() {
+        return this.firebase.user$();
+    }
+    login() {
+        this.firebase.loginWithGoogle();
     }
 }

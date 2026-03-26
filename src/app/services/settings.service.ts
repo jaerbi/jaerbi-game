@@ -15,9 +15,9 @@ export interface GameSettings {
 export class SettingsService {
     private difficultySignal = signal<Difficulty>('normal');
     private mapSizeSignal = signal<MapSize>(10);
-    private langSignal = signal<LangCode>('uk');
+    private langSignal = signal<LangCode>('en');
     private customModeSignal = signal<boolean>(false);
-    public version = 'v.2.7.28';
+    public version = 'v.2.8.32';
     public diffArr: Difficulty[] = ['baby', 'normal', 'hard', 'nightmare'];
     private storageKey = 'shape_tactics_settings';
 

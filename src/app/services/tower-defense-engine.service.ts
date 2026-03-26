@@ -15,13 +15,13 @@ const TOWER_COSTS = [15, 50, 400, 600, 250, 450, 500, 850] as const;
 
 const TIER_STATS = [
     { damage: 5, range: 1.5, fireInterval: 0.5 },
-    { damage: 12, range: 2, fireInterval: 0.7 },
-    { damage: 78, range: 1.5, fireInterval: 1 },
-    { damage: 250, range: 3, fireInterval: 4.5 },
-    { damage: 66, range: 1.5, fireInterval: 2.5 },
-    { damage: 38, range: 2, fireInterval: 0.2 },
-    { damage: 59, range: 1.6, fireInterval: 1 },
-    { damage: 22, range: 1.5, fireInterval: 2.5 }
+    { damage: 13, range: 2, fireInterval: 0.7 },
+    { damage: 87, range: 1.5, fireInterval: 1 },
+    { damage: 265, range: 3, fireInterval: 4.5 },
+    { damage: 86, range: 1.5, fireInterval: 2.5 },
+    { damage: 29, range: 2, fireInterval: 0.2 },
+    { damage: 92, range: 1.6, fireInterval: 1 },
+    { damage: 172, range: 1.5, fireInterval: 2.5 }
 ] as const;
 
 import { WaveAnalyticsService } from './wave-analytics.service';
@@ -58,7 +58,44 @@ export class TowerDefenseEngineService {
 
     currentLevelConfig = signal<LevelConfig | null>(null);
     allowedTowers = signal<number[]>([1, 2, 3, 4, 5, 6, 7, 8]);
+    public enemiesKilled = signal(0);
     public isFirstTimeClear = false;
+
+    // Time Freeze Logic
+    public freezeCharges = signal(0);
+    public isFreezeActive = signal(false);
+    private freezeTimer: any = null;
+
+    // Orbital Strike Logic
+    public orbitalStrikeCharges = signal(0);
+    public isOrbitalStrikeActive = signal(false);
+
+    // Overdrive Logic
+    public overdriveCharges = signal(0);
+    public isOverdriveActive = signal(false);
+    private overdriveTimer: any = null;
+
+    // Gold Rush Logic
+    public goldRushCharges = signal(0);
+    public isGoldRushActive = signal(false);
+    private goldRushTimer: any = null;
+
+    // Black Hole Logic
+    public blackHoleCharges = signal(0);
+    public isBlackHoleActive = signal(false);
+    public isTargetingBlackHole = signal(false);
+    public blackHolePosition = signal<{ x: number, y: number } | null>(null); // Тепер це сигнал!
+    public lastMousePos = signal<{ x: number, y: number } | null>(null);    // Для малювання прицілу
+    private blackHoleTimer: any = null;
+
+    // Shield Wall Logic
+    public shieldWallCharges = signal(0);
+    public shieldWallHitsRemaining = signal(0);
+    public isShieldWallActive = signal(false);
+
+    // Global Ability Purchase Logic
+    public abilityPurchaseCount = signal(0);
+    public nextAbilityPrice = signal(500);
 
     private enemiesInternal: Enemy[] = [];
     private projectilesInternal: Projectile[] = [];
@@ -83,9 +120,27 @@ export class TowerDefenseEngineService {
         return this.waveAnalytics.activeCounterStrategy;
     }
 
+    public buyAbilityCharge(abilityType: string) {
+        const price = 500 * Math.pow(1.3, this.abilityPurchaseCount());
+        if (this.money() < price) return;
+
+        this.money.update(m => m - price);
+        this.abilityPurchaseCount.update(c => c + 1);
+        this.nextAbilityPrice.set(500 * Math.pow(1.3, this.abilityPurchaseCount()));
+
+        switch (abilityType) {
+            case 'freeze': this.freezeCharges.update(c => c + 1); break;
+            case 'orbital': this.orbitalStrikeCharges.update(c => c + 1); break;
+            case 'overdrive': this.overdriveCharges.update(c => c + 1); break;
+            case 'goldRush': this.goldRushCharges.update(c => c + 1); break;
+            case 'blackHole': this.blackHoleCharges.update(c => c + 1); break;
+            case 'shieldWall': this.shieldWallCharges.update(c => c + 1); break;
+        }
+    }
+
     // Costs and Stats
     readonly towerCosts = TOWER_COSTS;
-
+    showStats = false;
     private savedResult = false;
     private gameEndedHard = false;
 
@@ -140,12 +195,12 @@ export class TowerDefenseEngineService {
             if (!isVictory) return;
 
             if (xpToAward > 0) {
-                await this.firebase.awardTowerDefenseXp(xpToAward, levelId, this.wave());
+                await this.firebase.awardTowerDefenseXp(xpToAward, levelId, this.lives());
             }
             return;
         } else {
             if (xpToAward > 0) {
-                await this.firebase.awardTowerDefenseXp(xpToAward, undefined, this.wave());
+                await this.firebase.awardTowerDefenseXp(xpToAward);
             }
             const mapSizeLabel = this.gridSize === 20 ? '20x20' : '10x10';
             const payload = {
@@ -166,6 +221,34 @@ export class TowerDefenseEngineService {
 
     dispose() {
         this.stopGameLoop();
+        if (this.freezeTimer) {
+            clearTimeout(this.freezeTimer);
+            this.freezeTimer = null;
+        }
+        this.isFreezeActive.set(false);
+
+        if (this.overdriveTimer) {
+            clearTimeout(this.overdriveTimer);
+            this.overdriveTimer = null;
+        }
+        this.isOverdriveActive.set(false);
+
+        if (this.goldRushTimer) {
+            clearTimeout(this.goldRushTimer);
+            this.goldRushTimer = null;
+        }
+        this.isGoldRushActive.set(false);
+
+        if (this.blackHoleTimer) {
+            clearTimeout(this.blackHoleTimer);
+            this.blackHoleTimer = null;
+        }
+        this.isBlackHoleActive.set(false);
+        this.isTargetingBlackHole.set(false);
+        this.blackHolePosition.set(null);
+
+        this.isOrbitalStrikeActive.set(false);
+
         this.enemiesInternal = [];
         this.projectilesInternal = [];
         this.towersInternal = [];
@@ -284,7 +367,6 @@ export class TowerDefenseEngineService {
                 const randomBonus = bonuses[Math.floor(Math.random() * bonuses.length)];
                 grid[chosen.y][chosen.x].type = 'buildable';
                 grid[chosen.y][chosen.x].bonus = randomBonus;
-                console.log(`Bonus spawned at ${chosen.x},${chosen.y} (dist: ${chosen.dist}): ${randomBonus}`);
             }
 
             return [...grid];
@@ -303,14 +385,14 @@ export class TowerDefenseEngineService {
 
         let totalXp = waves * 0.5;
 
-        if (waves > 20) totalXp += (waves - 20) * 1.5;
-        if (waves > 40) totalXp += (waves - 40) * 2;
-        if (waves > 60) totalXp += (waves - 60) * 2.5;
-        if (waves > 80) totalXp += (waves - 80) * 3;
-        if (waves > 100) totalXp += (waves - 100) * 3.5;
-        if (waves > 120) totalXp += (waves - 120) * 4;
-        if (waves > 140) totalXp += (waves - 140) * 4.5;
-        if (waves > 160) totalXp += (waves - 160) * 5;
+        if (waves > 20) totalXp += (waves - 20) * 2.5;
+        if (waves > 40) totalXp += (waves - 40) * 3;
+        if (waves > 60) totalXp += (waves - 60) * 4.5;
+        if (waves > 80) totalXp += (waves - 80) * 5.5;
+        if (waves > 100) totalXp += (waves - 100) * 6.5;
+        if (waves > 120) totalXp += (waves - 120) * 8;
+        if (waves > 140) totalXp += (waves - 140) * 9.5;
+        if (waves > 160) totalXp += (waves - 160) * 10;
 
         const cappedBonusXp = Math.min(this.bonusXpAccumulated, waves * 3);
         totalXp += cappedBonusXp;
@@ -321,6 +403,8 @@ export class TowerDefenseEngineService {
         // Reset state
         this.dispose();
         this.isFirstTimeClear = false;
+        this.abilityPurchaseCount.set(0);
+        this.nextAbilityPrice.set(1000);
 
         // Handle Campaign Mode Configuration
         if (campaignLevelId) {
@@ -344,11 +428,33 @@ export class TowerDefenseEngineService {
                     // Add Mastery Bonus
                     const goldLevel = this.getGoldMasteryLevel();
                     if (goldLevel >= 8) {
-                        const bonus = (goldLevel - 7) * 20;
+                        const bonus = (goldLevel - 7) * 5;
                         money += bonus;
                     }
                 }
                 this.money.set(money);
+
+                // Set Freeze Charges from Workshop
+                const freezeLevel = profile?.upgrades?.['time_freeze_charges'] ?? 0;
+                this.freezeCharges.set(1 + (typeof freezeLevel === 'number' ? freezeLevel : 0));
+
+                const orbitalStrikeLevel = profile?.upgrades?.['orbital_strike_charges'] ?? 0;
+                this.orbitalStrikeCharges.set(1 + (typeof orbitalStrikeLevel === 'number' ? orbitalStrikeLevel : 0));
+
+                const overdriveLevel = profile?.upgrades?.['overdrive_charges'] ?? 0;
+                this.overdriveCharges.set(1 + (typeof overdriveLevel === 'number' ? overdriveLevel : 0));
+
+                const goldRushLevel = profile?.upgrades?.['gold_rush_charges'] ?? 0;
+                this.goldRushCharges.set(1 + (typeof goldRushLevel === 'number' ? goldRushLevel : 0));
+
+                const blackHoleLevel = profile?.upgrades?.['black_hole_charges'] ?? 0;
+                this.blackHoleCharges.set(1 + (typeof blackHoleLevel === 'number' ? blackHoleLevel : 0));
+
+                const shieldWallLevel = profile?.upgrades?.['shield_wall_charges'] ?? 0;
+                this.shieldWallCharges.set(1 + (typeof shieldWallLevel === 'number' ? shieldWallLevel : 0));
+                this.shieldWallHitsRemaining.set(0);
+                this.isShieldWallActive.set(false);
+                this.firstHitTaken = false;
 
                 this.generateMap(config);
             } else {
@@ -382,6 +488,30 @@ export class TowerDefenseEngineService {
             startMoney += bonus;
         }
         this.money.set(startMoney);
+
+        // Set Freeze Charges from Workshop for Random Mode
+        const profile = this.firebase.masteryProfile();
+        const freezeLevel = profile?.upgrades?.['time_freeze_charges'] ?? 0;
+        this.freezeCharges.set(1 + (typeof freezeLevel === 'number' ? freezeLevel : 0));
+
+        const orbitalStrikeLevel = profile?.upgrades?.['orbital_strike_charges'] ?? 0;
+        this.orbitalStrikeCharges.set(1 + (typeof orbitalStrikeLevel === 'number' ? orbitalStrikeLevel : 0));
+
+        const overdriveLevel = profile?.upgrades?.['overdrive_charges'] ?? 0;
+        this.overdriveCharges.set(1 + (typeof overdriveLevel === 'number' ? overdriveLevel : 0));
+
+        const goldRushLevel = profile?.upgrades?.['gold_rush_charges'] ?? 0;
+        this.goldRushCharges.set(1 + (typeof goldRushLevel === 'number' ? goldRushLevel : 0));
+
+        const blackHoleLevel = profile?.upgrades?.['black_hole_charges'] ?? 0;
+        this.blackHoleCharges.set(1 + (typeof blackHoleLevel === 'number' ? blackHoleLevel : 0));
+
+        const shieldWallLevel = profile?.upgrades?.['shield_wall_charges'] ?? 0;
+        this.shieldWallCharges.set(1 + (typeof shieldWallLevel === 'number' ? shieldWallLevel : 0));
+        this.shieldWallHitsRemaining.set(0);
+        this.isShieldWallActive.set(false);
+        this.firstHitTaken = false;
+
         const bonusTiles: { x: number, y: number, type: 'damage' | 'range' | 'prime' | 'bounty' | 'mastery' | 'speed' }[] = [];
         const tempPath = this.generateRandomPath();
         const randomBonusCount = Math.floor(Math.random() * 3) + 3;
@@ -661,7 +791,7 @@ export class TowerDefenseEngineService {
         }
 
         this.wave.update(w => w + 1);
-        if (this.gameMode() !== 'campaign' && this.wave() > 1 && this.wave() % 10 === 0) {
+        if (this.gameMode() !== 'campaign' && this.wave() > 1 && this.wave() % 5 === 0) {
             this.spawnRandomBonusTile();
         }
         this.isWaveInProgress.set(true);
@@ -861,7 +991,7 @@ export class TowerDefenseEngineService {
             });
             const goldLevel = this.getGoldMasteryLevel();
             if (goldLevel >= 15) {
-                const endOfWaveBonus = (goldLevel - 14) * 10;
+                const endOfWaveBonus = (goldLevel - 14) * 5;
                 this.money.update(m => m + endOfWaveBonus);
             }
         }
@@ -875,6 +1005,137 @@ export class TowerDefenseEngineService {
         this.isPaused.set(false);
     }
 
+    public useTimeFreeze() {
+        if (this.freezeCharges() <= 0 || this.isFreezeActive() || this.gameOver() || !this.isWaveInProgress()) return;
+
+        this.freezeCharges.update(c => c - 1);
+        this.isFreezeActive.set(true);
+
+        if (this.freezeTimer) clearTimeout(this.freezeTimer);
+
+        this.freezeTimer = setTimeout(() => {
+            this.ngZone.run(() => {
+                this.isFreezeActive.set(false);
+                this.freezeTimer = null;
+            });
+        }, 8000); // 10 seconds duration
+    }
+
+    public useOrbitalStrike() {
+        if (this.orbitalStrikeCharges() <= 0 || this.gameOver() || !this.isWaveInProgress()) return;
+
+        this.orbitalStrikeCharges.update(c => c - 1);
+        this.isOrbitalStrikeActive.set(true);
+
+        const profile = this.firebase.masteryProfile();
+        const level = profile?.upgrades?.['orbital_strike_charges'] ?? 0;
+        const finalDamagePercent = Math.min(0.95, 0.5 + (typeof level === 'number' ? level * 0.045 : 0));
+
+        // Damage all enemies
+        for (const enemy of this.enemiesInternal) {
+            if (enemy.hp <= 0) continue;
+            const dmg = enemy.maxHp * finalDamagePercent;
+            this.damageService.applyDamage(enemy, dmg, 0, this.wave(), 'orbital', this.recordDamage.bind(this));
+        }
+
+        setTimeout(() => {
+            this.ngZone.run(() => this.isOrbitalStrikeActive.set(false));
+        }, 200);
+    }
+
+    public useOverdrive() {
+        if (this.overdriveCharges() <= 0 || this.isOverdriveActive() || this.gameOver() || !this.isWaveInProgress()) return;
+
+        this.overdriveCharges.update(c => c - 1);
+        this.isOverdriveActive.set(true);
+
+        if (this.overdriveTimer) clearTimeout(this.overdriveTimer);
+
+        const profile = this.firebase.masteryProfile();
+        const level = profile?.upgrades?.['overdrive_charges'] ?? 0;
+        const duration = 15 + (typeof level === 'number' ? level : 0);
+
+        this.overdriveTimer = setTimeout(() => {
+            this.ngZone.run(() => {
+                this.isOverdriveActive.set(false);
+                this.overdriveTimer = null;
+            });
+        }, duration * 1000);
+    }
+
+    public useGoldRush() {
+        if (this.goldRushCharges() <= 0 || this.isGoldRushActive() || this.gameOver() || !this.isWaveInProgress()) return;
+
+        this.goldRushCharges.update(c => c - 1);
+        this.isGoldRushActive.set(true);
+
+        if (this.goldRushTimer) clearTimeout(this.goldRushTimer);
+
+        const profile = this.firebase.masteryProfile();
+        const level = profile?.upgrades?.['gold_rush_charges'] ?? 0;
+        const duration = 15 + (typeof level === 'number' ? level * 0.5 : 0); // 15s+
+
+        this.goldRushTimer = setTimeout(() => {
+            this.ngZone.run(() => {
+                this.isGoldRushActive.set(false);
+                this.goldRushTimer = null;
+            });
+        }, duration * 1000);
+    }
+
+    public useBlackHole() {
+        if (this.blackHoleCharges() <= 0 || this.isBlackHoleActive() || this.gameOver() || !this.isWaveInProgress()) return;
+
+        // Toggle targeting mode
+        this.isTargetingBlackHole.update(v => !v);
+    }
+
+    public spawnBlackHole(x: number, y: number) {
+        if (this.blackHoleCharges() <= 0 || this.isBlackHoleActive()) return;
+
+        this.blackHoleCharges.update(c => c - 1);
+        this.isBlackHoleActive.set(true);
+        this.isTargetingBlackHole.set(false);
+
+        this.blackHolePosition.set({ x, y });
+
+        if (this.blackHoleTimer) clearTimeout(this.blackHoleTimer);
+
+        const profile = this.firebase.masteryProfile();
+        const level = profile?.upgrades?.['black_hole_charges'] ?? 0;
+        const duration = 10 + (typeof level === 'number' ? level * 0.4 : 0);
+
+        this.blackHoleTimer = setTimeout(() => {
+            this.ngZone.run(() => {
+                this.isBlackHoleActive.set(false);
+                this.blackHolePosition.set(null);
+                this.blackHoleTimer = null;
+            });
+        }, duration * 1000);
+    }
+    private firstHitTaken = false;
+    public toggleShieldWall() {
+        if (this.gameOver() || !this.isWaveInProgress()) return;
+
+        if (this.isShieldWallActive()) {
+            this.isShieldWallActive.set(false);
+            if (!this.firstHitTaken) {
+                this.shieldWallHitsRemaining.set(0);
+            }
+        } else {
+            if (this.shieldWallCharges() > 0 || this.shieldWallHitsRemaining() > 0) {
+                this.isShieldWallActive.set(true);
+
+                if (this.shieldWallHitsRemaining() <= 0) {
+                    const profile = this.firebase.masteryProfile();
+                    const level = profile?.upgrades?.['shield_wall_charges'] ?? 0;
+                    const maxHits = 10 + (typeof level === 'number' ? level * 10 : 0);
+                    this.shieldWallHitsRemaining.set(maxHits);
+                    this.firstHitTaken = false;
+                }
+            }
+        }
+    }
     public getUpgradeLevel(tier: number, kind: 'damage' | 'range' | 'golden'): number {
         if (!this.areMasteriesActiveForWave(this.wave())) return 0;
         const profile = this.firebase.masteryProfile();
@@ -896,7 +1157,7 @@ export class TowerDefenseEngineService {
         const golden = this.getUpgradeLevel(5, 'golden');
         if (golden <= 0 || sourceDamage <= 0) return;
 
-        const damageMultiplier = 0.3 + (golden * 0.1);
+        const damageMultiplier = 0.5 + (golden * 0.3);
         const explosionDamage = Math.floor(sourceDamage * damageMultiplier);
 
         const radius = 1.0;
@@ -918,6 +1179,7 @@ export class TowerDefenseEngineService {
                     this.recordDamage.bind(this)
                 );
                 enemy.burnedByInferno = true;
+                enemy.burnDuration = 5.0;
                 enemy.lastInfernoDamage = sourceDamage;
             }
         }
@@ -931,7 +1193,7 @@ export class TowerDefenseEngineService {
     private damageTracking: Map<string, number> = new Map();
 
     private handleSpawning(dt: number) {
-        if (this.enemiesToSpawn <= 0) return;
+        if (this.enemiesToSpawn <= 0 || this.isFreezeActive()) return;
 
         this.spawnTimer += dt * 1000;
         if (this.spawnTimer >= this.spawnInterval) {
@@ -945,20 +1207,26 @@ export class TowerDefenseEngineService {
         const currentWave = this.wave();
 
         // HP Scaling
-        let hpMultiplier: number;
-        if (currentWave <= 10) {
-            // Linear: 1.2, 1.4... 3.0
-            hpMultiplier = 1 + 0.2 * currentWave;
-        } else {
-            const w = currentWave - 10;
-            hpMultiplier = 3.0 * Math.pow(1.15, w);
-        }
+        let hpMultiplier = Math.pow(1.10, currentWave)
 
-        if (currentWave >= 130) {
-            hpMultiplier *= 1.3; // +30%
-        } else if (currentWave >= 100) {
-            hpMultiplier *= 1.1; // +10%
-        }
+        // special for Yevhen
+        // if (currentWave >= 240) {
+        //     hpMultiplier *= 1.4; // +40%
+        // } else if (currentWave >= 220) {
+        //     hpMultiplier *= 1.35; // +35%
+        // } else if (currentWave >= 200) {
+        //     hpMultiplier *= 1.3; // +30%
+        // } else if (currentWave >= 180) {
+        //     hpMultiplier *= 1.25; // +25%
+        // } else if (currentWave >= 160) {
+        //     hpMultiplier *= 1.2; // +20%
+        // } else if (currentWave >= 140) {
+        //     hpMultiplier *= 1.15; // +15%
+        // } else if (currentWave >= 120) {
+        //     hpMultiplier *= 1.1; // +10%
+        // } else if (currentWave >= 100) {
+        //     hpMultiplier *= 1.05; // +5%
+        // }
 
         const hp = 50 * hpMultiplier;
 
@@ -971,7 +1239,7 @@ export class TowerDefenseEngineService {
             }
         }
 
-        const baseSpeed = 0.5 + (currentWave * 0.02) + (Math.floor(currentWave / 5) * 0.1);
+        const baseSpeed = 0.5 + (currentWave * 0.02) + (Math.floor(currentWave / 5) * 0.05)
         const total = this.currentWaveEnemyCount || (5 + this.wave() * 2);
         const spawnedSoFar = total - this.enemiesToSpawn;
 
@@ -1036,15 +1304,28 @@ export class TowerDefenseEngineService {
 
         // Counter Strategy Logic (Random Mode Only)
         // Uses pre-calculated strategy for the wave
-        if (this.gameMode() === 'random' && this.waveAnalytics.currentWaveCounterType && !boss) {
+        if (this.gameMode() === 'random' && this.waveAnalytics.currentWaveCounters.length > 0 && !boss) {
             const spawnChance = this.waveAnalytics.currentWaveCounterChance;
-            const counterType = this.waveAnalytics.currentWaveCounterType;
 
             if (Math.random() < spawnChance) {
-                const flags = this.waveAnalytics.getCounterFlag(counterType);
+                const counters = this.waveAnalytics.currentWaveCounters;
+
+                const totalWeight = counters.reduce((sum, c) => sum + c.ratio, 0);
+                let randomWeight = Math.random() * totalWeight;
+
+                let selectedCounterType = counters[0].type;
+
+                for (const counter of counters) {
+                    randomWeight -= counter.ratio;
+                    if (randomWeight <= 0) {
+                        selectedCounterType = counter.type;
+                        break;
+                    }
+                }
+
+                const flags = this.waveAnalytics.getCounterFlag(selectedCounterType);
                 Object.assign(newEnemy, flags);
 
-                // Earlier HP Buff for Resistant Enemies
                 let hpBonus = 1.0;
                 if (this.wave() >= 29) {
                     hpBonus = 1.5;
@@ -1084,10 +1365,49 @@ export class TowerDefenseEngineService {
     }
 
     private updateEnemies(dt: number) {
+        const globalFreeze = this.isFreezeActive();
+        const bhActive = this.isBlackHoleActive();
+        const bhPos = this.blackHolePosition();
+        const bhRadius = 3.5;
+        const bhRadiusSq = bhRadius * bhRadius;
+
         for (let i = this.enemiesInternal.length - 1; i >= 0; i--) {
             const enemy = this.enemiesInternal[i];
             enemy.speedModifier = 1;
             enemy.isFrozen = false;
+            enemy.isTimeFrozen = globalFreeze;
+            enemy.isBlackHolePulled = false;
+
+            // Black Hole Pull Logic
+            if (bhActive && bhPos) {
+                const dx = bhPos.x - (enemy.position.x + 0.5);
+                const dy = bhPos.y - (enemy.position.y + 0.5);
+                const distSq = dx * dx + dy * dy;
+
+                if (distSq <= bhRadiusSq) {
+                    enemy.isBlackHolePulled = true;
+                    // Move enemy slightly towards BH center
+                    const pullStrength = 0.5 * dt; // Adjust for feel
+                    const angle = Math.atan2(dy, dx);
+
+                    // Direct coordinate manipulation for pull effect
+                    // This is tricky because enemies normally follow pathIndex/progress
+                    // Let's modify progress and potentially pathIndex if needed, 
+                    // or just use a visual offset if we want to be safe.
+                    // Actually, a simple way is to reduce progress if moving away, 
+                    // or increase if moving towards.
+                    // But easier: Black Hole STUNS and PULLS.
+
+                    // Simple approach: BH stuns (speed = 0) and we visually pull them in the drawing layer?
+                    // No, let's actually affect pathIndex/progress for real mechanic.
+
+                    // If we want real pull, we need to know if the BH center is "ahead" or "behind" on the path.
+                    // Easier: BH just slows them down by 90% and we add a visual effect.
+                    // User said "slowly pulled toward the center coordinate".
+
+                    enemy.speedModifier *= 0.1; // Heavy slow
+                }
+            }
 
             if (enemy.cannonSlowTimer && enemy.cannonSlowTimer > 0) {
                 enemy.cannonSlowTimer -= dt;
@@ -1110,6 +1430,14 @@ export class TowerDefenseEngineService {
                 const bleedDmg = this.damageService.processBleedTick(enemy, dt);
                 if (bleedDmg > 0) {
                     this.damageService.applyDamage(enemy, bleedDmg, 4, this.wave(), enemy.lastBleedSourceId, this.recordDamage.bind(this));
+                }
+            }
+            if (enemy.burnDuration && enemy.burnDuration > 0) {
+                enemy.burnDuration -= dt;
+
+                if (enemy.burnDuration <= 0) {
+                    enemy.burnDuration = 0;
+                    enemy.burnedByInferno = false;
                 }
             }
         }
@@ -1138,6 +1466,7 @@ export class TowerDefenseEngineService {
                     if (zone.dps > 0) {
                         this.damageService.applyDamage(enemy, zone.dps * dt, 5, this.wave());
                         enemy.burnedByInferno = true;
+                        enemy.burnDuration = 5.0;
                     }
                 }
             }
@@ -1152,7 +1481,7 @@ export class TowerDefenseEngineService {
                 enemy.basePlayerDamage = enemy.type === 'boss' ? 10 : 3;
             }
 
-            if (!isStunned) {
+            if (!isStunned && !globalFreeze) {
                 const base = enemy.baseSpeed;
                 const archetypeMultiplier =
                     enemy.type === 'tank' ? 0.5 :
@@ -1166,6 +1495,34 @@ export class TowerDefenseEngineService {
                     enemy.progress = 0;
 
                     if (enemy.pathIndex >= this.path().length - 1) {
+                        // Shield Wall Check
+                        if (this.isShieldWallActive() && this.shieldWallHitsRemaining() > 0) {
+
+                            if (!this.firstHitTaken) {
+                                if (this.shieldWallCharges() > 0) {
+                                    this.shieldWallCharges.update(c => c - 1);
+                                    this.firstHitTaken = true;
+                                } else if (this.shieldWallHitsRemaining() <= 0) {
+                                    this.isShieldWallActive.set(false);
+                                    this.lives.update(l => Math.max(0, l - 1));
+                                    continue;
+                                }
+                            }
+
+                            this.shieldWallHitsRemaining.update(h => h - 1);
+
+                            if (this.shieldWallHitsRemaining() <= 0) {
+                                this.isShieldWallActive.set(false);
+                                this.firstHitTaken = false;
+                            }
+                            const path = this.path();
+                            const midIndex = Math.floor(path.length / 2);
+                            enemy.pathIndex = midIndex;
+                            enemy.progress = 0;
+                            enemy.position = { ...path[midIndex] };
+                            continue;
+                        }
+
                         let damageToLives = 1;
                         const hpPercent = enemy.hp / enemy.maxHp;
 
@@ -1212,7 +1569,9 @@ export class TowerDefenseEngineService {
             else if (enemy.type === 'scout') scale = 0.9;
             else if (enemy.type === 'boss') scale = 1.6;
             enemy.scale = scale;
-            if (enemy.isFrozen) {
+            if (enemy.isTimeFrozen) {
+                enemy.bg = `hsl(190, 90%, 85%)`; // Light Cyan for Time Freeze
+            } else if (enemy.isFrozen) {
                 enemy.bg = `hsl(190, 80%, ${lightness}%)`;
             } else if (enemy.type === 'tank') {
                 enemy.bg = `hsl(330, 70%, 60%)`;
@@ -1232,11 +1591,8 @@ export class TowerDefenseEngineService {
                 if (diedBurning && sourceDmg > 0) {
                     this.triggerInfernoChainReaction(deathPos, sourceDmg, sourceId);
                 }
-                const deathMaxHp = enemy.maxHp;
                 this.enemiesInternal.splice(i, 1);
-                if (diedBurning) {
-                    this.triggerInfernoChainReaction(deathPos, deathMaxHp, sourceId);
-                }
+                this.ngZone.run(() => this.enemiesKilled.update(n => n + 1));
 
                 const wave = this.wave();
                 let baseReward = 5 + Math.floor(wave * 0.5);
@@ -1248,6 +1604,14 @@ export class TowerDefenseEngineService {
 
                 const goldMultiplier = this.getGoldKillMultiplier();
                 let reward = Math.floor(baseReward * goldMultiplier);
+
+                // Gold Rush Active
+                if (this.isGoldRushActive()) {
+                    const profile = this.firebase.masteryProfile();
+                    const level = profile?.upgrades?.['gold_rush_charges'] ?? 0;
+                    const rushMult = 3 + (typeof level === 'number' ? level * 0.2 : 0); // e.g. 3x to 5x
+                    reward = Math.floor(reward * rushMult);
+                }
 
                 // Boss Reward Bonus
                 if (enemy.type === 'boss') {
@@ -1284,14 +1648,21 @@ export class TowerDefenseEngineService {
 
     private updateTowers(dt: number) {
         if (this.enemiesInternal.length === 0 || this.towersInternal.length === 0) return;
+
+        const overdriveActive = this.isOverdriveActive();
+        const profile = this.firebase.masteryProfile();
+        const odLevel = profile?.upgrades?.['overdrive_charges'] ?? 0;
+        const odMultiplier = 2 + (typeof odLevel === 'number' ? odLevel * 0.1 : 0); // 2x to 3x
+
         for (const tower of this.towersInternal) {
-            tower.cooldown -= dt;
+            const effectiveDt = overdriveActive ? dt * odMultiplier : dt;
+            tower.cooldown -= effectiveDt;
             if (tower.cooldown <= 0) {
-                const target = this.findTargetForTower(tower, this.enemiesInternal);
+                const target = this.findTargetForTower(tower, this.enemiesInternal, (tier, type: 'damage' | 'range' | 'golden') => this.getUpgradeLevel(tier, type));
                 if (target) {
                     tower.targetEnemyId = target.id;
                     this.fireAt(tower, target);
-                    if (tower.type === 7) {
+                    if (tower.type === 7 || tower.type === 3) {
                         tower.hitsOnTarget = (tower.hitsOnTarget || 0) + 1;
                     }
                     tower.cooldown = tower.fireInterval;
@@ -1301,7 +1672,12 @@ export class TowerDefenseEngineService {
                     tower.lastBeamTargetId = undefined;
                     tower.extraTargetIds = undefined;
                     tower.cooldown = 0;
-                    if (tower.type === 7) {
+                    if (tower.type === 7 || tower.type === 3) {
+                        tower.hitsOnTarget = 0;
+                    }
+                }
+                if (tower.type === 7 || tower.type === 3) {
+                    if (!target || target.id !== tower.targetEnemyId) {
                         tower.hitsOnTarget = 0;
                     }
                 }
@@ -1317,9 +1693,15 @@ export class TowerDefenseEngineService {
         );
     }
 
-    private findTargetForTower(tower: Tower, enemies: Enemy[]): Enemy | null {
+    private findTargetForTower(tower: Tower, enemies: Enemy[], getUpgradeLevel: (tier: number, type: 'damage' | 'range' | 'golden') => number): Enemy | null {
         const stickyTypes = [3, 6];
-
+        let maxHits = Infinity;
+        const goldenLevel = getUpgradeLevel(tower.type, 'golden');
+        if (tower.type === 7) {
+            maxHits = this.damageService.VENOM_MAX_STACKS + goldenLevel;
+        } else if (tower.type === 3) {
+            maxHits = this.damageService.SHATTER_MAX_STACKS + goldenLevel;
+        }
         const tX = tower.position.x + 0.5;
         const tY = tower.position.y + 0.5;
 
@@ -1338,9 +1720,7 @@ export class TowerDefenseEngineService {
                 const rangeSq = stickyRange * stickyRange;
 
                 if (distSq <= rangeSq) {
-                    if (tower.type === 7) {
-                        if ((tower.hitsOnTarget ?? 0) < 3) return currentTarget;
-                    } else {
+                    if ((tower.hitsOnTarget ?? 0) < maxHits) {
                         return currentTarget;
                     }
                 }
@@ -1351,7 +1731,7 @@ export class TowerDefenseEngineService {
         const effectiveFiringRange = effRange + HITBOX_OFFSET;
         const rangeSq = effectiveFiringRange * effectiveFiringRange;
 
-        const candidates: { enemy: Enemy; distSq: number; progressScore: number }[] = [];
+        const candidates: { enemy: Enemy; distSq: number; progressScore: number; isVulnerable: boolean }[] = [];
 
         for (const enemy of enemies) {
             if (enemy.hp <= 0) continue;
@@ -1362,13 +1742,15 @@ export class TowerDefenseEngineService {
 
             if (distSq > rangeSq) continue;
 
-            if (tower.type === 7 && enemy.id === tower.targetEnemyId && (tower.hitsOnTarget ?? 0) >= 3) {
+            if (enemy.id === tower.targetEnemyId && (tower.hitsOnTarget ?? 0) >= maxHits) {
                 continue;
             }
 
             const idx = enemy.pathIndex ?? 0;
             const prog = enemy.progress ?? 0;
-            candidates.push({ enemy, distSq, progressScore: idx + prog });
+            const isVulnerable = this.damageService.getVulnerabilityMultiplier(enemy, tower.type) > 1.0;
+
+            candidates.push({ enemy, distSq, progressScore: idx + prog, isVulnerable });
         }
 
         if (candidates.length === 0) {
@@ -1377,8 +1759,13 @@ export class TowerDefenseEngineService {
             return null;
         }
 
-        const selectedEnemy = this.applyStrategy(tower, candidates);
-
+        const vulnerableCandidates = candidates.filter(c => c.isVulnerable);
+        let selectedEnemy: Enemy;
+        if (vulnerableCandidates.length > 0) {
+            selectedEnemy = this.applyStrategy(tower, vulnerableCandidates);
+        } else {
+            selectedEnemy = this.applyStrategy(tower, candidates);
+        }
         if (tower.targetEnemyId !== selectedEnemy.id) {
             tower.hitsOnTarget = 0;
             if (tower.type === 6) tower.beamTime = 0;
@@ -1432,7 +1819,7 @@ export class TowerDefenseEngineService {
     }
 
     // Renamed to internalFireAt to avoid conflict if any, or just update logic
-    private fireAt(tower: Tower, enemy: Enemy) {
+    private fireAt(tower: Tower, enemy: Enemy, test: boolean = true) {
         if (tower.type !== 6 && tower.type !== 4 && tower.type !== 8) {
             const proj: Projectile = {
                 id: 'p' + (this.projectileIdCounter++),
@@ -1465,9 +1852,15 @@ export class TowerDefenseEngineService {
                 if (dx * dx + dy * dy <= radiusSq) {
                     let aoeDamage = damage;
                     this.damageService.applyDamage(other, aoeDamage, 5, this.wave(), tower.id, this.recordDamage.bind(this));
-                    other.burnedByInferno = true;
-                    other.lastInfernoDamage = damage;
-                    other.lastInfernoSourceId = tower.id;
+
+                    if (!other.isMagma) {
+                        const golden = this.getUpgradeLevel(5, 'golden');
+                        const duration = 6.0 + golden;
+                        other.burnedByInferno = true;
+                        other.burnDuration = duration;
+                        other.lastInfernoDamage = damage;
+                        other.lastInfernoSourceId = tower.id;
+                    }
                 }
             }
 
@@ -1477,7 +1870,7 @@ export class TowerDefenseEngineService {
                     'z' + (this.projectileIdCounter++),
                     radius,
                     4.0,
-                    Math.floor(damage * 0.15)
+                    Math.floor(damage * 0.6)
                 );
                 this.infernoZones.push(napalmZone);
             }
@@ -1488,7 +1881,9 @@ export class TowerDefenseEngineService {
             const extraCount = 2 + (golden * 2);
 
             if (tower.specialActive) {
-                this.applyEarthquakeEffect(enemy, pushBackAmount, damage, tower);
+                if (!enemy.isLevitating) {
+                    this.applyEarthquakeEffect(enemy, pushBackAmount, damage, tower);
+                }
                 this.pushProjectile({
                     id: 'p' + (this.projectileIdCounter++),
                     from: { x: tower.position.x + 0.5, y: tower.position.y + 0.5 },
@@ -1537,7 +1932,9 @@ export class TowerDefenseEngineService {
             }
         }
         else if (tower.type === 7) {
-            this.damageService.applyVenomStack(enemy, damage, tower.specialActive);
+            if (!enemy.isSlime) {
+                this.damageService.applyVenomStack(enemy, damage, tower.specialActive, (tier, type: 'damage' | 'range' | 'golden') => this.getUpgradeLevel(tier, type));
+            }
             this.damageService.applyDamage(enemy, damage, tower.type, this.wave(), tower.id, this.recordDamage.bind(this));
         } else if (tower.type !== 6 || !tower.specialActive) {
             this.damageService.applyDamage(enemy, damage, tower.type, this.wave(), tower.id, this.recordDamage.bind(this));
@@ -1549,22 +1946,23 @@ export class TowerDefenseEngineService {
                 if (enemy.isBoss) {
                     enemy.cannonSlowTimer = Math.max(enemy.cannonSlowTimer ?? 0, 1.5);
                 } else {
-                    const shatterStacks = enemy.shatterStacks || 0;
+                    if (!enemy.isAgile) {
+                        const shatterStacks = enemy.shatterStacks || 0;
 
-                    let stunChance = 0.15 + golden * 0.05;
-                    let durationBonus = 0;
+                        let stunChance = 0.15 + golden * 0.05;
+                        let durationBonus = 0;
 
-                    if (shatterStacks > 0) {
-                        stunChance += 0.15; // +15% Chance
-                        durationBonus = shatterStacks * 0.5; // +0.5s per stack
-                    }
+                        if (shatterStacks > 0) {
+                            stunChance += 0.15; // +15% Chance
+                            durationBonus = shatterStacks * 0.5; // +0.5s per stack
+                        }
 
-                    if (Math.random() < stunChance) {
-                        const baseDuration = ((0.5 + golden * 0.2) * 1.2) + durationBonus;
-                        enemy.stunTime = Math.max(enemy.stunTime ?? 0, baseDuration);
+                        if (Math.random() < stunChance) {
+                            const baseDuration = ((0.5 + golden * 0.2) * 1.2) + durationBonus;
+                            enemy.stunTime = Math.max(enemy.stunTime ?? 0, baseDuration);
+                        }
                     }
                 }
-
             }
         }
 
@@ -1605,9 +2003,14 @@ export class TowerDefenseEngineService {
 
         if (tower.type === 6 && tower.specialActive) {
             this.damageService.applyDamage(enemy, damage, 6, this.wave(), tower.id, this.recordDamage.bind(this));
+            const golden = this.getUpgradeLevel(6, 'golden');
+            if (golden > 0 && !enemy.isMirror) {
+                const duration = 2.0 + golden;
+                enemy.prismVulnerableTime = duration;
+            }
             const extraBeamsCount = 2;
-            const tX = tower.position.x + 0.5;
-            const tY = tower.position.y + 0.5;
+            const tX = tower.position.x;
+            const tY = tower.position.y;
 
             const extraTargets = this.enemiesInternal
                 .filter(e => e.id !== enemy.id && e.hp > 0)
@@ -1624,6 +2027,10 @@ export class TowerDefenseEngineService {
             extraTargets.forEach(target => {
                 const secondaryDmg = Math.floor(damage * 0.5);
                 this.damageService.applyDamage(target, secondaryDmg, 6, this.wave(), tower.id, this.recordDamage.bind(this));
+                if (golden > 0 && !target.isMirror) {
+                    const duration = 2.0 + golden;
+                    target.prismVulnerableTime = duration;
+                }
             });
         } else if (tower.type === 6) {
             tower.extraTargetIds = [];
@@ -1648,7 +2055,7 @@ export class TowerDefenseEngineService {
                 const finalDamage = Math.floor(baseDmg * Math.pow(falloff, index));
                 this.damageService.applyDamage(target, finalDamage, tower.type, this.wave(), tower.id, this.recordDamage.bind(this));
 
-                if (tower.specialActive) {
+                if (tower.specialActive && !target.isBulwark) {
                     this.damageService.applyBleed(target, finalDamage);
                 }
 

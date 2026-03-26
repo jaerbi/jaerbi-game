@@ -2160,10 +2160,8 @@ export class GameEngineService {
         if (this.activeSideSignal() !== 'ai' || this.gameStatus() !== 'playing') return;
         if (this.isAiThinking) return;
         this.isAiThinking = true;
-        // console.trace('AI TURN START TRACE');
         this.aiBatchingActions = true;
         const aiBase = this.getBasePosition('ai');
-        // console.log('[AI] Phase: Economy');
 
         // Reclamation Mode: Global resource control assessment
         const totalResources = this.forestsSignal().length + this.minesSignal().length;
@@ -2220,14 +2218,6 @@ export class GameEngineService {
         } else {
             this.reclamationGoalsSignal.set(new Map());
         }
-
-        // 0. Global Strategy: Fortress Mode
-        const aiForests = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y)).length;
-        const fortressMode = aiForests > 3;
-        if (fortressMode) {
-            // console.log('[AI] FORTRESS MODE ACTIVE');
-        }
-
         {
             let iter = 0;
             const maxIter = 50;
@@ -2271,9 +2261,6 @@ export class GameEngineService {
             const aiPct = totalForests > 0 ? aiForests / totalForests : 0;
             const prevTW = this.totalWarModeSignal();
             const nextTW = aiPct >= 0.65;
-            if (!prevTW && nextTW) {
-                try { console.log('[AI MODE] TOTAL_WAR_MODE engaged'); } catch { }
-            }
             this.totalWarModeSignal.set(nextTW);
             if (mood === 'rage') {
                 const reserveHelp: number = (baseDifficulty === 'baby')
@@ -2335,7 +2322,6 @@ export class GameEngineService {
         const aiIncome = this.unitsSignal().filter(u => u.owner === 'ai' && this.isForest(u.position.x, u.position.y) && (u.productionActive ?? false)).length * 2;
         const aggression = playerIncome >= aiIncome;
         this.aggressionModeSignal.set(aggression);
-        // console.log(`[AI Economy] Player Income: ${playerIncome}, AI Income: ${aiIncome}. AGGRESSION MODE: ${aggression}`);
         const forestsAll = this.forestsSignal();
         const unoccupied = forestsAll.filter(f => !this.getUnitAt(f.x, f.y));
         const visibleFree = unoccupied.filter(f => this.isVisibleToAi(f.x, f.y));
@@ -2384,9 +2370,7 @@ export class GameEngineService {
             }
         }
 
-        // PHASE 1: Free Actions (Loop until no beneficial free actions remain)
-        // console.log('[AI] Phase 1: Free Actions (Spawning/Walls/Conversion)');
-        let freeActionsTaken = 0;
+       let freeActionsTaken = 0;
         const MAX_FREE_ACTIONS = 10; // Safety cap
         while (freeActionsTaken < MAX_FREE_ACTIONS) {
             const performed = this.executeOneFreeAction();
@@ -2915,9 +2899,7 @@ export class GameEngineService {
             await new Promise(r => setTimeout(r, 60));
         }
 
-        // console.log('>>> SWITCHING TO PLAYER SIDE NOW <<<');
         this.endTurn();
-        // console.log('--- AI TURN FINISHED, WAITING FOR PLAYER ---');
         this.isAiThinking = false;
         this.aiBatchingActions = false;
         return;
@@ -3084,7 +3066,6 @@ export class GameEngineService {
         ]);
         this.reservePointsSignal.update(r => ({ player: r.player, ai: r.ai - cost }));
         this.recomputeVisibility();
-        // console.log('[AI Defense] Spawned single strongest blocker at', critical, 'cost', cost);
         return true;
     }
     // --- Spawning ---

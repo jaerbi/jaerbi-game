@@ -132,8 +132,8 @@ interface TowerStats {
   `
 })
 export class AdminAnalyticsComponent implements OnInit {
-    currentVersion = signal('0.0.4');
-    availableVersions = signal(['0.0.2', '0.0.3', '0.0.4']);
+    currentVersion = signal('0.0.8');
+    availableVersions = signal(['0.0.2', '0.0.3', '0.0.4', '0.0.5', '0.0.6', '0.0.7', '0.0.8']);
     loading = signal(false);
     stats = signal<TowerStats[]>([]);
     sortField = signal<keyof TowerStats>('pickRate');

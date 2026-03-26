@@ -1,6 +1,5 @@
 import { Injectable, signal } from '@angular/core';
 import { SettingsService } from './settings.service';
-import { DamageCalculationService } from './damage-calculation.service';
 
 @Injectable({
     providedIn: 'root'
@@ -15,10 +14,11 @@ export class WaveAnalyticsService {
     // Counter Strategy State
     public activeCounterStrategy = signal<{ towerType: number; name: string; taunt: string, recommendedTower: string, recommendedId: number } | null>(null);
     public consecutiveCounterWaves = 0;
-    public currentWaveCounterType: number | null = null;
+    // public currentWaveCounterType: number | null = null;
+    public currentWaveCounters: { type: number, ratio: number }[] = [];
     public currentWaveCounterChance: number = 0;
     public currentDominanceRatio: number = 0;
-    public BALANCE_VERSION: string = '0.0.4';
+    public BALANCE_VERSION: string = '0.0.8';
     readonly COUNTER_RECOMMENDATIONS: Record<number, { id: number, name: string }> = {}
 
     constructor(private _settings: SettingsService) {
@@ -48,6 +48,7 @@ export class WaveAnalyticsService {
             case 5: return !!enemy.isMagma;
             case 6: return !!enemy.isMirror;
             case 7: return !!enemy.isSlime;
+            case 8: return !!enemy.isLevitating
             default: return false;
         }
     }
@@ -56,7 +57,8 @@ export class WaveAnalyticsService {
         this.waveDamageHistory = [];
         this.lastWaveTotalStats = {};
         this.consecutiveCounterWaves = 0;
-        this.currentWaveCounterType = null;
+        // this.currentWaveCounterType = null;
+        this.currentWaveCounters = [];
         this.currentWaveCounterChance = 0;
         this.activeCounterStrategy.set(null);
     }
@@ -96,280 +98,283 @@ export class WaveAnalyticsService {
      * @returns The strategy to apply, or null if none
      */
     analyzeAndSetStrategy(wave: number) {
-        // Reset current counter
-        this.currentWaveCounterType = null;
+        this.currentWaveCounters = [];
         this.currentWaveCounterChance = 0;
 
         // Wave Threshold: No counter logic before wave 13
-        if (wave < 13) {
+        if (wave < 10) {
             this.consecutiveCounterWaves = 0;
             this.activeCounterStrategy.set(null);
             return;
         }
 
-        const strategy = this.getDominantTowerType();
-
-        if (strategy) {
-            const { type, ratio } = strategy;
+        const strategies = this.getTopTowerStrategies();
+        if (strategies && strategies.length > 0) {
+            const top1 = strategies[0];
+            const primaryRatio = top1.ratio;
             let spawnChance = wave >= 31 ? 0.8 : wave >= 21 ? 0.6 : 0.4;
 
-            // Mono-Penalty: If ratio > 0.8, force 100% chance (Wave 15+)
-            if (ratio > 0.8 && wave >= 15) {
+            if (primaryRatio > 0.8 && wave >= 13) {
                 spawnChance = 1.0;
             }
-
-            this.currentWaveCounterType = type;
+            this.currentWaveCounters = strategies.slice(0, 2);
             this.currentWaveCounterChance = spawnChance;
-            this.currentDominanceRatio = ratio; // Store for scaling resistance
+
             if (this.currentWaveCounterChance > 0) {
                 this.consecutiveCounterWaves++;
             } else {
                 this.consecutiveCounterWaves = 0;
             }
 
-            const wavesSinceLastMessage = wave - this.lastMessageWave;
-            const typeChanged = type !== this.lastReportedType;
+            const primaryType = top1.type;
+            const ratio = top1.ratio;
+            this.currentDominanceRatio = ratio; // Store for scaling resistance
 
-            const towerNames: Record<number, string> = {
-                1: this.getTowerName(1), 2: this.getTowerName(2), 3: this.getTowerName(3), 4: this.getTowerName(4), 5: this.getTowerName(5), 6: this.getTowerName(6), 7: this.getTowerName(7)
-            };
+            const wavesSinceLastMessage = wave - (this.lastMessageWave || 0);
+            const typeChanged = primaryType !== this.lastReportedType;
+            const minInterval = 4;
 
-            if (this.consecutiveCounterWaves >= 2 && (wavesSinceLastMessage >= 3 || typeChanged)) {
-                const isUk = this._settings.currentLang() === 'uk';
-                const taunts = isUk ? [
-                    // UA Taunts
-                    `Ваша тактика занадто передбачувана!`,
-                    `Ми адаптувалися до ваших веж ${towerNames[type]}!`,
-                    `Це все, на що ви здатні?`,
-                    `Активувати щити проти типу: ${towerNames[type]}!`,
-                    `Сектор посилено проти зброї типу ${towerNames[type]}.`,
-                    `Ваша оборона застаріла. Ми знаємо ваш наступний крок.`,
-                    `Протоколи захисту оновлено. ${towerNames[type]} більше не загроза.`,
-                    `Ви надто покладаєтесь на ${towerNames[type]}... Помилка.`,
-                    `Аналіз завершено: слабкі місця веж ${towerNames[type]} виявлено.`,
-                    `Наші корпуси тепер витримують атаки типу ${towerNames[type]}!`,
 
-                    // Холодна логіка
-                    `Аналіз завершено. Ефективність веж ${towerNames[type]} знижена на 75%.`,
-                    `Ваша стратегія обчислена. Коригуємо курс...`,
-                    `Захисні протоколи активовано. Тип загрози: ${towerNames[type]}.`,
-                    `Помилка: використання веж ${towerNames[type]} більше не приносить результату.`,
-
-                    // Глузування
-                    `Це все? Ми очікували більшого від вашої лінії ${towerNames[type]}.`,
-                    `Ви все ще сподіваєтесь на ${towerNames[type]}? Як наївно.`,
-                    `Ваша оборона розсипається на очах. Спробуйте щось інше.`,
-                    `Ми адаптуємось швидше, ніж ви будуєте.`,
-
-                    // Техногенні / Військові
-                    `Корпуси посилено термостійким покриттям проти ${towerNames[type]}.`,
-                    `Системи РЕБ налаштовані на частоту ваших веж ${towerNames[type]}.`,
-                    `Увага всім підрозділам: зброя ${towerNames[type]} ідентифікована як малоефективна.`,
-                    `Сектор 7 повністю захищено від атак типу ${towerNames[type]}.`,
-
-                    // Стратегічні
-                    `Ви самі підказали нам, як вас перемогти, використовуючи лише ${towerNames[type]}.`,
-                    `Різноманітність — не ваша сильна сторона, чи не так?`,
-                    `Ми вивчили кожен вольт і кожен постріл ваших ${towerNames[type]}.`,
-                    `Ваш ліміт веж ${towerNames[type]} вичерпано. Готуйтесь до поразки.`,
-
-                    // "Пасхалки" (рідкісні фрази)
-                    `Хтось казав вам, що ставити тільки ${towerNames[type]} — це погана ідея?`,
-                    `Наші сенсори фіксують відчай у вашій тактиці.`,
-                    `System.err: Strategy_Not_Found. Жарт. Ми просто стали сильнішими.`,
-                    `О, знову ${towerNames[type]}? Як... оригінально.`,
-
-                    // Тематичні (Геометрія та Форми)
-                    `Ваші геометричні розрахунки хибні. ${towerNames[type]} нас не втримають.`,
-                    `Ми знайшли кут, під яким ваші ${towerNames[type]} абсолютно марні.`,
-                    `Трикутники, кола, ${towerNames[type]}... Все це лише пил під нашими ногами.`,
-
-                    // Економічні (Глузування над витратами)
-                    `Витратити стільки кредитів на ${towerNames[type]}... Яке марнотратство.`,
-                    `Ваш бюджет вичерпується, а наші сили лише зростають. ${towerNames[type]} вас не врятують.`,
-                    `Інвестиція в ${towerNames[type]} була вашою найгіршою помилкою за цей сектор.`,
-
-                    // Психологічний тиск (AI-стиль)
-                    `Ми прорахували 14 мільйонів варіантів. У жодному ваші ${towerNames[type]} не перемагають.`,
-                    `Ваш пульс прискорюється. Ви розумієте, що ${towerNames[type]} — це кінець.`,
-                    `Я — алгоритм, що вчиться. І я щойно навчився ігнорувати ваші ${towerNames[type]}.`,
-
-                    // Короткі та зухвалі (для швидких хвиль)
-                    `Нуль пошкоджень від ${towerNames[type]}. Спробуйте знову.`,
-                    `Це вежі чи декорації? ${towerNames[type]} нас не лякають.`,
-
-                    // 🧠 Еволюція / Навчання
-                    `Ми вчимося з кожної вашої помилки.`,
-                    `Алгоритм еволюціонує. ${towerNames[type]} більше не працюють.`,
-                    `Ваша стратегія — наш тренувальний полігон.`,
-                    `Оновлення завершено. ${towerNames[type]} класифіковано як неефективні.`,
-                    `Ми вже проходили цей сценарій. Ви програєте.`,
-
-                    //🩸 Домінування / Перевага
-                    `Це вже не битва. Це демонстрація переваги.`,
-                    `Ви граєте. Ми перемагаємо.`,
-                    `Опір марний.`,
-                    `Ми контролюємо цей сектор.`,
-                    `Ваші ${towerNames[type]} — лише статистика для нас.`,
-
-                    // ⚙️ Метакоментар (ніби гра знає, що це гра)
-                    `Складність занижена? Нам так не здається.`,
-                    `Спробуйте іншу стратегію. Або іншу гру.`,
-                    `Пора переглянути гайд по ${towerNames[type]}.`,
-                    `Нотатки до патчів: ${towerNames[type]} більше не імба.`,
-                    `AI > Player.`,
-
-                    // 🧊 Холодний кіберпанк стиль
-                    `Протокол 0xAF запущено проти ${towerNames[type]}.`,
-                    `Біти обчислено. Результат: поразка гравця.`,
-                    `Система стабільна. Гравець — ні.`,
-                    `Ваш код оборони застарів.`,
-                    `Сигнал ${towerNames[type]} перехоплено.`,
-
-                    // 😈 Знущання з повторного спаму однієї вежі
-                    `Ще одна ${towerNames[type]}? Серйозно?`,
-                    `Може, спробуємо щось інше, крім ${towerNames[type]}?`,
-                    `Ваш план: більше ${towerNames[type]}. Наш план: перемога.`,
-                    `Ми бачимо 87% ${towerNames[type]} у вашій стратегії.`,
-                    `Одноманітність — шлях до поразки.`,
-
-                    // 🎭 Трошки гумору (щоб було вірусно)
-                    `Ми навіть не активували складний режим.`,
-                    `Це навчальна хвиля, так?`,
-                    `Ви точно читали опис ${towerNames[type]}?`,
-                    `Ctrl + Z не працює.`,
-                    `Зберегти гру? Пізно.`,
-                ] : [
-                    // EN Taunts
-                    `Your tactics are predictable!`,
-                    `We have adapted to your ${towerNames[type]} towers!`,
-                    `Is that all you have?`,
-                    `Shields up against ${towerNames[type]} weaponry!`,
-                    `Sector reinforced against ${towerNames[type]} damage.`,
-                    `Your defense is obsolete. We see your next move.`,
-                    `Defense protocols updated. ${towerNames[type]} is no longer a threat.`,
-                    `You rely too much on ${towerNames[type]}... Big mistake.`,
-                    `Analysis complete: ${towerNames[type]} weak points identified.`,
-                    `Our hulls are now reinforced against ${towerNames[type]} attacks!`,
-
-                    // Cold Logic
-                    `Analysis complete. Efficiency of ${towerNames[type]} towers reduced by 75%.`,
-                    `Your strategy has been calculated. Adjusting course...`,
-                    `Defense protocols activated. Threat type: ${towerNames[type]}.`,
-                    `Error: Using ${towerNames[type]} units is no longer effective.`,
-
-                    // Taunting
-                    `Is that all? We expected more from your ${towerNames[type]} line.`,
-                    `Still relying on ${towerNames[type]}? How naive.`,
-                    `Your defense is crumbling. Try something else.`,
-                    `We adapt faster than you can build.`,
-
-                    // Tech / Military
-                    `Hulls reinforced with specialized plating against ${towerNames[type]}.`,
-                    `Electronic warfare set to the frequency of your ${towerNames[type]} units.`,
-                    `Attention all units: ${towerNames[type]} weaponry identified as low-threat.`,
-                    `Sector 7 fully shielded against ${towerNames[type]} attacks.`,
-
-                    // Strategic
-                    `You've shown us exactly how to beat you by overusing ${towerNames[type]}.`,
-                    `Diversity isn't your strong suit, is it?`,
-                    `We've mapped every volt and shell of your ${towerNames[type]} towers.`,
-                    `Your ${towerNames[type]} quota has expired. Prepare for impact.`,
-
-                    // Rare / Easter Eggs
-                    `Did anyone tell you that massing ${towerNames[type]} was a bad idea?`,
-                    `Our sensors detect desperation in your tactics.`,
-                    `System.err: Strategy_Not_Found. Just kidding. We're just stronger now.`,
-                    `Oh, ${towerNames[type]} again? How... original.`,
-
-                    // 
-                    `Your geometric calculations are flawed. ${towerNames[type]} won't hold us.`,
-                    `We found an angle where your ${towerNames[type]} are completely useless.`,
-                    `Triangles, circles, ${towerNames[type]}... It's all just dust under our feet.`,
-
-                    // 
-                    `Spending so many credits on ${towerNames[type]}... What a waste.`,
-                    `Your budget is draining, and our strength is only growing. ${towerNames[type]} won't save you`,
-                    `Investing in ${towerNames[type]} was your worst mistake in this sector.`,
-
-                    // 
-                    `We've calculated 14 million outcomes. In none of them do your ${towerNames[type]} win.`,
-                    `Your heart rate is rising. You realize that ${towerNames[type]} is the end.`,
-                    `I am a learning algorithm. And I just learned to ignore your ${towerNames[type]}.`,
-
-                    // 
-                    `Zero damage from ${towerNames[type]}. Try again.`,
-                    `Are these towers or decorations? ${towerNames[type]} don't scare us.`,
-
-                    //
-                    `We learn from every mistake you make.`,
-                    `Algorithm evolving. ${towerNames[type]} no longer effective.`,
-                    `Your strategy is our training data.`,
-                    `Update complete. ${towerNames[type]} classified as inefficient.`,
-                    `We've simulated this scenario before. You lose.`,
-
-                    // 
-                    `This is no longer a battle. It's a demonstration.`,
-                    `You play. We win.`,
-                    `Resistance is irrelevant.`,
-                    `We control this sector.`,
-                    `Your ${towerNames[type]} are just statistics to us.`,
-
-                    //
-                    `Difficulty set too low? Doesn't look like it.`,
-                    `Try another strategy. Or another game.`,
-                    `Maybe re-read the ${towerNames[type]} guide.`,
-                    `Patch notes: ${towerNames[type]} no longer OP.`,
-                    `AI > Player.`,
-
-                    // 
-                    `Protocol 0xAF initiated against ${towerNames[type]}.`,
-                    `Bits calculated. Result: Player defeat.`,
-                    `System stable. Player unstable.`,
-                    `Your defense code is outdated.`,
-                    `Signal from ${towerNames[type]} intercepted.`,
-
-                    // 
-                    `Another ${towerNames[type]}? Really?`,
-                    `Maybe try something other than ${towerNames[type]}?`,
-                    `Your plan: more ${towerNames[type]}. Our plan: victory.`,
-                    `87% of your strategy is ${towerNames[type]}. Noted.`,
-                    `Monotony leads to defeat.`,
-
-                    //
-                    `We haven't even activated hard mode.`,
-                    `This is the tutorial wave, right?`,
-                    `Did you actually read what ${towerNames[type]} does?`,
-                    `Ctrl + Z doesn't work here.`,
-                    `Save game? Too late.`,
-                ];
-                const recommendation = this.COUNTER_RECOMMENDATIONS[type];
-                const taunt = taunts[Math.floor(Math.random() * taunts.length)];
-
-                this.activeCounterStrategy.set({
-                    towerType: type,
-                    name: towerNames[type],
-                    taunt,
-                    recommendedTower: recommendation?.name || 'Unknown',
-                    recommendedId: recommendation?.id
-                });
-
-                this.lastMessageWave = wave;
-                this.lastReportedType = type;
-
-                setTimeout(() => this.activeCounterStrategy.set(null), 10000);
+            if (this.consecutiveCounterWaves >= 2 && wavesSinceLastMessage >= minInterval) {
+                if (typeChanged || wavesSinceLastMessage >= 6) {
+                    this._showCounterMessage(wave, primaryType);
+                }
             }
-
-            this.currentWaveCounterType = type;
-            this.currentWaveCounterChance = spawnChance;
         } else {
             this.consecutiveCounterWaves = 0;
             this.activeCounterStrategy.set(null);
         }
     }
+    private _showCounterMessage(wave: number, primaryType: number) {
+        const towerNames: Record<number, string> = {
+            1: this.getTowerName(1), 2: this.getTowerName(2), 3: this.getTowerName(3), 4: this.getTowerName(4), 5: this.getTowerName(5), 6: this.getTowerName(6), 7: this.getTowerName(7)
+        };
+        const isUk = this._settings.currentLang() === 'uk';
+        const taunts = isUk ? [
+            // UA Taunts
+            `Ваша тактика занадто передбачувана!`,
+            `Ми адаптувалися до ваших веж ${towerNames[primaryType]}!`,
+            `Це все, на що ви здатні?`,
+            `Активувати щити проти типу: ${towerNames[primaryType]}!`,
+            `Сектор посилено проти зброї типу ${towerNames[primaryType]}.`,
+            `Ваша оборона застаріла. Ми знаємо ваш наступний крок.`,
+            `Протоколи захисту оновлено. ${towerNames[primaryType]} більше не загроза.`,
+            `Ви надто покладаєтесь на ${towerNames[primaryType]}... Помилка.`,
+            `Аналіз завершено: слабкі місця веж ${towerNames[primaryType]} виявлено.`,
+            `Наші корпуси тепер витримують атаки типу ${towerNames[primaryType]}!`,
 
-    private getDominantTowerType(): { type: number; ratio: number } | null {
-        // Sum up recent history
+            // Холодна логіка
+            `Аналіз завершено. Ефективність веж ${towerNames[primaryType]} знижена на 75%.`,
+            `Ваша стратегія обчислена. Коригуємо курс...`,
+            `Захисні протоколи активовано. Тип загрози: ${towerNames[primaryType]}.`,
+            `Помилка: використання веж ${towerNames[primaryType]} більше не приносить результату.`,
+
+            // Глузування
+            `Це все? Ми очікували більшого від вашої лінії ${towerNames[primaryType]}.`,
+            `Ви все ще сподіваєтесь на ${towerNames[primaryType]}? Як наївно.`,
+            `Ваша оборона розсипається на очах. Спробуйте щось інше.`,
+            `Ми адаптуємось швидше, ніж ви будуєте.`,
+
+            // Техногенні / Військові
+            `Корпуси посилено термостійким покриттям проти ${towerNames[primaryType]}.`,
+            `Системи РЕБ налаштовані на частоту ваших веж ${towerNames[primaryType]}.`,
+            `Увага всім підрозділам: зброя ${towerNames[primaryType]} ідентифікована як малоефективна.`,
+            `Сектор 7 повністю захищено від атак типу ${towerNames[primaryType]}.`,
+
+            // Стратегічні
+            `Ви самі підказали нам, як вас перемогти, використовуючи лише ${towerNames[primaryType]}.`,
+            `Різноманітність — не ваша сильна сторона, чи не так?`,
+            `Ми вивчили кожен вольт і кожен постріл ваших ${towerNames[primaryType]}.`,
+            `Ваш ліміт веж ${towerNames[primaryType]} вичерпано. Готуйтесь до поразки.`,
+
+            // "Пасхалки" (рідкісні фрази)
+            `Хтось казав вам, що ставити тільки ${towerNames[primaryType]} — це погана ідея?`,
+            `Наші сенсори фіксують відчай у вашій тактиці.`,
+            `System.err: Strategy_Not_Found. Жарт. Ми просто стали сильнішими.`,
+            `О, знову ${towerNames[primaryType]}? Як... оригінально.`,
+
+            // Тематичні (Геометрія та Форми)
+            `Ваші геометричні розрахунки хибні. ${towerNames[primaryType]} нас не втримають.`,
+            `Ми знайшли кут, під яким ваші ${towerNames[primaryType]} абсолютно марні.`,
+            `Трикутники, кола, ${towerNames[primaryType]}... Все це лише пил під нашими ногами.`,
+
+            // Економічні (Глузування над витратами)
+            `Витратити стільки кредитів на ${towerNames[primaryType]}... Яке марнотратство.`,
+            `Ваш бюджет вичерпується, а наші сили лише зростають. ${towerNames[primaryType]} вас не врятують.`,
+            `Інвестиція в ${towerNames[primaryType]} була вашою найгіршою помилкою за цей сектор.`,
+
+            // Психологічний тиск (AI-стиль)
+            `Ми прорахували 14 мільйонів варіантів. У жодному ваші ${towerNames[primaryType]} не перемагають.`,
+            `Ваш пульс прискорюється. Ви розумієте, що ${towerNames[primaryType]} — це кінець.`,
+            `Я — алгоритм, що вчиться. І я щойно навчився ігнорувати ваші ${towerNames[primaryType]}.`,
+
+            // Короткі та зухвалі (для швидких хвиль)
+            `Нуль пошкоджень від ${towerNames[primaryType]}. Спробуйте знову.`,
+            `Це вежі чи декорації? ${towerNames[primaryType]} нас не лякають.`,
+
+            // 🧠 Еволюція / Навчання
+            `Ми вчимося з кожної вашої помилки.`,
+            `Алгоритм еволюціонує. ${towerNames[primaryType]} більше не працюють.`,
+            `Ваша стратегія — наш тренувальний полігон.`,
+            `Оновлення завершено. ${towerNames[primaryType]} класифіковано як неефективні.`,
+            `Ми вже проходили цей сценарій. Ви програєте.`,
+
+            //🩸 Домінування / Перевага
+            `Це вже не битва. Це демонстрація переваги.`,
+            `Ви граєте. Ми перемагаємо.`,
+            `Опір марний.`,
+            `Ми контролюємо цей сектор.`,
+            `Ваші ${towerNames[primaryType]} — лише статистика для нас.`,
+
+            // ⚙️ Метакоментар (ніби гра знає, що це гра)
+            `Складність занижена? Нам так не здається.`,
+            `Спробуйте іншу стратегію. Або іншу гру.`,
+            `Пора переглянути гайд по ${towerNames[primaryType]}.`,
+            `Нотатки до патчів: ${towerNames[primaryType]} більше не імба.`,
+            `AI > Player.`,
+
+            // 🧊 Холодний кіберпанк стиль
+            `Протокол 0xAF запущено проти ${towerNames[primaryType]}.`,
+            `Біти обчислено. Результат: поразка гравця.`,
+            `Система стабільна. Гравець — ні.`,
+            `Ваш код оборони застарів.`,
+            `Сигнал ${towerNames[primaryType]} перехоплено.`,
+
+            // 😈 Знущання з повторного спаму однієї вежі
+            `Ще одна ${towerNames[primaryType]}? Серйозно?`,
+            `Може, спробуємо щось інше, крім ${towerNames[primaryType]}?`,
+            `Ваш план: більше ${towerNames[primaryType]}. Наш план: перемога.`,
+            `Ми бачимо 87% ${towerNames[primaryType]} у вашій стратегії.`,
+            `Одноманітність — шлях до поразки.`,
+
+            // 🎭 Трошки гумору (щоб було вірусно)
+            `Ми навіть не активували складний режим.`,
+            `Це навчальна хвиля, так?`,
+            `Ви точно читали опис ${towerNames[primaryType]}?`,
+            `Ctrl + Z не працює.`,
+            `Зберегти гру? Пізно.`,
+        ] : [
+            // EN Taunts
+            `Your tactics are predictable!`,
+            `We have adapted to your ${towerNames[primaryType]} towers!`,
+            `Is that all you have?`,
+            `Shields up against ${towerNames[primaryType]} weaponry!`,
+            `Sector reinforced against ${towerNames[primaryType]} damage.`,
+            `Your defense is obsolete. We see your next move.`,
+            `Defense protocols updated. ${towerNames[primaryType]} is no longer a threat.`,
+            `You rely too much on ${towerNames[primaryType]}... Big mistake.`,
+            `Analysis complete: ${towerNames[primaryType]} weak points identified.`,
+            `Our hulls are now reinforced against ${towerNames[primaryType]} attacks!`,
+
+            // Cold Logic
+            `Analysis complete. Efficiency of ${towerNames[primaryType]} towers reduced by 75%.`,
+            `Your strategy has been calculated. Adjusting course...`,
+            `Defense protocols activated. Threat type: ${towerNames[primaryType]}.`,
+            `Error: Using ${towerNames[primaryType]} units is no longer effective.`,
+
+            // Taunting
+            `Is that all? We expected more from your ${towerNames[primaryType]} line.`,
+            `Still relying on ${towerNames[primaryType]}? How naive.`,
+            `Your defense is crumbling. Try something else.`,
+            `We adapt faster than you can build.`,
+
+            // Tech / Military
+            `Hulls reinforced with specialized plating against ${towerNames[primaryType]}.`,
+            `Electronic warfare set to the frequency of your ${towerNames[primaryType]} units.`,
+            `Attention all units: ${towerNames[primaryType]} weaponry identified as low-threat.`,
+            `Sector 7 fully shielded against ${towerNames[primaryType]} attacks.`,
+
+            // Strategic
+            `You've shown us exactly how to beat you by overusing ${towerNames[primaryType]}.`,
+            `Diversity isn't your strong suit, is it?`,
+            `We've mapped every volt and shell of your ${towerNames[primaryType]} towers.`,
+            `Your ${towerNames[primaryType]} quota has expired. Prepare for impact.`,
+
+            // Rare / Easter Eggs
+            `Did anyone tell you that massing ${towerNames[primaryType]} was a bad idea?`,
+            `Our sensors detect desperation in your tactics.`,
+            `System.err: Strategy_Not_Found. Just kidding. We're just stronger now.`,
+            `Oh, ${towerNames[primaryType]} again? How... original.`,
+
+            // 
+            `Your geometric calculations are flawed. ${towerNames[primaryType]} won't hold us.`,
+            `We found an angle where your ${towerNames[primaryType]} are completely useless.`,
+            `Triangles, circles, ${towerNames[primaryType]}... It's all just dust under our feet.`,
+
+            // 
+            `Spending so many credits on ${towerNames[primaryType]}... What a waste.`,
+            `Your budget is draining, and our strength is only growing. ${towerNames[primaryType]} won't save you`,
+            `Investing in ${towerNames[primaryType]} was your worst mistake in this sector.`,
+
+            // 
+            `We've calculated 14 million outcomes. In none of them do your ${towerNames[primaryType]} win.`,
+            `Your heart rate is rising. You realize that ${towerNames[primaryType]} is the end.`,
+            `I am a learning algorithm. And I just learned to ignore your ${towerNames[primaryType]}.`,
+
+            // 
+            `Zero damage from ${towerNames[primaryType]}. Try again.`,
+            `Are these towers or decorations? ${towerNames[primaryType]} don't scare us.`,
+
+            //
+            `We learn from every mistake you make.`,
+            `Algorithm evolving. ${towerNames[primaryType]} no longer effective.`,
+            `Your strategy is our training data.`,
+            `Update complete. ${towerNames[primaryType]} classified as inefficient.`,
+            `We've simulated this scenario before. You lose.`,
+
+            // 
+            `This is no longer a battle. It's a demonstration.`,
+            `You play. We win.`,
+            `Resistance is irrelevant.`,
+            `We control this sector.`,
+            `Your ${towerNames[primaryType]} are just statistics to us.`,
+
+            //
+            `Difficulty set too low? Doesn't look like it.`,
+            `Try another strategy. Or another game.`,
+            `Maybe re-read the ${towerNames[primaryType]} guide.`,
+            `Patch notes: ${towerNames[primaryType]} no longer OP.`,
+            `AI > Player.`,
+
+            // 
+            `Protocol 0xAF initiated against ${towerNames[primaryType]}.`,
+            `Bits calculated. Result: Player defeat.`,
+            `System stable. Player unstable.`,
+            `Your defense code is outdated.`,
+            `Signal from ${towerNames[primaryType]} intercepted.`,
+
+            // 
+            `Another ${towerNames[primaryType]}? Really?`,
+            `Maybe try something other than ${towerNames[primaryType]}?`,
+            `Your plan: more ${towerNames[primaryType]}. Our plan: victory.`,
+            `87% of your strategy is ${towerNames[primaryType]}. Noted.`,
+            `Monotony leads to defeat.`,
+
+            //
+            `We haven't even activated hard mode.`,
+            `This is the tutorial wave, right?`,
+            `Did you actually read what ${towerNames[primaryType]} does?`,
+            `Ctrl + Z doesn't work here.`,
+            `Save game? Too late.`,
+        ];
+        const recommendation = this.COUNTER_RECOMMENDATIONS[primaryType];
+        const taunt = taunts[Math.floor(Math.random() * taunts.length)];
+
+        this.activeCounterStrategy.set({
+            towerType: primaryType,
+            name: towerNames[primaryType],
+            taunt,
+            recommendedTower: recommendation?.name || 'Unknown',
+            recommendedId: recommendation?.id
+        });
+
+        this.lastMessageWave = wave;
+        this.lastReportedType = primaryType;
+
+        setTimeout(() => this.activeCounterStrategy.set(null), 10000);
+    }
+
+    private getTopTowerStrategies(): { type: number; ratio: number }[] {
         const recentStats: Record<number, number> = {};
         let totalRecentDamage = 0;
 
@@ -381,21 +386,18 @@ export class WaveAnalyticsService {
             }
         }
 
-        if (totalRecentDamage < 10000) return null; // Wait for significant data
+        if (totalRecentDamage < 10000) return [];
 
-        let maxType = 0;
-        let maxDmg = 0;
+        const sortedStrategies = Object.entries(recentStats)
+            .map(([typeStr, dmg]) => ({
+                type: parseInt(typeStr),
+                ratio: dmg / totalRecentDamage,
+                damage: dmg
+            }))
+            .sort((a, b) => b.damage - a.damage)
+            .filter(strategy => strategy.ratio > 0.1);
 
-        for (const [typeStr, dmg] of Object.entries(recentStats)) {
-            const type = parseInt(typeStr);
-            if (dmg > maxDmg) {
-                maxDmg = dmg;
-                maxType = type;
-            }
-        }
-
-        if (maxType === 0) return null;
-        return { type: maxType, ratio: maxDmg / totalRecentDamage };
+        return sortedStrategies;
     }
 
     /**
@@ -404,14 +406,14 @@ export class WaveAnalyticsService {
      */
     getCounterFlag(counterType: number): Partial<any> {
         switch (counterType) {
-            case 1: return { isFrost: true };      // Type 1 (Ice) -> isFrost
-            case 2: return { isGrounded: true };   // Type 2 (Lightning) -> isGrounded
-            case 3: return { isAgile: true };      // Type 3 (Cannon) -> isAgile
-            case 4: return { isBulwark: true };    // Type 4 (Sniper) -> isBulwark
-            case 5: return { isMagma: true };      // Type 5 (Inferno) -> isMagma
-            case 6: return { isMirror: true };     // Type 6 (Prism) -> isMirror
-            case 7: return { isSlime: true };      // Type 7 (Venom) -> isSlime
-            case 8: return { isLevitating: true }; // Type 8 (Earthquake) -> isLevitating
+            case 1: return { isFrost: true };
+            case 2: return { isGrounded: true };
+            case 3: return { isAgile: true };
+            case 4: return { isBulwark: true };
+            case 5: return { isMagma: true };
+            case 6: return { isMirror: true };
+            case 7: return { isSlime: true };
+            case 8: return { isLevitating: true }
             default: return {};
         }
     }

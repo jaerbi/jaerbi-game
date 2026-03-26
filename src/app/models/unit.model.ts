@@ -70,6 +70,7 @@ export interface Enemy {
     cannonSlowTimer?: number;
     type?: 'tank' | 'scout' | 'standard' | 'boss';
     burnedByInferno?: boolean;
+    burnDuration?: number;
     lastInfernoDamage?: number;
     lastInfernoSourceId?: string;
     prismVulnerableTime?: number;
@@ -90,6 +91,8 @@ export interface Enemy {
     isGrounded?: boolean; // Resists Lightning/Physical
     isAgile?: boolean; // Resists Cannon
     isLevitating?: boolean; // Resists Earthquake
+    isTimeFrozen?: boolean; // NEW: Global Time Freeze State
+    isBlackHolePulled?: boolean; // NEW: Black Hole State
 }
 
 export interface Projectile {
