@@ -11,7 +11,7 @@ export class DamageCalculationService {
     // ========================================================================
     readonly RESISTANCE_MULTIPLIER = 0.45; // 55% Reduction
     readonly BOSS_RESISTANCE_MULTIPLIER = 0.3; // 70% Resistance
-    readonly VULNERABILITY_MULTIPLIER = 1.5; // +50% damage to a vulnerable enemy
+    readonly VULNERABILITY_MULTIPLIER = 1.7; // +50% damage to a vulnerable enemy
 
     // Frost
     readonly FROST_SLOW_BASE = 0.30;
@@ -56,11 +56,11 @@ export class DamageCalculationService {
             const golden = getUpgradeLevel(1, 'golden');
 
             if (target.isFrozen && !target.isFrost) {
-                const frostMultiplier = 2.0 + ((1 + golden) * 0.5);
+                const frostMultiplier = 3.0 + ((1 + golden) * 1.3);
                 damage = Math.floor(damage * frostMultiplier);
 
                 if (target.isBoss) {
-                    damage += tower.damage * (1.0 + golden * 0.2);
+                    damage += tower.damage * (1.0 + golden * 0.9);
                 }
             }
         }
@@ -128,7 +128,7 @@ export class DamageCalculationService {
 
             //if (Slow || Bleed || Venom), add +30% dps for each Golden level
             if (target.isFrozen || (target.venomStacks && target.venomStacks > 0) || (target.bleedDamagePerSec && target.bleedDamagePerSec > 0)) {
-                const focusMultiplier = 1 + (golden * 0.35);
+                const focusMultiplier = 1 + (golden * 0.55);
                 damage = Math.floor(damage * focusMultiplier);
             }
         }
@@ -253,7 +253,7 @@ export class DamageCalculationService {
 
         enemy.venomStacks = newStacks;
 
-        const goldenDamageMultiplier = 1.0 + (golden * 0.5);
+        const goldenDamageMultiplier = 1.0 + (golden * 0.9);
         const stackDamage = (towerDamage * 0.4) * goldenDamageMultiplier;
 
         enemy.venomBaseDamage = (enemy.venomBaseDamage ?? 0) + stackDamage;
@@ -290,7 +290,7 @@ export class DamageCalculationService {
 
         if (enemy.venomTickTimer >= tickInterval) {
             enemy.venomTickTimer = 0;
-            damageToDeal = ((enemy.venomBaseDamage || 0) * (enemy.venomStacks * 0.1)) / 2;
+            damageToDeal = ((enemy.venomBaseDamage || 0) * (enemy.venomStacks * 0.9)) / 2;
         }
 
         if (enemy.venomDuration <= 0) {
