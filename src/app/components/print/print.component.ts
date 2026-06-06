@@ -1,7 +1,8 @@
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, inject, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule } from '@angular/cdk/drag-drop';
+import { CdkDragStart } from '@angular/cdk/drag-drop';
 
 @Component({
     selector: 'app-print',
@@ -9,18 +10,19 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
     templateUrl: 'print.component.html',
 })
 export class PrintComponent {
+    @ViewChild('printableBoundary') printableBoundary!: ElementRef<HTMLDivElement>;
+    @ViewChild('dragImageRef') dragImageRef?: ElementRef<HTMLDivElement>;
+    @ViewChild('dragTextRef') dragTextRef?: ElementRef<HTMLDivElement>;
+
     private _cdr = inject(ChangeDetectorRef);
 
-    // Ціноутворення (в Євро)
-    basePrice: number = 25;       // Базова ціна футболки
-    imageAddonPrice: number = 30; // Вартість друку зображення
-    textAddonPrice: number = 15;  // Вартість друку тексту
+    basePrice: number = 25;
+    imageAddonPrice: number = 30;
+    textAddonPrice: number = 15;
 
-    // Динамічні ціни кастомізації
     printPrice: number = 0;
     textPrice: number = 0;
 
-    // Початкові дані стану
     selectedColor: string = '#ffffff';
     selectedImage: string = 'assets/images/white-tshirt-base.png';
     userImage: string | null = null;
@@ -63,9 +65,9 @@ export class PrintComponent {
 
     positionClasses = {
         'center': 'items-center justify-center text-center',
-        'top-left': 'items-start justify-start text-left p-4',
-        'top-right': 'items-start justify-end text-right p-4',
-        'bottom-center': 'items-end justify-center text-center p-4'
+        'top-left': 'items-start justify-start text-left',
+        'top-right': 'items-start justify-end text-right',
+        'bottom-center': 'items-end justify-center text-center'
     };
 
     selectColor(colorObj: { name: string, hex: string, image: string }) {
@@ -74,15 +76,69 @@ export class PrintComponent {
     }
 
     onDragStart() {
-    // Коли користувач почав тягнути елемент руками, ми переводимо керування в "ручний" режим.
-    // Це запобігає конфлікту CSS-класів флексбокса та абсолютних координат CDK.
-}
-changePosition(position: 'center' | 'top-left' | 'top-right' | 'bottom-center') {
+        // event.source.reset();
+    }
+    changePosition(position: 'center' | 'top-left' | 'top-right' | 'bottom-center') {
     this.printPosition = position;
-    // Скидаємо ручні x та y координати в нуль, щоб увімкнулися стилі positionClasses[printPosition]
-    this.dragPosition = { x: 0, y: 0 }; 
-    this._cdr.detectChanges();
-}
+
+    // Даємо Angular мить на оновлення DOM
+    setTimeout(() => {
+      if (!this.printableBoundary) return;
+
+      // Отримуємо розміри штрихпунктирної рамки
+      const boundaryRect = this.printableBoundary.nativeElement.getBoundingClientRect();
+      const B_Width = boundaryRect.width;
+      const B_Height = boundaryRect.height;
+
+      // Отримуємо активний елемент, який зараз рендериться (картинка або текст)
+      const activeElement = this.activeTab === 'image' 
+        ? this.dragImageRef?.nativeElement 
+        : this.dragTextRef?.nativeElement;
+
+      if (!activeElement) {
+        this.dragPosition = { x: 0, y: 0 };
+        return;
+      }
+
+      // Отримуємо поточні фізичні розміри самого принту (вони вже враховують printSize відсотки)
+      const elementRect = activeElement.getBoundingClientRect();
+      const E_Width = elementRect.width;
+      const E_Height = elementRect.height;
+
+      // Математичний розрахунок координат відносно лівого верхнього кута (0, 0)
+      switch (position) {
+        case 'top-left':
+          // Невеликий відступ у 8 пікселів від країв
+          this.dragPosition = { x: 8, y: 8 };
+          break;
+
+        case 'top-right':
+          // Ширина рамки мінус ширина елемента мінус відступ
+          this.dragPosition = { x: B_Width - E_Width - 8, y: 8 };
+          break;
+
+        case 'bottom-center':
+          // Центр по горизонталі, а по вертикалі — в самий низ мінус відступ
+          this.dragPosition = { 
+            x: (B_Width - E_Width) / 2, 
+            y: B_Height - E_Height - 8 
+          };
+          break;
+
+        case 'center':
+        default:
+          // Ідеальний центр по обох осях
+          this.dragPosition = { 
+            x: (B_Width - E_Width) / 2, 
+            y: (B_Height - E_Height) / 2 
+          };
+          break;
+      }
+
+      // Обов'язково кажемо Angular оновити view
+      this._cdr.detectChanges();
+    }, 50);
+  }
 
     onFileSelected(event: Event) {
         const input = event.target as HTMLInputElement;
@@ -106,11 +162,9 @@ changePosition(position: 'center' | 'top-left' | 'top-right' | 'bottom-center') 
     }
 
     onTextChange() {
-        // Якщо текст є — додаємо 15 €, якщо пустий рядок — 0
         this.textPrice = this.userText.trim().length > 0 ? this.textAddonPrice : 0;
     }
 
-    // Розумний підрахунок суми залежно від обраного активного табу
     get totalPrice(): number {
         if (this.activeTab === 'image' && this.userImage) {
             return this.basePrice + this.printPrice;
@@ -143,9 +197,43 @@ changePosition(position: 'center' | 'top-left' | 'top-right' | 'bottom-center') 
             currency: 'EUR'
         };
 
-        console.log('Товар успішно додано в кошик:', orderDetails);
         alert(`T-shirt size ${this.selectedSize} added to cart! Amount: €${this.totalPrice}.00`);
 
         this.isSubmitted = false;
+    }
+
+    // Геттер для координат картинки залежно від обраної позиції кнопок
+    get imageCoords() {
+        switch (this.printPosition) {
+            case 'top-left':
+                return { left: '8px', top: '8px', transform: 'none' };
+            case 'top-right':
+                return { left: 'auto', right: '8px', top: '8px', transform: 'none' }; // якщо right, краще зробити через відступи:
+            case 'bottom-center':
+                return { left: '50%', top: 'auto', bottom: '8px', transform: 'translateX(-50%)' };
+            case 'center':
+            default:
+                return { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' };
+        }
+    }
+
+    // Оскільки для right/bottom CDK теж може підглючувати, зробимо універсальні чисті відсотки:
+    get textCoords() {
+        return this.getImageOrTextCoords();
+    }
+
+    getImageOrTextCoords() {
+        switch (this.printPosition) {
+            case 'top-left':
+                return { left: '0%', top: '0%', transform: 'none' };
+            case 'top-right':
+                // Ставимо left: 100% і зміщуємо сам елемент назад на його ширину через -100%
+                return { left: '100%', top: '0%', transform: 'translateX(-100%)' };
+            case 'bottom-center':
+                return { left: '50%', top: '100%', transform: 'translate(-50%, -100%)' };
+            case 'center':
+            default:
+                return { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' };
+        }
     }
 }

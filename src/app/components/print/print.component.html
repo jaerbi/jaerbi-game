@@ -15,51 +15,52 @@
 
           <div
             #printableBoundary
-            [className]="
-              'relative z-10 w-1/2 aspect-[3/4] border border-dashed border-gray-300 flex transition-all duration-300 ' +
-              positionClasses[printPosition]
-            "
+            class="relative z-10 w-1/2 aspect-[3/4] border border-dashed border-gray-300 overflow-hidden bg-transparent"
           >
-            <div
-              cdkDrag
-              [cdkDragBoundary]="printableBoundary"
-              [cdkDragFreeDragPosition]="dragPosition"
-              (cdkDragStarted)="onDragStart()"
-              [className]="
-                'cursor-move active:cursor-grabbing w-auto h-auto flex flex-col z-20 ' +
-                (printPosition === 'top-left'
-                  ? 'items-start'
-                  : printPosition === 'top-right'
-                    ? 'items-end'
-                    : 'items-center')
-              "
-            >
+            @if (userImage && activeTab === 'image') {
               <div
-                [style.transform]="'scale(' + printSize / 100 + ')'"
-                class="transition-transform duration-200 ease-out origin-center flex flex-col items-center justify-center"
+                #dragImageRef
+                cdkDrag
+                [cdkDragBoundary]="printableBoundary"
+                [cdkDragFreeDragPosition]="dragPosition"
+                (cdkDragStarted)="onDragStart()"
+                [style.width.%]="printSize"
+                class="absolute top-0 left-0 z-20 cursor-move active:cursor-grabbing transition-[width] duration-200 ease-out"
               >
-                @if (userImage && activeTab === 'image') {
-                  <img
-                    [src]="userImage"
-                    class="max-w-full max-h-full object-contain pointer-events-none select-none"
-                    alt="User print"
-                  />
-                }
-
-                @if (userText && activeTab === 'text') {
-                  <p
-                    [className]="'break-words max-w-full text-xl font-bold whitespace-pre-line select-none ' + textFont"
-                    [style.color]="textColor"
-                  >
-                    {{ userText }}
-                  </p>
-                }
+                <img
+                  [src]="userImage"
+                  class="w-full h-auto object-contain pointer-events-none select-none"
+                  alt="User print"
+                />
               </div>
-            </div>
+            }
+
+           @if (userText && activeTab === 'text') {
+              <div
+                #dragTextRef
+                cdkDrag
+                [cdkDragBoundary]="printableBoundary"
+                [cdkDragFreeDragPosition]="dragPosition"
+                (cdkDragStarted)="onDragStart()"
+                class="absolute top-0 left-0 z-20 cursor-move active:cursor-grabbing w-fit h-fit m-0 p-0"
+              >
+                <p
+                  [className]="'break-words font-bold whitespace-pre-line select-none ' + textFont"
+                  [style.color]="textColor"
+                  [style.fontSize.px]="(printSize / 100) * 32"
+                  [class.text-left]="printPosition === 'top-left'"
+                  [class.text-right]="printPosition === 'top-right'"
+                  [class.text-center]="printPosition === 'center' || printPosition === 'bottom-center'"
+                  class="m-0 p-0 leading-none"
+                >
+                  {{ userText }}
+                </p>
+              </div>
+            }
 
             @if ((activeTab === 'image' && !userImage) || (activeTab === 'text' && !userText)) {
               <span
-                class="absolute inset-0 flex items-center justify-center text-gray-400 text-xs text-center uppercase tracking-widest p-2 pointer-events-none select-none"
+                class="absolute inset-0 flex items-center justify-center text-gray-400 text-xs text-center uppercase tracking-widest p-2 pointer-events-none select-none z-0"
               >
                 {{ activeTab === 'image' ? 'Place for photos' : 'Enter text' }}
               </span>
