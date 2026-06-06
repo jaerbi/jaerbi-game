@@ -404,7 +404,7 @@ export class TowerDefenseEngineService {
         this.dispose();
         this.isFirstTimeClear = false;
         this.abilityPurchaseCount.set(0);
-        this.nextAbilityPrice.set(1000);
+        this.nextAbilityPrice.set(500);
 
         // Handle Campaign Mode Configuration
         if (campaignLevelId) {
@@ -1157,7 +1157,7 @@ export class TowerDefenseEngineService {
         const golden = this.getUpgradeLevel(5, 'golden');
         if (golden <= 0 || sourceDamage <= 0) return;
 
-        const damageMultiplier = 0.5 + (golden * 0.3);
+        const damageMultiplier = 1.5 + (golden * 0.7);
         const explosionDamage = Math.floor(sourceDamage * damageMultiplier);
 
         const radius = 1.0;
@@ -1850,11 +1850,11 @@ export class TowerDefenseEngineService {
                 const dx = basePos.x - other.position.x;
                 const dy = basePos.y - other.position.y;
                 if (dx * dx + dy * dy <= radiusSq) {
-                    let aoeDamage = damage;
+                    const golden = this.getUpgradeLevel(5, 'golden');
+                    let aoeDamage = damage * (golden * 0.7);
                     this.damageService.applyDamage(other, aoeDamage, 5, this.wave(), tower.id, this.recordDamage.bind(this));
 
                     if (!other.isMagma) {
-                        const golden = this.getUpgradeLevel(5, 'golden');
                         const duration = 6.0 + golden;
                         other.burnedByInferno = true;
                         other.burnDuration = duration;
@@ -1870,7 +1870,7 @@ export class TowerDefenseEngineService {
                     'z' + (this.projectileIdCounter++),
                     radius,
                     4.0,
-                    Math.floor(damage * 0.6)
+                    Math.floor(damage * 0.9)
                 );
                 this.infernoZones.push(napalmZone);
             }
