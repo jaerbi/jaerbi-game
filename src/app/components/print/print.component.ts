@@ -21,6 +21,7 @@ export class PrintComponent {
 
     // Початкові дані стану
     selectedColor: string = '#ffffff';
+    selectedImage: string = 'assets/images/white-tshirt-base.png';
     userImage: string | null = null;
     userText: string = '';
     textColor: string = '#000000';
@@ -40,12 +41,14 @@ export class PrintComponent {
     ];
 
     colors = [
-        { name: 'White', hex: '#ffffff' },
-        { name: 'Black', hex: '#1a1a1a' },
-        { name: 'Royal Blue', hex: '#2563eb' },
-        { name: 'Red', hex: '#dc2626' },
-        { name: 'Forest Green', hex: '#166534' },
-        { name: 'Yellow', hex: '#facc15' }
+        { name: 'White', hex: '#ffffff', image: 'assets/images/white-tshirt-base.png' },
+        { name: 'Black', hex: '#1a1a1a', image: 'assets/images/black-t-shirt.png' },
+        { name: 'Royal Blue', hex: '#2563eb', image: 'assets/images/blue-t-shirt.png' },
+        { name: 'Red', hex: '#dc2626', image: 'assets/images/red-t-shirt.png' },
+        { name: 'Forest Green', hex: '#166534', image: 'assets/images/green-t-shirt.png' },
+        { name: 'Yellow', hex: '#facc15', image: 'assets/images/yellow-t-shirt.png' },
+        { name: 'Maroon', hex: '#441e00', image: 'assets/images/maroon-t-shirt.png' },
+        { name: 'Orange', hex: '#e86d0f', image: 'assets/images/orange-t-shirt.png' }
     ];
 
     fonts = [
@@ -55,7 +58,7 @@ export class PrintComponent {
     ];
 
     textColors = ['#000000', '#ffffff', '#ef4444', '#3b82f6', '#10b981', '#f59e0b'];
-    
+
     positionClasses = {
         'center': 'items-center justify-center text-center',
         'top-left': 'items-start justify-start text-left p-4',
@@ -63,8 +66,9 @@ export class PrintComponent {
         'bottom-center': 'items-end justify-center text-center p-4'
     };
 
-    selectColor(hex: string) {
-        this.selectedColor = hex;
+    selectColor(colorObj: { name: string, hex: string, image: string }) {
+        this.selectedColor = colorObj.hex;
+        this.selectedImage = colorObj.image;
     }
 
     onFileSelected(event: Event) {

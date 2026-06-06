@@ -5,11 +5,9 @@
     >
       <div class="relative w-full max-w-md aspect-square flex items-center justify-center">
         <img
-          src="/assets/images/white-tshirt-base.png"
+          [src]="selectedImage"
           alt="T-shirt base"
           class="absolute inset-0 w-full h-full object-contain pointer-events-none"
-          [style.backgroundColor]="selectedColor"
-          style="mix-blend-mode: multiply"
         />
 
         <div
@@ -65,7 +63,7 @@
         <div class="flex flex-wrap gap-3">
           @for (color of colors; track color.hex) {
             <button
-              (click)="selectColor(color.hex)"
+              (click)="selectColor(color)"
               [style.backgroundColor]="color.hex"
               [class.ring-4]="selectedColor === color.hex"
               class="w-9 h-9 rounded-full border border-gray-200 transition-all hover:scale-110 ring-blue-500 ring-offset-2"
@@ -196,7 +194,7 @@
             </div>
 
             @if (userText) {
-              <p class="text-[11px] text-green-600 font-medium">+ €{{textAddonPrice}}.00 for applying text</p>
+              <p class="text-[11px] text-green-600 font-medium">+ €{{ textAddonPrice }}.00 for applying text</p>
             }
           </div>
         }
