@@ -9,6 +9,7 @@ import { MasteriesComponent } from './components/masteries/masteries.component';
 import { canLeaveGameGuard } from './guards/can-leave-game-guard.guard';
 import { AdminAnalyticsComponent } from './components/admin-analytics/admin-analytics.component';
 import { AdminGuard } from './guards/admin.guard';
+import { PrintComponent } from './components/print/print.component';
 
 export const routes: Routes = [
     {
@@ -36,6 +37,10 @@ export const routes: Routes = [
     {
         path: 'masteries',
         component: MasteriesComponent,
+    },
+    {
+        path: 'print',
+        component: PrintComponent,
     },
     {
         path: 'feedback',

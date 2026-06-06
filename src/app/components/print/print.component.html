@@ -1,0 +1,307 @@
+<div class="container mx-auto p-4 lg:p-8 min-h-screen">
+  <div class="flex flex-col lg:flex-row gap-8 bg-white shadow-xl rounded-2xl overflow-hidden p-4 lg:p-6">
+    <div
+      class="flex-1 bg-gray-100 rounded-2xl p-8 flex items-center justify-center relative min-h-[400px] lg:min-h-[600px]"
+    >
+      <div class="relative w-full max-w-md aspect-square flex items-center justify-center">
+        <img
+          src="/assets/images/white-tshirt-base.png"
+          alt="T-shirt base"
+          class="absolute inset-0 w-full h-full object-contain pointer-events-none"
+          [style.backgroundColor]="selectedColor"
+          style="mix-blend-mode: multiply"
+        />
+
+        <div
+          [className]="
+            'relative z-10 w-1/2 aspect-[3/4] border border-dashed border-gray-300 flex transition-all duration-300 ' +
+            positionClasses[printPosition]
+          "
+        >
+          <div
+            [style.transform]="'scale(' + printSize / 100 + ')'"
+            [className]="
+              'transition-transform duration-200 ease-out origin-center w-auto h-auto flex flex-col ' +
+              (printPosition === 'top-left'
+                ? 'items-start'
+                : printPosition === 'top-right'
+                  ? 'items-end'
+                  : 'items-center')
+            "
+          >
+            @if (userImage && activeTab === 'image') {
+              <img [src]="userImage" class="max-w-full max-h-full object-contain" alt="User print" />
+            }
+
+            @if (userText && activeTab === 'text') {
+              <p
+                [className]="'break-words max-w-full text-xl font-bold whitespace-pre-line ' + textFont"
+                [style.color]="textColor"
+              >
+                {{ userText }}
+              </p>
+            }
+          </div>
+
+          @if ((activeTab === 'image' && !userImage) || (activeTab === 'text' && !userText)) {
+            <span
+              class="absolute inset-0 flex items-center justify-center text-gray-400 text-xs text-center uppercase tracking-widest p-2"
+            >
+              {{ activeTab === 'image' ? 'Place for photos' : 'Enter text' }}
+            </span>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="flex-1 p-2 lg:p-4 flex flex-col space-y-6">
+      <div>
+        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mt-1">Custom Print Lab</h1>
+        <p class="text-sm text-gray-500 mt-1">Create your unique design in minutes</p>
+      </div>
+
+      <section class="bg-gray-50/60 border border-gray-100 rounded-2xl p-5">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Choose a base color</h3>
+        <div class="flex flex-wrap gap-3">
+          @for (color of colors; track color.hex) {
+            <button
+              (click)="selectColor(color.hex)"
+              [style.backgroundColor]="color.hex"
+              [class.ring-4]="selectedColor === color.hex"
+              class="w-9 h-9 rounded-full border border-gray-200 transition-all hover:scale-110 ring-blue-500 ring-offset-2"
+              [title]="color.name"
+            ></button>
+          }
+        </div>
+      </section>
+
+      <section class="bg-gray-50/60 border border-gray-100 rounded-2xl p-5">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Customization</h3>
+
+        <div class="flex bg-gray-200/70 p-1 rounded-xl mb-4">
+          <button
+            (click)="activeTab = 'image'"
+            [class.bg-white]="activeTab === 'image'"
+            [class.text-gray-900]="activeTab === 'image'"
+            [class.shadow-sm]="activeTab === 'image'"
+            class="flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-gray-500 hover:text-gray-900"
+          >
+            Upload photo
+          </button>
+          <button
+            (click)="activeTab = 'text'"
+            [class.bg-white]="activeTab === 'text'"
+            [class.text-gray-900]="activeTab === 'text'"
+            [class.shadow-sm]="activeTab === 'text'"
+            class="flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-gray-500 hover:text-gray-900"
+          >
+            Add text
+          </button>
+        </div>
+
+        @if (activeTab === 'image') {
+          <div class="w-full">
+            @if (!userImage) {
+              <label
+                class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-xl cursor-pointer bg-white hover:bg-gray-50 transition-colors"
+              >
+                <div class="flex flex-col items-center justify-center text-center px-4">
+                  <svg class="w-7 h-7 mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <p class="text-xs text-gray-600 font-semibold">Click to download</p>
+                  <p class="text-[11px] text-gray-400 mt-0.5">PNG, SVG, JPG (preferably transparent background)</p>
+                </div>
+                <input type="file" class="hidden" accept="image/*" (change)="onFileSelected($event)" />
+              </label>
+            } @else {
+              <div
+                class="flex items-center justify-between w-full p-3 bg-white rounded-xl border border-gray-200 shadow-sm"
+              >
+                <div class="flex items-center space-x-3">
+                  <img
+                    [src]="userImage"
+                    class="w-14 h-14 object-contain bg-gray-50 border rounded-lg p-1"
+                    alt="Print thumbnail"
+                  />
+                  <div>
+                    <p class="text-xs font-semibold text-gray-800 truncate max-w-[160px]">Print loaded</p>
+                    <p class="text-[11px] text-green-600 font-medium">+ €{{ printPrice }}.00 to the cost</p>
+                  </div>
+                </div>
+                <button
+                  (click)="removeImage()"
+                  class="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                  title="Видалити принт"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              </div>
+            }
+          </div>
+        }
+
+        @if (activeTab === 'text') {
+          <div class="space-y-4">
+            <div>
+              <label class="block text-[11px] font-bold uppercase text-gray-400 mb-1.5">Your text</label>
+              <input
+                type="text"
+                [(ngModel)]="userText"
+                (input)="onTextChange()"
+                placeholder="For example: Clean Code"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white outline-none transition-all text-gray-800"
+                maxLength="40"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] font-bold uppercase text-gray-400 mb-1.5">Type</label>
+                <select
+                  [(ngModel)]="textFont"
+                  class="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 outline-none text-gray-700"
+                >
+                  @for (font of fonts; track font.class) {
+                    <option [value]="font.class">{{ font.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold uppercase text-gray-400 mb-1.5">Text color</label>
+                <div class="flex gap-1.5 items-center h-[34px]">
+                  @for (color of textColors; track color) {
+                    <button
+                      (click)="textColor = color"
+                      [style.backgroundColor]="color"
+                      [class.ring-2]="textColor === color"
+                      class="w-6 h-6 rounded-full border border-gray-300 transition-all ring-blue-500 ring-offset-1"
+                    ></button>
+                  }
+                </div>
+              </div>
+            </div>
+
+            @if (userText) {
+              <p class="text-[11px] text-green-600 font-medium">+ €{{textAddonPrice}}.00 for applying text</p>
+            }
+          </div>
+        }
+      </section>
+
+      @if ((activeTab === 'image' && userImage) || (activeTab === 'text' && userText)) {
+        <section class="bg-gray-50/60 border border-gray-100 rounded-2xl p-5 space-y-4 animate-fadeIn">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">Print location</h3>
+
+          <div>
+            <div class="flex justify-between text-xs text-gray-500 mb-1.5">
+              <span>Print size</span>
+              <span class="font-bold text-gray-800">{{ printSize }}%</span>
+            </div>
+            <input
+              type="range"
+              min="30"
+              max="120"
+              [(ngModel)]="printSize"
+              class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            />
+          </div>
+
+          <div>
+            <span class="block text-xs text-gray-500 mb-1.5">Position on the T-shirt</span>
+            <div class="grid grid-cols-3 gap-2">
+              <button
+                (click)="printPosition = 'top-left'"
+                [class.bg-blue-600]="printPosition === 'top-left'"
+                [class.text-sky-400]="printPosition === 'top-left'"
+                [class.border-blue-600]="printPosition === 'top-left'"
+                class="py-2 px-1 text-[11px] font-semibold border rounded-xl transition-all bg-white hover:bg-gray-50 text-gray-700 border-gray-200 shadow-sm"
+              >
+                Left
+              </button>
+              <button
+                (click)="printPosition = 'center'"
+                [class.bg-blue-600]="printPosition === 'center'"
+                [class.text-sky-400]="printPosition === 'center'"
+                [class.border-blue-600]="printPosition === 'center'"
+                class="py-2 px-1 text-[11px] font-semibold border rounded-xl transition-all bg-white hover:bg-gray-50 text-gray-700 border-gray-200 shadow-sm"
+              >
+                Center
+              </button>
+              <button
+                (click)="printPosition = 'top-right'"
+                [class.bg-blue-600]="printPosition === 'top-right'"
+                [class.text-sky-400]="printPosition === 'top-right'"
+                [class.border-blue-600]="printPosition === 'top-right'"
+                class="py-2 px-1 text-[11px] font-semibold border rounded-xl transition-all bg-white hover:bg-gray-50 text-gray-700 border-gray-200 shadow-sm"
+              >
+                Right
+              </button>
+            </div>
+          </div>
+        </section>
+      }
+
+      <section class="bg-gray-50/60 border border-gray-100 rounded-2xl p-5">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">Choose size</h3>
+          @if (isSubmitted && !selectedSize) {
+            <span class="text-[11px] text-red-500 font-bold animate-pulse">Be sure to choose a size!</span>
+          }
+        </div>
+
+        <div
+          [class.border-red-400]="isSubmitted && !selectedSize"
+          [class.p-1]="isSubmitted && !selectedSize"
+          [class.border]="isSubmitted && !selectedSize"
+          [class.rounded-xl]="isSubmitted && !selectedSize"
+          class="grid grid-cols-5 gap-2 transition-all"
+        >
+          @for (size of sizes; track size.name) {
+            <button
+              (click)="selectSize(size.name)"
+              type="button"
+              [class.bg-blue-600]="selectedSize === size.name"
+              [class.text-sky-400]="selectedSize === size.name"
+              [class.border-blue-600]="selectedSize === size.name"
+              [class.shadow-md]="selectedSize === size.name"
+              class="h-10 border border-gray-200 rounded-xl font-bold text-xs flex items-center justify-center transition-all hover:border-blue-500 hover:text-blue-600 bg-white text-gray-700 shadow-sm"
+              [class.hover:text-sky-400]="selectedSize === size.name"
+              [title]="size.description"
+            >
+              {{ size.name }}
+            </button>
+          }
+        </div>
+      </section>
+
+      <div
+        class="bg-gray-900 text-sky-400 p-5 rounded-2xl mt-auto shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
+        <div>
+          <span class="text-xs text-gray-400 block font-medium">Total cost:</span>
+          <span class="text-3xl font-black text-green-400 tracking-tight">€{{ totalPrice }}.00</span>
+        </div>
+        <button
+          (click)="addToCart()"
+          class="sm:w-auto flex-1 bg-blue-600 text-sky-400 py-3.5 px-6 rounded-xl font-bold hover:bg-blue-500 transition-all text-xs uppercase tracking-widest active:scale-[0.98] shadow-md shadow-blue-600/20"
+        >
+          Add to cart
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
