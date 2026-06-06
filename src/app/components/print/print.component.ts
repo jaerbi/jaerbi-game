@@ -1,10 +1,11 @@
 import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 
 @Component({
     selector: 'app-print',
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, DragDropModule],
     templateUrl: 'print.component.html',
 })
 export class PrintComponent {
@@ -31,6 +32,7 @@ export class PrintComponent {
     printPosition: 'center' | 'top-left' | 'top-right' | 'bottom-center' = 'center';
     selectedSize: string | null = null;
     isSubmitted: boolean = false;
+    dragPosition = { x: 0, y: 0 };
 
     sizes = [
         { name: 'S', description: 'Width 48cm / Length 68cm' },
@@ -70,6 +72,17 @@ export class PrintComponent {
         this.selectedColor = colorObj.hex;
         this.selectedImage = colorObj.image;
     }
+
+    onDragStart() {
+    // Коли користувач почав тягнути елемент руками, ми переводимо керування в "ручний" режим.
+    // Це запобігає конфлікту CSS-класів флексбокса та абсолютних координат CDK.
+}
+changePosition(position: 'center' | 'top-left' | 'top-right' | 'bottom-center') {
+    this.printPosition = position;
+    // Скидаємо ручні x та y координати в нуль, щоб увімкнулися стилі positionClasses[printPosition]
+    this.dragPosition = { x: 0, y: 0 }; 
+    this._cdr.detectChanges();
+}
 
     onFileSelected(event: Event) {
         const input = event.target as HTMLInputElement;

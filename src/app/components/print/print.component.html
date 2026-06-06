@@ -3,51 +3,68 @@
     <div
       class="flex-1 bg-gray-100 rounded-2xl p-8 flex items-center justify-center relative min-h-[400px] lg:min-h-[600px]"
     >
-      <div class="relative w-full max-w-md aspect-square flex items-center justify-center">
-        <img
-          [src]="selectedImage"
-          alt="T-shirt base"
-          class="absolute inset-0 w-full h-full object-contain pointer-events-none"
-        />
+      <div
+        class="flex-1 bg-gray-100 rounded-2xl p-8 flex items-center justify-center relative min-h-[400px] lg:min-h-[600px]"
+      >
+        <div class="relative w-full max-w-md aspect-square flex items-center justify-center">
+          <img
+            [src]="selectedImage"
+            alt="T-shirt base"
+            class="absolute inset-0 w-full h-full object-contain pointer-events-none z-0"
+          />
 
-        <div
-          [className]="
-            'relative z-10 w-1/2 aspect-[3/4] border border-dashed border-gray-300 flex transition-all duration-300 ' +
-            positionClasses[printPosition]
-          "
-        >
           <div
-            [style.transform]="'scale(' + printSize / 100 + ')'"
+            #printableBoundary
             [className]="
-              'transition-transform duration-200 ease-out origin-center w-auto h-auto flex flex-col ' +
-              (printPosition === 'top-left'
-                ? 'items-start'
-                : printPosition === 'top-right'
-                  ? 'items-end'
-                  : 'items-center')
+              'relative z-10 w-1/2 aspect-[3/4] border border-dashed border-gray-300 flex transition-all duration-300 ' +
+              positionClasses[printPosition]
             "
           >
-            @if (userImage && activeTab === 'image') {
-              <img [src]="userImage" class="max-w-full max-h-full object-contain" alt="User print" />
-            }
-
-            @if (userText && activeTab === 'text') {
-              <p
-                [className]="'break-words max-w-full text-xl font-bold whitespace-pre-line ' + textFont"
-                [style.color]="textColor"
+            <div
+              cdkDrag
+              [cdkDragBoundary]="printableBoundary"
+              [cdkDragFreeDragPosition]="dragPosition"
+              (cdkDragStarted)="onDragStart()"
+              [className]="
+                'cursor-move active:cursor-grabbing w-auto h-auto flex flex-col z-20 ' +
+                (printPosition === 'top-left'
+                  ? 'items-start'
+                  : printPosition === 'top-right'
+                    ? 'items-end'
+                    : 'items-center')
+              "
+            >
+              <div
+                [style.transform]="'scale(' + printSize / 100 + ')'"
+                class="transition-transform duration-200 ease-out origin-center flex flex-col items-center justify-center"
               >
-                {{ userText }}
-              </p>
+                @if (userImage && activeTab === 'image') {
+                  <img
+                    [src]="userImage"
+                    class="max-w-full max-h-full object-contain pointer-events-none select-none"
+                    alt="User print"
+                  />
+                }
+
+                @if (userText && activeTab === 'text') {
+                  <p
+                    [className]="'break-words max-w-full text-xl font-bold whitespace-pre-line select-none ' + textFont"
+                    [style.color]="textColor"
+                  >
+                    {{ userText }}
+                  </p>
+                }
+              </div>
+            </div>
+
+            @if ((activeTab === 'image' && !userImage) || (activeTab === 'text' && !userText)) {
+              <span
+                class="absolute inset-0 flex items-center justify-center text-gray-400 text-xs text-center uppercase tracking-widest p-2 pointer-events-none select-none"
+              >
+                {{ activeTab === 'image' ? 'Place for photos' : 'Enter text' }}
+              </span>
             }
           </div>
-
-          @if ((activeTab === 'image' && !userImage) || (activeTab === 'text' && !userText)) {
-            <span
-              class="absolute inset-0 flex items-center justify-center text-gray-400 text-xs text-center uppercase tracking-widest p-2"
-            >
-              {{ activeTab === 'image' ? 'Place for photos' : 'Enter text' }}
-            </span>
-          }
         </div>
       </div>
     </div>
@@ -222,7 +239,7 @@
             <span class="block text-xs text-gray-500 mb-1.5">Position on the T-shirt</span>
             <div class="grid grid-cols-3 gap-2">
               <button
-                (click)="printPosition = 'top-left'"
+                (click)="changePosition('top-left')"
                 [class.bg-blue-600]="printPosition === 'top-left'"
                 [class.text-sky-400]="printPosition === 'top-left'"
                 [class.border-blue-600]="printPosition === 'top-left'"
@@ -231,7 +248,7 @@
                 Left
               </button>
               <button
-                (click)="printPosition = 'center'"
+                (click)="changePosition('center')"
                 [class.bg-blue-600]="printPosition === 'center'"
                 [class.text-sky-400]="printPosition === 'center'"
                 [class.border-blue-600]="printPosition === 'center'"
@@ -240,7 +257,7 @@
                 Center
               </button>
               <button
-                (click)="printPosition = 'top-right'"
+                (click)="changePosition('top-right')"
                 [class.bg-blue-600]="printPosition === 'top-right'"
                 [class.text-sky-400]="printPosition === 'top-right'"
                 [class.border-blue-600]="printPosition === 'top-right'"
