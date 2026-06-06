@@ -2,7 +2,7 @@ import { ChangeDetectorRef, Component, ElementRef, inject, ViewChild } from '@an
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule } from '@angular/cdk/drag-drop';
-import { CdkDragStart } from '@angular/cdk/drag-drop';
+import html2canvas from 'html2canvas';
 
 @Component({
     selector: 'app-print',
@@ -70,6 +70,51 @@ export class PrintComponent {
         'bottom-center': 'items-end justify-center text-center'
     };
 
+    async downloadDesign() {
+        if (!this.printableBoundary) return;
+
+        try {
+            const element = this.printableBoundary.nativeElement;
+
+            // Опції для html2canvas, щоб отримати максимальну якість для друку
+            const options = {
+                scale: 3, // Збільшуємо масштаб в 3 рази для високої роздільної здатності (щоб не було розмитих пікселів)
+                useCORS: true, // Дозволяє завантажувати сторонні зображення (якщо юзер завантажив картинку по лінку)
+                logging: false, // Вимикаємо зайві логи в консолі
+                backgroundColor: '#ffffff' // Робимо фон білим (або null, якщо потрібен прозорий PNG)
+            };
+
+            // Тимчасово прибираємо штрихпунктирну рамку перед скріншотом, щоб вона не пішла в друк
+            element.classList.remove('border', 'border-dashed', 'border-gray-300');
+
+            // Генеруємо канвас
+            const canvas = await html2canvas(element, options);
+
+            // Повертаємо рамку назад для інтерфейсу користувача
+            element.classList.add('border', 'border-dashed', 'border-gray-300');
+
+            // Конвертуємо канвас в Data URL (PNG картинку)
+            const dataUrl = canvas.toDataURL('image/png');
+
+            // Створюємо фантомне посилання для скачування файлу
+            const downloadLink = document.createElement('a');
+
+            // Формуємо красиву назву файлу (наприклад: design-1717658400.png)
+            const timestamp = Math.floor(Date.now() / 1000);
+            downloadLink.download = `design-${timestamp}.png`;
+            downloadLink.href = dataUrl;
+
+            // Імітуємо клік для скачування та видаляємо елемент
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+
+        } catch (error) {
+            console.error('Error generating PDF/PNG design:', error);
+            // Тут можна вивести якийсь Toast-нотифікатор про помилку
+        }
+    }
+
     selectColor(colorObj: { name: string, hex: string, image: string }) {
         this.selectedColor = colorObj.hex;
         this.selectedImage = colorObj.image;
@@ -79,66 +124,66 @@ export class PrintComponent {
         // event.source.reset();
     }
     changePosition(position: 'center' | 'top-left' | 'top-right' | 'bottom-center') {
-    this.printPosition = position;
+        this.printPosition = position;
 
-    // Даємо Angular мить на оновлення DOM
-    setTimeout(() => {
-      if (!this.printableBoundary) return;
+        // Даємо Angular мить на оновлення DOM
+        setTimeout(() => {
+            if (!this.printableBoundary) return;
 
-      // Отримуємо розміри штрихпунктирної рамки
-      const boundaryRect = this.printableBoundary.nativeElement.getBoundingClientRect();
-      const B_Width = boundaryRect.width;
-      const B_Height = boundaryRect.height;
+            // Отримуємо розміри штрихпунктирної рамки
+            const boundaryRect = this.printableBoundary.nativeElement.getBoundingClientRect();
+            const B_Width = boundaryRect.width;
+            const B_Height = boundaryRect.height;
 
-      // Отримуємо активний елемент, який зараз рендериться (картинка або текст)
-      const activeElement = this.activeTab === 'image' 
-        ? this.dragImageRef?.nativeElement 
-        : this.dragTextRef?.nativeElement;
+            // Отримуємо активний елемент, який зараз рендериться (картинка або текст)
+            const activeElement = this.activeTab === 'image'
+                ? this.dragImageRef?.nativeElement
+                : this.dragTextRef?.nativeElement;
 
-      if (!activeElement) {
-        this.dragPosition = { x: 0, y: 0 };
-        return;
-      }
+            if (!activeElement) {
+                this.dragPosition = { x: 0, y: 0 };
+                return;
+            }
 
-      // Отримуємо поточні фізичні розміри самого принту (вони вже враховують printSize відсотки)
-      const elementRect = activeElement.getBoundingClientRect();
-      const E_Width = elementRect.width;
-      const E_Height = elementRect.height;
+            // Отримуємо поточні фізичні розміри самого принту (вони вже враховують printSize відсотки)
+            const elementRect = activeElement.getBoundingClientRect();
+            const E_Width = elementRect.width;
+            const E_Height = elementRect.height;
 
-      // Математичний розрахунок координат відносно лівого верхнього кута (0, 0)
-      switch (position) {
-        case 'top-left':
-          // Невеликий відступ у 8 пікселів від країв
-          this.dragPosition = { x: 8, y: 8 };
-          break;
+            // Математичний розрахунок координат відносно лівого верхнього кута (0, 0)
+            switch (position) {
+                case 'top-left':
+                    // Невеликий відступ у 8 пікселів від країв
+                    this.dragPosition = { x: 8, y: 8 };
+                    break;
 
-        case 'top-right':
-          // Ширина рамки мінус ширина елемента мінус відступ
-          this.dragPosition = { x: B_Width - E_Width - 8, y: 8 };
-          break;
+                case 'top-right':
+                    // Ширина рамки мінус ширина елемента мінус відступ
+                    this.dragPosition = { x: B_Width - E_Width - 8, y: 8 };
+                    break;
 
-        case 'bottom-center':
-          // Центр по горизонталі, а по вертикалі — в самий низ мінус відступ
-          this.dragPosition = { 
-            x: (B_Width - E_Width) / 2, 
-            y: B_Height - E_Height - 8 
-          };
-          break;
+                case 'bottom-center':
+                    // Центр по горизонталі, а по вертикалі — в самий низ мінус відступ
+                    this.dragPosition = {
+                        x: (B_Width - E_Width) / 2,
+                        y: B_Height - E_Height - 8
+                    };
+                    break;
 
-        case 'center':
-        default:
-          // Ідеальний центр по обох осях
-          this.dragPosition = { 
-            x: (B_Width - E_Width) / 2, 
-            y: (B_Height - E_Height) / 2 
-          };
-          break;
-      }
+                case 'center':
+                default:
+                    // Ідеальний центр по обох осях
+                    this.dragPosition = {
+                        x: (B_Width - E_Width) / 2,
+                        y: (B_Height - E_Height) / 2
+                    };
+                    break;
+            }
 
-      // Обов'язково кажемо Angular оновити view
-      this._cdr.detectChanges();
-    }, 50);
-  }
+            // Обов'язково кажемо Angular оновити view
+            this._cdr.detectChanges();
+        }, 50);
+    }
 
     onFileSelected(event: Event) {
         const input = event.target as HTMLInputElement;
