@@ -29,6 +29,7 @@
               >
                 <img
                   [src]="userImage"
+                  [style.transform]="'rotate(' + printRotation + 'deg)'"
                   class="w-full h-auto object-contain pointer-events-none select-none"
                   alt="User print"
                 />
@@ -48,6 +49,7 @@
                   [className]="'break-words font-bold whitespace-pre-line select-none ' + textFont"
                   [style.color]="textColor"
                   [style.fontSize.px]="(printSize / 100) * 32"
+                  [style.transform]="'rotate(' + printRotation + 'deg)'"
                   [class.text-left]="printPosition === 'top-left'"
                   [class.text-right]="printPosition === 'top-right'"
                   [class.text-center]="printPosition === 'center' || printPosition === 'bottom-center'"
@@ -66,17 +68,31 @@
               </span>
             }
           </div>
-          
         </div>
-        
       </div>
-      
     </div>
 
     <div class="flex-1 p-2 lg:p-4 flex flex-col space-y-6">
       <div>
         <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mt-1">Custom Print Lab</h1>
         <p class="text-sm text-gray-500 mt-1">Create your unique design in minutes</p>
+      </div>
+
+      <div
+        class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between shadow-sm animate-pulse"
+      >
+        <div class="flex items-center space-x-3">
+          <span class="text-2xl">🔥</span>
+          <div>
+            <p class="text-xs font-bold text-amber-900 uppercase tracking-wide">Urgent offer</p>
+            <p class="text-xs text-amber-700 mt-0.5">Order within the specified time and we will ship today!</p>
+          </div>
+        </div>
+        <div
+          class="bg-amber-900 text-amber-400 font-mono text-sm font-black px-3 py-1.5 rounded-xl border border-amber-700 tracking-wider"
+        >
+          {{ fomoTimerText }}
+        </div>
       </div>
 
       <section class="bg-gray-50/60 border border-gray-100 rounded-2xl p-5">
@@ -170,6 +186,36 @@
               </div>
             }
           </div>
+          <div class="w-full space-y-5">
+            <div class="border-t border-gray-100 pt-4">
+              <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2.5">
+                Or choose a ready-made sticker:
+              </h4>
+
+              <div class="space-y-3">
+                @for (category of clipartCategories; track category.name) {
+                  <div>
+                    <span
+                      class="text-[10px] font-semibold text-gray-400 block mb-1.5 bg-gray-100 px-2 py-0.5 rounded w-fit"
+                    >
+                      {{ category.name }}
+                    </span>
+                    <div class="flex flex-wrap gap-2">
+                      @for (sticker of category.items; track sticker.name) {
+                        <button
+                          (click)="selectClipart(sticker.url)"
+                          class="p-2 bg-white border border-gray-200 hover:border-blue-500 hover:bg-blue-50/30 rounded-xl transition-all hover:scale-105 shadow-sm flex items-center justify-center w-12 h-12"
+                          [title]="sticker.name"
+                        >
+                          <img [src]="sticker.url" class="w-8 h-8 object-contain" [alt]="sticker.name" />
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
         }
 
         @if (activeTab === 'text') {
@@ -237,6 +283,31 @@
               [(ngModel)]="printSize"
               class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
             />
+          </div>
+
+          <div class="space-y-2 mt-4">
+            <div class="flex justify-between text-xs font-semibold text-gray-500">
+              <span>Rotation</span>
+              <span>{{ printRotation }}°</span>
+            </div>
+            <div class="flex items-center space-x-3">
+              <input
+                type="range"
+                min="-180"
+                max="180"
+                [(ngModel)]="printRotation"
+                class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              />
+              @if (printRotation !== 0) {
+                <button
+                  (click)="printRotation = 0"
+                  class="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-bold transition-colors"
+                  title="Reset rotation"
+                >
+                  Reset
+                </button>
+              }
+            </div>
           </div>
 
           <div>
@@ -307,6 +378,28 @@
         </div>
       </section>
 
+      <label
+        [class.border-blue-500]="isGiftWrapSelected"
+        [class.bg-blue-50/40]="isGiftWrapSelected"
+        class="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-2xl cursor-pointer transition-all select-none hover:bg-gray-50/80 shadow-sm"
+      >
+        <div class="flex items-center space-x-3.5">
+          <input
+            type="checkbox"
+            [(ngModel)]="isGiftWrapSelected"
+            class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 accent-blue-600"
+          />
+          <div class="flex items-center space-x-2.5">
+            <span class="text-xl">🎁</span>
+            <div>
+              <p class="text-xs font-bold text-gray-800">Add holiday gift wrapping</p>
+              <p class="text-[11px] text-gray-400 mt-0.5">We will pack it in a premium box with a ribbon.</p>
+            </div>
+          </div>
+        </div>
+        <span class="text-xs font-extrabold text-blue-600">+ €3.00</span>
+      </label>
+
       <div
         class="bg-gray-900 text-sky-400 p-5 rounded-2xl mt-auto shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
       >
@@ -321,25 +414,19 @@
           Add to cart
         </button>
         <button
-            (click)="downloadDesign()"
-            class=" py-3.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition-colors flex items-center gap-2"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-              />
-            </svg>
-            Download Design
-          </button>
+          (click)="downloadDesign()"
+          class="py-3.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition-colors flex items-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+            />
+          </svg>
+          Download Design
+        </button>
       </div>
     </div>
   </div>
