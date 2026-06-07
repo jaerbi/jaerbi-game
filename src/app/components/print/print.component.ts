@@ -8,6 +8,7 @@ import html2canvas from 'html2canvas';
     selector: 'app-print',
     imports: [CommonModule, FormsModule, DragDropModule],
     templateUrl: 'print.component.html',
+    styleUrl: 'print.component.css',
 })
 export class PrintComponent implements OnInit, OnDestroy {
     @ViewChild('printableBoundary') printableBoundary!: ElementRef<HTMLDivElement>;
