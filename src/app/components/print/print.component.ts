@@ -41,7 +41,16 @@ export class PrintComponent implements OnInit, OnDestroy {
     fomoTimerText: string = '02:00:00';
     private _timerIntervalId: any;
     printRotation: number = 0;
+    selectedFilter: string = 'none';
 
+    imageFilters = [
+        { name: 'Original', value: 'none', icon: '✨' },
+        { name: 'B&W', value: 'grayscale(100%)', icon: '🏁' },
+        { name: 'Sepia', value: 'sepia(80%)', icon: '📜' },
+        { name: 'Invert', value: 'invert(100%)', icon: '🔄' },
+        { name: 'Vintage', value: 'sepia(30%) contrast(120%) brightness(90%) hue-rotate(-15deg)', icon: '🎞️' },
+        { name: 'Warm', value: 'saturate(140%) sepia(10%)', icon: '☀️' }
+    ];
     clipartCategories = [
         {
             name: 'IT / Coding',
@@ -112,6 +121,11 @@ export class PrintComponent implements OnInit, OnDestroy {
             clearInterval(this._timerIntervalId);
         }
     }
+
+    setFilter(filterValue: string) {
+        this.selectedFilter = filterValue;
+    }
+
 
     selectClipart(url: string) {
         this.activeTab = 'image'; // Перемикаємо на таб зображення
@@ -277,6 +291,8 @@ export class PrintComponent implements OnInit, OnDestroy {
     removeImage() {
         this.userImage = null;
         this.printPrice = 0;
+        this.userImage = null;
+        this.selectedFilter = 'none';
     }
 
     onTextChange() {
