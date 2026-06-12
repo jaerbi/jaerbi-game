@@ -1,85 +1,99 @@
-<div class="container mx-auto p-4 lg:p-8 min-h-screen">
-  <div class="flex flex-col lg:flex-row gap-8 bg-white shadow-xl rounded-2xl overflow-hidden p-4 lg:p-6">
+<div class="container mx-auto p-4 lg:p-6 min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden">
+  <div class="flex flex-col lg:flex-row gap-6 bg-white shadow-xl rounded-2xl p-4 lg:p-6 min-h-full lg:h-full lg:overflow-hidden">
+    
     <div
-      class="flex-1 bg-gray-100 rounded-2xl p-8 flex items-center justify-center relative min-h-[400px] lg:min-h-[600px]"
+      class="flex-1 bg-gray-100 rounded-2xl p-6 flex items-center justify-center relative min-h-[350px] sm:min-h-[450px] lg:h-full lg:max-h-full flex-shrink-0"
     >
-      <div
-        class="flex-1 bg-gray-100 rounded-2xl p-8 flex items-center justify-center relative min-h-[400px] lg:min-h-[600px]"
-      >
-        <div class="relative w-full max-w-md aspect-square flex items-center justify-center">
-          <img
-            [src]="selectedImage"
-            alt="T-shirt base"
-            class="absolute inset-0 w-full h-full object-contain pointer-events-none z-0"
-          />
+      <div class="relative w-full max-w-md aspect-square flex items-center justify-center">
+        <img
+          [src]="selectedImage"
+          alt="T-shirt base"
+          class="absolute inset-0 w-full h-full object-contain pointer-events-none z-0"
+        />
 
-          <div
-            #printableBoundary
-            class="relative z-10 w-1/2 aspect-[3/4] border border-dashed border-gray-300 overflow-hidden bg-transparent"
-          >
-            @if (userImage && activeTab === 'image') {
-              <div
-                #dragImageRef
-                cdkDrag
-                [cdkDragBoundary]="printableBoundary"
-                [cdkDragFreeDragPosition]="dragPosition"
-                (cdkDragStarted)="onDragStart()"
-                [style.width.%]="printSize"
-                class="absolute top-0 left-0 z-20 cursor-move active:cursor-grabbing transition-[width] duration-200 ease-out"
-              >
-                <img
-                  [src]="userImage"
-                  class="w-full h-auto object-contain pointer-events-none select-none"
-                  alt="User print"
-                />
-              </div>
-            }
+        <div
+          #printableBoundary
+          class="relative z-10 w-1/2 aspect-[3/4] border border-dashed border-gray-300 overflow-hidden bg-transparent"
+        >
+          @if (userImage && activeTab === 'image') {
+            <div
+              #dragImageRef
+              cdkDrag
+              [cdkDragBoundary]="printableBoundary"
+              [cdkDragFreeDragPosition]="dragPosition"
+              (cdkDragStarted)="onDragStart()"
+              [style.width.%]="printSize"
+              class="absolute top-0 left-0 z-20 cursor-move active:cursor-grabbing transition-[width] duration-200 ease-out"
+            >
+              <img
+                [src]="userImage"
+                [style.transform]="'rotate(' + printRotation + 'deg)'"
+                [style.filter]="selectedFilter"
+                class="w-full h-auto object-contain pointer-events-none select-none transition-all duration-150 ease-out"
+                alt="User print"
+              />
+            </div>
+          }
 
-            @if (userText && activeTab === 'text') {
-              <div
-                #dragTextRef
-                cdkDrag
-                [cdkDragBoundary]="printableBoundary"
-                [cdkDragFreeDragPosition]="dragPosition"
-                (cdkDragStarted)="onDragStart()"
-                class="absolute top-0 left-0 z-20 cursor-move active:cursor-grabbing w-fit h-fit m-0 p-0"
+          @if (userText && activeTab === 'text') {
+            <div
+              #dragTextRef
+              cdkDrag
+              [cdkDragBoundary]="printableBoundary"
+              [cdkDragFreeDragPosition]="dragPosition"
+              (cdkDragStarted)="onDragStart()"
+              class="absolute top-0 left-0 z-20 cursor-move active:cursor-grabbing w-fit h-fit m-0 p-0"
+            >
+              <p
+                [className]="'break-words font-bold whitespace-pre-line select-none ' + textFont"
+                [style.color]="textColor"
+                [style.fontSize.px]="(printSize / 100) * 32"
+                [style.transform]="'rotate(' + printRotation + 'deg)'"
+                [class.text-left]="printPosition === 'top-left'"
+                [class.text-right]="printPosition === 'top-right'"
+                [class.text-center]="printPosition === 'center' || printPosition === 'bottom-center'"
+                class="m-0 p-0 leading-none"
               >
-                <p
-                  [className]="'break-words font-bold whitespace-pre-line select-none ' + textFont"
-                  [style.color]="textColor"
-                  [style.fontSize.px]="(printSize / 100) * 32"
-                  [class.text-left]="printPosition === 'top-left'"
-                  [class.text-right]="printPosition === 'top-right'"
-                  [class.text-center]="printPosition === 'center' || printPosition === 'bottom-center'"
-                  class="m-0 p-0 leading-none"
-                >
-                  {{ userText }}
-                </p>
-              </div>
-            }
+                {{ userText }}
+              </p>
+            </div>
+          }
 
-            @if ((activeTab === 'image' && !userImage) || (activeTab === 'text' && !userText)) {
-              <span
-                class="absolute inset-0 flex items-center justify-center text-gray-400 text-xs text-center uppercase tracking-widest p-2 pointer-events-none select-none z-0"
-              >
-                {{ activeTab === 'image' ? 'Place for photos' : 'Enter text' }}
-              </span>
-            }
-          </div>
-          
+          @if ((activeTab === 'image' && !userImage) || (activeTab === 'text' && !userText)) {
+            <span
+              class="absolute inset-0 flex items-center justify-center text-gray-400 text-xs text-center uppercase tracking-widest p-2 pointer-events-none select-none z-0"
+            >
+              {{ activeTab === 'image' ? 'Place for photos' : 'Enter text' }}
+            </span>
+          }
         </div>
-        
       </div>
-      
     </div>
 
-    <div class="flex-1 p-2 lg:p-4 flex flex-col space-y-6">
+    <div class="w-full lg:w-[450px] h-auto lg:h-full lg:overflow-y-auto lg:pr-1 flex flex-col space-y-5 custom-scrollbar">
       <div>
         <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mt-1">Custom Print Lab</h1>
         <p class="text-sm text-gray-500 mt-1">Create your unique design in minutes</p>
       </div>
 
-      <section class="bg-gray-50/60 border border-gray-100 rounded-2xl p-5">
+      <div
+        class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between shadow-sm animate-pulse flex-shrink-0"
+      >
+        <div class="flex items-center space-x-3">
+          <span class="text-2xl">🔥</span>
+          <div>
+            <p class="text-xs font-bold text-amber-900 uppercase tracking-wide">Urgent offer</p>
+            <p class="text-xs text-amber-700 mt-0.5">Order within the specified time and we will ship today!</p>
+          </div>
+        </div>
+        <div
+          class="bg-amber-900 text-amber-400 font-mono text-sm font-black px-3 py-1.5 rounded-xl border border-amber-700 tracking-wider"
+        >
+          {{ fomoTimerText }}
+        </div>
+      </div>
+
+      <section class="bg-gray-50/60 border border-gray-100 rounded-2xl p-5 flex-shrink-0">
         <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Choose a base color</h3>
         <div class="flex flex-wrap gap-3">
           @for (color of colors; track color.hex) {
@@ -94,7 +108,7 @@
         </div>
       </section>
 
-      <section class="bg-gray-50/60 border border-gray-100 rounded-2xl p-5">
+      <section class="bg-gray-50/60 border border-gray-100 rounded-2xl p-5 flex-shrink-0">
         <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Customization</h3>
 
         <div class="flex bg-gray-200/70 p-1 rounded-xl mb-4">
@@ -140,7 +154,7 @@
               </label>
             } @else {
               <div
-                class="flex items-center justify-between w-full p-3 bg-white rounded-xl border border-gray-200 shadow-sm"
+                class="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full p-3 bg-white rounded-xl border border-gray-200 shadow-sm gap-3"
               >
                 <div class="flex items-center space-x-3">
                   <img
@@ -153,9 +167,12 @@
                     <p class="text-[11px] text-green-600 font-medium">+ €{{ printPrice }}.00 to the cost</p>
                   </div>
                 </div>
+                
+                
+
                 <button
                   (click)="removeImage()"
-                  class="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                  class="self-end sm:self-center p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
                   title="Видалити принт"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -167,8 +184,58 @@
                     />
                   </svg>
                 </button>
+                
               </div>
+              <div class="w-full border-t border-gray-100 pt-3 mt-1 sm:mt-0">
+                  <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Photo Effects:</h4>
+                  <div class="grid grid-cols-3 gap-1.5">
+                    @for (filter of imageFilters; track filter.name) {
+                      <button
+                        (click)="setFilter(filter.value)"
+                        type="button"
+                        [class.border-blue-500]="selectedFilter === filter.value"
+                        [class.bg-blue-50/50]="selectedFilter === filter.value"
+                        [class.text-blue-600]="selectedFilter === filter.value"
+                        class="flex flex-col items-center justify-center p-1.5 bg-white border border-gray-200 rounded-xl transition-all hover:border-gray-400 text-gray-700 shadow-sm"
+                      >
+                        <span class="text-base mb-0.5">{{ filter.icon }}</span>
+                        <span class="text-[9px] font-bold tracking-wide">{{ filter.name }}</span>
+                      </button>
+                    }
+                  </div>
+                </div>
             }
+          </div>
+          
+          <div class="w-full space-y-5 mt-4">
+            <div class="border-t border-gray-100 pt-4">
+              <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2.5">
+                Or choose a ready-made sticker:
+              </h4>
+
+              <div class="space-y-3">
+                @for (category of clipartCategories; track category.name) {
+                  <div>
+                    <span
+                      class="text-[10px] font-semibold text-gray-400 block mb-1.5 bg-gray-100 px-2 py-0.5 rounded w-fit"
+                    >
+                      {{ category.name }}
+                    </span>
+                    <div class="flex flex-wrap gap-2">
+                      @for (sticker of category.items; track sticker.name) {
+                        <button
+                          (click)="selectClipart(sticker.url)"
+                          class="p-2 bg-white border border-gray-200 hover:border-blue-500 hover:bg-blue-50/30 rounded-xl transition-all hover:scale-105 shadow-sm flex items-center justify-center w-12 h-12"
+                          [title]="sticker.name"
+                        >
+                          <img [src]="sticker.url" class="w-8 h-8 object-contain" [alt]="sticker.name" />
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
           </div>
         }
 
@@ -222,7 +289,7 @@
       </section>
 
       @if ((activeTab === 'image' && userImage) || (activeTab === 'text' && userText)) {
-        <section class="bg-gray-50/60 border border-gray-100 rounded-2xl p-5 space-y-4 animate-fadeIn">
+        <section class="bg-gray-50/60 border border-gray-100 rounded-2xl p-5 space-y-4 animate-fadeIn flex-shrink-0">
           <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">Print location</h3>
 
           <div>
@@ -237,6 +304,31 @@
               [(ngModel)]="printSize"
               class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
             />
+          </div>
+
+          <div class="space-y-2 mt-4">
+            <div class="flex justify-between text-xs font-semibold text-gray-500">
+              <span>Rotation</span>
+              <span>{{ printRotation }}°</span>
+            </div>
+            <div class="flex items-center space-x-3">
+              <input
+                type="range"
+                min="-180"
+                max="180"
+                [(ngModel)]="printRotation"
+                class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              />
+              @if (printRotation !== 0) {
+                <button
+                  (click)="printRotation = 0"
+                  class="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-bold transition-colors"
+                  title="Reset rotation"
+                >
+                  Reset
+                </button>
+              }
+            </div>
           </div>
 
           <div>
@@ -274,7 +366,7 @@
         </section>
       }
 
-      <section class="bg-gray-50/60 border border-gray-100 rounded-2xl p-5">
+      <section class="bg-gray-50/60 border border-gray-100 rounded-2xl p-5 flex-shrink-0">
         <div class="flex justify-between items-center mb-3">
           <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">Choose size</h3>
           @if (isSubmitted && !selectedSize) {
@@ -307,26 +399,49 @@
         </div>
       </section>
 
+      <label
+        [class.border-blue-500]="isGiftWrapSelected"
+        [class.bg-blue-50/40]="isGiftWrapSelected"
+        class="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-2xl cursor-pointer transition-all select-none hover:bg-gray-50/80 shadow-sm flex-shrink-0"
+      >
+        <div class="flex items-center space-x-3.5">
+          <input
+            type="checkbox"
+            [(ngModel)]="isGiftWrapSelected"
+            class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 accent-blue-600"
+          />
+          <div class="flex items-center space-x-2.5">
+            <span class="text-xl">🎁</span>
+            <div>
+              <p class="text-xs font-bold text-gray-800">Add holiday gift wrapping</p>
+              <p class="text-[11px] text-gray-400 mt-0.5">We will pack it in a premium box with a ribbon.</p>
+            </div>
+          </div>
+        </div>
+        <span class="text-xs font-extrabold text-blue-600">+ €3.00</span>
+      </label>
+
       <div
-        class="bg-gray-900 text-sky-400 p-5 rounded-2xl mt-auto shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        class="bg-gray-900 text-sky-400 p-5 rounded-2xl shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 flex-shrink-0 lg:!mt-auto"
       >
         <div>
           <span class="text-xs text-gray-400 block font-medium">Total cost:</span>
           <span class="text-3xl font-black text-green-400 tracking-tight">€{{ totalPrice }}.00</span>
         </div>
-        <button
-          (click)="addToCart()"
-          class="sm:w-auto flex-1 bg-blue-600 text-sky-400 py-3.5 px-6 rounded-xl font-bold hover:bg-blue-500 transition-all text-xs uppercase tracking-widest active:scale-[0.98] shadow-md shadow-blue-600/20"
-        >
-          Add to cart
-        </button>
-        <button
+        <div class="flex flex-1 flex-col sm:flex-row gap-2 sm:justify-end">
+          <button
+            (click)="addToCart()"
+            class="w-full sm:w-auto bg-blue-600 text-sky-400 py-3.5 px-6 rounded-xl font-bold hover:bg-blue-500 transition-all text-xs uppercase tracking-widest active:scale-[0.98] shadow-md shadow-blue-600/20"
+          >
+            Add to cart
+          </button>
+          <button
             (click)="downloadDesign()"
-            class=" py-3.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition-colors flex items-center gap-2"
+            class="w-full sm:w-auto py-3.5 px-4 bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold uppercase tracking-widest rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 border border-gray-700"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5"
+              class="h-4 w-4"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -338,9 +453,11 @@
                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
               />
             </svg>
-            Download Design
+            Export
           </button>
+        </div>
       </div>
     </div>
+    
   </div>
 </div>

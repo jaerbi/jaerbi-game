@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, ElementRef, inject, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule } from '@angular/cdk/drag-drop';
@@ -8,8 +8,9 @@ import html2canvas from 'html2canvas';
     selector: 'app-print',
     imports: [CommonModule, FormsModule, DragDropModule],
     templateUrl: 'print.component.html',
+    styleUrl: 'print.component.css',
 })
-export class PrintComponent {
+export class PrintComponent implements OnInit, OnDestroy {
     @ViewChild('printableBoundary') printableBoundary!: ElementRef<HTMLDivElement>;
     @ViewChild('dragImageRef') dragImageRef?: ElementRef<HTMLDivElement>;
     @ViewChild('dragTextRef') dragTextRef?: ElementRef<HTMLDivElement>;
@@ -35,7 +36,48 @@ export class PrintComponent {
     selectedSize: string | null = null;
     isSubmitted: boolean = false;
     dragPosition = { x: 0, y: 0 };
+    giftWrapPrice: number = 3;
+    isGiftWrapSelected: boolean = false;
+    fomoTimerText: string = '02:00:00';
+    private _timerIntervalId: any;
+    printRotation: number = 0;
+    selectedFilter: string = 'none';
 
+    imageFilters = [
+        { name: 'Original', value: 'none', icon: '✨' },
+        { name: 'B&W', value: 'grayscale(100%)', icon: '🏁' },
+        { name: 'Sepia', value: 'sepia(80%)', icon: '📜' },
+        { name: 'Invert', value: 'invert(100%)', icon: '🔄' },
+        { name: 'Vintage', value: 'sepia(30%) contrast(120%) brightness(90%) hue-rotate(-15deg)', icon: '🎞️' },
+        { name: 'Warm', value: 'saturate(140%) sepia(10%)', icon: '☀️' }
+    ];
+    clipartCategories = [
+        {
+            name: 'IT / Coding',
+            items: [
+                { name: 'Code', url: 'https://api.iconify.design/lucide:code.svg?color=%233b82f6' },
+                { name: 'Terminal', url: 'https://api.iconify.design/lucide:terminal.svg?color=%2310b981' },
+                { name: 'Database', url: 'https://api.iconify.design/lucide:database.svg?color=%23ef4444' },
+                { name: 'Coffee', url: 'https://api.iconify.design/lucide:coffee.svg?color=%23f59e0b' }
+            ]
+        },
+        {
+            name: 'Gaming',
+            items: [
+                { name: 'Gamepad', url: 'https://api.iconify.design/lucide:gamepad-2.svg?color=%238b5cf6' },
+                { name: 'Swords', url: 'https://api.iconify.design/lucide:swords.svg?color=%23f43f5e' },
+                { name: 'Trophy', url: 'https://api.iconify.design/lucide:trophy.svg?color=%23eab308' }
+            ]
+        },
+        {
+            name: 'Anime & Minimal',
+            items: [
+                { name: 'Heart', url: 'https://api.iconify.design/lucide:heart.svg?color=%23ec4899' },
+                { name: 'Sparkles', url: 'https://api.iconify.design/lucide:sparkles.svg?color=%23a855f7' },
+                { name: 'Flame', url: 'https://api.iconify.design/lucide:flame.svg?color=%23f97316' }
+            ]
+        }
+    ];
     sizes = [
         { name: 'S', description: 'Width 48cm / Length 68cm' },
         { name: 'M', description: 'Width 51cm / Length 70cm' },
@@ -69,6 +111,51 @@ export class PrintComponent {
         'top-right': 'items-start justify-end text-right',
         'bottom-center': 'items-end justify-center text-center'
     };
+
+    ngOnInit() {
+        this.startFomoTimer();
+    }
+
+    ngOnDestroy() {
+        if (this._timerIntervalId) {
+            clearInterval(this._timerIntervalId);
+        }
+    }
+
+    setFilter(filterValue: string) {
+        this.selectedFilter = filterValue;
+    }
+
+
+    selectClipart(url: string) {
+        this.activeTab = 'image'; // Перемикаємо на таб зображення
+        this.userImage = url;     // Підставляємо URL стікера як картинку принту
+        this.printPrice = this.imageAddonPrice; // додаємо вартість за друк принту
+
+        // Скидаємо позицію в центр, щоб відпрацював наш точний математичний розрахунок
+        this.changePosition('center');
+    }
+
+    startFomoTimer() {
+        // Зробимо красивий циклічний таймер, який ресетиться кожні 2 години для ефекту терміновості
+        const twoHoursInMs = 2 * 60 * 60 * 1000;
+        let startTime = Date.now();
+
+        this._timerIntervalId = setInterval(() => {
+            const now = Date.now();
+            const elapsed = (now - startTime) % twoHoursInMs;
+            const remaining = twoHoursInMs - elapsed;
+
+            const hours = Math.floor(remaining / (1000 * 60 * 60));
+            const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+
+            this.fomoTimerText =
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            this._cdr.detectChanges();
+        }, 1000);
+    }
 
     async downloadDesign() {
         if (!this.printableBoundary) return;
@@ -204,6 +291,8 @@ export class PrintComponent {
     removeImage() {
         this.userImage = null;
         this.printPrice = 0;
+        this.userImage = null;
+        this.selectedFilter = 'none';
     }
 
     onTextChange() {
@@ -211,13 +300,19 @@ export class PrintComponent {
     }
 
     get totalPrice(): number {
+        let total = this.basePrice;
+
         if (this.activeTab === 'image' && this.userImage) {
-            return this.basePrice + this.printPrice;
+            total += this.printPrice;
         }
         if (this.activeTab === 'text' && this.userText.trim().length > 0) {
-            return this.basePrice + this.textPrice;
+            total += this.textPrice;
         }
-        return this.basePrice;
+        if (this.isGiftWrapSelected) {
+            total += this.giftWrapPrice;
+        }
+
+        return total;
     }
 
     selectSize(sizeName: string) {
