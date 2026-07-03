@@ -10,6 +10,7 @@ import { canLeaveGameGuard } from './guards/can-leave-game-guard.guard';
 import { AdminAnalyticsComponent } from './components/admin-analytics/admin-analytics.component';
 import { AdminGuard } from './guards/admin.guard';
 import { PrintComponent } from './components/print/print.component';
+import { MizaelComponent } from './components/mizael/mizael.component';
 
 export const routes: Routes = [
     {
@@ -41,6 +42,10 @@ export const routes: Routes = [
     {
         path: 'print',
         component: PrintComponent,
+    },
+    {
+        path: 'mizael',
+        component: MizaelComponent,
     },
     {
         path: 'feedback',
