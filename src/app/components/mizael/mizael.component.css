@@ -1,0 +1,23 @@
+
+.custom-scrollbar {
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1; /* сірий колір slate-300 */
+    border-radius: 20px;
+    
+    &:hover {
+      background-color: #94a3b8; /* slate-400 при наведенні */
+    }
+  }
+
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
