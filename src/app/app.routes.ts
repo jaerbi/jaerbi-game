@@ -11,6 +11,8 @@ import { AdminAnalyticsComponent } from './components/admin-analytics/admin-anal
 import { AdminGuard } from './guards/admin.guard';
 import { PrintComponent } from './components/print/print.component';
 import { MizaelComponent } from './components/mizael/mizael.component';
+import { GoltComponent } from './components/golt/golt.component';
+import { ApplicationComponent } from './components/application/application.component';
 
 export const routes: Routes = [
     {
@@ -46,6 +48,14 @@ export const routes: Routes = [
     {
         path: 'mizael',
         component: MizaelComponent,
+    },
+    {
+        path: 'golt',
+        component: GoltComponent,
+    },
+    {
+        path: 'application',
+        component: ApplicationComponent,
     },
     {
         path: 'feedback',

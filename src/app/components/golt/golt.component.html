@@ -1,0 +1,43 @@
+<div class="estimate-container">
+  <div class="header-section">
+    <h2>Front-end Development Rough Estimate</h2>
+    <span class="project-badge">{{ projectName }}</span>
+  </div>
+
+  <div class="table-wrapper">
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Компонент / Модуль</th>
+          <th>Опис робіт</th>
+          <th class="text-center">Мін. (год)</th>
+          <th class="text-center">Макс. (год)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of estimateData">
+          <td class="font-semibold text-primary">{{ item.module }}</td>
+          <td class="text-secondary">{{ item.description }}</td>
+          <td class="text-center font-mono">{{ item.hoursMin }}</td>
+          <td class="text-center font-mono">{{ item.hoursMax }}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="2">Загальний естімейт (орієнтовно)</td>
+          <td class="text-center font-mono">{{ totalMin }}</td>
+          <td class="text-center font-mono">{{ totalMax }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="notes-card">
+    <h4>💡 Ризики та примітки до оцінки:</h4>
+    <ul>
+      <li>Оцінка є попередньою (Rough Estimate) та базується на поточному Feature Spec.</li>
+      <li>Передбачається наявність готового дизайну (UI/UX) та задокументованих контрактів API з боку Back-end.</li>
+      <li>Складність динамічних форм (Dynamic Forms) під окремих кредиторів може скоригувати час на розробку клієнтського флоу.</li>
+    </ul>
+  </div>
+</div>
