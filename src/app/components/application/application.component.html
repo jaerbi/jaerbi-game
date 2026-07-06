@@ -1,0 +1,45 @@
+<div class="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+  <table class="w-full text-left text-sm text-gray-600" id="estimate-table-id">
+    <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-700">
+      <tr>
+        <th class="px-6 py-4">Stage of work</th>
+        <th class="px-6 py-4">Description</th>
+        <th class="px-6 py-4 text-center">Estimate (hours)</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-200 bg-white">
+      <tr *ngFor="let item of estimateData(); let i = index" class="hover:bg-gray-50 transition-colors">
+        <td class="px-6 py-4 font-medium text-gray-900">{{ item.task }}</td>
+        <td class="px-6 py-4 text-gray-500">{{ item.description }}</td>
+        <td class="px-6 py-4 text-center">
+          <div class="flex items-center justify-center gap-2">
+            <input
+              type="number"
+              [ngModel]="item.hoursMin"
+              (ngModelChange)="updateHours(i, 'hoursMin', $event)"
+              class="w-16 rounded-md border border-gray-300 px-2 py-1 text-center focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <span class="text-gray-400">-</span>
+            <input
+              type="number"
+              [ngModel]="item.hoursMax"
+              (ngModelChange)="updateHours(i, 'hoursMax', $event)"
+              class="w-16 rounded-md border border-gray-300 px-2 py-1 text-center focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+        </td>
+      </tr>
+    </tbody>
+    <tfoot class="bg-gray-50 font-bold text-gray-900">
+      <tr class="total-row">
+        <td colspan="2" class="px-6 py-4 text-right">Together</td>
+        <td class="px-6 py-4 text-center text-blue-600">{{ totalMin() }} - {{ totalMax() }} hour</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+<button (click)="exportPDF()" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+  Завантажити PDF
+</button>
+
+<div id="estimate-table-id" class="overflow-hidden rounded-xl border border-gray-200 shadow-sm"></div>
