@@ -43,3 +43,70 @@
 </button>
 
 <div id="estimate-table-id" class="overflow-hidden rounded-xl border border-gray-200 shadow-sm"></div>
+<table class="w-full text-sm text-left text-slate-600 border-collapse">
+  <thead class="text-xs uppercase text-slate-700 bg-slate-100">
+    <tr>
+      <th scope="col" class="px-6 py-4 rounded-l-lg">Component / Responsibility Area</th>
+      <th scope="col" class="px-6 py-4">Front-end (Angular) Effort</th>
+      <th scope="col" class="px-6 py-4">Back-end (.NET) & AI Effort</th>
+      <th scope="col" class="px-6 py-4 text-center rounded-r-lg">Combined Target Hours</th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-slate-100">
+    <!-- Architecture & Foundations -->
+    <tr class="hover:bg-slate-50 transition-colors">
+      <td class="px-6 py-4 font-semibold text-slate-900">1. Foundations, Auth & Multi-Tenancy</td>
+      <td class="px-6 py-4">Nx Monorepo setup, UI Kit adaptation, Login/2FA layouts, RBAC Guard mechanisms.</td>
+      <td class="px-6 py-4">ABP Commercial config, DB schemas, multi-tenant data isolation layers, core DTOs.</td>
+      <td class="px-6 py-4 text-center font-bold text-slate-800">70 - 90 hrs</td>
+    </tr>
+    <!-- Company Portal -->
+    <tr class="bg-slate-50/40 hover:bg-slate-50 transition-colors">
+      <td class="px-6 py-4 font-semibold text-slate-900">2. Company Portal (Internal Advisory)</td>
+      <td class="px-6 py-4">Accounting Dashboard widgets, interactive Workpaper Pack tables, detail pages, chat UI.</td>
+      <td class="px-6 py-4">Workpaper pack CRUD endpoints, workflow state machine, queries management APIs.</td>
+      <td class="px-6 py-4 text-center font-bold text-slate-800">140 - 180 hrs</td>
+    </tr>
+    <!-- Client Portal -->
+    <tr class="hover:bg-slate-50 transition-colors">
+      <td class="px-6 py-4 font-semibold text-slate-900">3. Client Portal (Mobile-First)</td>
+      <td class="px-6 py-4">Mobile responsive layouts, Entity Switcher, guided drag-and-drop document uploader, AI Chat view.</td>
+      <td class="px-6 py-4">Client deadlines engine, secure document intake handlers, messaging API integration hooks.</td>
+      <td class="px-6 py-4 text-center font-bold text-slate-800">110 - 140 hrs</td>
+    </tr>
+    <!-- Automation Layer -->
+    <tr class="bg-slate-50/40 hover:bg-slate-50 transition-colors">
+      <td class="px-6 py-4 font-semibold text-slate-900">4. Workpaper Automation & Microsoft MAF</td>
+      <td class="px-6 py-4">AI suggestion highlights, Reviewer boundaries UI indicators, Manual Journals entry modal.</td>
+      <td class="px-6 py-4">Microsoft Foundry configurations, MAF agent orchestration workflows, automated data matching.</td>
+      <td class="px-6 py-4 text-center font-bold text-slate-800">140 - 180 hrs</td>
+    </tr>
+    <!-- Integrations & Admin -->
+    <tr class="hover:bg-slate-50 transition-colors">
+      <td class="px-6 py-4 font-semibold text-slate-900">5. Core Integrations & Systems Admin</td>
+      <td class="px-6 py-4">Xero Sync Queue monitoring dashboards, Admin logs viewers, system preference views.</td>
+      <td class="px-6 py-4">Xero Blue API, XPM 3.1 connector layer, OneDrive integration, ATO read-only stubs.</td>
+      <td class="px-6 py-4 text-center font-bold text-slate-800">100 - 130 hrs</td>
+    </tr>
+    <!-- QA & DevOps (Newly Added to Proposal) -->
+    <tr class="bg-indigo-50/30 hover:bg-indigo-50/50 transition-colors">
+      <td class="px-6 py-4 font-semibold text-slate-900">6. QA, CI/CD, DevOps & Security Hardening</td>
+      <td class="px-6 py-4">E2E UI test suites, multi-role matrix testing.</td>
+      <td class="px-6 py-4">Infrastructure provisioning, automated backup jobs, secrets configuration, Docker/CI-CD pipelines.</td>
+      <td class="px-6 py-4 text-center font-bold text-indigo-700">80 - 100 hrs</td>
+    </tr>
+    <!-- Documentation & Handover -->
+    <tr class="hover:bg-slate-50 transition-colors">
+      <td class="px-6 py-4 font-semibold text-slate-900">7. Technical Documentation & Handover</td>
+      <td class="px-6 py-4">Component catalog, client portal usage guides.</td>
+      <td class="px-6 py-4">Data models architecture notes, Swagger API docs, environment deployment manual.</td>
+      <td class="px-6 py-4 text-center font-bold text-slate-800">30 - 40 hrs</td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr class="bg-slate-950 text-white font-bold">
+      <td colspan="3" class="px-6 py-5 rounded-bl-xl text-base uppercase tracking-wider">Total Comprehensive Effort Budget:</td>
+      <td class="px-6 py-5 text-center rounded-br-xl text-lg bg-indigo-600 whitespace-nowrap">670 - 860 hrs</td>
+    </tr>
+  </tfoot>
+</table>
