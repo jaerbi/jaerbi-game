@@ -1,0 +1,10 @@
+/* chess-overlay.component.css */
+.score-container {
+  font-family: 'Arial Black', sans-serif;
+  color: white;
+  text-shadow: 2px 2px 4px #000;
+  font-size: 32px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 10px 20px;
+  border-radius: 8px;
+}

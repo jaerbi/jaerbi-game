@@ -13,6 +13,8 @@ import { PrintComponent } from './components/print/print.component';
 import { MizaelComponent } from './components/mizael/mizael.component';
 import { GoltComponent } from './components/golt/golt.component';
 import { ApplicationComponent } from './components/application/application.component';
+import { OBSComponent } from './components/obs/obs.component';
+import { ScoreOverlayComponent } from './components/obs/score-overlay.component';
 
 export const routes: Routes = [
     {
@@ -48,6 +50,14 @@ export const routes: Routes = [
     {
         path: 'mizael',
         component: MizaelComponent,
+    },
+    {
+        path: 'obs',
+        component: OBSComponent,
+    },
+    {
+        path: 'score-overlay',
+        component: ScoreOverlayComponent,
     },
     {
         path: 'golt',
