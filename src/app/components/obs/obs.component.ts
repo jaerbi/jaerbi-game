@@ -12,12 +12,18 @@ import { ScoreService } from './obs.service';
 export class OBSComponent {
     constructor(private scoreService: ScoreService) { }
 
-    addPoint(type: 'wins' | 'draws' | 'losses') {
-        const data = this.scoreService.getData(); // Отримуємо актуальне
-        data[type] += 1; // Додаємо +1
-        this.scoreService.saveData(data); // Зберігаємо
+    async addPoint(type: 'wins' | 'draws' | 'losses') {
+        // 1. Отримуємо актуальні дані з сервера
+        const data = await this.scoreService.getLatestData();
+
+        // 2. Оновлюємо
+        data[type] += 1;
+
+        // 3. Зберігаємо назад
+        await this.scoreService.saveData(data);
     }
-    reset() {
-        this.scoreService.saveData({ wins: 0, draws: 0, losses: 0 });
+
+    async reset() {
+        await this.scoreService.saveData({ wins: 0, draws: 0, losses: 0 });
     }
 }

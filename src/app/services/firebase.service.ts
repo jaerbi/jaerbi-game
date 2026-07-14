@@ -1,7 +1,7 @@
 import { Injectable, signal, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, Firestore, serverTimestamp, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, Firestore, serverTimestamp, doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User, Auth } from 'firebase/auth';
 import { environmentFirebase } from '../../environments/environment.firebase';
 import { Difficulty, MapSize } from './settings.service';
@@ -498,4 +498,34 @@ export class FirebaseService {
     //         console.error('❌ Migration failed:', error);
     //     }
     // }
+
+
+    subscribeToScore(callback: (data: any) => void) {
+        if (!this.db) return;
+        const docRef = doc(this.db, 'overlay_data', 'current_score');
+
+        // onSnapshot створює постійне з'єднання
+        return onSnapshot(docRef, (doc) => {
+            if (doc.exists()) {
+                callback(doc.data());
+            }
+        });
+    }
+
+    async getCurrentScore() {
+        if (!this.db) return { wins: 0, draws: 0, losses: 0 };
+        const docRef = doc(this.db, 'overlay_data', 'current_score');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return docSnap.data();
+        } else {
+            return { wins: 0, draws: 0, losses: 0 }; // Початкові значення
+        }
+    }
+
+    async updateScore(data: any) {
+        if (!this.db) return;
+        const docRef = doc(this.db, 'overlay_data', 'current_score');
+        await setDoc(docRef, data);
+    }
 }

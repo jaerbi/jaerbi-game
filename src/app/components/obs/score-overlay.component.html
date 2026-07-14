@@ -1,27 +1,56 @@
-<div class="flex items-center gap-4 p-4">
-  
-  <!-- Wins -->
-  <div class="flex flex-col items-center">
-    <span class="text-[10px] uppercase tracking-widest text-green-400 font-bold">Wins</span>
-    <span class="text-3xl font-black text-white font-mono">{{score.wins}}</span>
-  </div>
+<div
+  class="score-card-container min-w-[320px] h-[72px] flex items-center justify-center p-4 overflow-hidden relative"
+>
+  <!-- РЕЖИМ РАХУНКУ -->
+  @if (mode === 'score') {
+    <div class="flex items-center gap-6 animate-fade-in">
+      <!-- Wins -->
+      <div class="flex flex-col items-center">
+        <span class="text-[10px] uppercase tracking-widest text-green-400 font-bold">Wins</span>
+        <span
+          class="text-3xl font-black text-white font-mono transition-all duration-300"
+          [class.animate-pop]="animating.wins"
+        >
+          {{ score.wins }}
+        </span>
+      </div>
 
-  <!-- Divider -->
-  <div class="h-8 w-px bg-gray-600"></div>
+      <!-- Divider -->
+      <div class="h-8 w-px bg-gray-600"></div>
 
-  <!-- Draws -->
-  <div class="flex flex-col items-center">
-    <span class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Draws</span>
-    <span class="text-3xl font-black text-white font-mono">{{score.draws}}</span>
-  </div>
+      <!-- Draws -->
+      <div class="flex flex-col items-center">
+        <span class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Draws</span>
+        <span
+          class="text-3xl font-black text-white font-mono transition-all duration-300"
+          [class.animate-pop]="animating.draws"
+        >
+          {{ score.draws }}
+        </span>
+      </div>
 
-  <!-- Divider -->
-  <div class="h-8 w-px bg-gray-600"></div>
+      <!-- Divider -->
+      <div class="h-8 w-px bg-gray-600"></div>
 
-  <!-- Losses -->
-  <div class="flex flex-col items-center">
-    <span class="text-[10px] uppercase tracking-widest text-red-400 font-bold">Losses</span>
-    <span class="text-3xl font-black text-white font-mono">{{score.losses}}</span>
-  </div>
+      <!-- Losses -->
+      <div class="flex flex-col items-center">
+        <span class="text-[10px] uppercase tracking-widest text-red-400 font-bold">Losses</span>
+        <span
+          class="text-3xl font-black text-white font-mono transition-all duration-300"
+          [class.animate-pop]="animating.losses"
+        >
+          {{ score.losses }}
+        </span>
+      </div>
+    </div>
+  }
 
+  <!-- РЕЖИМ ТЕКСТОВОГО ПОВІДОМЛЕННЯ -->
+  @if (mode === 'text') {
+    <div class="w-full text-center px-2 animate-fade-in">
+      <p class="text-sm md:text-base font-bold text-yellow-400 tracking-wide leading-snug drop-shadow-md">
+        {{ currentText }}
+      </p>
+    </div>
+  }
 </div>
