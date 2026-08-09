@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core'; // <-- 1. Додаємо ChangeDetectorRef
+import { Component, OnInit, ChangeDetectorRef, Input } from '@angular/core'; // <-- 1. Додаємо ChangeDetectorRef
 import { CommonModule } from '@angular/common';
 import { FirebaseService } from '../../services/firebase.service';
 
@@ -9,6 +9,8 @@ import { FirebaseService } from '../../services/firebase.service';
     styleUrl: 'score-overlay.component.css',
 })
 export class ScoreOverlayComponent implements OnInit {
+
+    @Input() isAdmin = false;
     score = { wins: 0, draws: 0, losses: 0 };
     animating = { wins: false, draws: false, losses: false };
     currentText = '';

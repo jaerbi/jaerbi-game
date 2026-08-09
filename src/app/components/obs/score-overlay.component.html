@@ -2,7 +2,7 @@
   class="score-card-container min-w-[320px] h-[72px] flex items-center justify-center p-4 overflow-hidden relative"
 >
   <!-- РЕЖИМ РАХУНКУ -->
-  @if (mode === 'score') {
+  @if (isAdmin || mode === 'score') {
     <div class="flex items-center gap-6 animate-fade-in">
       <!-- Wins -->
       <div class="flex flex-col items-center">

@@ -2,10 +2,11 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ScoreService } from './obs.service';
+import { ScoreOverlayComponent } from './score-overlay.component';
 
 @Component({
     selector: 'app-obs',
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, ScoreOverlayComponent],
     templateUrl: 'obs.component.html',
     styleUrl: 'obs.component.css',
 })
