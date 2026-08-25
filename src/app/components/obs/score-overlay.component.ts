@@ -96,7 +96,6 @@ export class ScoreOverlayComponent implements OnInit {
     }
 
     triggerAnimation(key: keyof typeof this.animating) {
-        // Якщо раптом горить текст, примусово повертаємо рахунок при зміні балів
         if (this.mode === 'text') {
             this.mode = 'score';
             if (this.restoreTimeout) clearTimeout(this.restoreTimeout);
@@ -111,7 +110,7 @@ export class ScoreOverlayComponent implements OnInit {
             setTimeout(() => {
                 this.animating[key] = false;
                 this.cdr.detectChanges();
-            }, 500);
+            }, 600); // 600ms під тривалість CSS анімації
         }, 50);
     }
 

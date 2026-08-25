@@ -1,46 +1,74 @@
-<div
-  class="score-card-container min-w-[320px] h-[72px] flex items-center justify-center p-4 overflow-hidden relative"
->
+<div class="score-card-container min-w-[320px] h-[72px] flex items-center justify-center p-4 overflow-hidden relative">
   <!-- РЕЖИМ РАХУНКУ -->
   @if (isAdmin || mode === 'score') {
     <div class="flex items-center gap-6 animate-fade-in">
       <!-- Wins -->
-      <div class="flex flex-col items-center">
+      <div class="flex flex-col items-center relative">
         <span class="text-[10px] uppercase tracking-widest text-green-400 font-bold">Wins</span>
         <span
-          class="text-3xl font-black text-white font-mono transition-all duration-300"
+          class="text-3xl font-black text-white font-mono transition-all duration-300 relative z-10"
           [class.animate-pop]="animating.wins"
         >
           {{ score.wins }}
         </span>
+        @if (animating.wins) {
+          <div class="particle-burst wins">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        }
       </div>
 
       <!-- Divider -->
       <div class="h-8 w-px bg-gray-600"></div>
 
       <!-- Draws -->
-      <div class="flex flex-col items-center">
+      <div class="flex flex-col items-center relative">
         <span class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Draws</span>
         <span
-          class="text-3xl font-black text-white font-mono transition-all duration-300"
+          class="text-3xl font-black text-white font-mono transition-all duration-300 relative z-10"
           [class.animate-pop]="animating.draws"
         >
           {{ score.draws }}
         </span>
+        @if (animating.draws) {
+          <div class="particle-burst draws">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        }
       </div>
 
       <!-- Divider -->
       <div class="h-8 w-px bg-gray-600"></div>
 
       <!-- Losses -->
-      <div class="flex flex-col items-center">
+      <div class="flex flex-col items-center relative">
         <span class="text-[10px] uppercase tracking-widest text-red-400 font-bold">Losses</span>
         <span
-          class="text-3xl font-black text-white font-mono transition-all duration-300"
+          class="text-3xl font-black text-white font-mono transition-all duration-300 relative z-10"
           [class.animate-pop]="animating.losses"
         >
           {{ score.losses }}
         </span>
+        @if (animating.losses) {
+          <div class="particle-burst losses">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        }
       </div>
     </div>
   }
