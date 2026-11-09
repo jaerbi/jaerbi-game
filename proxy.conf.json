@@ -1,0 +1,10 @@
+{
+  "/api": {
+    "target": "https://poe.ninja",
+    "secure": true,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api": "/api"
+    }
+  }
+}

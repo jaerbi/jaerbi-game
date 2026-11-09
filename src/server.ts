@@ -13,16 +13,26 @@ const app = express();
 const angularApp = new AngularNodeAppEngine();
 
 /**
- * Example Express Rest API endpoints can be defined here.
- * Uncomment and define endpoints as necessary.
- *
- * Example:
- * ```ts
- * app.get('/api/{*splat}', (req, res) => {
- *   // Handle API request
- * });
- * ```
+ * Наш власний API-ендпоінт для проксування запитів до poe.ninja без CORS
  */
+app.get('/api/proxy-ninja', async (req, res) => {
+  const type = req.query['type'] || 'Currency';
+  const league = req.query['league'] || 'Settlers';
+  
+  const targetUrl = `https://poe.ninja/api/data/currencyoverview?league=${league}&type=${type}`;
+
+  try {
+    const response = await fetch(targetUrl);
+    if (!response.ok) {
+      throw new Error(`PoE.ninja responded with status: ${response.status}`);
+    }
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('Помилка проксі сервера:', error);
+    res.status(500).json({ error: 'Не вдалося отримати дані з poe.ninja' });
+  }
+});
 
 /**
  * Serve static files from /browser
@@ -48,8 +58,7 @@ app.use((req, res, next) => {
 });
 
 /**
- * Start the server if this module is the main entry point, or it is ran via PM2.
- * The server listens on the port defined by the `PORT` environment variable, or defaults to 4000.
+ * Start the server if this module is the main entry point...
  */
 if (isMainModule(import.meta.url) || process.env['pm_id']) {
   const port = process.env['PORT'] || 4000;
@@ -62,7 +71,4 @@ if (isMainModule(import.meta.url) || process.env['pm_id']) {
   });
 }
 
-/**
- * Request handler used by the Angular CLI (for dev-server and during build) or Firebase Cloud Functions.
- */
 export const reqHandler = createNodeRequestHandler(app);

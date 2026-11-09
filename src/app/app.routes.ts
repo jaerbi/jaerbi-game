@@ -15,6 +15,7 @@ import { GoltComponent } from './components/golt/golt.component';
 import { ApplicationComponent } from './components/application/application.component';
 import { OBSComponent } from './components/obs/obs.component';
 import { ScoreOverlayComponent } from './components/obs/score-overlay.component';
+import { PoeTrackerComponent } from './components/ninja/poe-tracker.component';
 
 export const routes: Routes = [
     {
@@ -74,5 +75,9 @@ export const routes: Routes = [
     {
         path: 'roadmap',
         component: RoadmapComponent
+    },
+    {
+        path: 'jaerbi-ninja',
+        component: PoeTrackerComponent
     }
 ];
