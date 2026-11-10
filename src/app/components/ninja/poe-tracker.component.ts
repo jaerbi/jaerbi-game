@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, PLATFORM_ID, signal, computed } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { PoeNinjaService, FossilItem } from './poe-ninja.service';
+import { DelveBossesComponent } from './delve-bosses.component';
 
 interface BiomeData {
     name: string;
@@ -12,7 +13,7 @@ interface BiomeData {
 @Component({
     selector: 'app-poe-tracker',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, DelveBossesComponent],
     templateUrl: 'poe-tracker.component.html'
 })
 export class PoeTrackerComponent implements OnInit {
