@@ -1,22 +1,13 @@
 <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-xl mt-8">
-  <div class="p-4 bg-slate-950/60 border-b border-slate-700 flex justify-between items-center">
-    <div>
-      <h2 class="text-lg font-bold text-amber-400">Delve Boss Profitability Tier List</h2>
-      <p class="text-xs text-slate-400 mt-0.5">
-        Expected Value (EV) calculation based on drop rates & poe.ninja prices
-      </p>
-    </div>
     <!-- <button 
       (click)="fetchBossData()" 
       class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-lg text-xs transition cursor-pointer">
       🔄 Refresh Boss Prices
     </button> -->
-  </div>
   <!-- TOP VALUABLE BOSS DROPS -->
   @if (topBossItems().length > 0) {
-    <div class="mb-6 mt-2">
-      <h3 class="text-sm font-bold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-        <span>👑</span>
+    <div class="mb-6 mt-6">
+      <h3 class="pl-4 text-sm font-bold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-2">
         Top Most Valuable Delve Boss Drops
       </h3>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -39,7 +30,7 @@
               <div>
                 <span class="text-xs font-bold text-slate-200 block line-clamp-1">{{ item.name }}</span>
                 <span class="text-[10px]" [ngClass]="item.changePercent >= 0 ? 'text-emerald-400' : 'text-rose-400'">
-                  {{ item.changePercent >= 0 ? '+' : '' }}{{ item.changePercent }}% (7d)
+                  {{ item.changePercent >= 0 ? '+' : '' }}{{ item.changePercent }}%
                 </span>
               </div>
             </div>
@@ -70,7 +61,14 @@
           <!-- Boss Main Row -->
           <tr (click)="toggleBoss(boss.name)" class="hover:bg-slate-700/40 transition cursor-pointer select-none">
             <td class="p-4 font-semibold flex items-center gap-3">
-              <span class="w-3 h-3 rounded-full inline-block shrink-0" [style.background-color]="boss.colorHex"></span>
+              <!-- Замість кольорового span виводимо іконку нода дельва -->
+              @if (boss.icon) {
+                <img
+                  [src]="boss.icon"
+                  class="w-8 h-8 object-cover rounded-lg border border-slate-700 bg-slate-900 shrink-0"
+                  alt="{{ boss.name }}"
+                />
+              } 
               <div>
                 <span class="text-slate-200 block">{{ boss.name }}</span>
                 <span class="text-[10px] text-slate-400 uppercase tracking-wider">{{ boss.title }}</span>

@@ -11,6 +11,7 @@ interface BossData {
     name: string;
     title: string;
     colorHex: string;
+    icon: string;
     expanded: boolean;
     drops: BossDrop[];
 }
@@ -54,8 +55,9 @@ export class DelveBossesComponent implements OnInit {
     bosses = signal<BossData[]>([
         {
             name: 'Kurgal, the Blackblooded',
-            title: 'Delve Boss #1',
+            title: "The Lich's Tomb",
             colorHex: '#a855f7',
+            icon: "assets/images/poe/The_Lich's_Tomb_delve_node_icon.png",
             expanded: false,
             drops: [
                 { name: 'Hale Negator (1 socket)', dropRate: 0.40 },
@@ -70,8 +72,9 @@ export class DelveBossesComponent implements OnInit {
         },
         {
             name: 'Ahuatotli, the Blind',
-            title: 'Delve Boss #2',
+            title: "The Grand Architect's Temple",
             colorHex: '#3b82f6',
+            icon: "assets/images/poe/The_Grand_Architect's_Temple_delve_node_icon.png",
             expanded: false,
             drops: [
                 { name: 'Cerberus Limb', dropRate: 0.60 },
@@ -84,8 +87,9 @@ export class DelveBossesComponent implements OnInit {
         },
         {
             name: 'Aul, the Crystal King',
-            title: 'Delve Boss #3',
+            title: "The Crystal King's Throne",
             colorHex: '#f59e0b',
+            icon: "assets/images/poe/The_Crystal_King's_Throne_delve_node_icon.png",
             expanded: false,
             drops: [
                 { name: "Aul's Uprising", dropRate: 0.61 },

@@ -6,7 +6,9 @@
     >
       <div>
         <h1 class="text-2xl font-bold text-amber-400">DelveScout</h1>
-        <p class="text-xs text-slate-400 mt-1">Real-time Delve biomes farm profitability based on poe.ninja prices</p>
+        <p class="text-xs text-slate-400 mt-1">
+          Real-time Delve Biome Farming & Boss Expected Value (EV) Tracker via poe.ninja
+        </p>
       </div>
       <!-- <button
         (click)="forceRefresh()"
@@ -22,7 +24,7 @@
         <!-- Gainers -->
         <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md">
           <h3 class="text-xs font-bold uppercase text-emerald-400 mb-3 flex items-center gap-1">
-            <span>🚀 Top Price Gainers (Fossils)</span>
+            <span>Top Gainers</span>
           </h3>
           <div class="space-y-2">
             @for (f of topGainers(); track f.id) {
@@ -43,7 +45,7 @@
         <!-- Losers -->
         <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md">
           <h3 class="text-xs font-bold uppercase text-rose-400 mb-3 flex items-center gap-1">
-            <span>📉 Top Price Losers (Fossils)</span>
+            <span>Top Losers</span>
           </h3>
           <div class="space-y-2">
             @for (f of topLosers(); track f.id) {
@@ -81,10 +83,18 @@
               <!-- Biome Main Row -->
               <tr (click)="toggleBiome(biome.name)" class="hover:bg-slate-700/40 transition cursor-pointer select-none">
                 <td class="p-4 font-semibold flex items-center gap-3">
-                  <span
-                    class="w-3 h-3 rounded-full inline-block shrink-0"
-                    [style.background-color]="biome.colorHex"
-                  ></span>
+                  @if (biome.icon) {
+                    <img
+                      [src]="biome.icon"
+                      class="w-8 h-8 object-cover rounded-lg border border-slate-700 bg-slate-900 shrink-0"
+                      alt="{{ biome.name }}"
+                    />
+                  } @else {
+                    <span
+                      class="w-3 h-3 rounded-full inline-block shrink-0"
+                      [style.background-color]="biome.colorHex"
+                    ></span>
+                  }
                   <span class="text-slate-200">{{ biome.name }}</span>
                   <span class="text-xs text-amber-500/80">({{ biome.expanded ? '▲ hide' : '▼ details' }})</span>
                 </td>
@@ -154,10 +164,10 @@
             }
           </tbody>
         </table>
-
-        <!-- Підключаємо блок босів нижче -->
-        <app-delve-bosses></app-delve-bosses>
       }
     </div>
+
+    <!-- Підключаємо блок босів нижче -->
+    <app-delve-bosses></app-delve-bosses>
   </div>
 </div>

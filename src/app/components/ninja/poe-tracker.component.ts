@@ -6,6 +6,7 @@ import { DelveBossesComponent } from './delve-bosses.component';
 interface BiomeData {
     name: string;
     colorHex: string;
+    icon: string;
     fossilKeywords: string[];
     expanded: boolean;
 }
@@ -28,13 +29,55 @@ export class PoeTrackerComponent implements OnInit {
     private readonly CACHE_DURATION = 30 * 60 * 1000; // 30 хвилин
 
     biomes = signal<BiomeData[]>([
-        { name: 'Frozen Hollow', colorHex: '#00ffff', fossilKeywords: ['Frigid', 'Serrated', 'Prismatic', 'Sanctified'], expanded: false },
-        { name: 'Fungal Caverns', colorHex: '#90ee90', fossilKeywords: ['Dense', 'Aberrant', 'Perfect', 'Corroded', 'Gilded'], expanded: false },
-        { name: 'Magma Fissure', colorHex: '#ffa500', fossilKeywords: ['Scorched', 'Prismatic', 'Pristine', 'Deft', 'Fundamental'], expanded: false },
-        { name: 'Mines', colorHex: '#ffb6c1', fossilKeywords: ['Metallic', 'Serrated', 'Pristine', 'Aetheric'], expanded: false },
-        { name: 'Petrified Forest', colorHex: '#00ff00', fossilKeywords: ['Bound', 'Jagged', 'Corroded', 'Sanctified'], expanded: false },
-        { name: 'Abyssal Depths', colorHex: '#808080', fossilKeywords: ['Aberrant', 'Bound', 'Gilded', 'Lucent'], expanded: false },
-        { name: 'Sulphur Vents', colorHex: '#f5deb3', fossilKeywords: ['Metallic', 'Perfect', 'Aetheric', 'Fundamental'], expanded: false }
+        {
+            name: 'Mines',
+            colorHex: '#ffb6c1',
+            icon: 'assets/images/poe/Delve_Biome_Mines.png',
+            fossilKeywords: ['Metallic Fossil', 'Serrated Fossil', 'Pristine Fossil', 'Aetheric Fossil'],
+            expanded: false
+        },
+        {
+            name: 'Fungal Caverns',
+            colorHex: '#90ee90',
+            icon: 'assets/images/poe/Delve_Biome_Fungal_Caverns.png',
+            fossilKeywords: ['Dense Fossil', 'Aberrant Fossil', 'Opulent Fossil', 'Corroded Fossil', 'Gilded Fossil'],
+            expanded: false
+        },
+        {
+            name: 'Petrified Forest',
+            colorHex: '#00ff00',
+            icon: 'assets/images/poe/Delve_Biome_Petrified_Forest.png',
+            fossilKeywords: ['Bound Fossil', 'Jagged Fossil', 'Corroded Fossil', 'Sanctified Fossil'],
+            expanded: false
+        },
+        {
+            name: 'Abyssal Depths',
+            colorHex: '#808080',
+            icon: 'assets/images/poe/Delve_Biome_Abyssal_Depths.png',
+            fossilKeywords: ['Aberrant Fossil', 'Bound Fossil', 'Gilded Fossil', 'Lucent Fossil'],
+            expanded: false
+        },
+        {
+            name: 'Frozen Hollow',
+            colorHex: '#00ffff',
+            icon: 'assets/images/poe/Delve_Biome_Frozen_Hollow.png',
+            fossilKeywords: ['Frigid Fossil', 'Serrated Fossil', 'Prismatic Fossil', 'Sanctified Fossil', 'Shuddering Fossil'],
+            expanded: false
+        },
+        {
+            name: 'Magma Fissure',
+            colorHex: '#ffa500',
+            icon: 'assets/images/poe/Delve_Biome_Magma_Fissure.png',
+            fossilKeywords: ['Scorched Fossil', 'Prismatic Fossil', 'Pristine Fossil', 'Deft Fossil', 'Fundamental Fossil'],
+            expanded: false
+        },
+        {
+            name: 'Sulphur Vents',
+            colorHex: '#f5deb3',
+            icon: 'assets/images/poe/Delve_Biome_Sulfur_Vents.png',
+            fossilKeywords: ['Metallic Fossil', 'Opulent Fossil', 'Aetheric Fossil', 'Fundamental Fossil'],
+            expanded: false
+        }
     ]);
 
     ngOnInit() {
@@ -86,7 +129,7 @@ export class PoeTrackerComponent implements OnInit {
                 if (cachedData) {
                     try {
                         this.fossilsData.set(JSON.parse(cachedData));
-                    } catch (e) {}
+                    } catch (e) { }
                 }
                 this.loading.set(false);
             }
@@ -95,7 +138,7 @@ export class PoeTrackerComponent implements OnInit {
 
     // Перемикаємо стан expanded безпосередньо для конкретного біома за його іменем
     toggleBiome(biomeName: string) {
-        this.biomes.update(current => 
+        this.biomes.update(current =>
             current.map(b => b.name === biomeName ? { ...b, expanded: !b.expanded } : b)
         );
     }
@@ -105,7 +148,7 @@ export class PoeTrackerComponent implements OnInit {
         const fossils = this.fossilsData();
 
         const mapped = this.biomes().map(biome => {
-            const matchedFossils = fossils.filter(f => 
+            const matchedFossils = fossils.filter(f =>
                 biome.fossilKeywords.some(keyword => f.name.toLowerCase().includes(keyword.toLowerCase()))
             );
 
