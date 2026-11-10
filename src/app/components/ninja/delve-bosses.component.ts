@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, PLATFORM_ID, signal, computed } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { DelveBossesService, BossItem } from './delve-bosses.service';
+import { DelveSearchService } from './delve-search.service';
 
 interface BossDrop {
     name: string;
@@ -25,6 +26,7 @@ interface BossData {
 export class DelveBossesComponent implements OnInit {
     private bossService = inject(DelveBossesService);
     private platformId = inject(PLATFORM_ID);
+    private searchService = inject(DelveSearchService);
 
     loading = signal<boolean>(true);
     bossItemsMap = signal(new Map());
@@ -115,6 +117,7 @@ export class DelveBossesComponent implements OnInit {
         this.bossService.getBossItems('Allflame', ignoreCache).subscribe({
             next: (mapData) => {
                 this.bossItemsMap.set(mapData);
+                this.searchService.setBossItems(mapData);
                 this.loading.set(false);
             },
             error: () => {

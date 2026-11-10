@@ -1,21 +1,19 @@
 <div class="min-h-screen bg-slate-900 text-slate-100 p-6">
   <div class="max-w-4xl mx-auto space-y-6">
-    <!-- Header -->
-    <div
-      class="bg-slate-800 p-6 rounded-xl border border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-lg"
-    >
+    <!-- HEADER SECTION WITH SEARCH -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <!-- Логотип та опис без зайвої рамки -->
       <div>
-        <h1 class="text-2xl font-bold text-amber-400">DelveScout</h1>
-        <p class="text-xs text-slate-400 mt-1">
+        <h1 class="text-3xl font-extrabold text-amber-400 tracking-tight">DelveScout</h1>
+        <p class="text-xs text-slate-400 mt-0.5">
           Real-time Delve Biome Farming & Boss Expected Value (EV) Tracker via poe.ninja
         </p>
       </div>
-      <!-- <button
-        (click)="forceRefresh()"
-        class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-lg text-sm transition shadow cursor-pointer"
-      >
-        Refresh Prices
-      </button> -->
+
+      <!-- Пошуковий компонент у правому куті шапки -->
+      <div class="w-full md:w-80 lg:w-96">
+        <app-delve-search></app-delve-search>
+      </div>
     </div>
 
     <!-- Market Trends (Top Gainers / Losers) -->
@@ -34,7 +32,7 @@
                   <span class="text-xs text-slate-200">{{ f.name }}</span>
                 </div>
                 <div class="text-right font-mono text-xs">
-                  <span class="text-amber-300 font-bold mr-2">{{ f.chaosValue }}c</span>
+                  <span class="text-amber-300 font-bold mr-2">{{ f.chaosValue | number:'1.0-0' }}c</span>
                   <span class="text-emerald-400 font-semibold">+{{ f.changePercent }}%</span>
                 </div>
               </div>
@@ -55,7 +53,7 @@
                   <span class="text-xs text-slate-200">{{ f.name }}</span>
                 </div>
                 <div class="text-right font-mono text-xs">
-                  <span class="text-amber-300 font-bold mr-2">{{ f.chaosValue }}c</span>
+                  <span class="text-amber-300 font-bold mr-2">{{ f.chaosValue | number:'1.0-0' }}c</span>
                   <span class="text-rose-400 font-semibold">{{ f.changePercent }}%</span>
                 </div>
               </div>
@@ -112,7 +110,7 @@
                       {{ biome.averageChange > 0 ? '+' : '' }}{{ biome.averageChange | number: '1.1-1' }}%
                     </span>
                     <span class="text-amber-300 font-bold text-base">
-                      {{ biome.averageValue | number: '1.2-2' }}
+                      {{ biome.averageValue | number:'1.0-0' }}
                       <span class="text-xs text-slate-400">c</span>
                     </span>
                   </div>
@@ -142,7 +140,7 @@
                             </div>
                             <div class="text-right font-mono text-xs">
                               <span class="text-amber-400 font-bold bg-slate-900 px-2 py-1 rounded mr-1">
-                                {{ fossil.chaosValue }} c
+                                {{ fossil.chaosValue | number:'1.0-0' }} c
                               </span>
                               <span
                                 [class.text-emerald-400]="fossil.changePercent > 0"

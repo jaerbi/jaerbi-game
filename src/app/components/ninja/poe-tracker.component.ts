@@ -2,6 +2,8 @@ import { Component, OnInit, inject, PLATFORM_ID, signal, computed } from '@angul
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { PoeNinjaService, FossilItem } from './poe-ninja.service';
 import { DelveBossesComponent } from './delve-bosses.component';
+import { DelveSearchComponent } from './delve-search.component';
+import { DelveSearchService } from './delve-search.service';
 
 interface BiomeData {
     name: string;
@@ -14,12 +16,13 @@ interface BiomeData {
 @Component({
     selector: 'app-poe-tracker',
     standalone: true,
-    imports: [CommonModule, DelveBossesComponent],
+    imports: [CommonModule, DelveBossesComponent, DelveSearchComponent],
     templateUrl: 'poe-tracker.component.html'
 })
 export class PoeTrackerComponent implements OnInit {
     private poeService = inject(PoeNinjaService);
     private platformId = inject(PLATFORM_ID);
+    private searchService = inject(DelveSearchService);
 
     loading = signal<boolean>(true);
     fossilsData = signal<FossilItem[]>([]);
@@ -106,6 +109,7 @@ export class PoeTrackerComponent implements OnInit {
                 const parsed = JSON.parse(cachedData);
                 if (parsed && parsed.length > 0) {
                     this.fossilsData.set(parsed);
+                    this.searchService.setFossils(parsed);
                     this.loading.set(false);
                     return;
                 }
@@ -118,11 +122,27 @@ export class PoeTrackerComponent implements OnInit {
         this.poeService.getFossils('Allflame').subscribe({
             next: (data) => {
                 this.fossilsData.set(data);
+                console.log('data: ', data);
+                this.searchService.setFossils(data);
                 this.loading.set(false);
 
                 if (data && data.length > 0) {
                     localStorage.setItem(this.CACHE_KEY, JSON.stringify(data));
                     localStorage.setItem(this.CACHE_TIME_KEY, now.toString());
+                    if (cachedData && cachedTime && (now - Number(cachedTime) < this.CACHE_DURATION)) {
+                        try {
+                            const parsedData = JSON.parse(cachedData);
+                            if (parsedData && parsedData.length > 0) {
+                                this.fossilsData.set(parsedData);
+                                this.searchService.setFossils(parsedData);
+                                console.log('parsedData: ', parsedData);
+                                this.loading.set(false);
+                                return;
+                            }
+                        } catch (e) {
+                            console.error('Cache parse error:', e);
+                        }
+                    }
                 }
             },
             error: () => {
