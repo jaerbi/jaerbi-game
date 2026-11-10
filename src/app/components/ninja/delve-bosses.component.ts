@@ -62,10 +62,8 @@ export class DelveBossesComponent implements OnInit {
             icon: "assets/images/poe/The_Lich's_Tomb_delve_node_icon.png",
             expanded: false,
             drops: [
-                { name: 'Hale Negator (1 socket)', dropRate: 0.40 },
-                { name: 'Hale Negator (2 socket)', dropRate: 0.10 },
-                { name: 'Command of the Pit (1 socket)', dropRate: 0.15 },
-                { name: 'Command of the Pit (2 socket)', dropRate: 0.05 },
+                { name: 'Hale Negator', dropRate: 0.40 },
+                { name: 'Command of the Pit', dropRate: 0.15 },
                 { name: "Ahkeli's Valley", dropRate: 0.10 },
                 { name: "Uzaza's Mountain", dropRate: 0.10 },
                 { name: "Putembo's Meadow", dropRate: 0.10 },

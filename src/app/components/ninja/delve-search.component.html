@@ -1,19 +1,30 @@
-<div class="relative w-full">
+<div class="relative">
   <!-- Search Input Container -->
   <div class="relative flex items-center">
-    <div class="absolute left-3.5 text-slate-400 pointer-events-none">🔍</div>
+    <div class="absolute left-2.5 text-slate-400 pointer-events-none flex items-center">
+      <svg
+        class="w-4 h-4"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+      </svg>
+    </div>
     <input
       type="text"
       [ngModel]="searchQuery()"
       (ngModelChange)="onInputTextChange($event)"
       (focus)="onInputFocus()"
       placeholder="Search Delve fossils, bosses..."
-      class="w-full pl-10 pr-10 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-inner text-sm font-medium transition-all"
+      class="w-full pl-8 pr-8 py-2.5 bg-slate-900 border border-slate-700/80 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-inner text-sm font-medium transition-all"
     />
     @if (searchQuery() || selectedItem()) {
       <button
         (click)="clearSearch()"
-        class="absolute right-3 text-slate-400 hover:text-slate-200 text-xs bg-slate-800 hover:bg-slate-700 w-5 h-5 rounded-full flex items-center justify-center transition-all cursor-pointer z-10"
+        class="absolute right-3 text-slate-400 hover:text-slate-200 text-xs bg-[#1d262fe6] hover:bg-slate-700 w-5 h-5 flex items-center justify-center transition-all cursor-pointer z-10"
       >
         ✕
       </button>
@@ -23,31 +34,27 @@
   <!-- DROPDOWN LIST (Випадаючий список варіантів пошуку) -->
   @if (isOpen() && !selectedItem() && filteredItems().length > 0) {
     <div
-      class="absolute left-0 right-0 top-full mt-1.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden backdrop-blur-md"
+      class="absolute left-0 right-0 top-full mt-1.5 bg-slate-900 border border-slate-700 shadow-2xl z-50 overflow-hidden backdrop-blur-md"
     >
       <div class="max-h-64 overflow-y-auto divide-y divide-slate-800/60 custom-scrollbar">
         @for (item of filteredItems(); track item.id) {
           <div
             (click)="selectItem(item)"
-            class="p-2.5 px-3 flex items-center justify-between hover:bg-slate-800 cursor-pointer transition-colors group"
+            class="p-2.5 px-3 flex items-center justify-between hover:bg-[#1d262fe6] cursor-pointer transition-colors group"
           >
             <div class="flex items-center gap-2.5">
               @if (item.icon) {
                 <img
                   [src]="item.icon"
-                  class="w-7 h-7 object-contain bg-slate-950 rounded-lg p-0.5 border border-slate-800"
+                  class="w-7 h-7 object-contain bg-slate-950 p-0.5 border border-slate-800"
                   alt=""
                 />
               } @else {
-                <div
-                  class="w-7 h-7 bg-slate-950 rounded-lg flex items-center justify-center text-[10px] text-slate-500"
-                >
-                  ?
-                </div>
+                <div class="w-7 h-7 bg-slate-950 flex items-center justify-center text-[10px] text-slate-500">?</div>
               }
               <div>
                 <span
-                  class="text-xs font-semibold text-slate-200 group-hover:text-amber-400 transition-colors block line-clamp-1"
+                  class="text-xs font-semibold text-slate-200 group-hover:text-[#ffff75] transition-colors block line-clamp-1"
                 >
                   {{ item.name }}
                 </span>
@@ -58,11 +65,11 @@
             </div>
 
             <div class="text-right font-mono">
-              <span class="text-amber-400 font-bold text-xs block">
+              <span class="text-[#ffff75] font-bold text-xs block">
                 {{ item.chaosValue | number: '1.0-0' }}
                 <span class="text-[10px] text-slate-400">c</span>
               </span>
-              <span class="text-[10px]" [ngClass]="item.changePercent >= 0 ? 'text-emerald-400' : 'text-rose-400'">
+              <span class="text-[10px]" [ngClass]="item.changePercent >= 0 ? 'text-emerald-500' : 'text-red-400'">
                 {{ item.changePercent >= 0 ? '+' : '' }}{{ item.changePercent }}%
               </span>
             </div>
@@ -75,21 +82,17 @@
   <!-- PINNED SELECTED ITEM CARD (Закріплена плашка обраного предмета під інпутом) -->
   @if (selectedItem(); as item) {
     <div
-      class="absolute left-0 right-0 top-full mt-1.5 p-3 bg-slate-900 border border-amber-500/50 rounded-xl shadow-2xl z-40 flex items-center justify-between backdrop-blur-md animate-fadeIn"
+      class="absolute left-0 right-0 top-full mt-1.5 p-3 bg-slate-900 border border-amber-500/50 shadow-2xl z-40 flex items-center justify-between backdrop-blur-md animate-fadeIn"
     >
       <div class="flex items-center gap-2.5">
         @if (item.icon) {
-          <img
-            [src]="item.icon"
-            class="w-8 h-8 object-contain bg-slate-950 rounded-lg p-0.5 border border-slate-800"
-            alt=""
-          />
+          <img [src]="item.icon" class="w-8 h-8 object-contain bg-slate-950 p-0.5 border border-slate-800" alt="" />
         }
         <div>
           <div class="flex items-center gap-2">
             <span class="text-xs font-bold text-slate-100 line-clamp-1">{{ item.name }}</span>
             <span
-              class="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30"
+              class="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 bg-amber-500/20 text-[#ffff75] border border-amber-500/30"
             >
               {{ item.category }}
             </span>
@@ -99,13 +102,13 @@
       </div>
 
       <div class="text-right font-mono">
-        <div class="text-amber-400 font-bold text-sm">
+        <div class="text-[#ffff75] font-bold text-sm">
           {{ item.chaosValue | number: '1.0-0' }}
           <span class="text-xs text-slate-400">c</span>
         </div>
         <div
           class="text-[10px] font-semibold"
-          [ngClass]="item.changePercent >= 0 ? 'text-emerald-400' : 'text-rose-400'"
+          [ngClass]="item.changePercent >= 0 ? 'text-emerald-500' : 'text-red-400'"
         >
           {{ item.changePercent >= 0 ? '+' : '' }}{{ item.changePercent }}% (7d)
         </div>

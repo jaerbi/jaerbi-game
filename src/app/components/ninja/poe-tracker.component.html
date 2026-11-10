@@ -1,18 +1,38 @@
-<div class="min-h-screen bg-slate-900 text-slate-100 p-6">
+<div class="min-h-screen bg-slate-950 text-slate-100 p-6 ">
   <div class="max-w-4xl mx-auto space-y-6">
-    <!-- HEADER SECTION WITH SEARCH -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-      <!-- Логотип та опис без зайвої рамки -->
+    <!-- HEADER SECTION -->
+    <!-- HEADER SECTION -->
+    <div class="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4 mb-4">
+      <!-- Логотип та опис -->
       <div>
-        <h1 class="text-3xl font-extrabold text-amber-400 tracking-tight">DelveScout</h1>
+        <h1 class="text-3xl font-extrabold text-white tracking-tight">DelveScout</h1>
         <p class="text-xs text-slate-400 mt-0.5">
           Real-time Delve Biome Farming & Boss Expected Value (EV) Tracker via poe.ninja
         </p>
       </div>
 
-      <!-- Пошуковий компонент у правому куті шапки -->
-      <div class="w-full md:w-80 lg:w-96">
-        <app-delve-search></app-delve-search>
+      <!-- Єдиний flex-контейнер з чітким gap-3 між УСІМА елементами -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
+        <!-- Кнопка Info -->
+        <button
+          (click)="toggleInfoModal()"
+          class="px-4 py-2.5 bg-[#1d262fe6] hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer rounded-none shrink-0"
+        >
+          Info
+        </button>
+
+        <!-- Кнопка Donate / Support -->
+        <button
+          (click)="toggleDonateModal()"
+          class="px-4 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-[#ffff75] border border-amber-500/40 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-amber-500/10 rounded-none shrink-0"
+        >
+          Donate
+        </button>
+
+        <!-- Пошуковий компонент -->
+        <div class="w-full sm:w-72 xl:w-80">
+          <app-delve-search></app-delve-search>
+        </div>
       </div>
     </div>
 
@@ -20,20 +40,20 @@
     @if (!loading() && fossilsData().length > 0) {
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <!-- Gainers -->
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md">
-          <h3 class="text-xs font-bold uppercase text-emerald-400 mb-3 flex items-center gap-1">
+        <div class="bg-[#1d262fe6] p-4 border border-slate-700 shadow-md">
+          <h3 class="text-xs font-bold uppercase text-emerald-500 mb-3 flex items-center gap-1">
             <span>Top Gainers</span>
           </h3>
           <div class="space-y-2">
             @for (f of topGainers(); track f.id) {
-              <div class="flex items-center justify-between bg-slate-900/60 p-2 rounded border border-slate-700/50">
+              <div class="flex items-center justify-between bg-slate-900/60 p-2 border border-slate-700/50">
                 <div class="flex items-center gap-2">
                   <img [src]="f.icon" class="w-6 h-6 object-contain" alt="" />
                   <span class="text-xs text-slate-200">{{ f.name }}</span>
                 </div>
                 <div class="text-right font-mono text-xs">
-                  <span class="text-amber-300 font-bold mr-2">{{ f.chaosValue | number:'1.0-0' }}c</span>
-                  <span class="text-emerald-400 font-semibold">+{{ f.changePercent }}%</span>
+                  <span class="text-[#ffff75] font-bold mr-2">{{ f.chaosValue | number: '1.0-0' }}c</span>
+                  <span class="text-emerald-500 font-semibold">+{{ f.changePercent }}%</span>
                 </div>
               </div>
             }
@@ -41,20 +61,20 @@
         </div>
 
         <!-- Losers -->
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md">
-          <h3 class="text-xs font-bold uppercase text-rose-400 mb-3 flex items-center gap-1">
+        <div class="bg-[#1d262fe6] p-4 border border-slate-700 shadow-md">
+          <h3 class="text-xs font-bold uppercase text-red-400 mb-3 flex items-center gap-1">
             <span>Top Losers</span>
           </h3>
           <div class="space-y-2">
             @for (f of topLosers(); track f.id) {
-              <div class="flex items-center justify-between bg-slate-900/60 p-2 rounded border border-slate-700/50">
+              <div class="flex items-center justify-between bg-slate-900/60 p-2 border border-slate-700/50">
                 <div class="flex items-center gap-2">
                   <img [src]="f.icon" class="w-6 h-6 object-contain" alt="" />
                   <span class="text-xs text-slate-200">{{ f.name }}</span>
                 </div>
                 <div class="text-right font-mono text-xs">
-                  <span class="text-amber-300 font-bold mr-2">{{ f.chaosValue | number:'1.0-0' }}c</span>
-                  <span class="text-rose-400 font-semibold">{{ f.changePercent }}%</span>
+                  <span class="text-[#ffff75] font-bold mr-2">{{ f.chaosValue | number: '1.0-0' }}c</span>
+                  <span class="text-red-400 font-semibold">{{ f.changePercent }}%</span>
                 </div>
               </div>
             }
@@ -64,7 +84,7 @@
     }
 
     <!-- Biomes Table -->
-    <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-xl">
+    <div class="bg-[#1d262fe6] border border-slate-700 overflow-hidden shadow-xl">
       @if (loading()) {
         <div class="p-12 text-center text-slate-400 animate-pulse">Loading live fossil prices from poe.ninja...</div>
       } @else {
@@ -84,34 +104,30 @@
                   @if (biome.icon) {
                     <img
                       [src]="biome.icon"
-                      class="w-8 h-8 object-cover rounded-lg border border-slate-700 bg-slate-900 shrink-0"
+                      class="w-8 h-8 object-cover border border-slate-700 bg-slate-900 shrink-0"
                       alt="{{ biome.name }}"
                     />
                   } @else {
-                    <span
-                      class="w-3 h-3 rounded-full inline-block shrink-0"
-                      [style.background-color]="biome.colorHex"
-                    ></span>
+                    <span class="w-3 h-3 inline-block shrink-0" [style.background-color]="biome.colorHex"></span>
                   }
                   <span class="text-slate-200">{{ biome.name }}</span>
-                  <span class="text-xs text-amber-500/80">({{ biome.expanded ? '▲ hide' : '▼ details' }})</span>
+                  <span class="text-xs text-slate-400">({{ biome.expanded ? '▲ hide' : '▼ details' }})</span>
                 </td>
-                <td class="p-4 text-center font-mono text-slate-300">
+                <td class="p-4 text-center font-mono text-white">
                   {{ biome.matchedFossils.length }}
                 </td>
                 <td class="p-4 text-right font-mono">
                   <div class="flex items-center justify-end gap-3">
                     <span
-                      [class.text-emerald-400]="biome.averageChange > 0"
-                      [class.text-rose-400]="biome.averageChange < 0"
+                      [class.text-emerald-500]="biome.averageChange > 0"
+                      [class.text-red-400]="biome.averageChange < 0"
                       [class.text-slate-500]="biome.averageChange === 0"
                       class="text-xs font-semibold"
                     >
                       {{ biome.averageChange > 0 ? '+' : '' }}{{ biome.averageChange | number: '1.1-1' }}%
                     </span>
-                    <span class="text-amber-300 font-bold text-base">
-                      {{ biome.averageValue | number:'1.0-0' }}
-                      <span class="text-xs text-slate-400">c</span>
+                    <span class="text-[#ffff75] font-bold text-base">
+                      {{ biome.averageValue | number: '1.0-0' }}c
                     </span>
                   </div>
                 </td>
@@ -128,23 +144,19 @@
                       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         @for (fossil of biome.matchedFossils; track fossil.name) {
                           <div
-                            class="flex items-center justify-between bg-slate-800 p-2.5 rounded-lg border border-slate-700/80 shadow-inner"
+                            class="flex items-center justify-between bg-[#1d262fe6] p-2.5 border border-slate-700/80 shadow-inner"
                           >
                             <div class="flex items-center gap-2.5">
-                              <img
-                                [src]="fossil.icon"
-                                class="w-7 h-7 object-contain bg-slate-900/50 rounded p-0.5"
-                                alt=""
-                              />
+                              <img [src]="fossil.icon" class="w-7 h-7 object-contain bg-slate-900/50 p-0.5" alt="" />
                               <span class="text-xs font-medium text-slate-200">{{ fossil.name }}</span>
                             </div>
                             <div class="text-right font-mono text-xs">
-                              <span class="text-amber-400 font-bold bg-slate-900 px-2 py-1 rounded mr-1">
-                                {{ fossil.chaosValue | number:'1.0-0' }} c
+                              <span class="text-[#ffff75] font-bold bg-slate-900 px-2 py-1 mr-1">
+                                {{ fossil.chaosValue | number: '1.0-0' }}c
                               </span>
                               <span
-                                [class.text-emerald-400]="fossil.changePercent > 0"
-                                [class.text-rose-400]="fossil.changePercent < 0"
+                                [class.text-emerald-500]="fossil.changePercent > 0"
+                                [class.text-red-400]="fossil.changePercent < 0"
                                 class="text-[10px]"
                               >
                                 {{ fossil.changePercent > 0 ? '+' : '' }}{{ fossil.changePercent }}%
@@ -169,3 +181,99 @@
     <app-delve-bosses></app-delve-bosses>
   </div>
 </div>
+<!-- INFO MODAL -->
+@if (isInfoOpen()) {
+  <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+    <div class="bg-slate-900 border border-slate-700 max-w-lg w-full p-6 shadow-2xl relative">
+      <button
+        (click)="toggleInfoModal()"
+        class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 bg-[#1d262fe6] w-7 h-7 flex items-center justify-center transition-all cursor-pointer"
+      >
+        ✕
+      </button>
+
+      <h3 class="text-xl font-bold text-white mb-3 flex items-center gap-2">About DelveScout</h3>
+
+      <div class="space-y-3 text-sm text-slate-300 leading-relaxed">
+        <p>
+          <strong>DelveScout</strong>
+          is a professional analytical tool for Path of Exile players, designed to optimize Delve farming strategy.
+        </p>
+        <p>
+          It analyzes real-time market prices from
+          <span class="text-[#ffff75] font-mono">poe.ninja</span>
+          , calculates biome profitability based on fossil drop rates, and computes the Expected Value (EV) of valuable
+          boss drops from Delve encounter bosses (Aul, Kurgal, Ahuatotli).
+        </p>
+        <p class="text-xs text-slate-400 pt-2 border-t border-slate-800">
+          Fossil and biome data are based on up-to-date tables from the official PoE Wiki.
+        </p>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- DONATE MODAL -->
+@if (isDonateOpen()) {
+  <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+    <div class="bg-slate-900 border border-amber-500/40 max-w-md w-full p-6 shadow-2xl relative">
+      <button
+        (click)="toggleDonateModal()"
+        class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 bg-[#1d262fe6] w-7 h-7 flex items-center justify-center transition-all cursor-pointer"
+      >
+        ✕
+      </button>
+
+      <h3 class="text-xl font-bold text-[#ffff75] mb-2 flex items-center gap-2">☕ Support the Project</h3>
+      <p class="text-xs text-slate-400 mb-4">
+        Thanks for using DelveScout! If this tool helps you make currency in-game, you can support its development with
+        a coffee or donation:
+      </p>
+
+      <div class="space-y-2.5 text-sm">
+        <button
+          (click)="openExternalLink('https://send.monobank.ua/jar/4rZ2WKVKDB')"
+          class="flex items-center justify-between w-100 p-2.5 bg-[#1d262fe6]/80 hover:bg-[#1d262fe6] border border-slate-700/80 transition-all group"
+        >
+          <span class="text-slate-200 group-hover:text-[#ffff75] font-medium flex items-center gap-2">
+            💰 Monobank Jar
+          </span>
+          <span class="text-xs text-[#ffff75] font-semibold">Open ↗</span>
+        </button>
+
+        <a
+          href="https://donatello.to/jaerbi"
+          target="_blank"
+          class="flex items-center justify-between p-2.5 bg-[#1d262fe6]/80 hover:bg-[#1d262fe6] border border-slate-700/80 transition-all group"
+        >
+          <span class="text-slate-200 group-hover:text-[#ffff75] font-medium flex items-center gap-2">
+            🐢 Donatello
+          </span>
+          <span class="text-xs text-[#ffff75] font-semibold">Support ↗</span>
+        </a>
+
+        <a
+          href="https://www.buymeacoffee.com/jaerbi"
+          target="_blank"
+          class="flex items-center justify-between p-2.5 bg-[#1d262fe6]/80 hover:bg-[#1d262fe6] border border-slate-700/80 transition-all group"
+        >
+          <span class="text-slate-200 group-hover:text-[#ffff75] font-medium flex items-center gap-2">
+            ☕ Buy Me a Coffee
+          </span>
+          <span class="text-xs text-[#ffff75] font-semibold">Treat ↗</span>
+        </a>
+
+        <div class="p-2.5 bg-[#06080a] border border-slate-800 text-xs font-mono text-slate-300 space-y-1">
+          <div class="text-slate-400 font-sans text-[11px] mb-1">💳 PrivatBank Card:</div>
+          <button class="text-[#ffff75] font-bold select-all" (click)="copySupportLink('5168 7450 2174 7073')">
+            5168 7450 2174 7073 📋
+          </button>
+          <div class="text-slate-400 font-sans text-[11px] pt-1">
+            💛 PayPal:
+            <span class="text-slate-200 select-all">jaerbi42@gmail.com</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+}

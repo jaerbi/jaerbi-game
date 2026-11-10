@@ -87,6 +87,18 @@ export class PoeTrackerComponent implements OnInit {
         this.fetchData(false);
     }
 
+    // Сигнали стану модальних вікон
+    isInfoOpen = signal<boolean>(false);
+    isDonateOpen = signal<boolean>(false);
+
+    toggleInfoModal() {
+        this.isInfoOpen.update(v => !v);
+    }
+
+    toggleDonateModal() {
+        this.isDonateOpen.update(v => !v);
+    }
+
     forceRefresh() {
         if (!isPlatformBrowser(this.platformId)) return;
         localStorage.removeItem(this.CACHE_KEY);
@@ -196,4 +208,19 @@ export class PoeTrackerComponent implements OnInit {
     topLosers = computed(() => {
         return [...this.fossilsData()].sort((a, b) => a.changePercent - b.changePercent).slice(0, 3);
     });
+
+    openExternalLink(url: string): void {
+        const win = window.open(url, '_blank', 'noopener,noreferrer');
+        if (win) {
+            win.focus();
+        }
+    }
+
+     copySupportLink(url: string) {
+        try {
+            if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url);
+            }
+        } catch { }
+    }
 }

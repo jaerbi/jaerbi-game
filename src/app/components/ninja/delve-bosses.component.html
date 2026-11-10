@@ -1,4 +1,4 @@
-<div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-xl mt-8">
+<div class="bg-[#1d262fe6] border border-slate-700 overflow-hidden shadow-xl mt-8">
     <!-- <button 
       (click)="fetchBossData()" 
       class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-lg text-xs transition cursor-pointer">
@@ -6,36 +6,36 @@
     </button> -->
   <!-- TOP VALUABLE BOSS DROPS -->
   @if (topBossItems().length > 0) {
-    <div class="mb-6 mt-6">
-      <h3 class="pl-4 text-sm font-bold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+    <div class="mb-6 mt-4">
+      <h3 class="pl-4 text-sm font-bold text-white uppercase tracking-wider mb-2 flex items-center gap-2">
         Top Most Valuable Delve Boss Drops
       </h3>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         @for (item of topBossItems(); track item.name) {
           <div
-            class="bg-slate-900/80 border border-slate-700/80 p-2 rounded-xl flex items-center justify-between shadow-lg"
+            class="bg-slate-900/80 border border-slate-700/80 p-2 flex items-center justify-between shadow-lg"
           >
             <div class="flex items-center gap-3">
               @if (item.icon) {
                 <img
                   [src]="item.icon"
-                  class="w-10 h-10 object-contain bg-slate-950 rounded-lg p-1 border border-slate-800"
+                  class="w-10 h-10 object-contain bg-slate-950 p-1 border border-slate-800"
                   alt=""
                 />
               } @else {
-                <div class="w-10 h-10 bg-slate-950 rounded-lg flex items-center justify-center text-xs text-slate-500">
+                <div class="w-10 h-10 bg-slate-950 flex items-center justify-center text-xs text-slate-500">
                   ?
                 </div>
               }
               <div>
                 <span class="text-xs font-bold text-slate-200 block line-clamp-1">{{ item.name }}</span>
-                <span class="text-[10px]" [ngClass]="item.changePercent >= 0 ? 'text-emerald-400' : 'text-rose-400'">
+                <span class="text-[10px]" [ngClass]="item.changePercent >= 0 ? 'text-emerald-500' : 'text-red-400'">
                   {{ item.changePercent >= 0 ? '+' : '' }}{{ item.changePercent }}%
                 </span>
               </div>
             </div>
             <div class="text-right font-mono">
-              <span class="text-amber-300 font-bold text-sm bg-slate-950 px-2.5 py-1 rounded-lg block">
+              <span class="text-[#ffff75] font-bold text-sm bg-slate-950 px-2.5 py-1 block">
                 {{ item.chaosValue | number:'1.0-0' }}c
               </span>
             </div>
@@ -64,7 +64,7 @@
               @if (boss.icon) {
                 <img
                   [src]="boss.icon"
-                  class="w-8 h-8 object-cover rounded-lg border border-slate-700 bg-slate-900 shrink-0"
+                  class="w-8 h-8 object-cover border border-slate-700 bg-slate-900 shrink-0"
                   alt="{{ boss.name }}"
                 />
               } 
@@ -72,14 +72,13 @@
                 <span class="text-slate-200 block">{{ boss.name }}</span>
                 <span class="text-[10px] text-slate-400 uppercase tracking-wider">{{ boss.title }}</span>
               </div>
-              <span class="text-xs text-amber-500/80 ml-2">({{ boss.expanded ? '▲ hide' : '▼ details' }})</span>
+              <span class="text-xs text-slate-400 ml-2">({{ boss.expanded ? '▲ hide' : '▼ details' }})</span>
             </td>
-            <td class="p-4 text-center font-mono text-slate-300">
+            <td class="p-4 text-center font-mono text-white">
               {{ boss.drops.length }}
             </td>
-            <td class="p-4 text-right font-mono text-amber-300 font-bold text-base">
-              {{ boss.averageProfit | number:'1.0-0' }}
-              <span class="text-xs text-slate-400">c</span>
+            <td class="p-4 text-right font-mono text-[#ffff75] font-bold text-base">
+              {{ boss.averageProfit | number:'1.0-0' }}c
             </td>
           </tr>
 
@@ -92,18 +91,18 @@
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     @for (drop of boss.drops; track drop.name) {
                       <div
-                        class="flex items-center justify-between bg-slate-800 p-2.5 rounded-lg border border-slate-700/80 shadow-inner"
+                        class="flex items-center justify-between bg-[#1d262fe6] p-2.5 border border-slate-700/80 shadow-inner"
                       >
                         <div class="flex items-center gap-2.5">
                           @if (drop.matchedItem?.icon) {
                             <img
                               [src]="drop.matchedItem?.icon"
-                              class="w-7 h-7 object-contain bg-slate-900/50 rounded p-0.5"
+                              class="w-7 h-7 object-contain bg-slate-900/50 p-0.5"
                               alt=""
                             />
                           } @else {
                             <div
-                              class="w-7 h-7 bg-slate-900/50 rounded flex items-center justify-center text-[10px] text-slate-500"
+                              class="w-7 h-7 bg-slate-900/50 flex items-center justify-center text-[10px] text-slate-500"
                             >
                               ?
                             </div>
@@ -118,14 +117,14 @@
                         <div class="text-right font-mono text-xs">
                           <div class="flex items-center gap-1.5 justify-end">
                             <!-- Ціна в хаосах -->
-                            <span class="text-amber-400 font-bold bg-slate-900 px-2 py-0.5 rounded">
+                            <span class="text-[#ffff75] font-bold bg-slate-900 px-2 py-0.5">
                               {{ drop.itemPrice }} c
                             </span>
                             <!-- Додаємо відсотки зміни за 7 днів (як на фосилях!) -->
                             @if (drop.matchedItem) {
                               <span
                                 class="text-[10px]"
-                                [ngClass]="drop.matchedItem.changePercent >= 0 ? 'text-emerald-400' : 'text-rose-400'"
+                                [ngClass]="drop.matchedItem.changePercent >= 0 ? 'text-emerald-500' : 'text-red-400'"
                               >
                                 {{ drop.matchedItem.changePercent >= 0 ? '+' : ''
                                 }}{{ drop.matchedItem.changePercent }}%
