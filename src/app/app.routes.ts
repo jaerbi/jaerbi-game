@@ -77,7 +77,7 @@ export const routes: Routes = [
         component: RoadmapComponent
     },
     {
-        path: 'jaerbi-ninja',
+        path: 'delve-scout',
         component: PoeTrackerComponent
     }
 ];
