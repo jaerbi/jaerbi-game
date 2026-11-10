@@ -19,8 +19,8 @@ export class DelveBossesService {
     private platformId = inject(PLATFORM_ID);
     private workerUrl = 'https://tight-lab-5d5a.jaerbi42.workers.dev';
 
-    private readonly CACHE_KEY = 'delvescout_bosses_cache_v2';
-    private readonly CACHE_TIME_KEY = 'delvescout_bosses_cache_time_v2';
+    private readonly CACHE_KEY = 'delvescout_bosses_cache_v3';
+    private readonly CACHE_TIME_KEY = 'delvescout_bosses_cache_time_v3';
     private readonly CACHE_DURATION = 30 * 60 * 1000; // 30 хвилин
 
     getBossItems(league: string = 'Allflame', ignoreCache: boolean = false): Observable<Map<any, any>> {
@@ -43,7 +43,15 @@ export class DelveBossesService {
             }
         }
 
-        const types = ['UniqueArmour', 'UniqueAccessory', 'Fragment'];
+        // Повний список категорій poe.ninja, де живуть дропи дельвівських босів
+        const types = [
+            'UniqueArmour', 
+            'UniqueAccessory', 
+            'UniqueWeapon', 
+            'UniqueJewel', 
+            'UniqueMap', 
+            'Fragment'
+        ];
 
         return concat(
             ...types.map(type => this.fetchCategory(league, type))
@@ -54,7 +62,6 @@ export class DelveBossesService {
                 const allItems = responses.flat();
 
                 allItems.forEach(item => {
-                    // Зберігаємо за нормалізованим ім'ям для ідеального матчингу з босами
                     combinedMap.set(item.name.toLowerCase().trim(), item);
                 });
 
@@ -71,7 +78,6 @@ export class DelveBossesService {
     }
 
     private fetchCategory(league: string, type: string): Observable<BossItem[]> {
-        // Усі запити йдуть через твій воркер, щоб уникнути CORS-помилок
         const url = `${this.workerUrl}?league=${league}&type=${type}`;
 
         return this.http.get<any>(url).pipe(
@@ -92,7 +98,6 @@ export class DelveBossesService {
 
                 return lines.map((line: any) => {
                     const meta = metaMap.get(line.id) || {};
-
                     const itemName = meta.name || line.name || line.id || 'Unknown';
 
                     let iconUrl = meta.image || line.icon || '';

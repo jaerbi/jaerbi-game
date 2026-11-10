@@ -27,7 +27,30 @@ export class DelveBossesComponent implements OnInit {
 
     loading = signal<boolean>(true);
     bossItemsMap = signal(new Map());
+    // Топ-3 найдорожчих предметів, які реально випадають з босів
+    topBossItems = computed(() => {
+        const bosses = this.sortedBosses(); // Використовуємо вже розраховані дані босів з цінами
+        const allDropsMap = new Map<string, { name: string; icon?: string; chaosValue: number; changePercent: number }>();
 
+        // Збираємо всі унікальні дропи з усіх босів у єдину мапу (щоб не було дублікатів)
+        bosses.forEach(boss => {
+            boss.drops.forEach(drop => {
+                if (drop.matchedItem && drop.itemPrice > 0) {
+                    allDropsMap.set(drop.name, {
+                        name: drop.matchedItem.name || drop.name,
+                        icon: drop.matchedItem.icon,
+                        chaosValue: drop.itemPrice,
+                        changePercent: drop.matchedItem.changePercent
+                    });
+                }
+            });
+        });
+
+        // Перетворюємо в масив, сортуємо за ціною у спадному порядку та беремо топ-3
+        return Array.from(allDropsMap.values())
+            .sort((a, b) => b.chaosValue - a.chaosValue)
+            .slice(0, 3);
+    });
     bosses = signal<BossData[]>([
         {
             name: 'Kurgal, the Blackblooded',
@@ -55,6 +78,7 @@ export class DelveBossesComponent implements OnInit {
                 { name: "Ahkeli's Mountain", dropRate: 0.08 },
                 { name: "Uzaza's Meadow", dropRate: 0.08 },
                 { name: "Putembo's Valley", dropRate: 0.08 },
+                { name: "Doryani's Machinarium", dropRate: 0.16 },
                 { name: 'Curiosity', dropRate: 0.40 }
             ]
         },
