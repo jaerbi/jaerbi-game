@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-slate-950 text-slate-100 p-6 ">
+<div class="min-h-screen bg-slate-950 text-slate-100 p-6">
   <div class="max-w-4xl mx-auto space-y-6">
     <!-- HEADER SECTION -->
     <!-- HEADER SECTION -->
@@ -126,9 +126,7 @@
                     >
                       {{ biome.averageChange > 0 ? '+' : '' }}{{ biome.averageChange | number: '1.1-1' }}%
                     </span>
-                    <span class="text-[#ffff75] font-bold text-base">
-                      {{ biome.averageValue | number: '1.0-0' }}c
-                    </span>
+                    <span class="text-[#ffff75] font-bold text-base">{{ biome.averageValue | number: '1.0-0' }}c</span>
                   </div>
                 </td>
               </tr>
@@ -181,101 +179,154 @@
     <app-delve-bosses></app-delve-bosses>
 
     <app-fossil-history-chart [fossilsList]="fossilsData()"></app-fossil-history-chart>
-  </div>
-</div>
-<!-- INFO MODAL -->
-@if (isInfoOpen()) {
-  <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-    <div class="bg-slate-900 border border-slate-700 max-w-lg w-full p-6 shadow-2xl relative">
-      <button
-        (click)="toggleInfoModal()"
-        class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 bg-[#1d262fe6] w-7 h-7 flex items-center justify-center transition-all cursor-pointer"
-      >
-        ✕
-      </button>
 
-      <h3 class="text-xl font-bold text-white mb-3 flex items-center gap-2">About DelveScout</h3>
-
-      <div class="space-y-3 text-sm text-slate-300 leading-relaxed">
+    <!-- FOOTER SECTION -->
+    <footer class="mt-12 pt-6 border-t border-slate-800/80 text-center text-xs text-slate-500 pb-8">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl mx-auto px-4">
         <p>
-          <strong>DelveScout</strong>
-          is a professional analytical tool for Path of Exile players, designed to optimize Delve farming strategy.
+          <span class="text-amber-400 font-semibold">DelveScout</span>
+          — Path of Exile Delve Analytics Tool
         </p>
-        <p>
-          It analyzes real-time market prices from
-          <span class="text-[#ffff75] font-mono">poe.ninja</span>
-          , calculates biome profitability based on fossil drop rates, and computes the Expected Value (EV) of valuable
-          boss drops from Delve encounter bosses (Aul, Kurgal, Ahuatotli).
-        </p>
-        <p class="text-xs text-slate-400 pt-2 border-t border-slate-800">
-          Fossil and biome data are based on up-to-date tables from the official PoE Wiki.
+        <p class="font-mono text-slate-400">
+          Developed with 💛 by
+          <span class="text-amber-400 font-bold">jaerbi</span>
+          © 2026
         </p>
       </div>
-    </div>
-  </div>
-}
+    </footer>
 
-<!-- DONATE MODAL -->
-@if (isDonateOpen()) {
-  <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-    <div class="bg-slate-900 border border-amber-500/40 max-w-md w-full p-6 shadow-2xl relative">
-      <button
-        (click)="toggleDonateModal()"
-        class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 bg-[#1d262fe6] w-7 h-7 flex items-center justify-center transition-all cursor-pointer"
+    <!-- INFO MODAL -->
+    @if (isInfoOpen()) {
+      <div
+        class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
       >
-        ✕
-      </button>
-
-      <h3 class="text-xl font-bold text-[#ffff75] mb-2 flex items-center gap-2">☕ Support the Project</h3>
-      <p class="text-xs text-slate-400 mb-4">
-        Thanks for using DelveScout! If this tool helps you make currency in-game, you can support its development with
-        a coffee or donation:
-      </p>
-
-      <div class="space-y-2.5 text-sm">
-        <button
-          (click)="openExternalLink('https://send.monobank.ua/jar/4rZ2WKVKDB')"
-          class="flex items-center justify-between w-100 p-2.5 bg-[#1d262fe6]/80 hover:bg-[#1d262fe6] border border-slate-700/80 transition-all group"
-        >
-          <span class="text-slate-200 group-hover:text-[#ffff75] font-medium flex items-center gap-2">
-            💰 Monobank Jar
-          </span>
-          <span class="text-xs text-[#ffff75] font-semibold">Open ↗</span>
-        </button>
-
-        <a
-          href="https://donatello.to/jaerbi"
-          target="_blank"
-          class="flex items-center justify-between p-2.5 bg-[#1d262fe6]/80 hover:bg-[#1d262fe6] border border-slate-700/80 transition-all group"
-        >
-          <span class="text-slate-200 group-hover:text-[#ffff75] font-medium flex items-center gap-2">
-            🐢 Donatello
-          </span>
-          <span class="text-xs text-[#ffff75] font-semibold">Support ↗</span>
-        </a>
-
-        <a
-          href="https://www.buymeacoffee.com/jaerbi"
-          target="_blank"
-          class="flex items-center justify-between p-2.5 bg-[#1d262fe6]/80 hover:bg-[#1d262fe6] border border-slate-700/80 transition-all group"
-        >
-          <span class="text-slate-200 group-hover:text-[#ffff75] font-medium flex items-center gap-2">
-            ☕ Buy Me a Coffee
-          </span>
-          <span class="text-xs text-[#ffff75] font-semibold">Treat ↗</span>
-        </a>
-
-        <div class="p-2.5 bg-[#06080a] border border-slate-800 text-xs font-mono text-slate-300 space-y-1">
-          <div class="text-slate-400 font-sans text-[11px] mb-1">💳 PrivatBank Card:</div>
-          <button class="text-[#ffff75] font-bold select-all" (click)="copySupportLink('5168 7450 2174 7073')">
-            5168 7450 2174 7073 📋
+        <div class="bg-slate-900 border border-slate-700 max-w-lg w-full p-6 shadow-2xl relative rounded-none">
+          <button
+            (click)="toggleInfoModal()"
+            class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 bg-[#1d262fe6] w-7 h-7 flex items-center justify-center transition-all cursor-pointer rounded-none"
+          >
+            ✕
           </button>
-          <div class="text-slate-400 font-sans text-[11px] pt-1">
-            💛 PayPal:
-            <span class="text-slate-200 select-all">jaerbi42@gmail.com</span>
+
+          <h3 class="text-xl font-bold text-white mb-3 flex items-center gap-2">About DelveScout</h3>
+
+          <div class="space-y-3 text-sm text-slate-300 leading-relaxed">
+            <p>
+              <strong>DelveScout</strong>
+              is a professional analytical tool for Path of Exile players, designed to optimize Delve farming strategy.
+            </p>
+            <p>
+              It analyzes real-time market prices from
+              <span class="text-[#ffff75] font-mono">poe.ninja</span>
+              , calculates biome profitability based on fossil drop rates, and computes the Expected Value (EV) of
+              valuable boss drops from Delve encounter bosses (Aul, Kurgal, Ahuatotli).
+            </p>
+            <p>
+              Features historical cross-league price comparisons (e.g.,
+              <span class="text-amber-400 font-semibold">Mirage vs Allflame</span>
+              ) to track and analyze fossil value trends across different league timelines.
+            </p>
+            <p class="text-xs text-slate-400 pt-2 border-t border-slate-800">
+              Fossil and biome data are based on up-to-date tables from the official PoE Wiki.
+            </p>
           </div>
         </div>
       </div>
-    </div>
+    }
+
+    <!-- DONATE MODAL -->
+    @if (isDonateOpen()) {
+      <div
+        class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
+      >
+        <div class="bg-slate-900 border border-amber-500/40 max-w-md w-full p-6 shadow-2xl relative rounded-none">
+          <button
+            (click)="toggleDonateModal()"
+            class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 bg-[#1d262fe6] w-7 h-7 flex items-center justify-center transition-all cursor-pointer rounded-none"
+          >
+            ✕
+          </button>
+
+          <h3 class="text-xl font-bold text-[#ffff75] mb-2 flex items-center gap-2">
+            ☕ Support DelveScout Development
+          </h3>
+
+          <!-- Душевний і щирий текст -->
+          <div class="text-xs text-slate-300 space-y-2 mb-5 leading-relaxed">
+            <p>
+              Hey exile! 👋 I built
+              <strong>DelveScout</strong>
+              in my spare time as a passion project for the PoE community to make Delve analytics fast, clean, and
+              actually useful.
+            </p>
+            <p class="text-slate-400">
+              Running servers, Cloudflare Workers, and developing new features takes continuous effort. If this tool
+              helped you secure a fat stack of Divines or saved you hours of research, buying me a coffee is the best
+              way to keep the project alive! 💛
+            </p>
+          </div>
+
+          <div class="space-y-2.5 text-sm">
+            <!-- Monobank Jar -->
+            <button
+              (click)="openExternalLink('https://send.monobank.ua/jar/4rZ2WKVKDB')"
+              class="flex items-center justify-between w-full p-2.5 bg-[#1d262fe6]/80 hover:bg-[#1d262fe6] border border-slate-700/80 hover:border-amber-500/50 transition-all group rounded-none cursor-pointer"
+            >
+              <span class="text-slate-200 group-hover:text-[#ffff75] font-medium flex items-center gap-2">
+                🫙 Monobank Jar
+                <span class="text-[10px] text-slate-400 font-normal">(UA)</span>
+              </span>
+              <span class="text-xs text-[#ffff75] font-semibold">Support ↗</span>
+            </button>
+
+            <!-- Donatello -->
+            <a
+              href="https://donatello.to/jaerbi"
+              target="_blank"
+              class="flex items-center justify-between p-2.5 bg-[#1d262fe6]/80 hover:bg-[#1d262fe6] border border-slate-700/80 hover:border-amber-500/50 transition-all group rounded-none"
+            >
+              <span class="text-slate-200 group-hover:text-[#ffff75] font-medium flex items-center gap-2">
+                🐢 Donatello
+                <span class="text-[10px] text-slate-400 font-normal">(UA Stream Alert)</span>
+              </span>
+              <span class="text-xs text-[#ffff75] font-semibold">Support ↗</span>
+            </a>
+
+            <!-- Buy Me a Coffee -->
+            <a
+              href="https://www.buymeacoffee.com/jaerbi"
+              target="_blank"
+              class="flex items-center justify-between p-2.5 bg-[#1d262fe6]/80 hover:bg-[#1d262fe6] border border-slate-700/80 hover:border-amber-500/50 transition-all group rounded-none"
+            >
+              <span class="text-slate-200 group-hover:text-[#ffff75] font-medium flex items-center gap-2">
+                ☕ Buy Me a Coffee
+                <span class="text-[10px] text-slate-400 font-normal">(International)</span>
+              </span>
+              <span class="text-xs text-[#ffff75] font-semibold">Treat ↗</span>
+            </a>
+
+            <!-- Реквізити картки та PayPal -->
+            <div
+              class="p-3 bg-[#06080a] border border-slate-800 text-xs font-mono text-slate-300 space-y-2 rounded-none mt-3"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400 font-sans text-[11px]">💳 PrivatBank Card:</span>
+                <button
+                  class="text-[#ffff75] hover:text-amber-300 font-bold select-all cursor-pointer flex items-center gap-1"
+                  (click)="copySupportLink('5168 7450 2174 7073')"
+                  title="Click to copy"
+                >
+                  5168 7450 2174 7073 📋
+                </button>
+              </div>
+              <div class="flex items-center justify-between pt-1 border-t border-slate-800/60">
+                <span class="text-slate-400 font-sans text-[11px]">💛 PayPal:</span>
+                <span class="text-amber-300 select-all font-semibold">jaerbi42@gmail.com</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
   </div>
-}
+</div>
