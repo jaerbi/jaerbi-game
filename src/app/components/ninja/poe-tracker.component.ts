@@ -4,6 +4,7 @@ import { PoeNinjaService, FossilItem } from './poe-ninja.service';
 import { DelveBossesComponent } from './delve-bosses.component';
 import { DelveSearchComponent } from './delve-search.component';
 import { DelveSearchService } from './delve-search.service';
+import { FossilHistoryChartComponent } from './fossil-history-chart.component';
 
 interface BiomeData {
     name: string;
@@ -16,7 +17,7 @@ interface BiomeData {
 @Component({
     selector: 'app-poe-tracker',
     standalone: true,
-    imports: [CommonModule, DelveBossesComponent, DelveSearchComponent],
+    imports: [CommonModule, DelveBossesComponent, DelveSearchComponent, FossilHistoryChartComponent],
     templateUrl: 'poe-tracker.component.html'
 })
 export class PoeTrackerComponent implements OnInit {
@@ -134,7 +135,6 @@ export class PoeTrackerComponent implements OnInit {
         this.poeService.getFossils('Allflame').subscribe({
             next: (data) => {
                 this.fossilsData.set(data);
-                console.log('data: ', data);
                 this.searchService.setFossils(data);
                 this.loading.set(false);
 

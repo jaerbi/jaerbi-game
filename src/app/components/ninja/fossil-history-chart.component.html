@@ -1,0 +1,160 @@
+<div class="mt-8 bg-[#1d262fe6] border border-slate-700/80 p-6 rounded-none shadow-xl">
+  <!-- HEADER SECTION -->
+  <div class="mb-6">
+    <!-- Рядок 1: Заголовок на всю довжину -->
+    <h3 class="text-lg font-bold text-white w-full mb-1">League vs League Price Comparison (Mirage vs Allflame)</h3>
+
+    <!-- Рядок 2: Сабтайтул зліва + Легенда/Тултіп справа (в одну лінію або з перенесенням підпису) -->
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+      <!-- Сабтайтул (займає вільний простір зліва) -->
+      <p class="text-xs text-slate-400">
+        Comparing current league trends against the previous league normalized by day of the league.
+      </p>
+
+      <!-- Правий блок: Тултіп (фіксований розмір) + Легенда ліг (завжди на одному рівні) -->
+      <div class="flex items-center gap-4 text-xs font-mono shrink-0">
+
+        <!-- Легенда (завжди на одному рівні в рядку) -->
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-0.5 bg-amber-500 inline-block"></span>
+            <span class="text-amber-400 font-bold">Mirage</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-0.5 bg-emerald-400 inline-block"></span>
+            <span class="text-emerald-400 font-bold">Allflame</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ФОСІЛ-БЕЙДЖИКИ -->
+  <div class="flex flex-wrap gap-2 mb-6">
+    @for (fossil of fossilsList(); track fossil.id) {
+      <button
+        (click)="selectFossil(fossil)"
+        class="px-3 py-2 text-xs font-medium border transition-all cursor-pointer flex items-center gap-2 rounded-none"
+        [ngClass]="
+          activeFossilId() === fossil.id
+            ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold shadow-lg shadow-amber-500/20'
+            : 'bg-slate-800/80 hover:bg-slate-800 text-slate-200 border-slate-700 hover:border-slate-600'
+        "
+      >
+        @if (fossil.icon) {
+          <img [src]="fossil.icon" class="w-4 h-4 object-contain" alt="" />
+        }
+        {{ fossil.name }}
+      </button>
+    }
+  </div>
+
+  <!-- ГРАФІК -->
+  <!-- ГРАФІК -->
+  @if (loading()) {
+    <div class="h-64 flex items-center justify-center text-slate-400 text-sm animate-pulse">
+      Loading cross-league analytics from poe.ninja...
+    </div>
+  } @else if (currentLeaguePoints().length > 0 || previousLeaguePoints().length > 0) {
+    <div class="bg-slate-950 border border-slate-800 p-4 rounded-none relative">
+      <div class="w-full h-64 relative">
+        <svg class="w-full h-full overflow-visible" viewBox="0 0 800 250" preserveAspectRatio="none">
+          <!-- Сітка -->
+          <line x1="0" y1="0" x2="800" y2="0" stroke="#1e293b" stroke-width="1" />
+          <line x1="0" y1="62.5" x2="800" y2="62.5" stroke="#1e293b" stroke-width="1" stroke-dasharray="4" />
+          <line x1="0" y1="125" x2="800" y2="125" stroke="#1e293b" stroke-width="1" stroke-dasharray="4" />
+          <line x1="0" y1="187.5" x2="800" y2="187.5" stroke="#1e293b" stroke-width="1" stroke-dasharray="4" />
+          <line x1="0" y1="250" x2="800" y2="250" stroke="#1e293b" stroke-width="1" />
+
+          <!-- Лінії -->
+          <path
+            [attr.d]="svgPath(previousLeaguePoints())"
+            fill="none"
+            stroke="#34d399"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            opacity="0.85"
+          />
+          <path
+            [attr.d]="svgPath(currentLeaguePoints())"
+            fill="none"
+            stroke="#f59e0b"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+
+          <!-- ТОЧКИ ПОПЕРЕДНЬОЇ ЛІГИ -->
+          @for (pt of previousLeaguePoints(); track pt.day) {
+            <circle
+              [attr.cx]="calcX(pt.day)"
+              [attr.cy]="calcY(pt.rate)"
+              r="5"
+              class="fill-emerald-400 cursor-pointer opacity-70 hover:opacity-100"
+              (mouseenter)="
+                hoveredPoint.set({
+                  day: pt.day,
+                  rate: pt.rate,
+                  league: 'Allflame',
+                  x: calcX(pt.day),
+                  y: calcY(pt.rate),
+                })
+              "
+              (mouseleave)="hoveredPoint.set(null)"
+            />
+          }
+
+          <!-- ТОЧКИ ПОТОЧНОЇ ЛІГИ -->
+          @for (pt of currentLeaguePoints(); track pt.day) {
+            <circle
+              [attr.cx]="calcX(pt.day)"
+              [attr.cy]="calcY(pt.rate)"
+              r="6"
+              class="fill-amber-500 cursor-pointer opacity-90 hover:opacity-100"
+              (mouseenter)="
+                hoveredPoint.set({
+                  day: pt.day,
+                  rate: pt.rate,
+                  league: 'Mirage',
+                  x: calcX(pt.day),
+                  y: calcY(pt.rate),
+                })
+              "
+              (mouseleave)="hoveredPoint.set(null)"
+            />
+          }
+        </svg>
+
+        <!-- ПЛАВАЮЧИЙ ПОПАП ПРЕЦИЗІЙНО НАД ТОЧКОЮ -->
+        @if (hoveredPoint(); as hp) {
+          <div
+            class="absolute z-50 pointer-events-none transform -translate-x-1/2 -translate-y-full mb-2 px-2.5 py-1.5 bg-slate-900 border border-amber-500/50 shadow-2xl text-[11px] font-mono text-slate-200 whitespace-nowrap flex items-center gap-2 animate-fadeIn"
+            [style.left.%]="(hp.x / 800) * 100"
+            [style.top.%]="(hp.y / 250) * 100"
+          >
+            <span class="font-bold text-white">Day {{ hp.day }}</span>
+            <span class="text-[#ffff75]">{{ hp.rate | number: '1.0-0' }}c</span>
+            <span class="text-[9px] text-slate-400">({{ hp.league }})</span>
+          </div>
+        }
+
+        <div class="absolute top-0 left-0 text-[10px] font-mono text-slate-400 bg-slate-900/80 px-1">
+          Max: {{ globalMaxPrice() | number: '1.0-0' }}c
+        </div>
+      </div>
+
+      <div
+        class="flex justify-between items-center text-[10px] font-mono text-slate-500 mt-2 pt-2 border-t border-slate-900"
+      >
+        <span>Day 1 (League Start)</span>
+        <span>Normalized Timeline (Days of League)</span>
+        <span>Present Day / End</span>
+      </div>
+    </div>
+  } @else {
+    <div class="h-64 flex items-center justify-center text-slate-500 text-xs">
+      Select a fossil above to compare price evolution across leagues.
+    </div>
+  }
+</div>
