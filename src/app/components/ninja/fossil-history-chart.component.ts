@@ -11,37 +11,83 @@ import { FossilHistoryService } from './fossil-history.service';
 export class FossilHistoryChartComponent {
     private historyService = inject(FossilHistoryService);
 
+    // Вхідний список усіх фосиліїв від батьківського компонента
     fossilsList = input<{ id: string; name: string; icon?: string }[]>([]);
+
+    // Фільтруємо список, залишаючи лише ті фосили, які присутні в обох історичних лігах (Mirage / Allflame)
+    filteredFossilsList = computed(() => {
+        const rawList = this.fossilsList();
+        if (!rawList || !rawList.length) return [];
+
+        // Список ID фосиліїв, які гарантовано є і в Mirage, і в Allflame на основі актуальних даних poe.ninja
+        const validHistoricalFossils = new Set([
+            'gilded-fossil',
+            'hollow-fossil',
+            'faceted-fossil',
+            'fractured-fossil',
+            'shuddering-fossil',
+            'opulent-fossil',
+            'aetheric-fossil',
+            'pristine-fossil',
+            'corroded-fossil',
+            'metallic-fossil',
+            'scorched-fossil',
+            'jagged-fossil',
+            'dense-fossil',
+            'aberrant-fossil',
+            'lucent-fossil',
+            'frigid-fossil',
+            'deft-fossil',
+            'bound-fossil',
+            'sanctified-fossil',
+            'prismatic-fossil',
+            'serrated-fossil',
+            'tangled-fossil',
+            'bloodstained-fossil',
+            'fundamental-fossil',
+            'glyphic-fossil'
+        ]);
+
+        return rawList.filter(f => validHistoricalFossils.has(f.id));
+    });
 
     activeFossilId = signal<string | null>(null);
     loading = signal<boolean>(false);
+    hasError = signal<boolean>(false);
 
     currentLeaguePoints = signal<{ day: number; rate: number }[]>([]);
     previousLeaguePoints = signal<{ day: number; rate: number }[]>([]);
-    // Зберігає дані та точні координати точки для плаваючого попапа
     hoveredPoint = signal<{ day: number; rate: number; league: string; x: number; y: number } | null>(null);
 
     selectFossil(fossil: { id: string; name: string }) {
         this.activeFossilId.set(fossil.id);
         this.loading.set(true);
+        this.hasError.set(false);
 
         this.historyService.CompareLeagues(fossil.id).subscribe({
             next: ({ current, previous }) => {
-                // Групуємо та згладжуємо дані (наприклад, беремо середнє за кожні 4 дні)
-                this.currentLeaguePoints.set(this.aggregateAndNormalize(current, 4));
-                this.previousLeaguePoints.set(this.aggregateAndNormalize(previous, 4));
+                const currentNormalized = this.aggregateAndNormalize(current, 4);
+                const previousNormalized = this.aggregateAndNormalize(previous, 4);
+
+                this.currentLeaguePoints.set(currentNormalized);
+                this.previousLeaguePoints.set(previousNormalized);
+
+                if (currentNormalized.length === 0 && previousNormalized.length === 0) {
+                    this.hasError.set(true);
+                }
+
                 this.loading.set(false);
             },
             error: (err) => {
                 console.error('Failed to load cross-league history', err);
                 this.loading.set(false);
+                this.hasError.set(true);
             }
         });
     }
 
-    // Нормалізація + агрегація по N днів (зменшуємо кількість точок, залишаючи чистий тренд)
     private normalizeByDay(rawHistory: any[]): { day: number; rate: number }[] {
-        if (!rawHistory.length) return [];
+        if (!rawHistory || !rawHistory.length) return [];
         const startTimestamp = new Date(rawHistory[0].timestamp).getTime();
 
         return rawHistory.map(item => {
@@ -71,7 +117,7 @@ export class FossilHistoryChartComponent {
             const { sum, count } = grouped[day];
             return {
                 day,
-                rate: Math.round((sum / count) * 100) / 100 // Середнє значення за період
+                rate: Math.round((sum / count) * 100) / 100
             };
         });
     }

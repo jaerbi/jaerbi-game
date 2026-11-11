@@ -1,20 +1,12 @@
 <div class="mt-8 bg-[#1d262fe6] border border-slate-700/80 p-6 rounded-none shadow-xl">
   <!-- HEADER SECTION -->
   <div class="mb-6">
-    <!-- Рядок 1: Заголовок на всю довжину -->
     <h3 class="text-lg font-bold text-white w-full mb-1">League vs League Price Comparison (Mirage vs Allflame)</h3>
-
-    <!-- Рядок 2: Сабтайтул зліва + Легенда/Тултіп справа (в одну лінію або з перенесенням підпису) -->
     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
-      <!-- Сабтайтул (займає вільний простір зліва) -->
       <p class="text-xs text-slate-400">
         Comparing current league trends against the previous league normalized by day of the league.
       </p>
-
-      <!-- Правий блок: Тултіп (фіксований розмір) + Легенда ліг (завжди на одному рівні) -->
       <div class="flex items-center gap-4 text-xs font-mono shrink-0">
-
-        <!-- Легенда (завжди на одному рівні в рядку) -->
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-1.5">
             <span class="w-3 h-0.5 bg-amber-500 inline-block"></span>
@@ -29,9 +21,9 @@
     </div>
   </div>
 
-  <!-- ФОСІЛ-БЕЙДЖИКИ -->
+  <!-- ФОСІЛ-БЕЙДЖИКИ (Фільтрований список) -->
   <div class="flex flex-wrap gap-2 mb-6">
-    @for (fossil of fossilsList(); track fossil.id) {
+    @for (fossil of filteredFossilsList(); track fossil.id) {
       <button
         (click)="selectFossil(fossil)"
         class="px-3 py-2 text-xs font-medium border transition-all cursor-pointer flex items-center gap-2 rounded-none"
@@ -49,11 +41,16 @@
     }
   </div>
 
-  <!-- ГРАФІК -->
-  <!-- ГРАФІК -->
+  <!-- ГРАФІК / СТАНИ -->
   @if (loading()) {
     <div class="h-64 flex items-center justify-center text-slate-400 text-sm animate-pulse">
       Loading cross-league analytics from poe.ninja...
+    </div>
+  } @else if (hasError()) {
+    <div
+      class="h-64 flex items-center justify-center text-amber-400/80 text-xs font-mono border border-slate-800 bg-slate-950"
+    >
+      Historical data for this fossil is unavailable or not found on poe.ninja.
     </div>
   } @else if (currentLeaguePoints().length > 0 || previousLeaguePoints().length > 0) {
     <div class="bg-slate-950 border border-slate-800 p-4 rounded-none relative">

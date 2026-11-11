@@ -2,7 +2,7 @@ import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, of } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
+import { map, tap, catchError } from 'rxjs/operators';
 
 @Injectable({
     providedIn: 'root'
@@ -11,7 +11,6 @@ export class FossilHistoryService {
     private http = inject(HttpClient);
     private platformId = inject(PLATFORM_ID);
 
-    // 👇 ВСТАВ СЮДИ СВІЙ РЕАЛЬНИЙ ДОМЕН CLOUDFLARE WORKER (той самий, що використовується для інших запитів)
     private WORKER_URL = 'https://tight-lab-5d5a.jaerbi42.workers.dev';
     private STORAGE_PREFIX = 'delvescout_league_history_';
 
@@ -22,20 +21,29 @@ export class FossilHistoryService {
         const getLeagueData = (leagueName: string) => {
             const cacheKey = `${this.STORAGE_PREFIX}_${leagueName}_${fossilId}`;
 
-            if (isPlatformBrowser(this.platformId) && leagueName === previousLeague) {
+            if (isPlatformBrowser(this.platformId)) {
                 const cached = localStorage.getItem(cacheKey);
-                if (cached) return of(JSON.parse(cached));
+                if (cached) {
+                    try {
+                        return of(JSON.parse(cached));
+                    } catch (e) {
+                        localStorage.removeItem(cacheKey);
+                    }
+                }
             }
 
-            // Передаємо параметри у твій воркер разом з id фосила
             const url = `${this.WORKER_URL}?league=${leagueName}&type=Fossil&id=${fossilId}`;
 
             return this.http.get<any>(url).pipe(
                 tap(data => {
-                    if (isPlatformBrowser(this.platformId) && leagueName === previousLeague && data) {
-                        localStorage.setItem(cacheKey, JSON.stringify(data));
+                    if (isPlatformBrowser(this.platformId) && data) {
+                        try {
+                            localStorage.setItem(cacheKey, JSON.stringify(data));
+                        } catch (e) { }
                     }
-                })
+                }),
+                // Якщо сервер повертає 404 або фосила немає в цій лізі — повертаємо null без зриву загального потоку
+                catchError(() => of(null))
             );
         };
 
@@ -45,6 +53,7 @@ export class FossilHistoryService {
         }).pipe(
             map(({ currentRes, previousRes }) => {
                 const extractHistory = (res: any) => {
+                    if (!res) return [];
                     const history = res?.pairs?.[0]?.history || res?.history || [];
                     return [...history].sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
                 };
