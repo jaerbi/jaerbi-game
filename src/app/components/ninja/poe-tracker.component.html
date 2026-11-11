@@ -198,6 +198,82 @@
       }
     </div>
 
+    <!-- 🌟 ПЕРЕДИЗАЙНЕНА СЕКЦІЯ: Biome-Specific Nodes (Rare Chests) -->
+    <div class="bg-[#1d262fe6] border border-slate-700 overflow-hidden shadow-xl mt-8">
+      <!-- Додаємо relative сюди, щоб обійти межі контейнера -->
+      <div class="p-4 bg-slate-950/60 border-b border-slate-700 relative pl-16">
+        <!-- Велика іконка з абсолютним позиціонуванням -->
+        <div class="absolute left-3 top-1 -translate-y-1.3 pointer-events-none">
+          <img
+            src="assets/images/poe/Fossils_delve_node_icon.png"
+            class="w-12 h-12 object-contain drop-shadow-md"
+            alt=""
+          />
+        </div>
+
+        <div>
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider">Biome-Specific Nodes (Rare Chests)</h3>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Restricted sub-nodes on the Delve map containing exclusive rare fossils (Tangled, Bloodstained, Faceted,
+            etc.).
+          </p>
+        </div>
+      </div>
+
+      @if (loading()) {
+        <div class="p-12 text-center text-slate-400 animate-pulse">Loading special node values...</div>
+      } @else {
+        <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          @for (node of sortedBiomesStaff(); track node.name) {
+            <div
+              class="bg-slate-900/80 border border-slate-700/80 p-3 flex items-center justify-between shadow-md hover:border-slate-500/60 transition-colors"
+            >
+              <!-- Ліва частина: іконка нода/біома + назва -->
+              <div class="flex items-center gap-3 overflow-hidden">
+                <img
+                  [src]="node.icon"
+                  class="w-9 h-9 object-cover border border-slate-700 bg-slate-950 shrink-0 p-0.5"
+                  alt=""
+                />
+                <div class="overflow-hidden">
+                  <span class="text-xs font-bold text-slate-200 block truncate">{{ node.name }}</span>
+                  <span class="text-[10px] text-slate-400 uppercase tracking-wider block">{{ node.subText}}</span>
+                </div>
+              </div>
+
+              <!-- Права частина: іконка фосила + ціна + відсоток -->
+              <div class="flex items-center gap-2 shrink-0">
+                @if (node.matchedFossils.length > 0) {
+                  @let fossil = node.matchedFossils[0];
+                  @if (fossil.icon) {
+                    <img
+                      [src]="fossil.icon"
+                      class="w-7 h-7 object-contain bg-slate-950/50 p-0.5"
+                      [alt]="fossil.name"
+                      [title]="fossil.name"
+                    />
+                  }
+                  <div class="text-right font-mono">
+                    <span class="text-[#ffff75] font-bold text-xs">
+                      {{ fossil.chaosValue | number: '1.0-0' }}c
+                    </span>
+                    <span
+                      class="text-[10px] font-semibold block mt-0.5"
+                      [ngClass]="fossil.changePercent >= 0 ? 'text-emerald-500' : 'text-red-400'"
+                    >
+                      {{ fossil.changePercent >= 0 ? '+' : '' }}{{ fossil.changePercent }}%
+                    </span>
+                  </div>
+                } @else {
+                  <span class="text-xs text-slate-500 italic">No data</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
     <!-- Підключаємо блок босів нижче -->
     <app-delve-bosses></app-delve-bosses>
 

@@ -11,6 +11,7 @@ import { debounceTime, Subject, takeUntil } from 'rxjs';
 
 interface BiomeData {
     name: string;
+    subText?: string;
     colorHex: string;
     icon: string;
     fossilKeywords: string[];
@@ -49,42 +50,93 @@ export class PoeTrackerComponent implements OnInit, OnDestroy {
             name: 'Fungal Caverns',
             colorHex: '#90ee90',
             icon: 'assets/images/poe/Delve_Biome_Fungal_Caverns.png',
-            fossilKeywords: ['Dense Fossil', 'Aberrant Fossil', 'Opulent Fossil', 'Corroded Fossil', 'Gilded Fossil', 'Tangled Fossil'],
+            fossilKeywords: ['Dense Fossil', 'Aberrant Fossil', 'Opulent Fossil', 'Corroded Fossil', 'Gilded Fossil'],
             expanded: false
         },
         {
             name: 'Petrified Forest',
             colorHex: '#00ff00',
             icon: 'assets/images/poe/Delve_Biome_Petrified_Forest.png',
-            fossilKeywords: ['Bound Fossil', 'Jagged Fossil', 'Corroded Fossil', 'Sanctified Fossil', 'Bloodstained Fossil'],
+            fossilKeywords: ['Bound Fossil', 'Jagged Fossil', 'Corroded Fossil', 'Sanctified Fossil'],
             expanded: false
         },
         {
             name: 'Abyssal Depths',
             colorHex: '#808080',
             icon: 'assets/images/poe/Delve_Biome_Abyssal_Depths.png',
-            fossilKeywords: ['Aberrant Fossil', 'Bound Fossil', 'Gilded Fossil', 'Lucent Fossil', 'Hollow Fossil'],
+            fossilKeywords: ['Aberrant Fossil', 'Bound Fossil', 'Gilded Fossil', 'Lucent Fossil'],
             expanded: false
         },
         {
             name: 'Frozen Hollow',
             colorHex: '#00ffff',
             icon: 'assets/images/poe/Delve_Biome_Frozen_Hollow.png',
-            fossilKeywords: ['Frigid Fossil', 'Serrated Fossil', 'Prismatic Fossil', 'Sanctified Fossil', 'Shuddering Fossil', 'Glyphic Fossil'],
+            fossilKeywords: ['Frigid Fossil', 'Serrated Fossil', 'Prismatic Fossil', 'Sanctified Fossil', 'Shuddering Fossil'],
             expanded: false
         },
         {
             name: 'Magma Fissure',
             colorHex: '#ffa500',
             icon: 'assets/images/poe/Delve_Biome_Magma_Fissure.png',
-            fossilKeywords: ['Scorched Fossil', 'Prismatic Fossil', 'Pristine Fossil', 'Deft Fossil', 'Fundamental Fossil', 'Faceted Fossil'],
+            fossilKeywords: ['Scorched Fossil', 'Prismatic Fossil', 'Pristine Fossil', 'Deft Fossil', 'Fundamental Fossil'],
             expanded: false
         },
         {
             name: 'Sulphur Vents',
             colorHex: '#f5deb3',
             icon: 'assets/images/poe/Delve_Biome_Sulfur_Vents.png',
-            fossilKeywords: ['Metallic Fossil', 'Opulent Fossil', 'Aetheric Fossil', 'Fundamental Fossil', 'Fractured Fossil'],
+            fossilKeywords: ['Metallic Fossil', 'Opulent Fossil', 'Aetheric Fossil', 'Fundamental Fossil'],
+            expanded: false
+        }
+    ]);
+    // ось тут ті штуки, хто зна навіть як назвати такий список?
+    biomesStaff = signal<BiomeData[]>([
+        {
+            name: 'Fungal Caverns',
+            subText: 'Haunted Tomb',
+            colorHex: '#90ee90',
+            icon: 'assets/images/poe/Delve_Biome_Fungal_Caverns.png',
+            fossilKeywords: ['Tangled Fossil'],
+            expanded: false
+        },
+        {
+            name: 'Petrified Forest',
+            subText: 'Stonewood Hollow',
+            colorHex: '#00ff00',
+            icon: 'assets/images/poe/Delve_Biome_Petrified_Forest.png',
+            fossilKeywords: ['Bloodstained Fossil'],
+            expanded: false
+        },
+        {
+            name: 'Abyssal Depths',
+            subText: 'Crystal Spire',
+            colorHex: '#808080',
+            icon: 'assets/images/poe/Delve_Biome_Abyssal_Depths.png',
+            fossilKeywords: ['Hollow Fossil'],
+            expanded: false
+        },
+        {
+            name: 'Frozen Hollow',
+            subText: 'Time-Lost Cavern',
+            colorHex: '#00ffff',
+            icon: 'assets/images/poe/Delve_Biome_Frozen_Hollow.png',
+            fossilKeywords: ['Glyphic Fossil'],
+            expanded: false
+        },
+        {
+            name: 'Magma Fissure',
+            subText: 'Molten Cavity',
+            colorHex: '#ffa500',
+            icon: 'assets/images/poe/Delve_Biome_Magma_Fissure.png',
+            fossilKeywords: ['Faceted Fossil'],
+            expanded: false
+        },
+        {
+            name: 'Sulphur Vents',
+            subText: 'Humid Fissure',
+            colorHex: '#f5deb3',
+            icon: 'assets/images/poe/Delve_Biome_Sulfur_Vents.png',
+            fossilKeywords: ['Fractured Fossil'],
             expanded: false
         }
     ]);
@@ -183,6 +235,32 @@ export class PoeTrackerComponent implements OnInit, OnDestroy {
         const fossils = this.fossilsData();
 
         const mapped = this.biomes().map(biome => {
+            const matchedFossils = fossils.filter(f =>
+                biome.fossilKeywords.some(keyword => f.name.toLowerCase().includes(keyword.toLowerCase()))
+            );
+
+            const totalValue = matchedFossils.reduce((sum, f) => sum + f.chaosValue, 0);
+            const averageValue = matchedFossils.length > 0 ? totalValue / matchedFossils.length : 0;
+
+            const totalChange = matchedFossils.reduce((sum, f) => sum + f.changePercent, 0);
+            const averageChange = matchedFossils.length > 0 ? totalChange / matchedFossils.length : 0;
+
+            return {
+                ...biome,
+                matchedFossils,
+                averageValue,
+                averageChange
+            };
+        });
+
+        return mapped.sort((a, b) => b.averageValue - a.averageValue);
+    });
+
+    // Обчислюваний список для спеціальних нодів з унікальними фосиліями
+    sortedBiomesStaff = computed(() => {
+        const fossils = this.fossilsData();
+
+        const mapped = this.biomesStaff().map(biome => {
             const matchedFossils = fossils.filter(f =>
                 biome.fossilKeywords.some(keyword => f.name.toLowerCase().includes(keyword.toLowerCase()))
             );
