@@ -119,8 +119,6 @@ export class DelveBossesComponent implements OnInit, OnDestroy {
                     this.fetchBossData(false);
                 }
             });
-
-        this.fetchBossData(false);
     }
 
     ngOnDestroy(): void {

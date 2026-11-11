@@ -116,9 +116,13 @@ export class DelveBossesService {
 
                     const price = line.chaosValue ?? line.primaryValue ?? line.chaosEquivalent ?? line.value ?? 0;
 
-                    const sparklineData = line.sparkline?.data || [];
-                    const totalChange = line.sparkline?.totalChange !== undefined
-                        ? Number(line.sparkline.totalChange)
+                    // 🔍 ВИПРАВЛЕНО: читаємо sparkLine з великою літерою 'L' + страховка через прямі поля
+                    const sparkLineObj = line.sparkLine || line.sparkline || {};
+                    const sparklineData = sparkLineObj.data || [];
+
+                    const rawTotalChange = sparkLineObj.totalChange ?? line.totalChange ?? line.sparkline?.totalChange;
+                    const totalChange = rawTotalChange !== undefined && rawTotalChange !== null
+                        ? Number(rawTotalChange)
                         : this.calculateChange(sparklineData);
 
                     return {

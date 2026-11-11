@@ -101,8 +101,6 @@ export class PoeTrackerComponent implements OnInit, OnDestroy {
                     this.fetchData(false);
                 }
             });
-
-        this.fetchData(false);
     }
 
     ngOnDestroy(): void {

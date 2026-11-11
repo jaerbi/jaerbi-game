@@ -34,45 +34,71 @@
       </div>
     </div>
 
-    <!-- Market Trends (Top Gainers / Losers) -->
+    <!-- Market Trends (Price Surges & Drops) -->
     @if (!loading() && fossilsData().length > 0) {
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <!-- Gainers -->
+        <!-- Top Risers / Gainers -->
         <div class="bg-[#1d262fe6] p-4 border border-slate-700 shadow-md">
-          <h3 class="text-xs font-bold uppercase text-emerald-500 mb-3 flex items-center gap-1">
-            <span>Top Gainers</span>
+          <h3 class="text-xs font-bold uppercase text-emerald-400 mb-3 flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2.5"
+                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                ></path>
+              </svg>
+              <span>Biggest Price Surges</span>
+            </span>
+            <span class="text-[10px] text-slate-400 font-normal lowercase">7d trend</span>
           </h3>
           <div class="space-y-2">
             @for (f of topGainers(); track f.id) {
-              <div class="flex items-center justify-between bg-slate-900/60 p-2 border border-slate-700/50">
-                <div class="flex items-center gap-2">
-                  <img [src]="f.icon" class="w-6 h-6 object-contain" alt="" />
-                  <span class="text-xs text-slate-200">{{ f.name }}</span>
+              <div
+                class="flex items-center justify-between bg-slate-900/60 p-2.5 border border-slate-700/50 hover:border-emerald-500/40 transition-colors"
+              >
+                <div class="flex items-center gap-2.5 overflow-hidden">
+                  <img [src]="f.icon" class="w-6 h-6 object-contain shrink-0" alt="" />
+                  <span class="text-xs text-slate-200 truncate">{{ f.name }}</span>
                 </div>
-                <div class="text-right font-mono text-xs">
-                  <span class="text-[#ffff75] font-bold mr-2">{{ f.chaosValue | number: '1.0-0' }}c</span>
-                  <span class="text-emerald-500 font-semibold">+{{ f.changePercent }}%</span>
+                <div class="text-right font-mono text-xs shrink-0 flex items-center gap-3">
+                  <span class="text-emerald-500 font-bold">+{{ f.changePercent }}%</span>
+                  <span class="text-[#ffff75] text-[11px] font-bold">{{ f.chaosValue | number: '1.0-0' }}c</span>
                 </div>
               </div>
             }
           </div>
         </div>
 
-        <!-- Losers -->
+        <!-- Top Drop / Losers -->
         <div class="bg-[#1d262fe6] p-4 border border-slate-700 shadow-md">
-          <h3 class="text-xs font-bold uppercase text-red-400 mb-3 flex items-center gap-1">
-            <span>Top Losers</span>
+          <h3 class="text-xs font-bold uppercase text-red-400 mb-3 flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2.5"
+                  d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"
+                ></path>
+              </svg>
+              <span>Sharpest Price Drops</span>
+            </span>
+            <span class="text-[10px] text-slate-400 font-normal lowercase">7d trend</span>
           </h3>
           <div class="space-y-2">
             @for (f of topLosers(); track f.id) {
-              <div class="flex items-center justify-between bg-slate-900/60 p-2 border border-slate-700/50">
-                <div class="flex items-center gap-2">
-                  <img [src]="f.icon" class="w-6 h-6 object-contain" alt="" />
-                  <span class="text-xs text-slate-200">{{ f.name }}</span>
+              <div
+                class="flex items-center justify-between bg-slate-900/60 p-2.5 border border-slate-700/50 hover:border-red-500/40 transition-colors"
+              >
+                <div class="flex items-center gap-2.5 overflow-hidden">
+                  <img [src]="f.icon" class="w-6 h-6 object-contain shrink-0" alt="" />
+                  <span class="text-xs text-slate-200 truncate">{{ f.name }}</span>
                 </div>
-                <div class="text-right font-mono text-xs">
-                  <span class="text-[#ffff75] font-bold mr-2">{{ f.chaosValue | number: '1.0-0' }}c</span>
-                  <span class="text-red-400 font-semibold">{{ f.changePercent }}%</span>
+                <div class="text-right font-mono text-xs shrink-0 flex items-center gap-3">
+                  <span class="text-red-400 font-bold">{{ f.changePercent }}%</span>
+                  <span class="text-[#ffff75] text-[11px] font-bold">{{ f.chaosValue | number: '1.0-0' }}c</span>
                 </div>
               </div>
             }
@@ -80,7 +106,6 @@
         </div>
       </div>
     }
-
     <!-- Biomes Table -->
     <div class="bg-[#1d262fe6] border border-slate-700 overflow-hidden shadow-xl">
       @if (loading()) {
