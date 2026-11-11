@@ -1,10 +1,13 @@
-import { Component, OnInit, inject, PLATFORM_ID, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, PLATFORM_ID, signal, computed, OnDestroy } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { PoeNinjaService, FossilItem } from './poe-ninja.service';
 import { DelveBossesComponent } from './delve-bosses.component';
 import { DelveSearchComponent } from './delve-search.component';
 import { DelveSearchService } from './delve-search.service';
 import { FossilHistoryChartComponent } from './fossil-history-chart.component';
+import { LeagueSelectorComponent } from './league-selector.component';
+import { LeagueStateService } from './league-state.service';
+import { debounceTime, Subject, takeUntil } from 'rxjs';
 
 interface BiomeData {
     name: string;
@@ -17,19 +20,21 @@ interface BiomeData {
 @Component({
     selector: 'app-poe-tracker',
     standalone: true,
-    imports: [CommonModule, DelveBossesComponent, DelveSearchComponent, FossilHistoryChartComponent],
+    imports: [CommonModule, DelveBossesComponent, DelveSearchComponent, FossilHistoryChartComponent, LeagueSelectorComponent],
     templateUrl: 'poe-tracker.component.html'
 })
-export class PoeTrackerComponent implements OnInit {
+export class PoeTrackerComponent implements OnInit, OnDestroy {
     private poeService = inject(PoeNinjaService);
     private platformId = inject(PLATFORM_ID);
     private searchService = inject(DelveSearchService);
+    private leagueStateService = inject(LeagueStateService);
 
     loading = signal<boolean>(true);
     fossilsData = signal<FossilItem[]>([]);
+    isInfoOpen = signal<boolean>(false);
+    isDonateOpen = signal<boolean>(false);
 
-    private readonly CACHE_KEY = 'delvescout_fossils_cache_v4';
-    private readonly CACHE_TIME_KEY = 'delvescout_cache_time_v4';
+    readonly onDestroy$ = new Subject<void>();
     private readonly CACHE_DURATION = 30 * 60 * 1000; // 30 хвилин
 
     biomes = signal<BiomeData[]>([
@@ -85,12 +90,25 @@ export class PoeTrackerComponent implements OnInit {
     ]);
 
     ngOnInit() {
+        this.leagueStateService.getLeagueChange$()
+            .pipe(
+                debounceTime(300),
+                takeUntil(this.onDestroy$)
+            )
+            .subscribe({
+                next: () => {
+                    // Спрацьовує, коли юзер міняє лігу
+                    this.fetchData(false);
+                }
+            });
+
         this.fetchData(false);
     }
 
-    // Сигнали стану модальних вікон
-    isInfoOpen = signal<boolean>(false);
-    isDonateOpen = signal<boolean>(false);
+    ngOnDestroy(): void {
+        this.onDestroy$.next();
+        this.onDestroy$.complete();
+    }
 
     toggleInfoModal() {
         this.isInfoOpen.update(v => !v);
@@ -100,22 +118,21 @@ export class PoeTrackerComponent implements OnInit {
         this.isDonateOpen.update(v => !v);
     }
 
-    forceRefresh() {
-        if (!isPlatformBrowser(this.platformId)) return;
-        localStorage.removeItem(this.CACHE_KEY);
-        localStorage.removeItem(this.CACHE_TIME_KEY);
-        this.fetchData(true);
-    }
-
     fetchData(ignoreCache: boolean) {
         if (!isPlatformBrowser(this.platformId)) {
             this.loading.set(false);
             return;
         }
 
+        const currentLeague = this.leagueStateService.selectedLeague();
+
+        // 🔑 Робимо ключі кешу унікальними для кожної ліги (наприклад, ..._Standard_v4 та ..._Allflame_v4)
+        const cacheKey = `delvescout_fossils_cache_${currentLeague}_v4`;
+        const cacheTimeKey = `delvescout_cache_time_${currentLeague}_v4`;
+
         const now = new Date().getTime();
-        const cachedData = localStorage.getItem(this.CACHE_KEY);
-        const cachedTime = localStorage.getItem(this.CACHE_TIME_KEY);
+        const cachedData = localStorage.getItem(cacheKey);
+        const cachedTime = localStorage.getItem(cacheTimeKey);
 
         if (!ignoreCache && cachedData && cachedTime && (now - Number(cachedTime) < this.CACHE_DURATION)) {
             try {
@@ -132,35 +149,23 @@ export class PoeTrackerComponent implements OnInit {
         }
 
         this.loading.set(true);
-        this.poeService.getFossils('Allflame').subscribe({
+        this.poeService.getFossils(currentLeague).subscribe({
             next: (data) => {
                 this.fossilsData.set(data);
                 this.searchService.setFossils(data);
                 this.loading.set(false);
 
                 if (data && data.length > 0) {
-                    localStorage.setItem(this.CACHE_KEY, JSON.stringify(data));
-                    localStorage.setItem(this.CACHE_TIME_KEY, now.toString());
-                    if (cachedData && cachedTime && (now - Number(cachedTime) < this.CACHE_DURATION)) {
-                        try {
-                            const parsedData = JSON.parse(cachedData);
-                            if (parsedData && parsedData.length > 0) {
-                                this.fossilsData.set(parsedData);
-                                this.searchService.setFossils(parsedData);
-                                console.log('parsedData: ', parsedData);
-                                this.loading.set(false);
-                                return;
-                            }
-                        } catch (e) {
-                            console.error('Cache parse error:', e);
-                        }
-                    }
+                    localStorage.setItem(cacheKey, JSON.stringify(data));
+                    localStorage.setItem(cacheTimeKey, now.toString());
                 }
             },
             error: () => {
                 if (cachedData) {
                     try {
-                        this.fossilsData.set(JSON.parse(cachedData));
+                        const parsed = JSON.parse(cachedData);
+                        this.fossilsData.set(parsed);
+                        this.searchService.setFossils(parsed);
                     } catch (e) { }
                 }
                 this.loading.set(false);
@@ -216,7 +221,7 @@ export class PoeTrackerComponent implements OnInit {
         }
     }
 
-     copySupportLink(url: string) {
+    copySupportLink(url: string) {
         try {
             if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(url);

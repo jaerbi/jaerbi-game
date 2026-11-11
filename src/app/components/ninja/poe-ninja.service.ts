@@ -2,6 +2,7 @@ import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map, of, catchError } from 'rxjs';
+import { LeagueStateService } from './league-state.service';
 
 export interface FossilItem {
     id: string;
@@ -17,14 +18,16 @@ export interface FossilItem {
 export class PoeNinjaService {
     private http = inject(HttpClient);
     private platformId = inject(PLATFORM_ID);
+    private leagueState = inject(LeagueStateService);
     private workerUrl = 'https://tight-lab-5d5a.jaerbi42.workers.dev';
 
-    getFossils(league: string = 'Allflame'): Observable<FossilItem[]> {
+    getFossils(league: string): Observable<FossilItem[]> {
         if (!isPlatformBrowser(this.platformId)) {
             return of([]);
         }
 
-        const url = `${this.workerUrl}?league=${league}&type=Fossil`;
+        const targetLeague = league || this.leagueState.selectedLeague();
+        const url = `${this.workerUrl}?league=${targetLeague}&type=Fossil`;
 
         return this.http.get<any>(url).pipe(
             catchError(() => of(null)),

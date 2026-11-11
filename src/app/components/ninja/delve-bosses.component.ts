@@ -1,7 +1,9 @@
-import { Component, OnInit, inject, PLATFORM_ID, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, PLATFORM_ID, signal, computed } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { DelveBossesService, BossItem } from './delve-bosses.service';
 import { DelveSearchService } from './delve-search.service';
+import { LeagueStateService } from './league-state.service';
+import { debounceTime, Subject, takeUntil } from 'rxjs';
 
 interface BossDrop {
     name: string;
@@ -23,13 +25,17 @@ interface BossData {
     imports: [CommonModule],
     templateUrl: 'delve-bosses.component.html'
 })
-export class DelveBossesComponent implements OnInit {
+export class DelveBossesComponent implements OnInit, OnDestroy {
     private bossService = inject(DelveBossesService);
     private platformId = inject(PLATFORM_ID);
     private searchService = inject(DelveSearchService);
+    private leagueStateService = inject(LeagueStateService);
 
     loading = signal<boolean>(true);
     bossItemsMap = signal(new Map());
+
+    readonly onDestroy$ = new Subject<void>();
+
     // Топ-3 найдорожчих предметів, які реально випадають з босів
     topBossItems = computed(() => {
         const bosses = this.sortedBosses(); // Використовуємо вже розраховані дані босів з цінами
@@ -54,6 +60,7 @@ export class DelveBossesComponent implements OnInit {
             .sort((a, b) => b.chaosValue - a.chaosValue)
             .slice(0, 3);
     });
+
     bosses = signal<BossData[]>([
         {
             name: 'Kurgal, the Blackblooded',
@@ -102,7 +109,23 @@ export class DelveBossesComponent implements OnInit {
     ]);
 
     ngOnInit() {
-        this.fetchBossData();
+        this.leagueStateService.getLeagueChange$()
+            .pipe(
+                debounceTime(300),
+                takeUntil(this.onDestroy$)
+            )
+            .subscribe({
+                next: () => {
+                    this.fetchBossData(false);
+                }
+            });
+
+        this.fetchBossData(false);
+    }
+
+    ngOnDestroy(): void {
+        this.onDestroy$.next();
+        this.onDestroy$.complete();
     }
 
     fetchBossData(ignoreCache: boolean = false) {
@@ -112,7 +135,10 @@ export class DelveBossesComponent implements OnInit {
         }
 
         this.loading.set(true);
-        this.bossService.getBossItems('Allflame', ignoreCache).subscribe({
+        const currentLeague = this.leagueStateService.selectedLeague();
+
+        // Сервіс DelveBossesService вже приймає лігу та керує кешем усередині себе
+        this.bossService.getBossItems(currentLeague, ignoreCache).subscribe({
             next: (mapData) => {
                 this.bossItemsMap.set(mapData);
                 this.searchService.setBossItems(mapData);

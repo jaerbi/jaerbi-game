@@ -2,6 +2,7 @@ import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Observable, concat, of, catchError, map, toArray } from 'rxjs';
+import { LeagueStateService } from './league-state.service';
 
 export interface BossItem {
     id: string;
@@ -17,21 +18,28 @@ export interface BossItem {
 export class DelveBossesService {
     private http = inject(HttpClient);
     private platformId = inject(PLATFORM_ID);
+    private leagueState = inject(LeagueStateService);
     private workerUrl = 'https://tight-lab-5d5a.jaerbi42.workers.dev';
 
-    private readonly CACHE_KEY = 'delvescout_bosses_cache_v3';
-    private readonly CACHE_TIME_KEY = 'delvescout_bosses_cache_time_v3';
     private readonly CACHE_DURATION = 30 * 60 * 1000; // 30 хвилин
 
-    getBossItems(league: string = 'Allflame', ignoreCache: boolean = false): Observable<Map<any, any>> {
+    getBossItems(league?: string, ignoreCache: boolean = false): Observable<Map<any, any>> {
         if (!isPlatformBrowser(this.platformId)) {
             return of(new Map());
         }
 
-        const now = new Date().getTime();
-        const cachedData = localStorage.getItem(this.CACHE_KEY);
-        const cachedTime = localStorage.getItem(this.CACHE_TIME_KEY);
+        // Визначаємо поточну лігу (або з аргументу, або з глобального сервісу стану ліг)
+        const targetLeague = league || this.leagueState.selectedLeague();
 
+        // Динамічні ключі кешу для кожної ліги окремо (наприклад, для Standard і Allflame)
+        const cacheKey = `delvescout_bosses_cache_${targetLeague}_v3`;
+        const cacheTimeKey = `delvescout_bosses_cache_time_${targetLeague}_v3`;
+
+        const now = new Date().getTime();
+        const cachedData = localStorage.getItem(cacheKey);
+        const cachedTime = localStorage.getItem(cacheTimeKey);
+
+        // Перевірка чи дійсний кеш для конкретної ліги
         if (!ignoreCache && cachedData && cachedTime && (now - Number(cachedTime) < this.CACHE_DURATION)) {
             try {
                 const parsedArray: [string, BossItem][] = JSON.parse(cachedData);
@@ -39,22 +47,22 @@ export class DelveBossesService {
                     return of(new Map(parsedArray));
                 }
             } catch (e) {
-                console.error('Boss cache read error:', e);
+                console.error(`Boss cache read error for league ${targetLeague}:`, e);
             }
         }
 
         // Повний список категорій poe.ninja, де живуть дропи дельвівських босів
         const types = [
-            'UniqueArmour', 
-            'UniqueAccessory', 
-            'UniqueWeapon', 
-            'UniqueJewel', 
-            'UniqueMap', 
+            'UniqueArmour',
+            'UniqueAccessory',
+            'UniqueWeapon',
+            'UniqueJewel',
+            'UniqueMap',
             'Fragment'
         ];
 
         return concat(
-            ...types.map(type => this.fetchCategory(league, type))
+            ...types.map(type => this.fetchCategory(targetLeague, type))
         ).pipe(
             toArray(),
             map((responses: BossItem[][]) => {
@@ -65,11 +73,12 @@ export class DelveBossesService {
                     combinedMap.set(item.name.toLowerCase().trim(), item);
                 });
 
+                // Зберігаємо унікальний кеш для поточної ліги
                 try {
-                    localStorage.setItem(this.CACHE_KEY, JSON.stringify(Array.from(combinedMap.entries())));
-                    localStorage.setItem(this.CACHE_TIME_KEY, now.toString());
+                    localStorage.setItem(cacheKey, JSON.stringify(Array.from(combinedMap.entries())));
+                    localStorage.setItem(cacheTimeKey, now.toString());
                 } catch (e) {
-                    console.error('Boss cache write error:', e);
+                    console.error(`Boss cache write error for league ${targetLeague}:`, e);
                 }
 
                 return combinedMap;
@@ -82,7 +91,7 @@ export class DelveBossesService {
 
         return this.http.get<any>(url).pipe(
             catchError((err) => {
-                console.error(`Error fetching ${type}:`, err);
+                console.error(`Error fetching ${type} for league ${league}:`, err);
                 return of(null);
             }),
             map(res => {
