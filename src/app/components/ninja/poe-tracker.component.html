@@ -237,7 +237,7 @@
                 />
                 <div class="overflow-hidden">
                   <span class="text-xs font-bold text-slate-200 block truncate">{{ node.name }}</span>
-                  <span class="text-[10px] text-slate-400 uppercase tracking-wider block">{{ node.subText}}</span>
+                  <span class="text-[10px] text-slate-400 uppercase tracking-wider block">{{ node.subText }}</span>
                 </div>
               </div>
 
@@ -254,9 +254,7 @@
                     />
                   }
                   <div class="text-right font-mono">
-                    <span class="text-[#ffff75] font-bold text-xs">
-                      {{ fossil.chaosValue | number: '1.0-0' }}c
-                    </span>
+                    <span class="text-[#ffff75] font-bold text-xs">{{ fossil.chaosValue | number: '1.0-0' }}c</span>
                     <span
                       class="text-[10px] font-semibold block mt-0.5"
                       [ngClass]="fossil.changePercent >= 0 ? 'text-emerald-500' : 'text-red-400'"
@@ -299,7 +297,7 @@
       <div
         class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
       >
-        <div class="bg-slate-900 border border-slate-700 max-w-lg w-full p-6 shadow-2xl relative rounded-none">
+        <div class="bg-slate-900 border border-slate-700 max-w-xl w-full p-6 shadow-2xl relative rounded-none">
           <button
             (click)="toggleInfoModal()"
             class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 bg-[#1d262fe6] w-7 h-7 flex items-center justify-center transition-all cursor-pointer rounded-none"
@@ -307,26 +305,91 @@
             ✕
           </button>
 
-          <h3 class="text-xl font-bold text-white mb-3 flex items-center gap-2">About DelveScout</h3>
+          <!-- Header with local icon -->
+          <div class="flex items-center gap-3 mb-4 pb-3 border-b border-slate-800">
+            <img
+              src="assets/images/poe/Fossils_delve_node_icon.png"
+              class="w-10 h-10 object-contain drop-shadow"
+              alt=""
+            />
+            <div>
+              <h3 class="text-lg font-bold text-white tracking-wide">About DelveScout</h3>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wider">
+                Path of Exile Analytics & Farming Optimizer
+              </p>
+            </div>
+          </div>
 
-          <div class="space-y-3 text-sm text-slate-300 leading-relaxed">
+          <!-- Content using local asset icons -->
+          <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
             <p>
-              <strong>DelveScout</strong>
-              is a professional analytical tool for Path of Exile players, designed to optimize Delve farming strategy.
+              <strong class="text-slate-100">DelveScout</strong>
+              is a professional analytical tool for Path of Exile players, designed to maximize Delve farming efficiency
+              and profit tracking.
             </p>
-            <p>
-              It analyzes real-time market prices from
-              <span class="text-[#ffff75] font-mono">poe.ninja</span>
-              , calculates biome profitability based on fossil drop rates, and computes the Expected Value (EV) of
-              valuable boss drops from Delve encounter bosses (Aul, Kurgal, Ahuatotli).
-            </p>
-            <p>
-              Features historical cross-league price comparisons (e.g.,
-              <span class="text-amber-400 font-semibold">Mirage vs Allflame</span>
-              ) to track and analyze fossil value trends across different league timelines.
-            </p>
-            <p class="text-xs text-slate-400 pt-2 border-t border-slate-800">
-              Fossil and biome data are based on up-to-date tables from the official PoE Wiki.
+
+            <!-- Grid with feature cards using local icons -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 py-1">
+              <!-- Card 1: Live API -->
+              <div class="bg-slate-950/60 p-2.5 border border-slate-800 flex items-center gap-3">
+                <img
+                  src="assets/images/poe/ninja-logo.png"
+                  class="w-8 h-8 object-cover border border-slate-700 shrink-0"
+                  alt=""
+                />
+                <div>
+                  <span class="text-slate-200 font-bold block">Live poe.ninja API</span>
+                  <span class="text-[10px] text-slate-400">Real-time fossil and unique item market tracking.</span>
+                </div>
+              </div>
+
+              <!-- Card 2: Biomes -->
+              <div class="bg-slate-950/60 p-2.5 border border-slate-800 flex items-center gap-3">
+                <img
+                  src="assets/images/poe/map.jpg"
+                  class="w-8 h-8 object-cover border border-slate-700 shrink-0"
+                  alt=""
+                />
+                <div>
+                  <span class="text-slate-200 font-bold block">Biome Value Calculator</span>
+                  <span class="text-[10px] text-slate-400">
+                    Average profitability calculation for every Delve biome.
+                  </span>
+                </div>
+              </div>
+
+              <!-- Card 3: Boss EV -->
+              <div class="bg-slate-950/60 p-2.5 border border-slate-800 flex items-center gap-3">
+                <img
+                  src="assets/images/poe/The_Crystal_King's_Throne_delve_node_icon.png"
+                  class="w-8 h-8 object-cover border border-slate-700 shrink-0"
+                  alt=""
+                />
+                <div>
+                  <span class="text-slate-200 font-bold block">Boss EV Tracker</span>
+                  <span class="text-[10px] text-slate-400">Expected Value (EV) calculation for encounter bosses.</span>
+                </div>
+              </div>
+
+              <!-- Card 4: Rare Chests -->
+              <div class="bg-slate-950/60 p-2.5 border border-slate-800 flex items-center gap-3">
+                <img
+                  src="assets/images/poe/Fossils_delve_node_icon.png"
+                  class="w-8 h-8 object-contain border border-slate-700 bg-slate-950 shrink-0 p-0.5"
+                  alt=""
+                />
+                <div>
+                  <span class="text-slate-200 font-bold block">Rare Chest Nodes</span>
+                  <span class="text-[10px] text-slate-400">
+                    Exclusive tracking for restricted biome-specific fossil chests.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-slate-400 pt-1">
+              Supports cross-league historical analysis, independent league caching, and instant search across the
+              database.
             </p>
           </div>
         </div>
