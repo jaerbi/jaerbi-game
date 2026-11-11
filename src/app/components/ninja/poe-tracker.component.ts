@@ -49,42 +49,42 @@ export class PoeTrackerComponent implements OnInit, OnDestroy {
             name: 'Fungal Caverns',
             colorHex: '#90ee90',
             icon: 'assets/images/poe/Delve_Biome_Fungal_Caverns.png',
-            fossilKeywords: ['Dense Fossil', 'Aberrant Fossil', 'Opulent Fossil', 'Corroded Fossil', 'Gilded Fossil'],
+            fossilKeywords: ['Dense Fossil', 'Aberrant Fossil', 'Opulent Fossil', 'Corroded Fossil', 'Gilded Fossil', 'Tangled Fossil'],
             expanded: false
         },
         {
             name: 'Petrified Forest',
             colorHex: '#00ff00',
             icon: 'assets/images/poe/Delve_Biome_Petrified_Forest.png',
-            fossilKeywords: ['Bound Fossil', 'Jagged Fossil', 'Corroded Fossil', 'Sanctified Fossil'],
+            fossilKeywords: ['Bound Fossil', 'Jagged Fossil', 'Corroded Fossil', 'Sanctified Fossil', 'Bloodstained Fossil'],
             expanded: false
         },
         {
             name: 'Abyssal Depths',
             colorHex: '#808080',
             icon: 'assets/images/poe/Delve_Biome_Abyssal_Depths.png',
-            fossilKeywords: ['Aberrant Fossil', 'Bound Fossil', 'Gilded Fossil', 'Lucent Fossil'],
+            fossilKeywords: ['Aberrant Fossil', 'Bound Fossil', 'Gilded Fossil', 'Lucent Fossil', 'Hollow Fossil'],
             expanded: false
         },
         {
             name: 'Frozen Hollow',
             colorHex: '#00ffff',
             icon: 'assets/images/poe/Delve_Biome_Frozen_Hollow.png',
-            fossilKeywords: ['Frigid Fossil', 'Serrated Fossil', 'Prismatic Fossil', 'Sanctified Fossil', 'Shuddering Fossil'],
+            fossilKeywords: ['Frigid Fossil', 'Serrated Fossil', 'Prismatic Fossil', 'Sanctified Fossil', 'Shuddering Fossil', 'Glyphic Fossil'],
             expanded: false
         },
         {
             name: 'Magma Fissure',
             colorHex: '#ffa500',
             icon: 'assets/images/poe/Delve_Biome_Magma_Fissure.png',
-            fossilKeywords: ['Scorched Fossil', 'Prismatic Fossil', 'Pristine Fossil', 'Deft Fossil', 'Fundamental Fossil'],
+            fossilKeywords: ['Scorched Fossil', 'Prismatic Fossil', 'Pristine Fossil', 'Deft Fossil', 'Fundamental Fossil', 'Faceted Fossil'],
             expanded: false
         },
         {
             name: 'Sulphur Vents',
             colorHex: '#f5deb3',
             icon: 'assets/images/poe/Delve_Biome_Sulfur_Vents.png',
-            fossilKeywords: ['Metallic Fossil', 'Opulent Fossil', 'Aetheric Fossil', 'Fundamental Fossil'],
+            fossilKeywords: ['Metallic Fossil', 'Opulent Fossil', 'Aetheric Fossil', 'Fundamental Fossil', 'Fractured Fossil'],
             expanded: false
         }
     ]);
