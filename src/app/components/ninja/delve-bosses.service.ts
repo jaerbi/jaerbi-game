@@ -54,11 +54,12 @@ export class DelveBossesService {
         // Повний список категорій poe.ninja, де живуть дропи дельвівських босів
         const types = [
             'UniqueArmour',
+            'DivinationCard',
             'UniqueAccessory',
             'UniqueWeapon',
             'UniqueJewel',
             'UniqueMap',
-            'Fragment'
+            'Fragment',
         ];
 
         return concat(

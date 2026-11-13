@@ -49,7 +49,7 @@ export class DelveBossesComponent implements OnInit, OnDestroy {
                         name: drop.matchedItem.name || drop.name,
                         icon: drop.matchedItem.icon,
                         chaosValue: drop.itemPrice,
-                        changePercent: drop.matchedItem.changePercent
+                        changePercent: drop.matchedItem.changePercent,
                     });
                 }
             });
@@ -74,7 +74,8 @@ export class DelveBossesComponent implements OnInit, OnDestroy {
                 { name: "Ahkeli's Valley", dropRate: 0.10 },
                 { name: "Uzaza's Mountain", dropRate: 0.10 },
                 { name: "Putembo's Meadow", dropRate: 0.10 },
-                { name: "Zorath's Eye of the Inevitable", dropRate: 0.50 }
+                { name: "Zorath's Eye of the Inevitable", dropRate: 0.50 },
+                { name: "Misery in Darkness", dropRate: 0.20 },
             ]
         },
         {
@@ -89,7 +90,7 @@ export class DelveBossesComponent implements OnInit, OnDestroy {
                 { name: "Uzaza's Meadow", dropRate: 0.08 },
                 { name: "Putembo's Valley", dropRate: 0.08 },
                 { name: "Doryani's Machinarium", dropRate: 0.16 },
-                { name: 'Curiosity', dropRate: 0.40 }
+                { name: 'Curiosity', dropRate: 0.40 },
             ]
         },
         {
@@ -103,7 +104,8 @@ export class DelveBossesComponent implements OnInit, OnDestroy {
                 { name: 'Crown of the Tyrant', dropRate: 0.15 },
                 { name: "Ahkeli's Meadow", dropRate: 0.08 },
                 { name: "Uzaza's Valley", dropRate: 0.08 },
-                { name: "Putembo's Mountain", dropRate: 0.08 }
+                { name: "Putembo's Mountain", dropRate: 0.08 },
+                { name: 'Luminous Trove', dropRate: 0.16 },
             ]
         }
     ]);
