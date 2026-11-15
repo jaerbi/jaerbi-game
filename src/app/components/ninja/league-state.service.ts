@@ -1,6 +1,6 @@
 import { Injectable, signal, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, BehaviorSubject, Subject } from 'rxjs';
 import { distinctUntilChanged } from 'rxjs/operators';
 
 export interface LeagueOption {
@@ -17,13 +17,22 @@ export class LeagueStateService {
 
     // 1. СПОЧАТКУ оголошуємо масив доступних ліг, щоб він існував
     readonly availableLeagues: LeagueOption[] = [
+        { id: 'Covens', name: 'Covens' },
         { id: 'Standard', name: 'Standard' },
-        { id: 'Allflame', name: 'Allflame' }
     ];
 
     // 2. ПОТІМ оголошуємо BehaviorSubject та сигнал, які спираються на цей масив
     private _leagueSubject = new BehaviorSubject<string>(this.getInitialLeague());
+    private _supportSubject = new Subject<void>();
     readonly selectedLeague = signal<string>(this.getInitialLeague());
+
+    getSupportChange$(): Observable<void> {
+        return this._supportSubject.asObservable();
+    }
+
+    setSupportChange(): void {
+        this._supportSubject.next();
+    }
 
     private getInitialLeague(): string {
         if (isPlatformBrowser(this.platformId)) {

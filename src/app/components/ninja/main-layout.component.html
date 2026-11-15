@@ -1,0 +1,39 @@
+<div
+  class="min-h-screen bg-slate-950 text-slate-100 p-6 bg-no-repeat bg-fixed relative flex flex-col justify-between"
+  style="
+    background-image:
+      linear-gradient(to top, rgba(2, 6, 23, 0.06), rgba(2, 6, 23, 0.44)),
+      url('assets/images/poe/Delve_loading_screen.jpg');
+    background-size: 125% auto;
+    background-position: center 0%;
+  "
+>
+  <!-- Main Content Area where child routes will be rendered -->
+  <div class="max-w-7xl mx-auto w-full flex-grow">
+    <router-outlet />
+  </div>
+
+  <!-- FOOTER SECTION -->
+  <footer class="mt-12 pt-6 border-t border-slate-800/80 text-center text-xs text-slate-500 pb-8 shrink-0">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-7xl mx-auto px-4">
+      <p>
+        <span class="text-amber-400 font-semibold">DelveScout</span>
+        — Path of Exile Delve Analytics Tool
+      </p>
+
+      <!-- Support the site button -->
+      <button
+        (click)="toggleDonateModal()"
+        class="text-slate-400 hover:text-amber-400 transition-colors cursor-pointer flex items-center gap-1.5 font-medium"
+      >
+        <span>💛 Support the site</span>
+      </button>
+
+      <p class="font-mono text-slate-400">
+        Developed with 💛 by
+        <span class="text-amber-400 font-bold">jaerbi</span>
+        © 2026
+      </p>
+    </div>
+  </footer>
+</div>

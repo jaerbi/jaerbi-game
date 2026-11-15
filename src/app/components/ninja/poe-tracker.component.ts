@@ -8,6 +8,8 @@ import { FossilHistoryChartComponent } from './fossil-history-chart.component';
 import { LeagueSelectorComponent } from './league-selector.component';
 import { LeagueStateService } from './league-state.service';
 import { debounceTime, Subject, takeUntil } from 'rxjs';
+import { RouterLink } from '@angular/router';
+import { DelveDonateComponent } from './donate/delve-donate.component';
 
 interface BiomeData {
     name: string;
@@ -21,7 +23,7 @@ interface BiomeData {
 @Component({
     selector: 'app-poe-tracker',
     standalone: true,
-    imports: [CommonModule, DelveBossesComponent, DelveSearchComponent, FossilHistoryChartComponent, LeagueSelectorComponent],
+    imports: [CommonModule, RouterLink, DelveDonateComponent, DelveBossesComponent, DelveSearchComponent, FossilHistoryChartComponent, LeagueSelectorComponent],
     templateUrl: 'poe-tracker.component.html'
 })
 export class PoeTrackerComponent implements OnInit, OnDestroy {
@@ -142,6 +144,15 @@ export class PoeTrackerComponent implements OnInit, OnDestroy {
     ]);
 
     ngOnInit() {
+        this.leagueStateService.getSupportChange$()
+            .pipe(
+                takeUntil(this.onDestroy$)
+            )
+            .subscribe({
+                next: () => {
+                    this.toggleDonateModal();
+                }
+            });
         this.leagueStateService.getLeagueChange$()
             .pipe(
                 debounceTime(300),
@@ -290,18 +301,4 @@ export class PoeTrackerComponent implements OnInit, OnDestroy {
         return [...this.fossilsData()].sort((a, b) => a.changePercent - b.changePercent).slice(0, 3);
     });
 
-    openExternalLink(url: string): void {
-        const win = window.open(url, '_blank', 'noopener,noreferrer');
-        if (win) {
-            win.focus();
-        }
-    }
-
-    copySupportLink(url: string) {
-        try {
-            if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(url);
-            }
-        } catch { }
-    }
 }

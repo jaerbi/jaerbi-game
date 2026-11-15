@@ -16,6 +16,8 @@ import { ApplicationComponent } from './components/application/application.compo
 import { OBSComponent } from './components/obs/obs.component';
 import { ScoreOverlayComponent } from './components/obs/score-overlay.component';
 import { PoeTrackerComponent } from './components/ninja/poe-tracker.component';
+import { TalismansComponent } from './components/ninja/talisman/talismans.component';
+import { MainLayoutComponent } from './components/ninja/main-layout.component';
 
 export const routes: Routes = [
     {
@@ -76,8 +78,19 @@ export const routes: Routes = [
         path: 'roadmap',
         component: RoadmapComponent
     },
+    // DelveScout Layout & Children Routes
     {
         path: 'delveScout',
-        component: PoeTrackerComponent
-    }
+        component: MainLayoutComponent,
+        children: [
+            {
+                path: '',
+                component: PoeTrackerComponent
+            },
+            {
+                path: 'talisman',
+                component: TalismansComponent
+            }
+        ]
+    },
 ];
