@@ -10,6 +10,7 @@ import { LeagueStateService } from './league-state.service';
 import { debounceTime, Subject, takeUntil } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { DelveDonateComponent } from './donate/delve-donate.component';
+import { AzuriteCalculatorComponent } from './resonator/azurite-calculator.component';
 
 interface BiomeData {
     name: string;
@@ -23,7 +24,16 @@ interface BiomeData {
 @Component({
     selector: 'app-poe-tracker',
     standalone: true,
-    imports: [CommonModule, RouterLink, DelveDonateComponent, DelveBossesComponent, DelveSearchComponent, FossilHistoryChartComponent, LeagueSelectorComponent],
+    imports: [
+        CommonModule,
+        RouterLink,
+        DelveDonateComponent,
+        DelveBossesComponent,
+        DelveSearchComponent,
+        FossilHistoryChartComponent,
+        LeagueSelectorComponent,
+        AzuriteCalculatorComponent,
+    ],
     templateUrl: 'poe-tracker.component.html'
 })
 export class PoeTrackerComponent implements OnInit, OnDestroy {

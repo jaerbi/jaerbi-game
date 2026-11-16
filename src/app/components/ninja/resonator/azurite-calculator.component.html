@@ -1,0 +1,150 @@
+<div class="bg-[#1d262fe6] border border-slate-700 shadow-xl p-4 sm:p-6 mb-6">
+  <!-- Header + Azurite Input -->
+  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-950 border border-cyan-500/40 p-0.5">
+        <img
+          src="assets/images/poe/Azurite_Fissure_delve_node_icon.png"
+          alt="Azurite"
+          class="max-h-full max-w-full object-contain"
+        />
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+          <span>Azurite to Chaos Converter</span>
+          <span class="text-[11px] font-normal uppercase tracking-wider px-2 py-0.5 bg-slate-900 text-cyan-400 border border-cyan-500/30 rounded">
+            Niko Shop
+          </span>
+        </h3>
+        <p class="text-xs text-slate-400">
+          Live exchange efficiency based on current poe.ninja resonator prices
+        </p>
+      </div>
+    </div>
+
+    <!-- Input & Quick Presets -->
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+      <div class="flex items-center gap-1.5">
+        @for (preset of presets; track preset) {
+          <button
+            type="button"
+            (click)="setPreset(preset)"
+            [class.border-cyan-400]="azuriteAmount() === preset"
+            [class.text-cyan-300]="azuriteAmount() === preset"
+            class="px-2 py-1.5 text-xs font-mono bg-slate-900/90 border border-slate-700 hover:border-cyan-500/60 text-slate-400 hover:text-slate-200 transition cursor-pointer"
+          >
+            {{ preset / 1000 }}k
+          </button>
+        }
+      </div>
+
+      <div class="relative">
+        <img
+          src="assets/images/poe/Azurite_Fissure_delve_node_icon.png"
+          alt=""
+          class="w-4 h-4 object-contain absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+        />
+        <input
+          type="number"
+          min="0"
+          step="1000"
+          [ngModel]="azuriteAmount()"
+          (ngModelChange)="azuriteAmount.set($event)"
+          placeholder="Your Azurite..."
+          class="w-full sm:w-44 bg-slate-950 border border-slate-700 focus:border-cyan-400 pl-9 pr-3 py-1.5 text-sm font-mono text-cyan-300 outline-none transition"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading / Error -->
+  @if (loading()) {
+    <div class="py-8 text-center text-sm text-slate-400 animate-pulse">
+      Calculating Niko exchange rates...
+    </div>
+  } @else if (error()) {
+    <div class="mt-4 p-3 bg-red-950/50 border border-red-800 text-red-200 text-xs">
+      {{ error() }}
+    </div>
+  } @else {
+    <!-- Verdict Banner -->
+    @if (bestDeal(); as best) {
+      <div class="mt-4 px-3.5 py-2.5 bg-emerald-950/30 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-2 text-slate-200">
+          <span class="text-emerald-400 font-bold uppercase tracking-wider">Best Trade:</span>
+          <span>
+            Buy <strong class="text-white">{{ best.canBuyCount | number }}x {{ best.name }}</strong>
+            for <strong class="text-cyan-300 font-mono">{{ best.chaosPer1kAzurite | number: '1.2-2' }}c / 1k Azurite</strong>
+          </span>
+        </div>
+        <div class="font-mono text-sm">
+          <span class="text-slate-400 mr-1.5">Total Return:</span>
+          <span class="text-[#ffff75] font-bold">~{{ best.totalChaosReturn | number: '1.0-1' }}c</span>
+        </div>
+      </div>
+    }
+
+    <!-- 3 Resonator Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+      @for (deal of calculatedDeals(); track deal.id) {
+        <div
+          class="bg-slate-900/90 border rounded-lg p-3.5 flex flex-col justify-between transition relative"
+          [class.border-emerald-500/60]="deal.isBest"
+          [class.shadow-emerald-950/30]="deal.isBest"
+          [class.border-slate-700/80]="!deal.isBest"
+        >
+          <!-- Top Row: Icon, Name, Badge -->
+          <div class="flex items-start justify-between gap-2 mb-3">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-10 h-10 shrink-0 bg-slate-950 border border-slate-800 rounded p-1 flex items-center justify-center">
+                @if (deal.icon) {
+                  <img [src]="deal.icon" [alt]="deal.name" class="max-h-full max-w-full object-contain" />
+                }
+              </div>
+              <div class="min-w-0">
+                <div class="text-sm font-semibold text-slate-100 truncate" [title]="deal.name">
+                  {{ deal.name }}
+                </div>
+                <div class="text-xs font-mono text-cyan-400 flex items-center gap-1 mt-0.5">
+                  <span>{{ deal.azuriteCost | number }} Azurite</span>
+                  <span class="text-slate-600">•</span>
+                  <span class="text-slate-400">{{ deal.chaosPrice | number: '1.2-2' }}c ea</span>
+                </div>
+              </div>
+            </div>
+
+            @if (deal.isBest) {
+              <span class="shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded">
+                Best Value
+              </span>
+            }
+          </div>
+
+          <!-- Stats Grid -->
+          <div class="grid grid-cols-3 gap-2 pt-2.5 border-t border-slate-800 text-xs font-mono">
+            <div>
+              <span class="block text-[10px] font-sans uppercase text-slate-500">Rate / 1k</span>
+              <span
+                class="font-bold"
+                [class.text-emerald-400]="deal.isBest"
+                [class.text-slate-300]="!deal.isBest"
+              >
+                {{ deal.chaosPer1kAzurite | number: '1.2-2' }}c
+              </span>
+            </div>
+
+            <div class="text-center">
+              <span class="block text-[10px] font-sans uppercase text-slate-500">You Get</span>
+              <span class="text-white font-semibold">{{ deal.canBuyCount | number }} pcs</span>
+            </div>
+
+            <div class="text-right">
+              <span class="block text-[10px] font-sans uppercase text-slate-500">Total Value</span>
+              <span class="text-[#ffff75] font-bold">{{ deal.totalChaosReturn | number: '1.0-1' }}c</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
