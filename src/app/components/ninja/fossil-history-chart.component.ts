@@ -55,8 +55,9 @@ export class FossilHistoryChartComponent {
     loading = signal<boolean>(false);
     hasError = signal<boolean>(false);
 
-    currentLeaguePoints = signal<{ day: number; rate: number }[]>([]);
+    oldLeaguePoints = signal<{ day: number; rate: number }[]>([]);
     previousLeaguePoints = signal<{ day: number; rate: number }[]>([]);
+    currentLeaguePoints = signal<{ day: number; rate: number }[]>([]);
     hoveredPoint = signal<{ day: number; rate: number; league: string; x: number; y: number } | null>(null);
 
     selectFossil(fossil: { id: string; name: string }) {
@@ -65,14 +66,19 @@ export class FossilHistoryChartComponent {
         this.hasError.set(false);
 
         this.historyService.CompareLeagues(fossil.id).subscribe({
-            next: ({ current, previous }) => {
-                const currentNormalized = this.aggregateAndNormalize(current, 4);
+            next: ({ old, previous, current }) => {
+                const oldNormalized = this.aggregateAndNormalize(old, 4);
                 const previousNormalized = this.aggregateAndNormalize(previous, 4);
+                const currentNormalized = this.aggregateAndNormalize(current, 4);
 
-                this.currentLeaguePoints.set(currentNormalized);
+                this.oldLeaguePoints.set(oldNormalized);
                 this.previousLeaguePoints.set(previousNormalized);
+                this.currentLeaguePoints.set(currentNormalized);
 
                 if (currentNormalized.length === 0 && previousNormalized.length === 0) {
+                    this.hasError.set(true);
+                }
+                if (oldNormalized.length === 0 && oldNormalized.length === 0) {
                     this.hasError.set(true);
                 }
 
@@ -123,21 +129,22 @@ export class FossilHistoryChartComponent {
     }
 
     globalMaxPrice = computed(() => {
-        const all = [...this.currentLeaguePoints(), ...this.previousLeaguePoints()];
+        const all = [...this.oldLeaguePoints(), ...this.previousLeaguePoints(), ...this.currentLeaguePoints()];
         if (!all.length) return 100;
         return Math.max(...all.map(p => p.rate));
     });
 
     globalMinPrice = computed(() => {
-        const all = [...this.currentLeaguePoints(), ...this.previousLeaguePoints()];
+        const all = [...this.oldLeaguePoints(), ...this.previousLeaguePoints(), ...this.currentLeaguePoints()];
         if (!all.length) return 0;
         return Math.min(...all.map(p => p.rate));
     });
 
     calcX(day: number): number {
         const maxDay = Math.max(
-            ...this.currentLeaguePoints().map(p => p.day),
+            ...this.oldLeaguePoints().map(p => p.day),
             ...this.previousLeaguePoints().map(p => p.day),
+            ...this.currentLeaguePoints().map(p => p.day),
             90
         );
         return (day / maxDay) * 800;

@@ -14,9 +14,10 @@ export class FossilHistoryService {
     private WORKER_URL = 'https://tight-lab-5d5a.jaerbi42.workers.dev';
     private STORAGE_PREFIX = 'delvescout_league_history_';
 
-    CompareLeagues(fossilId: string): Observable<{ current: any[]; previous: any[] }> {
-        const currentLeague = 'Mirage';
+    CompareLeagues(fossilId: string): Observable<{ old: any[]; previous: any[]; current: any[]; }> {
+        const oldLeague = 'Mirage';
         const previousLeague = 'Allflame';
+        const currentLeague = 'Covens';
 
         const getLeagueData = (leagueName: string) => {
             const cacheKey = `${this.STORAGE_PREFIX}_${leagueName}_${fossilId}`;
@@ -48,10 +49,11 @@ export class FossilHistoryService {
         };
 
         return forkJoin({
+            oldRes: getLeagueData(oldLeague),
+            previousRes: getLeagueData(previousLeague),
             currentRes: getLeagueData(currentLeague),
-            previousRes: getLeagueData(previousLeague)
         }).pipe(
-            map(({ currentRes, previousRes }) => {
+            map(({ oldRes, previousRes, currentRes }) => {
                 const extractHistory = (res: any) => {
                     if (!res) return [];
                     const history = res?.pairs?.[0]?.history || res?.history || [];
@@ -59,8 +61,9 @@ export class FossilHistoryService {
                 };
 
                 return {
+                    old: extractHistory(oldRes),
+                    previous: extractHistory(previousRes),
                     current: extractHistory(currentRes),
-                    previous: extractHistory(previousRes)
                 };
             })
         );
