@@ -1,291 +1,290 @@
-<div
-  class="min-h-screen bg-slate-950 text-slate-100 p-6 bg-no-repeat bg-fixed relative"
-  style="
-    background-image:
-      linear-gradient(to top, rgba(2, 6, 23, 0.06), rgba(2, 6, 23, 0.44)),
-      url('assets/images/poe/Delve_loading_screen.jpg');
-    background-size: 125% auto;
-    background-position: center 0%;
-  "
->
-  <div class="max-w-4xl mx-auto space-y-6">
-    <!-- HEADER SECTION -->
-    <!-- Логотип та опис -->
-    <div>
-      <h1 class="text-3xl font-extrabold text-white tracking-tight">DelveScout</h1>
-      <p class="text-xs text-white mt-0.5">
-        Real-time Delve Biome Farming & Boss Expected Value (EV) Tracker via poe.ninja
-      </p>
-    </div>
-    <div class="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4 mb-4">
-      <!-- Єдиний flex-контейнер з чітким gap-3 між УСІМА елементами -->
-      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
-        <app-league-selector></app-league-selector>
-        <!-- Кнопка Info -->
-        <button
-          (click)="toggleInfoModal()"
-          class="px-4 py-[13px] bg-[#1d262fe6] hover:bg-slate-700 text-slate-200 border border-slate-700 text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer rounded-none shrink-0"
-        >
-          Info
-        </button>
+<!-- HEADER SECTION -->
+<!-- Логотип та опис -->
+<div class="mb-2">
+  <h1 class="text-3xl font-extrabold text-white tracking-tight">DelveScout</h1>
+  <p class="text-xs text-white mt-0.5">
+    Real-time Delve Biome Farming & Boss Expected Value (EV) Tracker via poe.ninja
+  </p>
+</div>
+<div class="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4 mb-4">
+  <!-- Єдиний flex-контейнер з чітким gap-3 між УСІМА елементами -->
+  <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
+    <app-league-selector></app-league-selector>
+    <!-- Кнопка Info -->
+    <div class="flex justify-start gap-4">
+      <button
+        (click)="toggleInfoModal()"
+        class="px-4 py-[13px] bg-[#1d262fe6] hover:bg-slate-700 text-slate-200 border border-slate-700 text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer rounded-none shrink-0"
+      >
+        Info
+      </button>
 
-        <!-- Кнопка з прозорим сердечком (Donate) -->
-        <button
-          (click)="toggleDonateModal()"
-          class="px-3.5 py-[13px] bg-[#1d262fe6] hover:bg-slate-700 text-slate-300 hover:text-red-400 border border-slate-700 hover:border-slate-500 transition-all cursor-pointer rounded-none shrink-0 flex items-center justify-center group"
-          title="Support DelveScout"
+      <!-- Кнопка з прозорим сердечком (Donate) -->
+      <button
+        (click)="toggleDonateModal()"
+        class="px-3.5 py-[13px] bg-[#1d262fe6] hover:bg-slate-700 text-slate-300 hover:text-red-400 border border-slate-700 hover:border-slate-500 transition-all cursor-pointer rounded-none shrink-0 flex items-center justify-center group"
+        title="Support DelveScout"
+      >
+        <svg
+          class="w-5 h-5 transition-transform group-hover:scale-110"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          viewBox="0 0 24 24"
         >
-          <svg
-            class="w-5 h-5 transition-transform group-hover:scale-110"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            viewBox="0 0 24 24"
-          >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+          ></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+  <!-- Пошуковий компонент -->
+  <div class="w-full sm:w-72 xl:w-80">
+    <app-delve-search></app-delve-search>
+  </div>
+</div>
+
+<!-- Market Trends (Price Surges & Drops) -->
+@if (!loading() && fossilsData().length > 0) {
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <!-- Top Risers / Gainers -->
+    <div class="bg-[#1d262fe6] p-4 border border-slate-700 shadow-md">
+      <h3 class="text-xs font-bold uppercase text-emerald-400 mb-3 flex items-center justify-between">
+        <span class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
-              d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+              stroke-width="2.5"
+              d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
             ></path>
           </svg>
-        </button>
-      </div>
-      <!-- Пошуковий компонент -->
-      <div class="w-full sm:w-72 xl:w-80">
-        <app-delve-search></app-delve-search>
+          <span>Biggest Price Surges</span>
+        </span>
+        <span class="text-[10px] text-slate-400 font-normal lowercase">7d trend</span>
+      </h3>
+      <div class="space-y-2">
+        @for (f of topGainers(); track f.id) {
+          <div
+            class="flex items-center justify-between bg-slate-900/60 p-2.5 border border-slate-700/50 hover:border-emerald-500/40 transition-colors"
+          >
+            <div class="flex items-center gap-2.5 overflow-hidden">
+              <img [src]="f.icon" class="w-6 h-6 object-contain shrink-0" alt="" />
+              <span class="text-xs text-slate-200 truncate">{{ f.name }}</span>
+            </div>
+            <div class="text-right font-mono text-xs shrink-0 flex items-center gap-3">
+              <span class="text-emerald-500 font-bold">+{{ f.changePercent }}%</span>
+              <span class="text-[#ffff75] text-[11px] font-bold">{{ f.chaosValue | number: '1.0-0' }}c</span>
+            </div>
+          </div>
+        }
       </div>
     </div>
 
-    <!-- Market Trends (Price Surges & Drops) -->
-    @if (!loading() && fossilsData().length > 0) {
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <!-- Top Risers / Gainers -->
-        <div class="bg-[#1d262fe6] p-4 border border-slate-700 shadow-md">
-          <h3 class="text-xs font-bold uppercase text-emerald-400 mb-3 flex items-center justify-between">
-            <span class="flex items-center gap-1.5">
-              <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2.5"
-                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                ></path>
-              </svg>
-              <span>Biggest Price Surges</span>
-            </span>
-            <span class="text-[10px] text-slate-400 font-normal lowercase">7d trend</span>
-          </h3>
-          <div class="space-y-2">
-            @for (f of topGainers(); track f.id) {
-              <div
-                class="flex items-center justify-between bg-slate-900/60 p-2.5 border border-slate-700/50 hover:border-emerald-500/40 transition-colors"
-              >
-                <div class="flex items-center gap-2.5 overflow-hidden">
-                  <img [src]="f.icon" class="w-6 h-6 object-contain shrink-0" alt="" />
-                  <span class="text-xs text-slate-200 truncate">{{ f.name }}</span>
-                </div>
-                <div class="text-right font-mono text-xs shrink-0 flex items-center gap-3">
-                  <span class="text-emerald-500 font-bold">+{{ f.changePercent }}%</span>
-                  <span class="text-[#ffff75] text-[11px] font-bold">{{ f.chaosValue | number: '1.0-0' }}c</span>
-                </div>
-              </div>
-            }
+    <!-- Top Drop / Losers -->
+    <div class="bg-[#1d262fe6] p-4 border border-slate-700 shadow-md">
+      <h3 class="text-xs font-bold uppercase text-red-400 mb-3 flex items-center justify-between">
+        <span class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.5"
+              d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"
+            ></path>
+          </svg>
+          <span>Sharpest Price Drops</span>
+        </span>
+        <span class="text-[10px] text-slate-400 font-normal lowercase">7d trend</span>
+      </h3>
+      <div class="space-y-2">
+        @for (f of topLosers(); track f.id) {
+          <div
+            class="flex items-center justify-between bg-slate-900/60 p-2.5 border border-slate-700/50 hover:border-red-500/40 transition-colors"
+          >
+            <div class="flex items-center gap-2.5 overflow-hidden">
+              <img [src]="f.icon" class="w-6 h-6 object-contain shrink-0" alt="" />
+              <span class="text-xs text-slate-200 truncate">{{ f.name }}</span>
+            </div>
+            <div class="text-right font-mono text-xs shrink-0 flex items-center gap-3">
+              <span class="text-red-400 font-bold">{{ f.changePercent }}%</span>
+              <span class="text-[#ffff75] text-[11px] font-bold">{{ f.chaosValue | number: '1.0-0' }}c</span>
+            </div>
           </div>
-        </div>
-
-        <!-- Top Drop / Losers -->
-        <div class="bg-[#1d262fe6] p-4 border border-slate-700 shadow-md">
-          <h3 class="text-xs font-bold uppercase text-red-400 mb-3 flex items-center justify-between">
-            <span class="flex items-center gap-1.5">
-              <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2.5"
-                  d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"
-                ></path>
-              </svg>
-              <span>Sharpest Price Drops</span>
-            </span>
-            <span class="text-[10px] text-slate-400 font-normal lowercase">7d trend</span>
-          </h3>
-          <div class="space-y-2">
-            @for (f of topLosers(); track f.id) {
-              <div
-                class="flex items-center justify-between bg-slate-900/60 p-2.5 border border-slate-700/50 hover:border-red-500/40 transition-colors"
-              >
-                <div class="flex items-center gap-2.5 overflow-hidden">
-                  <img [src]="f.icon" class="w-6 h-6 object-contain shrink-0" alt="" />
-                  <span class="text-xs text-slate-200 truncate">{{ f.name }}</span>
-                </div>
-                <div class="text-right font-mono text-xs shrink-0 flex items-center gap-3">
-                  <span class="text-red-400 font-bold">{{ f.changePercent }}%</span>
-                  <span class="text-[#ffff75] text-[11px] font-bold">{{ f.chaosValue | number: '1.0-0' }}c</span>
-                </div>
-              </div>
-            }
-          </div>
-        </div>
+        }
       </div>
-    }
-    <!-- Biomes Table -->
-    <div class="bg-[#1d262fe6] border border-slate-700 overflow-hidden shadow-xl">
-      @if (loading()) {
-        <div class="p-12 text-center text-slate-400 animate-pulse">Loading live fossil prices from poe.ninja...</div>
-      } @else {
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-slate-950/60 text-slate-400 text-xs uppercase border-b border-slate-700">
-              <th class="p-4">Delve Biome</th>
-              <th class="p-4 text-center"># of Fossils</th>
-              <th class="p-4 text-right">Average Biome Value</th>
+    </div>
+  </div>
+}
+
+<!-- Biomes Container -->
+<div class="bg-[#1d262fe6] border border-slate-700 shadow-xl overflow-hidden">
+  @if (loading()) {
+    <div class="p-12 text-center text-slate-400 animate-pulse">Loading live fossil prices from poe.ninja...</div>
+  } @else {
+    
+    <!-- Desktop Table View (hidden on small screens, shown on md and above) -->
+    <div class="hidden md:block overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-950/60 text-slate-400 text-xs uppercase border-b border-slate-700">
+            <th class="p-4">Delve Biome</th>
+            <th class="p-4 text-center"># of Fossils</th>
+            <th class="p-4 text-right">Average Biome Value</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-700/50 text-sm">
+          @for (biome of sortedBiomes(); track biome.name) {
+            <!-- Biome Main Row -->
+            <tr (click)="toggleBiome(biome.name)" class="hover:bg-slate-700/40 transition cursor-pointer select-none">
+              <td class="p-4 font-semibold flex items-center gap-3">
+                @if (biome.icon) {
+                  <img
+                    [src]="biome.icon"
+                    class="w-8 h-8 object-cover border border-slate-700 bg-slate-900 shrink-0"
+                    alt="{{ biome.name }}"
+                  />
+                } @else {
+                  <span class="w-3 h-3 inline-block shrink-0" [style.background-color]="biome.colorHex"></span>
+                }
+                <span class="text-slate-200">{{ biome.name }}</span>
+                <span class="text-xs text-slate-400">({{ biome.expanded ? '▲ hide' : '▼ details' }})</span>
+              </td>
+              <td class="p-4 text-center font-mono text-white">
+                {{ biome.matchedFossils.length }}
+              </td>
+              <td class="p-4 text-right font-mono">
+                <div class="flex items-center justify-end gap-3">
+                  <span
+                    [class.text-emerald-500]="biome.averageChange > 0"
+                    [class.text-red-400]="biome.averageChange < 0"
+                    [class.text-slate-500]="biome.averageChange === 0"
+                    class="text-xs font-semibold"
+                  >
+                    {{ biome.averageChange > 0 ? '+' : '' }}{{ biome.averageChange | number: '1.1-1' }}%
+                  </span>
+                  <span class="text-[#ffff75] font-bold text-base">{{ biome.averageValue | number: '1.0-0' }}c</span>
+                </div>
+              </td>
             </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-700/50 text-sm">
-            @for (biome of sortedBiomes(); track biome.name) {
-              <!-- Biome Main Row -->
-              <tr (click)="toggleBiome(biome.name)" class="hover:bg-slate-700/40 transition cursor-pointer select-none">
-                <td class="p-4 font-semibold flex items-center gap-3">
-                  @if (biome.icon) {
-                    <img
-                      [src]="biome.icon"
-                      class="w-8 h-8 object-cover border border-slate-700 bg-slate-900 shrink-0"
-                      alt="{{ biome.name }}"
-                    />
-                  } @else {
-                    <span class="w-3 h-3 inline-block shrink-0" [style.background-color]="biome.colorHex"></span>
-                  }
-                  <span class="text-slate-200">{{ biome.name }}</span>
-                  <span class="text-xs text-slate-400">({{ biome.expanded ? '▲ hide' : '▼ details' }})</span>
-                </td>
-                <td class="p-4 text-center font-mono text-white">
-                  {{ biome.matchedFossils.length }}
-                </td>
-                <td class="p-4 text-right font-mono">
-                  <div class="flex items-center justify-end gap-3">
-                    <span
-                      [class.text-emerald-500]="biome.averageChange > 0"
-                      [class.text-red-400]="biome.averageChange < 0"
-                      [class.text-slate-500]="biome.averageChange === 0"
-                      class="text-xs font-semibold"
-                    >
-                      {{ biome.averageChange > 0 ? '+' : '' }}{{ biome.averageChange | number: '1.1-1' }}%
-                    </span>
-                    <span class="text-[#ffff75] font-bold text-base">{{ biome.averageValue | number: '1.0-0' }}c</span>
+
+            <!-- Expanded Fossil Details -->
+            @if (biome.expanded) {
+              <tr class="bg-slate-900/90">
+                <td colspan="3" class="p-4">
+                  <div class="space-y-3 pl-4 border-l-2 border-amber-500 my-1">
+                    <p class="text-xs text-slate-400 uppercase font-semibold tracking-wider">
+                      Fossils in this biome & their prices:
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      @for (fossil of biome.matchedFossils; track fossil.name) {
+                        <div
+                          class="flex items-center justify-between bg-[#1d262fe6] p-2.5 border border-slate-700/80 shadow-inner"
+                        >
+                          <div class="flex items-center gap-2.5 min-w-0 pr-2">
+                            <img [src]="fossil.icon" class="w-7 h-7 object-contain bg-slate-900/50 p-0.5 shrink-0" alt="" />
+                            <span class="text-xs font-medium text-slate-200 truncate">{{ fossil.name }}</span>
+                          </div>
+                          <div class="text-right font-mono text-xs shrink-0">
+                            <span class="text-[#ffff75] font-bold bg-slate-900 px-2 py-1 mr-1">
+                              {{ fossil.chaosValue | number: '1.0-0' }}c
+                            </span>
+                            <span
+                              [class.text-emerald-500]="fossil.changePercent > 0"
+                              [class.text-red-400]="fossil.changePercent < 0"
+                              class="text-[10px]"
+                            >
+                              {{ fossil.changePercent > 0 ? '+' : '' }}{{ fossil.changePercent }}%
+                            </span>
+                          </div>
+                        </div>
+                      } @empty {
+                        <span class="text-xs text-slate-500 italic">No mapped fossils found for this league</span>
+                      }
+                    </div>
                   </div>
                 </td>
               </tr>
-
-              <!-- Expanded Fossil Details -->
-              @if (biome.expanded) {
-                <tr class="bg-slate-900/90">
-                  <td colspan="3" class="p-4">
-                    <div class="space-y-3 pl-4 border-l-2 border-amber-500 my-1">
-                      <p class="text-xs text-slate-400 uppercase font-semibold tracking-wider">
-                        Fossils in this biome & their prices:
-                      </p>
-                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        @for (fossil of biome.matchedFossils; track fossil.name) {
-                          <div
-                            class="flex items-center justify-between bg-[#1d262fe6] p-2.5 border border-slate-700/80 shadow-inner"
-                          >
-                            <div class="flex items-center gap-2.5">
-                              <img [src]="fossil.icon" class="w-7 h-7 object-contain bg-slate-900/50 p-0.5" alt="" />
-                              <span class="text-xs font-medium text-slate-200">{{ fossil.name }}</span>
-                            </div>
-                            <div class="text-right font-mono text-xs">
-                              <span class="text-[#ffff75] font-bold bg-slate-900 px-2 py-1 mr-1">
-                                {{ fossil.chaosValue | number: '1.0-0' }}c
-                              </span>
-                              <span
-                                [class.text-emerald-500]="fossil.changePercent > 0"
-                                [class.text-red-400]="fossil.changePercent < 0"
-                                class="text-[10px]"
-                              >
-                                {{ fossil.changePercent > 0 ? '+' : '' }}{{ fossil.changePercent }}%
-                              </span>
-                            </div>
-                          </div>
-                        } @empty {
-                          <span class="text-xs text-slate-500 italic">No mapped fossils found for this league</span>
-                        }
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              }
             }
-          </tbody>
-        </table>
-      }
+          }
+        </tbody>
+      </table>
     </div>
 
-    <!-- 🌟 ПЕРЕДИЗАЙНЕНА СЕКЦІЯ: Biome-Specific Nodes (Rare Chests) -->
-    <div class="bg-[#1d262fe6] border border-slate-700 overflow-hidden shadow-xl mt-8">
-      <!-- Додаємо relative сюди, щоб обійти межі контейнера -->
-      <div class="p-4 bg-slate-950/60 border-b border-slate-700 relative pl-16">
-        <!-- Велика іконка з абсолютним позиціонуванням -->
-        <div class="absolute left-3 top-1 -translate-y-1.3 pointer-events-none">
-          <img
-            src="assets/images/poe/Fossils_delve_node_icon.png"
-            class="w-12 h-12 object-contain drop-shadow-md"
-            alt=""
-          />
-        </div>
-
-        <div>
-          <h3 class="text-sm font-bold text-white uppercase tracking-wider">Biome-Specific Nodes (Rare Chests)</h3>
-          <p class="text-xs text-slate-400 mt-0.5">
-            Restricted sub-nodes on the Delve map containing exclusive rare fossils (Tangled, Bloodstained, Faceted,
-            etc.).
-          </p>
-        </div>
-      </div>
-
-      @if (loading()) {
-        <div class="p-12 text-center text-slate-400 animate-pulse">Loading special node values...</div>
-      } @else {
-        <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          @for (node of sortedBiomesStaff(); track node.name) {
-            <div
-              class="bg-slate-900/80 border border-slate-700/80 p-3 flex items-center justify-between shadow-md hover:border-slate-500/60 transition-colors"
-            >
-              <!-- Ліва частина: іконка нода/біома + назва -->
-              <div class="flex items-center gap-3 overflow-hidden">
-                <img
-                  [src]="node.icon"
-                  class="w-9 h-9 object-cover border border-slate-700 bg-slate-950 shrink-0 p-0.5"
-                  alt=""
-                />
-                <div class="overflow-hidden">
-                  <span class="text-xs font-bold text-slate-200 block truncate">{{ node.name }}</span>
-                  <span class="text-[10px] text-slate-400 uppercase tracking-wider block">{{ node.subText }}</span>
-                </div>
-              </div>
-
-              <!-- Права частина: іконка фосила + ціна + відсоток -->
-              <div class="flex items-center gap-2 shrink-0">
-                @if (node.matchedFossils.length > 0) {
-                  @let fossil = node.matchedFossils[0];
-                  @if (fossil.icon) {
-                    <img
-                      [src]="fossil.icon"
-                      class="w-7 h-7 object-contain bg-slate-950/50 p-0.5"
-                      [alt]="fossil.name"
-                      [title]="fossil.name"
-                    />
-                  }
-                  <div class="text-right font-mono">
-                    <span class="text-[#ffff75] font-bold text-xs">{{ fossil.chaosValue | number: '1.0-0' }}c</span>
-                    <span
-                      class="text-[10px] font-semibold block mt-0.5"
-                      [ngClass]="fossil.changePercent >= 0 ? 'text-emerald-500' : 'text-red-400'"
-                    >
-                      {{ fossil.changePercent >= 0 ? '+' : '' }}{{ fossil.changePercent }}%
-                    </span>
-                  </div>
+    <!-- Mobile Card View (shown only on small screens, hidden on md and above) -->
+    <div class="block md:hidden divide-y divide-slate-700/50">
+      @for (biome of sortedBiomes(); track biome.name) {
+        <div class="p-4 bg-[#1d262fe6] transition">
+          <!-- Main Biome Card Header (Clickable) -->
+          <div (click)="toggleBiome(biome.name)" class="cursor-pointer select-none">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2.5 min-w-0 pr-2">
+                @if (biome.icon) {
+                  <img
+                    [src]="biome.icon"
+                    class="w-7 h-7 object-cover border border-slate-700 bg-slate-900 shrink-0"
+                    alt="{{ biome.name }}"
+                  />
                 } @else {
-                  <span class="text-xs text-slate-500 italic">No data</span>
+                  <span class="w-3 h-3 inline-block shrink-0" [style.background-color]="biome.colorHex"></span>
+                }
+                <span class="text-slate-200 font-semibold text-sm truncate">{{ biome.name }}</span>
+              </div>
+              
+              <!-- Value badge -->
+              <div class="text-right shrink-0 font-mono">
+                <span class="text-[#ffff75] font-bold text-base">{{ biome.averageValue | number: '1.0-0' }}c</span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-slate-800/60">
+              <span>Fossils: <strong class="text-white font-mono">{{ biome.matchedFossils.length }}</strong></span>
+              
+              <div class="flex items-center gap-2">
+                <span
+                  [class.text-emerald-500]="biome.averageChange > 0"
+                  [class.text-red-400]="biome.averageChange < 0"
+                  [class.text-slate-500]="biome.averageChange === 0"
+                  class="font-semibold"
+                >
+                  {{ biome.averageChange > 0 ? '+' : '' }}{{ biome.averageChange | number: '1.1-1' }}%
+                </span>
+                <span class="text-slate-400 font-medium">({{ biome.expanded ? '▲ hide' : '▼ details' }})</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Expanded Fossil Details for Mobile -->
+          @if (biome.expanded) {
+            <div class="mt-3 pt-3 border-t border-slate-800 bg-slate-900/90 p-3 rounded-lg">
+              <p class="text-[11px] text-slate-400 uppercase font-semibold tracking-wider mb-2">
+                Fossils in this biome & prices:
+              </p>
+              <div class="grid grid-cols-1 gap-2">
+                @for (fossil of biome.matchedFossils; track fossil.name) {
+                  <div class="flex items-center justify-between bg-[#1d262fe6] p-2 border border-slate-700/80">
+                    <div class="flex items-center gap-2 min-w-0 pr-2">
+                      <img [src]="fossil.icon" class="w-6 h-6 object-contain bg-slate-900/50 p-0.5 shrink-0" alt="" />
+                      <span class="text-xs font-medium text-slate-200 truncate">{{ fossil.name }}</span>
+                    </div>
+                    <div class="text-right font-mono text-xs shrink-0">
+                      <span class="text-[#ffff75] font-bold bg-slate-900 px-1.5 py-0.5 mr-1">
+                        {{ fossil.chaosValue | number: '1.0-0' }}c
+                      </span>
+                      <span
+                        [class.text-emerald-500]="fossil.changePercent > 0"
+                        [class.text-red-400]="fossil.changePercent < 0"
+                        class="text-[10px]"
+                      >
+                        {{ fossil.changePercent > 0 ? '+' : '' }}{{ fossil.changePercent }}%
+                      </span>
+                    </div>
+                  </div>
+                } @empty {
+                  <span class="text-xs text-slate-500 italic">No mapped fossils found for this league</span>
                 }
               </div>
             </div>
@@ -294,147 +293,198 @@
       }
     </div>
 
-    <!-- Підключаємо блок босів нижче -->
-    <app-delve-bosses></app-delve-bosses>
+  }
+</div>
 
-    <app-fossil-history-chart [fossilsList]="fossilsData()"></app-fossil-history-chart>
+<!-- 🌟 ПЕРЕДИЗАЙНЕНА СЕКЦІЯ: Biome-Specific Nodes (Rare Chests) -->
+<div class="bg-[#1d262fe6] border border-slate-700 overflow-hidden shadow-xl mt-8">
+  <!-- Додаємо relative сюди, щоб обійти межі контейнера -->
+  <div class="p-4 bg-slate-950/60 border-b border-slate-700 relative pl-16">
+    <!-- Велика іконка з абсолютним позиціонуванням -->
+    <div class="absolute left-3 top-1 -translate-y-1.3 pointer-events-none">
+      <img src="assets/images/poe/Fossils_delve_node_icon.png" class="w-12 h-12 object-contain drop-shadow-md" alt="" />
+    </div>
 
-    <a
-      routerLink="talisman"
-      class="inline-flex items-center gap-1 text-zinc-300 hover:text-amber-400 transition-colors group py-1 cursor-pointer"
-    >
-      <span class="font-medium">Ritual Grounds</span>
-      <div
-        class="w-9 h-9 flex items-center justify-center"
-      >
-        <img
-          src="assets/images/poe/Talisman_delve_node_icon.png"
-          alt="Ritual Grounds"
-          class="max-h-full max-w-full object-contain"
-        />
-      </div>
-    </a>
+    <div>
+      <h3 class="text-sm font-bold text-white uppercase tracking-wider">Biome-Specific Nodes (Rare Chests)</h3>
+      <p class="text-xs text-slate-400 mt-0.5">
+        Restricted sub-nodes on the Delve map containing exclusive rare fossils (Tangled, Bloodstained, Faceted, etc.).
+      </p>
+    </div>
+  </div>
 
-    <!-- INFO MODAL -->
-    @if (isInfoOpen()) {
-      <div
-        class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
-      >
-        <div class="bg-slate-900 border border-slate-700 max-w-xl w-full p-6 shadow-2xl relative rounded-none">
-          <button
-            (click)="toggleInfoModal()"
-            class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 bg-[#1d262fe6] w-7 h-7 flex items-center justify-center transition-all cursor-pointer rounded-none"
-          >
-            ✕
-          </button>
-
-          <!-- Header with local icon -->
-          <div class="flex items-center gap-3 mb-4 pb-3 border-b border-slate-800">
+  @if (loading()) {
+    <div class="p-12 text-center text-slate-400 animate-pulse">Loading special node values...</div>
+  } @else {
+    <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      @for (node of sortedBiomesStaff(); track node.name) {
+        <div
+          class="bg-slate-900/80 border border-slate-700/80 p-3 flex items-center justify-between shadow-md hover:border-slate-500/60 transition-colors"
+        >
+          <!-- Ліва частина: іконка нода/біома + назва -->
+          <div class="flex items-center gap-3 overflow-hidden">
             <img
-              src="assets/images/poe/Fossils_delve_node_icon.png"
-              class="w-10 h-10 object-contain drop-shadow"
+              [src]="node.icon"
+              class="w-9 h-9 object-cover border border-slate-700 bg-slate-950 shrink-0 p-0.5"
+              alt=""
+            />
+            <div class="overflow-hidden">
+              <span class="text-xs font-bold text-slate-200 block truncate">{{ node.name }}</span>
+              <span class="text-[10px] text-slate-400 uppercase tracking-wider block">{{ node.subText }}</span>
+            </div>
+          </div>
+
+          <!-- Права частина: іконка фосила + ціна + відсоток -->
+          <div class="flex items-center gap-2 shrink-0">
+            @if (node.matchedFossils.length > 0) {
+              @let fossil = node.matchedFossils[0];
+              @if (fossil.icon) {
+                <img
+                  [src]="fossil.icon"
+                  class="w-7 h-7 object-contain bg-slate-950/50 p-0.5"
+                  [alt]="fossil.name"
+                  [title]="fossil.name"
+                />
+              }
+              <div class="text-right font-mono">
+                <span class="text-[#ffff75] font-bold text-xs">{{ fossil.chaosValue | number: '1.0-0' }}c</span>
+                <span
+                  class="text-[10px] font-semibold block mt-0.5"
+                  [ngClass]="fossil.changePercent >= 0 ? 'text-emerald-500' : 'text-red-400'"
+                >
+                  {{ fossil.changePercent >= 0 ? '+' : '' }}{{ fossil.changePercent }}%
+                </span>
+              </div>
+            } @else {
+              <span class="text-xs text-slate-500 italic">No data</span>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Підключаємо блок босів нижче -->
+<app-delve-bosses></app-delve-bosses>
+
+<app-fossil-history-chart [fossilsList]="fossilsData()"></app-fossil-history-chart>
+
+<a
+  routerLink="talisman"
+  class="inline-flex items-center gap-1 text-zinc-300 hover:text-amber-400 transition-colors group py-1 cursor-pointer"
+>
+  <span class="font-medium">Ritual Grounds</span>
+  <div class="w-9 h-9 flex items-center justify-center">
+    <img
+      src="assets/images/poe/Talisman_delve_node_icon.png"
+      alt="Ritual Grounds"
+      class="max-h-full max-w-full object-contain"
+    />
+  </div>
+</a>
+
+<!-- INFO MODAL -->
+@if (isInfoOpen()) {
+  <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+    <div class="bg-slate-900 border border-slate-700 max-w-xl w-full p-6 shadow-2xl relative rounded-none">
+      <button
+        (click)="toggleInfoModal()"
+        class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 bg-[#1d262fe6] w-7 h-7 flex items-center justify-center transition-all cursor-pointer rounded-none"
+      >
+        ✕
+      </button>
+
+      <!-- Header with local icon -->
+      <div class="flex items-center gap-3 mb-4 pb-3 border-b border-slate-800">
+        <img src="assets/images/poe/Fossils_delve_node_icon.png" class="w-10 h-10 object-contain drop-shadow" alt="" />
+        <div>
+          <h3 class="text-lg font-bold text-white tracking-wide">About DelveScout</h3>
+          <p class="text-[11px] text-slate-400 uppercase tracking-wider">Path of Exile Analytics & Farming Optimizer</p>
+        </div>
+      </div>
+
+      <!-- Content using local asset icons -->
+      <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+        <p>
+          <strong class="text-slate-100">DelveScout</strong>
+          is a professional analytical tool for Path of Exile players, designed to maximize Delve farming efficiency and
+          profit tracking.
+        </p>
+
+        <!-- Grid with feature cards using local icons -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 py-1">
+          <!-- Card 1: Live API -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800 flex items-center gap-3">
+            <img
+              src="assets/images/poe/ninja-logo.png"
+              class="w-8 h-8 object-cover border border-slate-700 shrink-0"
               alt=""
             />
             <div>
-              <h3 class="text-lg font-bold text-white tracking-wide">About DelveScout</h3>
-              <p class="text-[11px] text-slate-400 uppercase tracking-wider">
-                Path of Exile Analytics & Farming Optimizer
-              </p>
+              <span class="text-slate-200 font-bold block">Live poe.ninja API</span>
+              <span class="text-[10px] text-slate-400">Real-time fossil and unique item market tracking.</span>
             </div>
           </div>
 
-          <!-- Content using local asset icons -->
-          <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
-            <p>
-              <strong class="text-slate-100">DelveScout</strong>
-              is a professional analytical tool for Path of Exile players, designed to maximize Delve farming efficiency
-              and profit tracking.
-            </p>
-
-            <!-- Grid with feature cards using local icons -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 py-1">
-              <!-- Card 1: Live API -->
-              <div class="bg-slate-950/60 p-2.5 border border-slate-800 flex items-center gap-3">
-                <img
-                  src="assets/images/poe/ninja-logo.png"
-                  class="w-8 h-8 object-cover border border-slate-700 shrink-0"
-                  alt=""
-                />
-                <div>
-                  <span class="text-slate-200 font-bold block">Live poe.ninja API</span>
-                  <span class="text-[10px] text-slate-400">Real-time fossil and unique item market tracking.</span>
-                </div>
-              </div>
-
-              <!-- Card 2: Biomes -->
-              <div class="bg-slate-950/60 p-2.5 border border-slate-800 flex items-center gap-3">
-                <img
-                  src="assets/images/poe/map.jpg"
-                  class="w-8 h-8 object-cover border border-slate-700 shrink-0"
-                  alt=""
-                />
-                <div>
-                  <span class="text-slate-200 font-bold block">Biome Value Calculator</span>
-                  <span class="text-[10px] text-slate-400">
-                    Average profitability calculation for every Delve biome.
-                  </span>
-                </div>
-              </div>
-
-              <!-- Card 3: Boss EV -->
-              <div class="bg-slate-950/60 p-2.5 border border-slate-800 flex items-center gap-3">
-                <img
-                  src="assets/images/poe/The_Crystal_King's_Throne_delve_node_icon.png"
-                  class="w-8 h-8 object-cover border border-slate-700 shrink-0"
-                  alt=""
-                />
-                <div>
-                  <span class="text-slate-200 font-bold block">Boss EV Tracker</span>
-                  <span class="text-[10px] text-slate-400">Expected Value (EV) calculation for encounter bosses.</span>
-                </div>
-              </div>
-
-              <!-- Card 4: Rare Chests -->
-              <div class="bg-slate-950/60 p-2.5 border border-slate-800 flex items-center gap-3">
-                <img
-                  src="assets/images/poe/Fossils_delve_node_icon.png"
-                  class="w-8 h-8 object-contain border border-slate-700 bg-slate-950 shrink-0 p-0.5"
-                  alt=""
-                />
-                <div>
-                  <span class="text-slate-200 font-bold block">Rare Chest Nodes</span>
-                  <span class="text-[10px] text-slate-400">
-                    Exclusive tracking for restricted biome-specific fossil chests.
-                  </span>
-                </div>
-              </div>
+          <!-- Card 2: Biomes -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800 flex items-center gap-3">
+            <img src="assets/images/poe/map.jpg" class="w-8 h-8 object-cover border border-slate-700 shrink-0" alt="" />
+            <div>
+              <span class="text-slate-200 font-bold block">Biome Value Calculator</span>
+              <span class="text-[10px] text-slate-400">Average profitability calculation for every Delve biome.</span>
             </div>
+          </div>
 
-            <p class="text-slate-400 pt-1">
-              Supports cross-league historical analysis, independent league caching, and instant search across the
-              database.
-            </p>
+          <!-- Card 3: Boss EV -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800 flex items-center gap-3">
+            <img
+              src="assets/images/poe/The_Crystal_King's_Throne_delve_node_icon.png"
+              class="w-8 h-8 object-cover border border-slate-700 shrink-0"
+              alt=""
+            />
+            <div>
+              <span class="text-slate-200 font-bold block">Boss EV Tracker</span>
+              <span class="text-[10px] text-slate-400">Expected Value (EV) calculation for encounter bosses.</span>
+            </div>
+          </div>
+
+          <!-- Card 4: Rare Chests -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800 flex items-center gap-3">
+            <img
+              src="assets/images/poe/Fossils_delve_node_icon.png"
+              class="w-8 h-8 object-contain border border-slate-700 bg-slate-950 shrink-0 p-0.5"
+              alt=""
+            />
+            <div>
+              <span class="text-slate-200 font-bold block">Rare Chest Nodes</span>
+              <span class="text-[10px] text-slate-400">
+                Exclusive tracking for restricted biome-specific fossil chests.
+              </span>
+            </div>
           </div>
         </div>
-      </div>
-    }
 
-    <!-- DONATE MODAL -->
-    @if (isDonateOpen()) {
-      <div
-        class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
-      >
-        <div class="bg-slate-900 border border-amber-500/40 max-w-md w-full p-6 shadow-2xl relative rounded-none">
-          <button
-            (click)="toggleDonateModal()"
-            class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 bg-[#1d262fe6] w-7 h-7 flex items-center justify-center transition-all cursor-pointer rounded-none"
-          >
-            ✕
-          </button>
-
-          <app-delve-donate></app-delve-donate>
-        </div>
+        <p class="text-slate-400 pt-1">
+          Supports cross-league historical analysis, independent league caching, and instant search across the database.
+        </p>
       </div>
-    }
+    </div>
   </div>
-</div>
+}
+
+<!-- DONATE MODAL -->
+@if (isDonateOpen()) {
+  <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+    <div class="bg-slate-900 border border-amber-500/40 max-w-md w-full p-6 shadow-2xl relative rounded-none">
+      <button
+        (click)="toggleDonateModal()"
+        class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 bg-[#1d262fe6] w-7 h-7 flex items-center justify-center transition-all cursor-pointer rounded-none"
+      >
+        ✕
+      </button>
+
+      <app-delve-donate></app-delve-donate>
+    </div>
+  </div>
+}
