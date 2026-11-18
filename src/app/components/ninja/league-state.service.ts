@@ -19,6 +19,7 @@ export class LeagueStateService {
     readonly availableLeagues: LeagueOption[] = [
         { id: 'Covens', name: 'Covens' },
         { id: 'Standard', name: 'Standard' },
+        { id: 'Hardcore Covens', name: 'Hardcore Covens' },
     ];
 
     // 2. ПОТІМ оголошуємо BehaviorSubject та сигнал, які спираються на цей масив
